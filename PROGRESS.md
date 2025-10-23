@@ -1,0 +1,97 @@
+# Streaming Progress & Recovery Log
+
+(Обновлять при каждом существенном шаге. Этот файл служит "памятью" после перезапуска VS Code / чата.)
+
+## Как собрать
+```
+# Сборка (Debug конфигурация)
+make -C Debug main-build
+
+# Альтернатива: просто make -C Debug (all => main-build)
+```
+
+Артефакты: `Debug/BMI30.stm32h7.elf`, `.map`, `.list`.
+
+## Как прошить
+```
+make -C Debug flash_full
+```
+Используется openocd mass erase + program + verify + reset.
+
+## Основные host-скрипты
+```
+# Старт потока + периодический STAT и чтение кадров (встроено в некоторые режимы)
+py -3 HostTools/vendor_get_status.py --start
+
+# Просто получить STAT (однократно или несколько раз)
+py -3 HostTools/vendor_get_status.py
+
+# Снифф входящих Vendor IN пакетов (сырые кадры)
+py -3 HostTools/vendor_sniff_raw.py --start
+# или без --start, если уже запущено ранее
+py -3 HostTools/vendor_sniff_raw.py
+```
+
+## Формат кадра (напоминание)
+32-байтный заголовок: magic=0xA55A (LE: 5A A5), ver=1, flags: 0x01=ADC0, 0x02=ADC1, 0x80=TEST.
+`seq` общий на пару (A/B), timestamp одинаковый для пары, total_samples.
+
+## Структура STAT v1 (64B)
+Поля: sig 'STAT', version=1, cur_samples, frame_bytes, test_frames, produced_seq, sent0, sent1, dbg_tx_cplt,
+DMA: dma_done0/1, frame_wr_seq, flags_runtime, flags2 (битовое поле), sending_ch, pair_idx, last_tx_len, cur_stream_seq, reserved0/2/3.
+
+flags2 биты:
+0 ep_busy
+1 tx_ready
+2 pending_B
+3 test_in_flight
+4 start_ack_done
+5 start_stat_inflight
+6 start_stat_planned
+7 pending_status
+8 simple_tx_mode
+9 diag_mode_active
+10 frameA_ready
+11 frameB_ready
+
+## Текущее наблюдаемое состояние (последняя сессия)
+(Заполнено: initial)
+- Получен burst кадров: STAT -> TEST -> несколько ADC0/ADC1 (длины 512/320).
+- После ~10 пакетов поток останавливается, дальнейшие bulk IN чтения дают timeout.
+- STAT после остановки: pending_B=1, sent0=1, sent1=0, dbg_tx_cplt=4.
+  Интерпретация: B из первой пары не завершён / не отправлен или потерян TxCplt для A.
+
+### Обновление (последний STAT снят py -3 HostTools/vendor_get_status.py)
+```
+len=64 cur_samples=912 produced_seq=0 sent0=1 sent1=1 tx_cplt=5 test_frames=1 flags2=0x196
+flags2 decode: ep_busy=0 tx_ready=1 pending_B=1 test_in_flight=0 start_ack_done=1 pending_status=1 simple_tx_mode=1
+frameA_ready(bit10)=0 frameB_ready(bit11)=0 (оба не готовы)
+```
+Изменения относительно ранее зафиксированного:
+- sent1 теперь =1 (кадр B всё же ушёл и получил TXCPLT) -> dbg_tx_cplt=5.
+- pending_B остался =1, несмотря на то что пара A/B (sent0=1,sent1=1) должна была закрыться.
+- frameA_ready / frameB_ready отсутствуют, то есть текущая пара не подготовлена.
+=> Гипотеза сбоев подтверждена: `pending_B` не сбрасывается в USBD_VND_TxCplt после отправки B либо состояние потеряло sending_channel.
+Вероятно условие в USBD_VND_TxCplt не сработало (sending_channel == 1?) или sending_channel был 0xFF к моменту завершения B.
+
+Патч: добавить проверку в таске watchdog: если `pending_B`=1 и `!vnd_ep_busy` и `sending_channel==0xFF` и `(HAL_GetTick()-vnd_last_txcplt_ms)>30` и оба кадра текущей пары не `FB_SENDING` -> лог `PEND_B_WDG` и `pending_B=0`.
+
+
+## Гипотезы остановки
+1. Потеря события TXCPLT для канала A приводит к тому, что state machine ждёт B (`pending_B=1`), но sending_channel уже сброшен (0xFF), и повторная попытка B не происходит (кадр ещё не готов или marked READY?).
+2. Кадр B не подготовлен (статус frameB_ready=0 в flags2 бите 11) => логика не возвращается к vnd_prepare_pair() из-за pending_B=1.
+3. Перекрытие статуса (STAT) или TEST кадра вмешалось и сбросило `vnd_ep_busy`, но не пнуло повторную отправку.
+4. Драйвер низкого уровня не вызывает DataIn/TXCPLT (ZLP?) для первого большого IN пакета – необходимо watchdog, который повторно инициирует B или сбрасывает pending_B.
+
+## План ближайших действий
+1. Добавить watchdog в `Vendor_Stream_Task`: если `pending_B==1`, `vnd_ep_busy==0`, `sending_channel==0xFF`, и время с последнего успешного TXCPLT (`now - vnd_last_txcplt_ms`) > 50..100 мс —
+   - Проверить готовность B. Если B READY — попытаться отправить.
+   - Иначе (B не READY) снять `pending_B=0` и разрешить подготовку новой пары (что фактически потеряет B, но не заморозит поток).
+2. Логировать событие `PEND_B_WDG` в таких случаях.
+3. Пересобрать, прошить, повторить sniff.
+
+## История изменений
+- (initial) Создан файл PROGRESS.md с процедурами и гипотезами.
+
+(Добавлять ниже датированные записи)
+

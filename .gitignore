@@ -1,0 +1,43 @@
+# Build directories
+Debug/
+Release/
+build/
+*.o
+*.a
+*.elf
+*.hex
+*.bin
+*.map
+*.list
+
+# IDE files
+.vscode/
+.settings/
+.cproject
+.project
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Logs
+*.log
+
+# Backups
+*.bak
+*.backup
+
+# STM32CubeMX
+STM32*_flash.ld
+*.ioc.bak

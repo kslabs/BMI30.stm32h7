@@ -1,0 +1,41 @@
+[Version]
+Signature   = "$Windows NT$"
+Class       = USBDevice
+ClassGuid   = {88BAE032-5A81-49f0-BC3D-A4FF138216D6}
+Provider    = %MfgName%
+DriverVer   = 09/25/2025,1.0.0.0
+
+[Manufacturer]
+%MfgName% = StdMfg,NTamd64
+
+[StdMfg.NTamd64]
+%DeviceName% = WinUSB_Install, USB\VID_CAFE&PID_4001&MI_02
+
+[WinUSB_Install]
+Include = winusb.inf
+Needs   = WINUSB.NT
+
+[WinUSB_Install.Services]
+Include    = winusb.inf
+AddService = WinUSB,0x00000002,WinUSB_ServiceInstall
+
+[WinUSB_ServiceInstall]
+DisplayName   = %WinUSB_SvcDesc%
+ServiceType   = 1
+StartType     = 3
+ErrorControl  = 1
+ServiceBinary = %12%\WinUSB.sys
+
+[WinUSB_Install.Interfaces]
+AddInterface = {3f9674b8-68c0-46ad-b3dd-b353d0c1f5b6},GLOBAL,WinUSB_Install.Interface
+
+[WinUSB_Install.Interface]
+AddReg = Dev_AddReg
+
+[Dev_AddReg]
+HKR,,DeviceInterfaceGUIDs,0x10000,"{3f9674b8-68c0-46ad-b3dd-b353d0c1f5b6}"
+
+[Strings]
+MfgName         = "AM Security"
+DeviceName      = "BMI30 Vendor Interface (IF#2)"
+WinUSB_SvcDesc  = "WinUSB Service"
