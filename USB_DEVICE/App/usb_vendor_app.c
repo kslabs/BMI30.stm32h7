@@ -617,6 +617,65 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
 
 uint8_t vnd_is_streaming(void){ return streaming; }
 
+/* Helper: Read meander state from GPIO to determine which phase we're in
+ * TIM2_CH2 (meander for ADC1) is on PA1
+ * Returns 1 if meander is HIGH (left channel), 0 if LOW (right channel)
+ */
+static inline uint8_t vnd_get_meander_state(void)
+{
+    /* Read PA1 state for TIM2_CH2 meander */
+    GPIO_PinState state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
+    return (state == GPIO_PIN_SET) ? 1 : 0;
+}
+
+/* Distribute ADC samples to stereo channels based on meander state
+ * HIGH meander → left channel (L) 
+ * LOW meander → right channel (R)
+ * This creates stereo pairs where each ADC channel fills either L or R
+ * depending on the meander phase
+ */
+static void vnd_prepare_stereo_pair(uint16_t *ch1, uint16_t *ch2, uint16_t samples,
+                                   uint8_t *left_out, uint8_t *right_out, uint16_t out_stride)
+{
+    uint8_t meander_high = vnd_get_meander_state();
+    
+    if (meander_high) {
+        /* HIGH: ch1 goes to left, ch2 goes to right */
+        for (uint16_t i = 0; i < samples; i++) {
+            uint16_t s1 = ch1[i];
+            uint16_t s2 = ch2[i];
+            
+            /* Left = ch1 data */
+            left_out[0] = (uint8_t)(s1 & 0xFF);
+            left_out[1] = (uint8_t)(s1 >> 8);
+            
+            /* Right = ch2 data */
+            right_out[0] = (uint8_t)(s2 & 0xFF);
+            right_out[1] = (uint8_t)(s2 >> 8);
+            
+            left_out += out_stride;
+            right_out += out_stride;
+        }
+    } else {
+        /* LOW: ch2 goes to left, ch1 goes to right */
+        for (uint16_t i = 0; i < samples; i++) {
+            uint16_t s1 = ch1[i];
+            uint16_t s2 = ch2[i];
+            
+            /* Left = ch2 data */
+            left_out[0] = (uint8_t)(s2 & 0xFF);
+            left_out[1] = (uint8_t)(s2 >> 8);
+            
+            /* Right = ch1 data */
+            right_out[0] = (uint8_t)(s1 & 0xFF);
+            right_out[1] = (uint8_t)(s1 >> 8);
+            
+            left_out += out_stride;
+            right_out += out_stride;
+        }
+    }
+}
+
 static void vnd_prepare_pair(void)
 {
     dbg_prepare_calls++;
@@ -674,11 +733,12 @@ static void vnd_prepare_pair(void)
     /* подробный лог пары убран для снижения нагрузки */
     /* Применяем усечение, если задано и меньше доступного */
     uint16_t use_samples = cur_samples_per_frame; /* уже определено и проверено */
-    for(uint16_t i = 0; i < use_samples; i++){
-        uint16_t a = ch1[i]; uint16_t b = ch2[i];
-        uint8_t *p0 = f0->buf + VND_FRAME_HDR_SIZE + 2 * i; p0[0] = (uint8_t)(a & 0xFF); p0[1] = (uint8_t)(a >> 8);
-        uint8_t *p1 = f1->buf + VND_FRAME_HDR_SIZE + 2 * i; p1[0] = (uint8_t)(b & 0xFF); p1[1] = (uint8_t)(b >> 8);
-    }
+    
+    /* Используем стерео распределение на основе состояния меандра */
+    uint8_t *left_buf = f0->buf + VND_FRAME_HDR_SIZE;
+    uint8_t *right_buf = f1->buf + VND_FRAME_HDR_SIZE;
+    vnd_prepare_stereo_pair(ch1, ch2, use_samples, left_buf, right_buf, 4u);
+    
     f0->samples = f1->samples = use_samples; f0->seq = f1->seq = next_seq_to_assign;
     vnd_frame_hdr_t *h0 = (vnd_frame_hdr_t*)f0->buf; h0->timestamp = pair_timestamp;
     vnd_frame_hdr_t *h1 = (vnd_frame_hdr_t*)f1->buf; h1->timestamp = pair_timestamp;
