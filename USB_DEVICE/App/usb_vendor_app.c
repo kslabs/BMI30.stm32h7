@@ -95,8 +95,8 @@ static volatile uint32_t dbg_tx_attempt = 0;
 static volatile uint32_t dbg_tx_reject = 0;
 static volatile uint32_t dbg_tx_sent = 0;
 static volatile uint32_t dbg_status_sent = 0;
-static volatile uint32_t dbg_sent_ch0_total = 0; // новые счётчики по каналам
-static volatile uint32_t dbg_sent_ch1_total = 0;
+volatile uint32_t dbg_sent_ch0_total = 0; // новые счётчики по каналам
+volatile uint32_t dbg_sent_ch1_total = 0;
 /* Глобальный счётчик завершений передачи (используется в статусе и диагностике) */
 volatile uint32_t dbg_tx_cplt = 0;
 /* Следующая метка последовательности для назначения готовящимся парам (может опережать stream_seq,
