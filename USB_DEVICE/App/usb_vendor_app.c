@@ -14,6 +14,8 @@
 /* Для дублирования фрагментов кадров в CDC (Virtual COM) */
 #include "usbd_cdc_if.h"
 #include "usbd_cdc_custom.h" /* для USBD_VND_RequestSoftReset/DeepReset (объявления находятся в .c) */
+/* Для отображения информации о потоке на LCD */
+#include "stream_display.h"
 
 /* Управление дублированием данных кадров в CDC (COM-порт):
  *  0 — отключено (оставляем только события START/STOP и 1 Гц статистику)
@@ -1315,6 +1317,8 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
     }
     /* Периодическая CDC-статистика по байтам/скорости */
     vnd_cdc_periodic_stats(now);
+    /* Периодическое обновление дисплея LCD с информацией о потоке */
+    stream_display_periodic_update();
     /* Небольшой NAK-watchdog: если давно не было завершений — попросим мягкий ресет класса.
        Он выполнится асинхронно и не блокирует EP0. */
     if((now - vnd_last_txcplt_ms) > 1500){
@@ -1613,6 +1617,16 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     uint16_t rate = adc_stream_get_buf_rate();
                     cdc_logf("EVT START t=%lu profile=%u samples=%u rate=%u Hz bytes=%llu", 
                              (unsigned long)start_cmd_ms, prof, samp, rate, (unsigned long long)vnd_tx_bytes_at_start);
+                    
+                    /* Обновляем дисплей с параметрами потока */
+                    stream_info_t stream_info = {
+                        .frequency_hz = rate,
+                        .start_sample = 0,
+                        .sample_count = samp,
+                        .frames_sent = 0,
+                        .is_streaming = 1
+                    };
+                    stream_display_update(&stream_info);
                 }
                 if(!full_mode){ diag_mode_active = 1; }
                 VND_LOG("START_STREAM");
@@ -1670,6 +1684,16 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     uint64_t cur = vnd_total_tx_bytes;
                     uint64_t delta = (cur >= vnd_tx_bytes_at_start) ? (cur - vnd_tx_bytes_at_start) : 0ULL;
                     cdc_logf("EVT STOP total=%llu delta=%llu", (unsigned long long)cur, (unsigned long long)delta);
+                    
+                    /* Обновляем дисплей: поток остановлен */
+                    stream_info_t stream_info = {
+                        .frequency_hz = 0,
+                        .start_sample = 0,
+                        .sample_count = 0,
+                        .frames_sent = dbg_sent_ch0_total + dbg_sent_ch1_total,
+                        .is_streaming = 0
+                    };
+                    stream_display_update(&stream_info);
                 }
                 vnd_tx_kick = 1; /* пнуть таск на всякий случай */
             } else {
