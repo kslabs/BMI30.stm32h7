@@ -143,5 +143,66 @@ openocd -s scripts -f interface/stlink.cfg -f target/stm32h7x.cfg \
   -c "program {Debug/BMI30.stm32h7.elf} verify reset exit"
 ```
 
+## 2025-10-24 (продолжение): LCD Display интеграция ✅
+
+**Статус:** LCD дисплей ST7735 полностью интегрирован в streaming loop
+
+**Реализованная функциональность:**
+- ✅ **LCD отображает параметры потока в реальном времени**
+  - Строка 1: Статус "STREAMING" (зелёный) или "STOPPED" (красный)
+  - Строка 2: Частота передачи "Freq: 200 Hz" или "Freq: 300 Hz" (жёлтый)
+  - Строка 3: Количество сэмплов "Samples: 1360" или "Samples: 912" (голубой)
+  - Строка 4: Номер сэмпла "Start: 0" (голубой)
+  - Строка 5: Счётчик отправленных кадров "Frames: XXXX" (светло-синий), обновляется каждые 500 мс
+  - Строка 6: Информация о профиле "Profile1" или "Profile2" (пурпурный)
+
+- ✅ **Периодическое обновление дисплея**
+  - `stream_display_periodic_update()` вызывается в главном цикле `Vendor_Stream_Task()`
+  - Обновление раз в 500 мс для избежания мерцания
+  - Счётчик кадров обновляется из глобальных переменных `dbg_sent_ch0_total` и `dbg_sent_ch1_total`
+
+- ✅ **Инициализация и управление дисплеем**
+  - Дисплей инициализируется при команде START_STREAM
+  - Выполняется явное обновление при START и STOP
+  - Дисплей очищается при остановке потока
+
+**Новые файлы:**
+- `Core/Inc/stream_display.h` - Заголовочный файл с API дисплея
+- `Core/Src/stream_display.c` - Реализация модуля LCD дисплея
+
+**Модифицированные файлы:**
+- `USB_DEVICE/App/usb_vendor_app.c`:
+  - Добавлен вызов `stream_display_periodic_update()` в `Vendor_Stream_Task()`
+  - Добавлено обновление дисплея при START_STREAM с инициализацией структуры `stream_info_t`
+  - Добавлено обновление дисплея при STOP_STREAM со счётчиком отправленных кадров
+
+- `Core/Inc/adc_stream.h`:
+  - Уже содержит публичные getter-функции из предыдущей версии
+
+**GitHub Commit:**
+- Commit: eaf3426
+- Message: "feat: Integrate LCD display updates in streaming loop"
+
+**Как использовать эту версию:**
+```bash
+# Клонировать последнюю версию с LCD интеграцией
+git clone https://github.com/kslabs/BMI30.stm32h7.git
+cd BMI30.stm32h7
+
+# Собрать
+make -C Debug all
+
+# Прошить
+make -C Debug flash_full
+
+# Теперь при запуске потока LCD покажет параметры и будет обновлять счётчик кадров в реальном времени
+```
+
+**VS Code задачи для быстрого запуска:**
+- `"Build (Debug)"` - Собрать проект
+- `"Flash (OpenOCD)"` - Прошить микроконтроллер
+- `"Clone + Build + Flash"` - Клонировать с GitHub, собрать и прошить (все в одно)
+- `"Clone BMI30 repo from GitHub"` - Только клонирование проекта
+
 (Добавлять ниже датированные записи)
 
