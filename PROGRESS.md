@@ -93,5 +93,55 @@ frameA_ready(bit10)=0 frameB_ready(bit11)=0 (оба не готовы)
 ## История изменений
 - (initial) Создан файл PROGRESS.md с процедурами и гипотезами.
 
+## 2025-10-24: Версия v1.0-working - Последняя рабочая версия ✅
+
+**Статус:** Опубликована на GitHub с тегом `v1.0-working`
+
+**Основные исправления:**
+- ✅ **Профиль 1 (200 Гц) полностью исправлен**
+  - Проблема: `vnd_prepare_pair()` использовала `adc_stream_get_debug().active_samples`, которое могло быть несинхронизировано после смены профиля
+  - Решение: Заменена на прямой вызов `adc_stream_get_active_samples()` для получения актуального значения
+  - Результат: Профиль 1 теперь корректно инициализирует DMA с 1360 сэмплами и отправляет кадры на частоте 200 Гц
+
+- ✅ **Улучшена диагностика**
+  - Добавлено логирование в CDC при SET_PROFILE: выводит текущий профиль, количество сэмплов, частоту
+  - Добавлено логирование при START_STREAM: показывает активный профиль и параметры
+  - Теперь легче отследить, какой профиль активен и какие параметры используются
+
+**Изменённые файлы:**
+- `USB_DEVICE/App/usb_vendor_app.c`:
+  - Исправлена функция `vnd_prepare_pair()` для использования `adc_stream_get_active_samples()`
+  - Добавлена диагностика в обработке команды `SET_PROFILE`
+  - Добавлена диагностика в обработке команды `START_STREAM`
+
+- `Core/Inc/adc_stream.h`:
+  - Добавлены публичные getter-функции: `adc_stream_get_profile()`, `adc_stream_get_active_samples()`, `adc_stream_get_buf_rate()`
+
+**GitHub Repository:**
+- URL: https://github.com/kslabs/BMI30.stm32h7.git
+- Ветка: main
+- Тег: v1.0-working
+- Commit: 4d4c788
+
+**Как использовать эту версию:**
+```bash
+# Клонировать проект с последней рабочей версией
+git clone https://github.com/kslabs/BMI30.stm32h7.git
+cd BMI30.stm32h7
+
+# Переключиться на конкретный тег (если нужна именно эта версия)
+git checkout v1.0-working
+
+# Собрать
+make -C Debug all
+
+# Прошить
+make -C Debug flash_full
+
+# Или через OpenOCD:
+openocd -s scripts -f interface/stlink.cfg -f target/stm32h7x.cfg \
+  -c "program {Debug/BMI30.stm32h7.elf} verify reset exit"
+```
+
 (Добавлять ниже датированные записи)
 
