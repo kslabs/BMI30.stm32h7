@@ -1,0 +1,1 @@
+program {C:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/Debug/BMI30.stm32h7.elf} verify reset exit  

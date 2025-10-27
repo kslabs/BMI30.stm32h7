@@ -1,0 +1,47 @@
+Constant USB frame dump (text) — format identical to firmware with USB_CONST_FRAME_TEST=1
+Size: 1048 bytes = 16 (header) + 4 (table) + 1024 (payload) + 4 (CRC)
+Endianness: little-endian for multi-byte values
+CRC32: IEEE 802.3 (poly 0xEDB88320, init=0xFFFFFFFF, xorout=0xFFFFFFFF)
+
+Header (16 bytes):
+5A A5 01 00  78 56 34 12  00 00 00 00  01 10 02 00
+- magic=0x5A 0xA5
+- ver=0x01, flags=0x00
+- seq=0x12345678 (LE: 78 56 34 12)
+- msec=0x00000000
+- win_count=1, sample_bits=16, channels=2, reserved=0
+
+Table (4 bytes):
+00 00  00 01
+- start=0x0000 (LE)
+- len=0x0100 (256, LE)
+
+Payload (1024 bytes = 256 stereo pairs, int16 LE, interleaved L,R):
+Pattern for i=0..255:
+  L[i] = 0x1000 + i (LE)
+  R[i] = 0x2000 + i (LE)
+Bytes sequence:
+  i=0:   00 10  00 20
+  i=1:   01 10  01 20
+  i=2:   02 10  02 20
+  ...
+  i=253: FD 10  FD 20
+  i=254: FE 10  FE 20
+  i=255: FF 10  FF 20
+
+CRC32 (4 bytes, LE) over header+table+payload (first 1044 bytes):
+DB 33 7F 4E  (value: 0x4E7F33DB)
+
+Full frame layout (first and last bytes shown):
+[Header 16]
+  5A A5 01 00 78 56 34 12 00 00 00 00 01 10 02 00
+[Table 4]
+  00 00 00 01
+[Payload 1024]
+  00 10 00 20  01 10 01 20  02 10 02 20  03 10 03 20  ...  FD 10 FD 20  FE 10 FE 20  FF 10 FF 20
+[CRC 4]
+  DB 33 7F 4E
+
+Notes:
+- This file describes exactly the bytes sent by the firmware in constant-frame test mode.
+- Compare your captured 1048 bytes byte-for-byte to this layout.

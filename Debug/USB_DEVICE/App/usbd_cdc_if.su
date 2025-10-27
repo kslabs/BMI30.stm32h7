@@ -1,0 +1,7 @@
+C:/Users/TEST/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/CMSIS/Include/core_cm7.h:2156:34:__NVIC_SystemReset	4	static
+../USB_DEVICE/App/usbd_cdc_if.c:156:15:CDC_Init_HS	8	static
+../USB_DEVICE/App/usbd_cdc_if.c:172:15:CDC_DeInit_HS	4	static
+../USB_DEVICE/App/usbd_cdc_if.c:186:15:CDC_Control_HS	16	static
+../USB_DEVICE/App/usbd_cdc_if.c:267:15:CDC_Receive_HS	24	static
+../USB_DEVICE/App/usbd_cdc_if.c:313:9:CDC_Transmit_HS	24	static
+../USB_DEVICE/App/usbd_cdc_if.c:339:15:CDC_TransmitCplt_HS	32	static

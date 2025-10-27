@@ -1,0 +1,632 @@
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=112 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=0 seq=0 sentA/B=0/0 dma=5177/0 cur_samples=0 wr_seq=5177 flags2=0x0102 send_ch=255 pair 0/0 lastTX=0 cur_seq=0
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=112 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=0/0 dma=18919/0 cur_samples=0 wr_seq=18919 flags2=0x011A send_ch=255 pair 0/0 lastTX=48 cur_seq=0 prep 0/1
+[HOST_RX] ep=0x83 len=512 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=0 seq=0 sentA/B=0/0 dma=37408/0 cur_samples=0 wr_seq=37408 flags2=0x01CA send_ch=255 pair 0/0 lastTX=48 cur_seq=0 prep 0/1
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=00 00 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=28 0D 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=22 0C 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=1C 0C 00 00
+[HOST_RX] ep=0x83 len=512 type=UNK head=D2 0B 00 00
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=48 type=TEST head=5A A5 01 80
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=0/0 dma=250490/0 cur_samples=0 wr_seq=250490 flags2=0x01CE send_ch=255 pair 0/0 lastTX=48 cur_seq=0 prep 0/0
+[HOST_RX] ep=0x83 len=48 type=TEST head=5A A5 01 80
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=0 seq=0 sentA/B=0/0 dma=1072/0 cur_samples=0 wr_seq=1072 flags2=0x0102 send_ch=255 pair 0/0 lastTX=0 cur_seq=0 prep 0/0
+[HOST_RX] ep=0x83 len=48 type=TEST head=5A A5 01 80
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=0 seq=0 sentA/B=0/0 dma=583/0 cur_samples=0 wr_seq=583 flags2=0x0102 send_ch=255 pair 0/0 lastTX=0 cur_seq=0 prep 0/0
+[HOST_RX] ep=0x83 len=48 type=TEST head=5A A5 01 80
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=0 seq=0 sentA/B=0/0 dma=421/0 cur_samples=0 wr_seq=421 flags2=0x0102 send_ch=255 pair 0/0 lastTX=0 cur_seq=0 prep 0/0
+[HOST_RX] ep=0x83 len=48 type=TEST head=5A A5 01 80
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=1 seq=0 sentA/B=1/0 dma=6823/0 cur_samples=0 wr_seq=6823 flags2=0x0192 send_ch=255 pair 0/0 lastTX=1856 cur_seq=0 prep 1/1
+[HOST_RX] ep=0x83 len=48 type=TEST head=5A A5 01 80
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=0 seq=0 sentA/B=0/0 dma=10033/0 cur_samples=0 wr_seq=10033 flags2=0x01CA send_ch=255 pair 0/0 lastTX=48 cur_seq=0 prep 1/1
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=1 seq=0 sentA/B=1/0 dma=13223/0 cur_samples=0 wr_seq=13223 flags2=0x0192 send_ch=255 pair 0/0 lastTX=1856 cur_seq=0 prep 2/2
+[HOST_RX] ep=0x83 len=48 type=TEST head=5A A5 01 80
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=0 seq=0 sentA/B=0/0 dma=34294/0 cur_samples=0 wr_seq=34294 flags2=0x01CA send_ch=255 pair 0/0 lastTX=48 cur_seq=0 prep 2/2
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=1 seq=0 sentA/B=1/0 dma=40673/0 cur_samples=0 wr_seq=40673 flags2=0x0192 send_ch=255 pair 0/0 lastTX=1856 cur_seq=0 prep 3/3
+[HOST_RX] ep=0x83 len=48 type=TEST head=5A A5 01 80
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=0 seq=0 sentA/B=0/0 dma=82779/0 cur_samples=0 wr_seq=82779 flags2=0x01CA send_ch=255 pair 0/0 lastTX=48 cur_seq=0 prep 3/3
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=0 seq=0 sentA/B=0/0 dma=1238/0 cur_samples=0 wr_seq=1238 flags2=0x0102 send_ch=255 pair 0/0 lastTX=0 cur_seq=0 prep 0/0
+[HOST_RX] ep=0x83 len=48 type=TEST head=5A A5 01 80
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=0 sentA/B=1/0 dma=1317/0 cur_samples=912 wr_seq=1317 flags2=0x0196 send_ch=1 pair 1/0 lastTX=1856 cur_seq=1 prep 1/1
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=1 sentA/B=2/1 dma=1366/0 cur_samples=912 wr_seq=1366 flags2=0x0196 send_ch=1 pair 0/1 lastTX=1856 cur_seq=2 prep 2/2
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=2 sentA/B=3/2 dma=1416/0 cur_samples=912 wr_seq=1416 flags2=0x0196 send_ch=1 pair 1/0 lastTX=1856 cur_seq=3 prep 3/3
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=3 sentA/B=4/3 dma=1465/0 cur_samples=912 wr_seq=1465 flags2=0x0196 send_ch=1 pair 0/1 lastTX=1856 cur_seq=4 prep 4/4
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=4 sentA/B=5/4 dma=1514/0 cur_samples=912 wr_seq=1514 flags2=0x0196 send_ch=1 pair 1/0 lastTX=1856 cur_seq=5 prep 5/5
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=5 sentA/B=6/5 dma=1563/0 cur_samples=912 wr_seq=1563 flags2=0x0196 send_ch=1 pair 0/1 lastTX=1856 cur_seq=6 prep 6/6
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=0 seq=0 sentA/B=0/0 dma=1071/0 cur_samples=0 wr_seq=1071 flags2=0x0102 send_ch=255 pair 0/0 lastTX=0 cur_seq=0 prep 0/0
+[HOST_RX] ep=0x83 len=48 type=TEST head=5A A5 01 80
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[ERR] Device not found VID=0xCAFE PID=0x4001

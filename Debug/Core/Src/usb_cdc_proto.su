@@ -1,0 +1,14 @@
+../Core/Src/usb_cdc_proto.c:27:6:usb_stream_on_tx_complete	8	static
+../Core/Src/usb_cdc_proto.c:56:6:usb_stream_send_status	104	static
+../Core/Src/usb_cdc_proto.c:77:6:usb_stream_send_test_frame	208	static
+../Core/Src/usb_cdc_proto.c:110:17:crc16_buf	32	static
+../Core/Src/usb_cdc_proto.c:113:16:try_send_one_adc_frame	80	static
+../Core/Src/usb_cdc_proto.c:149:13:usb_stream_service	16	static
+../Core/Src/usb_cdc_proto.c:160:9:usb_stream_try_send_frame	24	static
+../Core/Src/usb_cdc_proto.c:182:6:usb_stream_poll	8	static
+../Core/Src/usb_cdc_proto.c:189:19:usb_stream_cfg	4	static
+../Core/Src/usb_cdc_proto.c:192:13:stream_send_ack	24	static
+../Core/Src/usb_cdc_proto.c:193:6:stream_send_ack_param	24	static
+../Core/Src/usb_cdc_proto.c:194:13:stream_send_nack	24	static
+../Core/Src/usb_cdc_proto.c:197:6:usb_stream_on_rx_bytes	40	static
+../Core/Src/usb_cdc_proto.c:239:6:usb_stream_init	8	static

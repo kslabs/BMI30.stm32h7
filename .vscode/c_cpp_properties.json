@@ -1,0 +1,49 @@
+{
+    "configurations": [
+        {
+            "name": "STM32",
+            "includePath": [
+                "${workspaceFolder}/Core/Inc",
+                "${workspaceFolder}/Middlewares/TinyUSB/tinyusb/src",
+                "${workspaceFolder}/USB_DEVICE/App",
+                "${workspaceFolder}/USB_DEVICE/Target",
+                "${workspaceFolder}/Drivers/BSP/ST7735",
+                // STM32Cube Repository (фиксированные пути под установленную версию)
+                "${env:USERPROFILE}/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/STM32H7xx_HAL_Driver/Inc",
+                "${env:USERPROFILE}/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy",
+                "${env:USERPROFILE}/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc",
+                "${env:USERPROFILE}/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc",
+                "${env:USERPROFILE}/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/CMSIS/Include",
+                "${env:USERPROFILE}/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/CMSIS/Device/ST/STM32H7xx/Include"
+            ],
+            "defines": [
+                "USE_HAL_DRIVER",
+                "STM32H723xx"
+            ],
+            // Укажите реальный путь к компилятору, если не в PATH. Пример пути STM32CubeIDE:
+            // "compilerPath": "C:/ST/STM32CubeIDE_1.15.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.mingw64_*/tools/bin/arm-none-eabi-gcc.exe",
+            "compilerPath": "arm-none-eabi-gcc",
+            "compilerArgs": ["-mcpu=cortex-m7","-mthumb","-mfpu=fpv5-d16","-mfloat-abi=hard"],
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+        "intelliSenseMode": "gcc-arm",
+            "browse": {
+                "path": [
+            "${workspaceFolder}/Core/Inc",
+            "${workspaceFolder}/Middlewares/TinyUSB/tinyusb/src",
+            "${workspaceFolder}/USB_DEVICE/App",
+            "${workspaceFolder}/USB_DEVICE/Target",
+            "${workspaceFolder}/Drivers/BSP/ST7735",
+            "${env:USERPROFILE}/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/STM32H7xx_HAL_Driver/Inc",
+            "${env:USERPROFILE}/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy",
+            "${env:USERPROFILE}/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc",
+            "${env:USERPROFILE}/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc",
+            "${env:USERPROFILE}/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/CMSIS/Include",
+            "${env:USERPROFILE}/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/CMSIS/Device/ST/STM32H7xx/Include"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4
+}

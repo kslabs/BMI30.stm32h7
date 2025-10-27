@@ -1,0 +1,565 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build (Debug)",
+			"type": "shell",
+			"command": "make",
+			"args": [
+				"-C",
+				"Debug",
+				"all"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Clean (Debug)",
+			"type": "shell",
+			"command": "make",
+			"args": [
+				"-C",
+				"Debug",
+				"clean"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Flash (OpenOCD)",
+			"type": "shell",
+			"command": "c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\xpack-openocd-0.12.0-2-win32-x64\\xpack-openocd-0.12.0-2\\bin\\openocd.exe",
+			"args": [
+				"-s",
+				"c:/Users/TEST/Documents/Work/BMI20/STM32/xpack-openocd-0.12.0-2-win32-x64/xpack-openocd-0.12.0-2/scripts",
+				"-f",
+				"interface/stlink.cfg",
+				"-f",
+				"target/stm32h7x.cfg",
+				"-c",
+				"program {${workspaceFolder}/Debug/BMI30.stm32h7.elf} verify reset exit"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"group": "build"
+		},
+		{
+			"label": "Serial: Start COM9 @115200",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/serial-monitor.ps1",
+				"-Port",
+				"COM9",
+				"-Baud",
+				"115200"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			}
+		},
+		{
+			"label": "Serial: Stop",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/serial-monitor-stop.ps1"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			}
+		},
+		{
+			"label": "Serial: VND_* monitor (COM9)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/serial-monitor.ps1",
+				"-Port",
+				"COM9",
+				"-Baud",
+				"115200",
+				"-FilterRegex",
+				"^\\[VND",
+				"-LogPath",
+				".vscode/vnd_tx.log"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Serial: Monitor COM9 (raw)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/serial-monitor.ps1",
+				"-Port",
+				"COM9",
+				"-Baud",
+				"115200"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			}
+		},
+		{
+			"label": "CDC: Send START (CDC COM)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/serial-send-to-port.ps1",
+				"-Port",
+				"${input:cdcPort}",
+				"-Hex",
+				"20"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "Vendor USB: READ-ONLY via PyUSB",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"HostTools/vendor_usb_read_only.py"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "CDC: Send STOP (CDC COM)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/serial-send-to-port.ps1",
+				"-Port",
+				"${input:cdcPort}",
+				"-Hex",
+				"21"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "CDC: Send GET_STATUS (CDC COM)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/serial-send-to-port.ps1",
+				"-Port",
+				"${input:cdcPort}",
+				"-Hex",
+				"30"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "Vendor USB: START via PyUSB",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"HostTools/vendor_usb_start_only.py"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "Vendor USB: START+READ via PyUSB",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"HostTools/vendor_usb_start_and_read.py"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "Host: START+READ (robust)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/run-host-start-and-read.ps1"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "Run full host test",
+			"dependsOn": [
+				"Serial: Monitor COM9 (raw)",
+				"Host: START+READ (robust)"
+			],
+			"dependsOrder": "sequence",
+			"group": "none"
+		},
+		{
+			"label": "Build+Flash+Run host",
+			"dependsOn": [
+				"Build (Debug)",
+				"Flash (OpenOCD)",
+				"Vendor USB: START+READ via PyUSB"
+			],
+			"dependsOrder": "sequence",
+			"group": "build",
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "Build+Flash",
+			"dependsOn": [
+				"Build (Debug)",
+				"Flash (OpenOCD)"
+			],
+			"dependsOrder": "sequence",
+			"group": "build",
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "Build (GNU Make)",
+			"type": "shell",
+			"command": "make",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build (Make Debug)",
+			"type": "shell",
+			"command": "make",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Rebuild + Flash + Run diag reader",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"make -C Debug all; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\xpack-openocd-0.12.0-2-win32-x64\\xpack-openocd-0.12.0-2\\bin\\openocd.exe -s c:/Users/TEST/Documents/Work/BMI20/STM32/xpack-openocd-0.12.0-2-win32-x64/xpack-openocd-0.12.0-2/scripts -f interface/stlink.cfg -f target/stm32h7x.cfg -c 'program {C:\\\\Users\\\\TEST\\\\Documents\\\\Work\\\\BMI20\\\\STM32\\\\BMI30.stm32h7/Debug/BMI30.stm32h7.elf} verify reset exit'; py -3 HostTools/vendor_enable_diag_and_read.py"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build+Flash",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"make -C Debug all; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\xpack-openocd-0.12.0-2-win32-x64\\xpack-openocd-0.12.0-2\\bin\\openocd.exe -s c:/Users/TEST/Documents/Work/BMI20/STM32/xpack-openocd-0.12.0-2-win32-x64/xpack-openocd-0.12.0-2/scripts -f interface/stlink.cfg -f target/stm32h7x.cfg -c 'program {C:\\\\Users\\\\TEST\\\\Documents\\\\Work\\\\BMI20\\\\STM32\\\\BMI30.stm32h7/Debug/BMI30.stm32h7.elf} verify reset exit'"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Rebuild Debug",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"make -C Debug all"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Rebuild Debug (clean warnings)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"make -C Debug all"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run host diag reader",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"python \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/vendor_enable_diag_and_read.py\""
+			],
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Run quick status",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"python \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/vendor_quick_status.py\""
+			],
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Run diag via py launcher",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/vendor_enable_diag_and_read.py\""
+			],
+			"isBackground": false,
+			"group": "none"
+		},
+		{
+			"label": "Build (make -C Debug all)",
+			"type": "shell",
+			"command": "make",
+			"args": [
+				"-C",
+				"Debug",
+				"all"
+			],
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Flash (OpenOCD mass erase + program + reset)",
+			"type": "shell",
+			"command": "make",
+			"args": [
+				"-C",
+				"Debug",
+				"flash_full"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build after patch",
+			"type": "shell",
+			"command": "make",
+			"args": [
+				"-C",
+				"Debug",
+				"all"
+			],
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build BMI30 Debug (make)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"cd 'c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\Debug'; if (Test-Path makefile) { $env:PATH; make -j4 all } else { Write-Error 'makefile not found in Debug' }"
+			],
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Flash BMI30 via STM32CubeProgrammer",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"$elf='c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\Debug\\BMI30.stm32h7.elf'; if (!(Test-Path $elf)) { Write-Error \"ELF not found: $elf\"; exit 1 }; $cli=\"C:\\Program Files\\STMicroelectronics\\STM32Cube\\STM32CubeProgrammer\\bin\\STM32_Programmer_CLI.exe\"; if (!(Test-Path $cli)) { $cli='STM32_Programmer_CLI.exe' }; Write-Output \"Using CLI: $cli\"; & $cli -c port=SWD freq=4000 -w $elf -v -rst"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Flash (SWD) STM32 via CubeProgrammer",
+			"type": "shell",
+			"command": "C:\\Program Files\\STMicroelectronics\\STM32Cube\\STM32CubeProgrammer\\bin\\STM32_Programmer_CLI.exe",
+			"args": [
+				"-c",
+				"port=SWD",
+				"freq=4000",
+				"-w",
+				"c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\Debug\\BMI30.stm32h7.elf",
+				"-v",
+				"-rst"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "Flash (SWD) STM32 via CubeProgrammer - retry",
+			"type": "shell",
+			"command": "\"C:\\Program Files\\STMicroelectronics\\STM32Cube\\STM32CubeProgrammer\\bin\\STM32_Programmer_CLI.exe\" -c port=SWD freq=4000 -w \"c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\Debug\\BMI30.stm32h7.elf\" -v -rst",
+			"isBackground": false
+		},
+		{
+			"label": "Clone BMI30 repo from GitHub",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"$parent='C:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32'; if(!(Test-Path $parent)) { mkdir $parent }; cd $parent; git clone https://github.com/kslabs/BMI30.stm32h7.git; cd BMI30.stm32h7; Write-Host 'Cloned successfully to:' (Get-Location)"
+			],
+			"isBackground": false,
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "Clone + Build + Flash",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"$target='C:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7'; if(!(Test-Path $target)) { git clone https://github.com/kslabs/BMI30.stm32h7.git $target; Write-Host 'Cloned to' $target } else { Write-Host 'Directory exists, using existing repo' }; cd $target; Write-Host 'Building...'; make -C Debug all; if($LASTEXITCODE -ne 0) { Write-Error 'Build failed'; exit 1 }; Write-Host 'Flashing...'; c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\xpack-openocd-0.12.0-2-win32-x64\\xpack-openocd-0.12.0-2\\bin\\openocd.exe -s c:/Users/TEST/Documents/Work/BMI20/STM32/xpack-openocd-0.12.0-2-win32-x64/xpack-openocd-0.12.0-2/scripts -f interface/stlink.cfg -f target/stm32h7x.cfg -c 'program {' ($target + '/Debug/BMI30.stm32h7.elf') '} verify reset exit'; if($LASTEXITCODE -eq 0) { Write-Host 'Clone + Build + Flash completed successfully!' } else { Write-Error 'Flash failed'; exit 1 }"
+			],
+			"isBackground": false,
+			"group": "build",
+			"problemMatcher": ["$gcc"]
+		}
+	],
+	"inputs": [
+		{
+			"id": "cdcPort",
+			"type": "promptString",
+			"description": "CDC COM port (не ST-LINK, посмотрите в Диспетчере устройств)",
+			"default": "COM9"
+		}
+	]
+}

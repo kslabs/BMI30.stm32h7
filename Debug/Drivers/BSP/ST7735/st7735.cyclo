@@ -1,0 +1,6 @@
+../Drivers/BSP/ST7735/st7735.c:10:6:ST7735_SPI_Send	1
+../Drivers/BSP/ST7735/st7735.c:16:6:ST7735_WriteCommand	1
+../Drivers/BSP/ST7735/st7735.c:24:6:ST7735_WriteData	1
+../Drivers/BSP/ST7735/st7735.c:38:6:ST7735_Init	1
+../Drivers/BSP/ST7735/st7735.c:163:6:ST7735_AddrSet	1
+../Drivers/BSP/ST7735/st7735.c:183:6:ST7735_Fill	3

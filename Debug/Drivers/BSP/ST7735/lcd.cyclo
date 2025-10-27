@@ -1,0 +1,7 @@
+../Drivers/BSP/ST7735/lcd.c:13:6:LCD_Init	1
+../Drivers/BSP/ST7735/lcd.c:23:6:LCD_Clear	1
+../Drivers/BSP/ST7735/lcd.c:36:6:LCD_DrawPoint	1
+../Drivers/BSP/ST7735/lcd.c:54:6:LCD_ShowChar	11
+../Drivers/BSP/ST7735/lcd.c:98:6:LCD_ShowString	4
+../Drivers/BSP/ST7735/lcd.c:126:6:LCD_ShowString_Size	5
+../Drivers/BSP/ST7735/lcd.c:166:6:LCD_FillRect	6

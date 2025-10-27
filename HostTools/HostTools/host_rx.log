@@ -1,0 +1,156 @@
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][STAT-CTRL][ERR] [Errno 32] Pipe error
+[HOST_RX] timeout
+[HOST][STAT-CTRL][ERR] [Errno 32] Pipe error
+[HOST_RX] timeout
+[HOST][STAT-CTRL][ERR] [Errno 32] Pipe error
+[HOST_RX] timeout
+[HOST][STAT-CTRL][ERR] [Errno 32] Pipe error
+[HOST_RX] timeout
+[HOST][STAT-CTRL][ERR] [Errno 32] Pipe error
+[HOST_RX] timeout
+[HOST][STAT-CTRL][ERR] [Errno 32] Pipe error
+[HOST_RX] timeout
+[HOST][STAT-CTRL][ERR] [Errno 32] Pipe error
+[HOST_RX] timeout
+[HOST][STAT-CTRL][ERR] [Errno 32] Pipe error
+[HOST_RX] timeout
+[HOST][STAT-CTRL][ERR] [Errno 32] Pipe error
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=0 seq=0 sentA/B=0/0 dma=27321/0 cur_samples=0 wr_seq=27321 flags2=0x0182 send_ch=255 pair 0/0 lastTX=0 cur_seq=0 prep 0/0
+[HOST_RX] ep=0x83 len=48 type=TEST head=5A A5 01 80
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=0 sentA/B=0/0 dma=27355/0 cur_samples=0 wr_seq=27355 flags2=0x0192 send_ch=255 pair 0/0 lastTX=48 cur_seq=0 prep 0/0
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+[HOST] START written
+[HOST_RX] STAT len=64
+[HOST_RX] A len=1856
+[HOST] GET_STATUS queued via BULK
+[HOST_RX] STAT len=64
+[HOST_RX] timeout (waiting initial A/B)
+[HOST_RX] timeout (waiting initial A/B)
+[HOST_RX] timeout (waiting initial A/B)
+[HOST_RX] timeout (waiting initial A/B)
+[HOST_RX] timeout (waiting initial A/B)
+[HOST_RX] timeout (waiting initial A/B)
+[ERR] Did not receive initial frames in time
+[CHECK][GET_STATUS] PASS: exactly one STAT between A and B
+[HOST] STOP written
+[CHECK][STOP] FAIL: no STAT after STOP within 1.5s
+[HOST] START written
+[HOST_RX] STAT len=64
+[HOST_RX] TEST len=48
+[HOST_RX] A len=1856
+[HOST] GET_STATUS queued via BULK
+[HOST_RX] STAT len=64
+[HOST_RX] B len=1856
+[CHECK][GET_STATUS] PASS: exactly one STAT between A and B
+[HOST] STOP written
+[CHECK][STOP] FAIL: no STAT after STOP within 1.5s
+[HOST] START written
+[HOST_RX] STAT len=64
+[HOST_RX] TEST len=48
+[HOST_RX] A len=1856
+[HOST] GET_STATUS queued via BULK
+[HOST_RX] STAT len=64
+[HOST_RX] B len=1856
+[CHECK][GET_STATUS] PASS: exactly one STAT between A and B
+[HOST] STOP written
+[CHECK][STOP] FAIL: no STAT after STOP within 1.5s
+[HOST] START written
+[HOST_RX] STAT len=64
+[HOST_RX] TEST len=48
+[HOST_RX] A len=1856
+[HOST] GET_STATUS queued via BULK
+[HOST_RX] STAT len=64
+[HOST_RX] B len=1856
+[CHECK][GET_STATUS] PASS: exactly one STAT between A and B
+[HOST] STOP written
+[CHECK][STOP] FAIL: no STAT after STOP within 1.5s
+[HOST] START written
+[HOST_RX] STAT len=64
+[HOST_RX] TEST len=48
+[HOST_RX] A len=1856
+[HOST] GET_STATUS queued via BULK
+[HOST_RX] STAT len=64
+[HOST_RX] B len=1856
+[CHECK][GET_STATUS] PASS: exactly one STAT between A and B
+[HOST] STOP written
+[CHECK][STOP] FAIL: no STAT after STOP within 1.5s
+[HOST] START written
+[HOST_RX] STAT len=64
+[HOST_RX] TEST len=48
+[HOST_RX] A len=1856
+[HOST] GET_STATUS queued via BULK
+[HOST_RX] STAT len=64
+[HOST_RX] B len=1856
+[CHECK][GET_STATUS] PASS: exactly one STAT between A and B
+[HOST] STOP written
+[CHECK][STOP] FAIL: no STAT after STOP within 1.5s

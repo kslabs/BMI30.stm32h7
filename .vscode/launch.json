@@ -1,0 +1,24 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Cortex Debug",
+            "cwd": "${workspaceRoot}",
+            "executable": "./Debug/BMI30.stm32h7.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "preLaunchTask": "Build",
+            "servertype": "openocd",
+            "serverpath": "c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\xpack-openocd-0.12.0-2-win32-x64\\xpack-openocd-0.12.0-2\\bin\\openocd.exe",
+            "gdbPath": "C:\\ST\\STM32CubeIDE_1.18.1\\STM32CubeIDE\\plugins\\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.0.202411081344\\tools\\bin\\arm-none-eabi-gdb.exe",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32h7x.cfg"
+            ],
+            "device": "STM32H723VG",
+            "svdFile": "${workspaceRoot}/STM32H723.svd",
+            "runToEntryPoint": "main",
+            "showDevDebugOutput": "none"
+        }
+    ]
+}

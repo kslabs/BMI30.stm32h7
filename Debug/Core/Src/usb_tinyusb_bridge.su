@@ -1,0 +1,4 @@
+../Core/Src/usb_tinyusb_bridge.c:5:6:usb_tinyusb_configured	4	static
+../Core/Src/usb_tinyusb_bridge.c:6:6:usb_tinyusb_init	4	static
+../Core/Src/usb_tinyusb_bridge.c:7:6:usb_tinyusb_task	4	static
+../Core/Src/usb_tinyusb_bridge.c:8:6:usb_fs_phy_manual_init	4	static
