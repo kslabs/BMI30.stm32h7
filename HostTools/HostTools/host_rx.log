@@ -154,3 +154,254 @@
 [CHECK][GET_STATUS] PASS: exactly one STAT between A and B
 [HOST] STOP written
 [CHECK][STOP] FAIL: no STAT after STOP within 1.5s
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=30 tmo=3000ms window=30.0s full=1 rate=200Hz ctrlSTAT=0
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=0 sentA/B=8/8 dma=25467/0 cur_samples=912 wr_seq=240 flags2=0x1D92 send_ch=255 pair 1/0 lastTX=1856 cur_seq=0 prep 9/6
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=50 tmo=3000ms window=30.0s full=1 rate=200Hz ctrlSTAT=0
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX][ERR] [Errno 32] Pipe error
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=50 tmo=3000ms window=30.0s full=1 rate=200Hz ctrlSTAT=0
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=3 sentA/B=3/3 TxCplt=36 dma=66482/0 cur_samples=912 wr_seq=18 flags2=0x1D92 send_ch=255 pair 4/3 lastTX=1856 cur_seq=3 prep 15/37
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=13/14 TxCplt=58 dma=69294/0 cur_samples=0 wr_seq=2830 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 3/47
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=13/14 TxCplt=59 dma=71102/0 cur_samples=0 wr_seq=4638 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 3/47
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=13/14 TxCplt=60 dma=72910/0 cur_samples=0 wr_seq=6446 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 3/47
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=50 tmo=3000ms window=30.0s full=1 rate=200Hz ctrlSTAT=0
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=3 sentA/B=3/3 TxCplt=6 dma=307/0 cur_samples=912 wr_seq=21 flags2=0x1D92 send_ch=255 pair 4/3 lastTX=1856 cur_seq=3 prep 5/4
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=7/8 TxCplt=16 dma=3040/0 cur_samples=0 wr_seq=2754 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 1/8
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=7/8 TxCplt=17 dma=4848/0 cur_samples=0 wr_seq=4562 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 1/8
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=50 tmo=3000ms window=30.0s full=1 rate=200Hz ctrlSTAT=0
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=8 sentA/B=8/8 TxCplt=16 dma=37/0 cur_samples=912 wr_seq=37 flags2=0x2592 send_ch=255 pair 0/0 lastTX=1856 cur_seq=8 prep 12/8
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=8/9 TxCplt=17 dma=945/0 cur_samples=0 wr_seq=945 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 14/9
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=8/9 TxCplt=18 dma=1850/0 cur_samples=0 wr_seq=1850 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 14/9
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=8/9 TxCplt=19 dma=2755/0 cur_samples=0 wr_seq=2755 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 14/9
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=8/9 TxCplt=20 dma=3661/0 cur_samples=0 wr_seq=3661 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 14/9
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=8/9 TxCplt=21 dma=4577/0 cur_samples=0 wr_seq=4577 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 14/9
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=8/9 TxCplt=22 dma=5491/0 cur_samples=0 wr_seq=5491 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 14/9
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=8/9 TxCplt=23 dma=6396/0 cur_samples=0 wr_seq=6396 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 14/9
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=8/9 TxCplt=24 dma=7300/0 cur_samples=0 wr_seq=7300 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 14/9
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=8/9 TxCplt=25 dma=8205/0 cur_samples=0 wr_seq=8205 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 14/9
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=100 tmo=3000ms window=30.0s full=1 rate=200Hz ctrlSTAT=0
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=1856 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=1856 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=8 sentA/B=8/8 TxCplt=16 dma=1052/0 cur_samples=912 wr_seq=45 flags2=0x2592 send_ch=255 pair 0/0 lastTX=1856 cur_seq=8 prep 14/8
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=8/9 TxCplt=18 dma=3767/0 cur_samples=0 wr_seq=2760 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 0/9
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=8/9 TxCplt=19 dma=5570/0 cur_samples=0 wr_seq=4563 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 0/9
+[HOST_RX] timeout
+[HOST][GET_STATUS] queued via BULK
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=8/9 TxCplt=20 dma=7375/0 cur_samples=0 wr_seq=6368 flags2=0x0112 send_ch=255 pair 0/0 lastTX=64 cur_seq=0 prep 0/9

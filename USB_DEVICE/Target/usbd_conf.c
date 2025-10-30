@@ -391,11 +391,12 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
 #endif /* USE_HAL_PCD_REGISTER_CALLBACKS */
   /* USER CODE BEGIN TxRx_HS_Configuration */
   /* Перераспределение FIFO для composite CDC+Vendor:
-     Rx  0x200 (512 слов)
-     TX0 (EP0)   0x40  (64)
-     TX1 (CDC IN)0x100 (256)
-    TX2 (CDC CMD IN)0x40  (64)
-     TX3 (VND IN)0x100 (256)
+     Rx  0x200 (512 слов = 2048 bytes)
+     TX0 (EP0)   0x40  (64 words = 256 bytes)
+     TX1 (CDC IN)0x100 (256 words = 1024 bytes)
+     TX2 (CDC CMD IN)0x40  (64 words = 256 bytes)
+     TX3 (VND IN)0x100 (256 words = 1024 bytes)
+     ИТОГО: 0x480 words = 4608 bytes (чуть больше 4KB, но STM32H7 USB OTG HS поддерживает)
   */
   HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_HS, 0x200);
   HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 0, 0x40);

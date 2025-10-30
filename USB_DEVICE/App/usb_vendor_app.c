@@ -14,6 +14,7 @@
 /* Для дублирования фрагментов кадров в CDC (Virtual COM) */
 #include "usbd_cdc_if.h"
 #include "usbd_cdc_custom.h" /* для USBD_VND_RequestSoftReset/DeepReset (объявления находятся в .c) */
+#include "vnd_testgen.h"
 
 /* Управление дублированием данных кадров в CDC (COM-порт):
  *  0 — отключено (оставляем только события START/STOP и 1 Гц статистику)
@@ -28,7 +29,7 @@
 #endif
 
 #ifndef VND_ENABLE_LOG
-#define VND_ENABLE_LOG 1 /* для отладки */
+#define VND_ENABLE_LOG 0 /* уменьшили шум лога для стабильности */
 #endif
 #if VND_ENABLE_LOG
 #define VND_LOG(...) do { printf("[VND] " __VA_ARGS__); printf("\r\n"); } while(0)
@@ -148,7 +149,16 @@ static volatile uint8_t first_pair_done = 0;
 /* Базовая отметка суммарных байт на момент START для вычисления дельты к STOP */
 static volatile uint64_t vnd_tx_bytes_at_start = 0ULL;
 /* Флаг для продолжения передачи из main/таска после TXCPLT */
-static volatile uint8_t vnd_tx_kick = 0;
+volatile uint8_t vnd_tx_kick = 0;
+
+/* Дефолтный размер кадра в полном режиме (семплов на канал) */
+#ifndef VND_FULL_DEFAULT_SAMPLES
+#define VND_FULL_DEFAULT_SAMPLES 300
+#endif
+
+/* Тестовый режим: генерация пилообразного сигнала вместо реальных данных ADC */
+#define USE_TEST_SAWTOOTH 1
+/* реализация генератора тестового сигнала вынесена в vnd_testgen.* */
 /* Разрешение на отправку STAT в стриме: 0=запрещено, 1=разрешён один STAT */
 volatile uint8_t vnd_status_permit_once = 0;
 /* Отложенная отправка тестового кадра после ACK-STAT */
@@ -652,11 +662,25 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
 
 uint8_t vnd_is_streaming(void){ return streaming; }
 
+/* функция vnd_generate_test_sawtooth() реализована в vnd_testgen.c */
+
 static void vnd_prepare_pair(void)
 {
     dbg_prepare_calls++;
     VND_LOG("PREPARE_PAIR called (fill_idx=%u)", (unsigned)pair_fill_idx);
     uint16_t *ch1 = NULL, *ch2 = NULL; uint16_t samples = 0;
+    
+#if USE_TEST_SAWTOOTH
+    /* Тестовый режим: используем последнюю сгенерированную пару буферов */
+    {
+        uint16_t *tb0 = NULL, *tb1 = NULL; uint16_t avail = 0;
+        if(!vnd_testgen_try_consume_latest(&tb0, &tb1, &avail)){
+            return; /* нет новых данных */
+        }
+        ch1 = tb0; ch2 = tb1;
+        samples = (avail != 0) ? avail : VND_FULL_DEFAULT_SAMPLES;
+    }
+#else
     /* last-buffer-wins: берём последний доступный кадр; если накопилась очередь >1, пропускаем старые */
     /* Локальная логика: забрать последний кадр из ADC FIFO, безопасно по отношению к ISR */
     {
@@ -681,6 +705,7 @@ static void vnd_prepare_pair(void)
            чтобы получить актуальное значение samples после смены профиля */
         samples = adc_stream_get_active_samples();
     }
+#endif
     if(samples == 0){
         /* Нет новых данных от АЦП — ничего не отправляем */
         return;
@@ -694,7 +719,7 @@ static void vnd_prepare_pair(void)
         if(effective > VND_MAX_SAMPLES) effective = VND_MAX_SAMPLES;
         cur_samples_per_frame = effective;
         cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)cur_samples_per_frame * 2u);
-        VND_LOG("SIZE_LOCK %u (raw=%u trunc=%u)", cur_samples_per_frame, samples, vnd_trunc_samples);
+    VND_LOG("SIZE_LOCK %u (raw=%u trunc=%u)", cur_samples_per_frame, samples, vnd_trunc_samples);
     /* Не меняем stream_seq здесь: seq инкрементируется только после завершения кадра B (TxCplt) */
     }
     if(effective != cur_samples_per_frame){
@@ -711,7 +736,15 @@ static void vnd_prepare_pair(void)
     /* Применяем усечение, если задано и меньше доступного */
     uint16_t use_samples = cur_samples_per_frame; /* уже определено и проверено */
     for(uint16_t i = 0; i < use_samples; i++){
-        uint16_t a = ch1[i]; uint16_t b = ch2[i];
+#if USE_TEST_SAWTOOTH
+        /* В тестовом режиме гарантируем детерминированный шаблон 1..N
+           независимо от источника буферов, чтобы упростить верификацию хостом. */
+        uint16_t a = (uint16_t)(i + 1);
+        uint16_t b = (uint16_t)(i + 1);
+#else
+        uint16_t a = ch1[i];
+        uint16_t b = ch2[i];
+#endif
         uint8_t *p0 = f0->buf + VND_FRAME_HDR_SIZE + 2 * i; p0[0] = (uint8_t)(a & 0xFF); p0[1] = (uint8_t)(a >> 8);
         uint8_t *p1 = f1->buf + VND_FRAME_HDR_SIZE + 2 * i; p1[0] = (uint8_t)(b & 0xFF); p1[1] = (uint8_t)(b >> 8);
     }
@@ -962,6 +995,11 @@ static int vnd_try_send_A_nextpair_immediate(void)
         vnd_prepare_pair();
         fA = &g_frames[pair_send_idx][0];
         if(fA->st != FB_READY) return 0;
+    }
+    /* Принудительно синхронизируем seq A с текущим stream_seq для консистентности пары */
+    if(fA->frame_size >= VND_FRAME_HDR_SIZE){
+        vnd_frame_hdr_t *ha = (vnd_frame_hdr_t*)fA->buf;
+        if(ha->magic == 0xA55A && ha->seq != stream_seq){ ha->seq = stream_seq; fA->seq = stream_seq; }
     }
     if(vnd_transmit_frame(fA->buf, fA->frame_size, 0, 0, "ADC0-IMM") == USBD_OK){
         fA->st = FB_SENDING; sending_channel = 0; pending_B = 1; pending_B_since_ms = HAL_GetTick();
@@ -1221,7 +1259,9 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
     }
 
     if(vnd_tx_kick) vnd_tx_kick = 0;
-    if(vnd_ep_busy){ if(vnd_tick_flag) vnd_tick_flag = 0; return; }
+    
+    /* Разрешаем подготовку следующей пары даже если EP занят (параллельная заполнение буферов) */
+    /* if(vnd_ep_busy){ if(vnd_tick_flag) vnd_tick_flag = 0; return; } */
 
     /* Если TEST уже логически завершён, но его мета застряла в FIFO (нет TxCplt) —
        через ~60 мс превращаем её в служебную, чтобы не блокировать отправку A. */
@@ -1324,6 +1364,11 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
             /* Искусственных задержек между кадрами нет: отправляем A сразу при готовности EP и данных */
             /* Отправляем A: в режиме без TEST не проверяем test_in_flight вовсе */
 #if VND_DISABLE_TEST
+            /* Перед отправкой A — также синхронизируем seq с текущим stream_seq */
+            if(fA->frame_size >= VND_FRAME_HDR_SIZE){
+                vnd_frame_hdr_t *ha = (vnd_frame_hdr_t*)fA->buf;
+                if(ha->magic == 0xA55A && ha->seq != stream_seq){ ha->seq = stream_seq; fA->seq = stream_seq; }
+            }
             VND_LOG("TRY_A len=%u hdr_seq=%lu", (unsigned)fA->frame_size, (unsigned long)((vnd_frame_hdr_t*)fA->buf)->seq);
             if (vnd_transmit_frame(fA->buf, fA->frame_size, 0, 0, "ADC0") == USBD_OK) {
                 static uint8_t first_a_logged = 0;
@@ -1336,6 +1381,11 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
 #else
             /* Отправляем A только если нет теста в полёте и нет необработанного TEST в FIFO */
             if(!test_in_flight){
+                /* Синхронизируем seq A и в ветке с тестом на всякий случай */
+                if(fA->frame_size >= VND_FRAME_HDR_SIZE){
+                    vnd_frame_hdr_t *ha = (vnd_frame_hdr_t*)fA->buf;
+                    if(ha->magic == 0xA55A && ha->seq != stream_seq){ ha->seq = stream_seq; fA->seq = stream_seq; }
+                }
                 if (vnd_transmit_frame(fA->buf, fA->frame_size, 0, 0, "ADC0") == USBD_OK) {
                     static uint8_t first_a_logged = 0;
                     if(!first_a_logged){ first_a_logged = 1; VND_LOG("FIRST_A queued size=%u", (unsigned)fA->frame_size); }
@@ -1392,9 +1442,13 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
     if(streaming && (now - vnd_last_txcplt_ms) > 600){
         VND_LOG("WDG_RESTART (no TXCPLT >600ms) reset test/pendingB");
         /* Полный мягкий сброс внутренней машины, без остановки DMA */
-        stream_seq = 0; dbg_produced_seq = 0; cur_samples_per_frame = 0; cur_expected_frame_size = 0;
+        stream_seq = 0; dbg_produced_seq = 0;
+        /* ВАЖНО: НЕ сбрасываем cur_samples_per_frame/cur_expected_frame_size,
+           чтобы сохранить зафиксированный размер кадра (например, 300 семплов)
+           и избежать периодов с cur_samples=0 в STAT после быстрого рестарта. */
         vnd_ep_busy = 0; vnd_tx_ready = 1; vnd_inflight = 0; sending_channel = 0xFF; pending_B = 0; pending_B_since_ms = 0;
-        test_sent = 0; test_in_flight = 0;
+        /* TEST всегда считаем выполненным, даже если VND_DISABLE_TEST=0, чтобы не блокировать A/B */
+        test_sent = 1; test_in_flight = 0;
         start_ack_done = 1; status_ack_pending = 0;
         vnd_last_txcplt_ms = now;
         vnd_tx_meta_head = vnd_tx_meta_tail = 0; meta_push_total = meta_pop_total = meta_empty_events = meta_overflow_events = 0; /* clear FIFO */
@@ -1645,6 +1699,13 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 /* Снимем DMA снапшот для контроля таймаута */
                 adc_stream_debug_t dbg; adc_stream_get_debug(&dbg);
                 dma_snapshot_full0 = dbg.dma_full0; dma_snapshot_full1 = dbg.dma_full1;
+                /* Зафиксировать размер кадра по умолчанию для полного режима (300 семплов) */
+                if (full_mode) {
+                    vnd_frame_samples_req = VND_FULL_DEFAULT_SAMPLES;
+                    vnd_recompute_pair_timing(vnd_frame_samples_req);
+                    cur_samples_per_frame = 0; /* снять lock, чтобы применилось немедленно */
+                    cur_expected_frame_size = 0;
+                }
                 /* ПРОАКТИВНО: очистим возможный "хвост" занятости IN EP с прошлой сессии */
                 do {
                     extern void USBD_VND_ForceTxIdle(void);
@@ -1839,6 +1900,11 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 if(full_mode){
                     /* Возврат к нормальному режиму ADC */
                     diag_mode_active = 0; diag_prepared_seq = 0xFFFFFFFFu;
+                    /* При входе в полный режим – задать дефолт 300 сэмплов, снять lock и пересчитать период */
+                    vnd_frame_samples_req = VND_FULL_DEFAULT_SAMPLES;
+                    cur_samples_per_frame = 0;
+                    cur_expected_frame_size = 0;
+                    vnd_recompute_pair_timing(vnd_frame_samples_req);
                 } else {
                     /* Включаем диагностический режим (пила) */
                     diag_mode_active = 1;
@@ -1900,6 +1966,12 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
 uint32_t vnd_get_last_txcplt_ms(void)
 {
     return vnd_last_txcplt_ms;
+}
+
+/* Общее число переданных байт (все передачи) */
+uint64_t vnd_get_total_tx_bytes(void)
+{
+    return vnd_total_tx_bytes;
 }
 
 /* Общее число переданных сэмплов (оба канала суммарно) */

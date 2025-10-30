@@ -644,11 +644,17 @@ int main(void)
 #if defined(DIAG_TRAP_STAGE) && (DIAG_TRAP_STAGE==4)
   diag_trap(4);
 #endif
-  HAL_TIM_OC_Start(&htim2, TIM_CHANNEL_3);  // Контроль
+  // Запускаем PWM на TIM2 CH1/CH2/CH3 c периодом 200 Гц и скважностью 50%
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 2499);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 2499);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 2499);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);  // Контроль
 
-  // Установка скважности для TIM2 (CH1 и CH2) — 50%
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 2499); // 50% скважность
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 2499); // 50% скважность
+  // Включить прерывание TIM2 Update для генерации тестовых данных @ 200 Hz и запустить таймер
+  __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
+  HAL_TIM_Base_Start_IT(&htim2);
 
   // Запуск каналов для TIM3
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); // Фаза
@@ -795,7 +801,7 @@ int main(void)
     char line[32];
   /* Переносим строку VID/PID ниже (y=36), чтобы не конфликтовать с динамической строкой TX */
   snprintf(line, sizeof(line), "VID:%04X PID:%04X", vid, pid);
-  LCD_ShowString_Size(1, 65, line, 12, WHITE, BLACK);
+  LCD_ShowString_Size(1, 63, line, 16, WHITE, BLACK);
   }
   #endif
 
@@ -1004,15 +1010,25 @@ int main(void)
   // vnd_diag_send64_once();
   // PROG('v');
 
-  /* Запуск задачи стриминга: вызываем таск при активном стриме */
+  /* Запуск задачи стриминга: вызываем при сигнале kick ИЛИ активном стриме */
   // vendor stream task
 #if !SAFE_MINIMAL
+  extern volatile uint8_t vnd_tx_kick;
   extern uint8_t vnd_is_streaming(void);
-  if (vnd_is_streaming()) {
+  if (vnd_tx_kick || vnd_is_streaming()) {
     extern void Vendor_Stream_Task(void);
     Vendor_Stream_Task();
   }
 #endif
+
+  /* Периодическое обновление статуса на LCD (вернули после отката) */
+  {
+    static uint32_t last_lcd_ms = 0;
+    if (now - last_lcd_ms >= 100) { // ~10 Гц
+      last_lcd_ms = now;
+      DrawUSBStatus();
+    }
+  }
 
     if (need_recovery) {
 #if ENABLE_SOFT_USB_RECOVERY
@@ -1575,6 +1591,9 @@ static void MX_TIM2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN TIM2_Init 2 */
+  // Разрешаем прерывания TIM2
+  HAL_NVIC_SetPriority(TIM2_IRQn, 6, 0);
+  HAL_NVIC_EnableIRQ(TIM2_IRQn);
   /* USER CODE END TIM2_Init 2 */
   HAL_TIM_MspPostInit(&htim2);
 
@@ -1914,9 +1933,19 @@ static void UpdateUSBDebug(void) { /* no-op */ }
 static const char* usb_state_str(uint8_t s) { (void)s; return ""; }
 
 // Мигание светодиодом и сторож
+static volatile uint32_t tim2_irq_counter = 0; /* диагностика TIM2 IRQ */
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  if (htim->Instance == TIM6) {
+  if (htim->Instance == TIM2) {
+    tim2_irq_counter++; /* счётчик для измерения реальной частоты */
+    /* TIM2 @ 200 Hz: генерация тестового пилообразного сигнала */
+    #if !SAFE_MINIMAL
+      extern void vnd_generate_test_sawtooth(void);
+      vnd_generate_test_sawtooth();
+    #endif
+  }
+  else if (htim->Instance == TIM6) {
     static uint16_t div = 0; // делитель частоты мигания
     tim6_irq_count++;
     if (++div >= 20) {       // быстреее мигание для наглядности (~2–4 Гц в зависимости от частоты TIM6)
@@ -1962,7 +1991,7 @@ void UpdateLCDStatus(void){ need_usb_status_refresh = 1; }
 
 void DrawStarIndicator(void){
   PROG('S');
-#ifdef DIAG_SKIP_LCD
+#if DIAG_SKIP_LCD
   PROG('s');
   return;
 #endif
@@ -2011,7 +2040,7 @@ void DrawStarIndicator(void){
 
 void DrawUSBStatus(void){
   PROG('U');
-#ifdef DIAG_SKIP_LCD
+#if DIAG_SKIP_LCD
   PROG('u');
   return;
 #endif
@@ -2046,10 +2075,20 @@ void DrawUSBStatus(void){
     }
     lcd_print_padded_if_changed(0,0,text0, prev_line0, sizeof(prev_line0), 7, 12, color0, BLACK);
 
-  char ds_buf[12];
-  if(!host_present) snprintf(ds_buf,sizeof(ds_buf),"DS:--");
-  else snprintf(ds_buf,sizeof(ds_buf),"DS:%02u", (unsigned)s);
-    lcd_print_padded_if_changed(0,12, ds_buf, prev_line1, sizeof(prev_line1), 5, 12, WHITE, BLACK);
+  /* Диагностика частоты TIM2 IRQ */
+  static uint32_t prev_tim2_count = 0;
+  static uint32_t prev_tim2_calc_ms = 0;
+  static uint32_t tim2_hz_display = 0;
+  char ds_buf[16];
+  uint32_t dt_tim2 = now - prev_tim2_calc_ms;
+  if(dt_tim2 >= 1000) {
+    uint32_t tim2_delta = tim2_irq_counter - prev_tim2_count;
+    tim2_hz_display = tim2_delta; /* частота за последнюю секунду */
+    prev_tim2_count = tim2_irq_counter;
+    prev_tim2_calc_ms = now;
+  }
+  snprintf(ds_buf,sizeof(ds_buf),"T2:%u Hz", (unsigned)tim2_hz_display);
+    lcd_print_padded_if_changed(0,12, ds_buf, prev_line1, sizeof(prev_line1), 12, 12, CYAN, BLACK);
 
   /* Скорость обмена: считаем раз в ~500мс (байты/с и семплы/с) */
   if(host_present && s == USBD_STATE_CONFIGURED){
@@ -2079,19 +2118,33 @@ void DrawUSBStatus(void){
   /* Очистка legacy VID/PID убрана */
     /* Используем ширину 12 символов для гарантированного затирания хвоста */
     lcd_print_padded_if_changed(0,24, rate_buf, prev_line2, sizeof(prev_line2), 12, 12, vnd_is_streaming()?GREEN:WHITE, BLACK);
-    /* Показываем VID/PID ниже скорости (фиксированное положение y=36) */
+    /* Показываем время компиляции для контроля версии - ПРИНУДИТЕЛЬНО при первом запуске */
     {
-      uint16_t vid = USBD_Desc_GetVID();
-      uint16_t pid = USBD_Desc_GetPID();
-      char vidpid[20];
-      snprintf(vidpid, sizeof(vidpid), "VID:%04X PID:%04X", (unsigned)vid, (unsigned)pid);
-      lcd_print_padded_if_changed(0,36, vidpid, prev_line3, sizeof(prev_line3), 16, 12, WHITE, BLACK);
+      extern const char fw_build_time[];
+      static uint8_t build_time_shown = 0;
+      char build_time[20];
+      snprintf(build_time, sizeof(build_time), "Build:%s", fw_build_time);
+      if(!build_time_shown) {
+        memset(prev_line3, 0, sizeof(prev_line3)); // Сбросить для принудительного обновления
+        build_time_shown = 1;
+      }
+      lcd_print_padded_if_changed(0,36, build_time, prev_line3, sizeof(prev_line3), 16, 12, YELLOW, BLACK);
     }
   } else {
   /* Очистка legacy VID/PID убрана */
     lcd_print_padded_if_changed(0,24, host_present?"S:----":"S:----", prev_line2, sizeof(prev_line2), 12, 12, WHITE, BLACK);
-    /* При отсутствии хоста затираем VID/PID строку */
-    lcd_print_padded_if_changed(0,36, "VID:---- PID:----", prev_line3, sizeof(prev_line3), 16, 12, WHITE, BLACK);
+    /* При отсутствии хоста показываем время компиляции */
+    {
+      extern const char fw_build_time[];
+      static uint8_t build_time_shown2 = 0;
+      char build_time[20];
+      snprintf(build_time, sizeof(build_time), "Build:%s", fw_build_time);
+      if(!build_time_shown2) {
+        memset(prev_line3, 0, sizeof(prev_line3));
+        build_time_shown2 = 1;
+      }
+      lcd_print_padded_if_changed(0,36, build_time, prev_line3, sizeof(prev_line3), 16, 12, YELLOW, BLACK);
+    }
     prev_rate_calc_ms = now;
     prev_tx_bytes = vnd_get_total_tx_bytes();
     prev_tx_samples = vnd_get_total_tx_samples();

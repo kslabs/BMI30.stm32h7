@@ -49,6 +49,9 @@ extern void uart1_raw_putc(char c);
 // Переменная для подсчета прерываний SPI2
 static volatile uint32_t spi2_interrupt_counter = 0;
 
+// Счётчик вызовов USB ISR для диагностики
+volatile uint32_t usb_isr_counter = 0;
+
 // Диагностика HardFault (определения)
 volatile uint32_t hardfault_r0=0, hardfault_r1=0, hardfault_r2=0, hardfault_r3=0;
 volatile uint32_t hardfault_r12=0, hardfault_lr=0, hardfault_pc=0, hardfault_psr=0;
@@ -73,6 +76,7 @@ extern PCD_HandleTypeDef hpcd_USB_OTG_HS;
 extern DMA_HandleTypeDef hdma_adc1;
 extern DMA_HandleTypeDef hdma_adc2;
 extern DAC_HandleTypeDef hdac1;
+extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim6;
 /* USER CODE BEGIN EV */
 
@@ -252,6 +256,20 @@ void DMA1_Stream1_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles TIM2 global interrupt.
+  */
+void TIM2_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM2_IRQn 0 */
+
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
+
+  /* USER CODE END TIM2_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM6 global interrupt, DAC1_CH1 and DAC1_CH2 underrun error interrupts.
   */
 void TIM6_DAC_IRQHandler(void)
@@ -272,7 +290,8 @@ void TIM6_DAC_IRQHandler(void)
 void OTG_HS_IRQHandler(void)
 {
   /* USER CODE BEGIN OTG_HS_IRQn 0 */
-  /* minimized: no UART in IRQ */
+  /* Счётчик вызовов ISR для диагностики */
+  usb_isr_counter++;
   /* USER CODE END OTG_HS_IRQn 0 */
   HAL_PCD_IRQHandler(&hpcd_USB_OTG_HS);
   /* USER CODE BEGIN OTG_HS_IRQn 1 */

@@ -1,0 +1,48 @@
+﻿======================================================================
+USB CONTINUOUS READ TEST: 60 seconds
+======================================================================
+[HOST] Device found: VID=CAFE PID=4001
+[HOST] Claimed interface #2, alt=1
+[HOST] Setup complete
+[HOST] Sending START...
+[HOST] Reading for 60 seconds...
+Time | Pairs | A_cnt | B_cnt | STAT | Errors | Rate
+----------------------------------------------------------------------
+[DBG] len=1856 head=5A A5 01 01 01 00 00 00
+[DBG] len=1856 head=5A A5 01 02 00 00 00 00
+[DBG] len=1856 head=5A A5 01 01 02 00 00 00
+[DBG] len=1856 head=5A A5 01 02 01 00 00 00
+[DBG] len=1856 head=5A A5 01 01 03 00 00 00
+   1s |    34 |    35 |    34 |    0 |      0 | 32.92 pairs/s
+[USB_ERR] [Errno 10060] Operation timed out
+[USB_ERR] [Errno 10060] Operation timed out
+[USB_ERR] [Errno 10060] Operation timed out
+
+======================================================================
+Stopping...
+======================================================================
+FINAL RESULTS:
+  Duration:    62.0 seconds
+  Total pairs: 54
+  A frames:    54
+  B frames:    54
+  STAT frames: 0
+  Errors:      30
+  Other/bad:   1
+  Avg rate:    0.87 pairs/sec
+  Throughput:  0.00 MB/s
+  Total bytes: 200,512 bytes
+======================================================================
+py : Traceback (most recent call last):
+At line:1 char:1
++ py -3 HostTools\test_60sec.py 2>&1 | Out-File -FilePath test_60sec_re ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\TEST\Documents\Work\BMI20\STM32\BMI30.stm32h7\HostTools\test_60sec.py", line 150, in <module>
+    print("\u274c TEST FAILED")
+  File "C:\Users\TEST\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1250.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 0: character maps to <undefined>

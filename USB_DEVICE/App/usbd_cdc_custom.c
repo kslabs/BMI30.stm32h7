@@ -1,6 +1,6 @@
-/* Логирование Vendor: для максимальной производительности по умолчанию выключено. */
+/* Логирование Vendor: ОТКЛЮЧЕНО для максимальной производительности */
 #ifndef USBD_VND_LOG_ENABLE
-#define USBD_VND_LOG_ENABLE 1
+#define USBD_VND_LOG_ENABLE 0
 #endif
 #if USBD_VND_LOG_ENABLE
 #define VND_LOGF(...) printf(__VA_ARGS__)
@@ -201,11 +201,18 @@ uint8_t USBD_VND_Transmit(USBD_HandleTypeDef *pdev, const uint8_t *data, uint16_
     }
   }
   vnd_tx_busy = 1U;
-  /* Убираем установку total_length - она может вызывать задержку TxCplt */
-  /* pdev->ep_in[VND_IN_EP & 0x0FU].total_length = len; */
+  /* Восстанавливаем total_length для корректной ZLP логики в DataIn callback */
+  pdev->ep_in[VND_IN_EP & 0x0FU].total_length = len;
   vnd_last_tx_len = len;
-  vnd_last_tx_rc = (uint8_t)USBD_LL_Transmit(pdev, VND_IN_EP, vnd_tx_buf, len);
-  /* Логируем только реально поставленные в LL передачи как [VND_TX] */
+    vnd_last_tx_rc = (uint8_t)USBD_LL_Transmit(pdev, VND_IN_EP, vnd_tx_buf, len);
+    
+    /* КРИТИЧЕСКИ ВАЖНО: memory barrier через volatile read USB регистра.
+       Без этого компилятор может переупорядочить операции и HAL ISR не увидит
+       правильное состояние. Чтение GINTSTS безопасно и гарантирует порядок. */
+    {
+        USB_OTG_GlobalTypeDef *usb_reg = (USB_OTG_GlobalTypeDef *)USB1_OTG_HS_PERIPH_BASE;
+        (void)usb_reg->GINTSTS; /* volatile read для memory barrier */
+    }  /* Логируем только реально поставленные в LL передачи как [VND_TX] */
   if (vnd_last_tx_rc == (uint8_t)USBD_OK) {
     if (len >= 4) {
       VND_LOGF("[VND_TX] ep=0x%02X len=%u head=%02X %02X %02X %02X\r\n", (unsigned)VND_IN_EP, (unsigned)len,
@@ -564,8 +571,9 @@ static uint8_t USBD_CDCVND_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
       VND_LOGF("[VND_DataIn] ep=%u total=%u -> SEND ZLP (phase1) cnt=%lu\r\n", (unsigned)epnum, (unsigned)tl, (unsigned long)vnd_dataIn_counter);
       pdev->ep_in[epnum].total_length = 0U;
       (void)USBD_LL_Transmit(pdev, epnum, NULL, 0U); /* ZLP */
+      /* НЕ вызываем TxCplt здесь — он будет вызван при следующем DataIn после ZLP */
     } else {
-      /* Обычное завершение */
+      /* Обычное завершение (либо tl=0 после ZLP, либо tl не кратно mps) */
       VND_LOGF("[VND_DataIn] ep=%u total=%u -> COMPLETE (TxCplt) cnt=%lu\r\n", (unsigned)epnum, (unsigned)tl, (unsigned long)vnd_dataIn_counter);
       pdev->ep_in[epnum].total_length = 0U; /* очистить остаток для надёжности */
       vnd_tx_busy = 0U;

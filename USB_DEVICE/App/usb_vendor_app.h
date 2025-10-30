@@ -29,6 +29,10 @@ extern "C" {
 #ifndef VND_FRAME_MAX_SIZE
 #define VND_FRAME_MAX_SIZE  (VND_FRAME_HDR_SIZE + 2u*VND_MAX_SAMPLES)
 #endif
+/* Дефолт: 300 семплов на канал в полном режиме */
+#ifndef VND_FULL_DEFAULT_SAMPLES
+#define VND_FULL_DEFAULT_SAMPLES 300u
+#endif
 #ifndef VND_FLAGS_ADC0
 #define VND_FLAGS_ADC0      0x01u
 #endif
@@ -86,6 +90,9 @@ typedef struct {
 #pragma pack(pop)
 _Static_assert(sizeof(vnd_status_v1_t) == 64, "vnd_status_v1_t must be 64 bytes");
 
+/* Публичные переменные */
+extern volatile uint8_t vnd_tx_kick; /* Флаг пробуждения таска после события */
+
 /* Публичные функции */
 void Vendor_Stream_Task(void);
 void usb_vendor_periodic_tick(void); /* тик от TIM6 */
@@ -109,6 +116,9 @@ void vnd_pipeline_stop_reset(int deep);
 /* Получить текущие min/max АЦП значения последних отправленных кадров */
 void vnd_get_adc_minmax(int16_t *adc0_min, int16_t *adc0_max, 
                         int16_t *adc1_min, int16_t *adc1_max);
+
+/* Тестовый генератор (пилообразный сигнал) — объявление доступно и для main.c */
+void vnd_generate_test_sawtooth(void);
 
 #ifdef __cplusplus
 }

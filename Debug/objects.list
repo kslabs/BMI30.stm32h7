@@ -16,6 +16,7 @@
 "./Core/Src/usb_stream.o"
 "./Core/Src/usb_tinyusb_bridge.o"
 "./Core/Src/usbd_cdc.o"
+"./Core/Src/vnd_testgen.o"
 "./Core/Startup/startup_stm32h723vgtx.o"
 "./Drivers/BSP/ST7735/board.o"
 "./Drivers/BSP/ST7735/font.o"

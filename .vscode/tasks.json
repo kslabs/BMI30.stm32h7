@@ -429,6 +429,20 @@
 			"group": "none"
 		},
 		{
+			"label": "Run GUI oscilloscope",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope.py\" --ns 300"
+			],
+			"isBackground": false,
+			"group": "none"
+		},
+		{
 			"label": "Build (make -C Debug all)",
 			"type": "shell",
 			"command": "make",
@@ -495,8 +509,8 @@
 				"-NoProfile",
 				"-ExecutionPolicy",
 				"Bypass",
-				"-Command",
-				"$elf='c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\Debug\\BMI30.stm32h7.elf'; if (!(Test-Path $elf)) { Write-Error \"ELF not found: $elf\"; exit 1 }; $cli=\"C:\\Program Files\\STMicroelectronics\\STM32Cube\\STM32CubeProgrammer\\bin\\STM32_Programmer_CLI.exe\"; if (!(Test-Path $cli)) { $cli='STM32_Programmer_CLI.exe' }; Write-Output \"Using CLI: $cli\"; & $cli -c port=SWD freq=4000 -w $elf -v -rst"
+				"-File",
+				".vscode/flash-cubecli.ps1"
 			],
 			"isBackground": false,
 			"problemMatcher": [],
@@ -505,22 +519,27 @@
 		{
 			"label": "Flash (SWD) STM32 via CubeProgrammer",
 			"type": "shell",
-			"command": "C:\\Program Files\\STMicroelectronics\\STM32Cube\\STM32CubeProgrammer\\bin\\STM32_Programmer_CLI.exe",
+			"command": "powershell",
 			"args": [
-				"-c",
-				"port=SWD",
-				"freq=4000",
-				"-w",
-				"c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\Debug\\BMI30.stm32h7.elf",
-				"-v",
-				"-rst"
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/flash-cubecli.ps1"
 			],
 			"isBackground": false
 		},
 		{
 			"label": "Flash (SWD) STM32 via CubeProgrammer - retry",
 			"type": "shell",
-			"command": "\"C:\\Program Files\\STMicroelectronics\\STM32Cube\\STM32CubeProgrammer\\bin\\STM32_Programmer_CLI.exe\" -c port=SWD freq=4000 -w \"c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\Debug\\BMI30.stm32h7.elf\" -v -rst",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/flash-cubecli.ps1"
+			],
 			"isBackground": false
 		},
 		{
@@ -552,6 +571,40 @@
 			"isBackground": false,
 			"group": "build",
 			"problemMatcher": ["$gcc"]
+		},
+		{
+			"label": "BUILD+FLASH (auto-update time)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/build-and-flash.ps1"
+			],
+			"isBackground": false,
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "BUILD+FLASH (clean build)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/build-and-flash.ps1",
+				"-CleanBuild"
+			],
+			"isBackground": false,
+			"group": "build",
+			"problemMatcher": []
 		}
 	],
 	"inputs": [

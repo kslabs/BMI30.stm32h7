@@ -21,6 +21,14 @@ def find_dev():
     except usb.core.USBError:
         # Might already be configured
         pass
+    
+    # Set alternate setting 1 for Vendor interface (IF#2) to activate endpoints
+    try:
+        dev.set_interface_altsetting(interface=2, alternate_setting=1)
+        print("[OK] Set IF#2 altsetting 1 (Vendor endpoints active)")
+    except usb.core.USBError as e:
+        print(f"[WARN] Could not set altsetting: {e}")
+    
     return dev
 
 def parse_stat(buf: bytes):

@@ -55,7 +55,8 @@ USB_DEVICE/App/usb_vendor_app.o: ../USB_DEVICE/App/usb_vendor_app.c \
  ../USB_DEVICE/App/usb_vendor_app.h ../Core/Inc/adc_stream.h \
  ../USB_DEVICE/App/usbd_cdc_if.h \
  C:/Users/TEST/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h \
- C:/Users/TEST/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h
+ C:/Users/TEST/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
+ ../Core/Inc/vnd_testgen.h
 ../USB_DEVICE/App/usbd_cdc_custom.h:
 C:/Users/TEST/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h:
 ../USB_DEVICE/Target/usbd_conf.h:
@@ -117,3 +118,4 @@ C:/Users/TEST/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_
 ../USB_DEVICE/App/usbd_cdc_if.h:
 C:/Users/TEST/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h:
 C:/Users/TEST/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h:
+../Core/Inc/vnd_testgen.h:

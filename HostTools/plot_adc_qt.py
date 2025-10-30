@@ -53,8 +53,9 @@ ALT_SETTING = 1
 
 # Frame structure
 FRAME_HEADER = [0x5A, 0xA5, 0x01]
+FRAME_HEADER_SIZE = 32  # Full header is 32 bytes
 FRAME_SIZE = 1856
-SAMPLES_PER_FRAME = (FRAME_SIZE - 4) // 2  # 926 samples
+SAMPLES_PER_FRAME = 912  # (FRAME_SIZE - 32) // 2 = 912 samples
 
 # Commands
 CMD_SET_WINDOWS = 0x10
@@ -216,7 +217,7 @@ class FrameParser:
             self.buffer.extend(data)
             
     def get_frame(self):
-        """Extract one complete frame from buffer"""
+        """Extract one complete frame from buffer, returns (channel, samples) or None"""
         # Search for frame header
         while len(self.buffer) >= FRAME_SIZE:
             if (self.buffer[0] == FRAME_HEADER[0] and 
@@ -227,24 +228,28 @@ class FrameParser:
                 frame = bytes(self.buffer[:FRAME_SIZE])
                 self.buffer = self.buffer[FRAME_SIZE:]
                 
-                # Parse channel
-                channel = frame[3]
-                if channel not in [0x01, 0x02]:
-                    continue
+                # Parse channel from flags (byte 3)
+                flags = frame[3]
+                if flags & 0x01:
+                    channel = 0x01  # ADC0 (A)
+                elif flags & 0x02:
+                    channel = 0x02  # ADC1 (B)
+                else:
+                    continue  # Invalid channel, search for next frame
                     
-                # Parse samples (16-bit little-endian)
+                # Parse samples (16-bit little-endian, starting from byte 32)
                 samples = []
-                for i in range(4, FRAME_SIZE, 2):
+                for i in range(FRAME_HEADER_SIZE, FRAME_SIZE, 2):
                     if i + 1 < len(frame):
                         sample = struct.unpack('<h', frame[i:i+2])[0]
                         samples.append(sample)
                 
-                return channel, np.array(samples, dtype=np.int16)
+                return (channel, np.array(samples, dtype=np.int16))
             else:
                 # Skip one byte and search again
                 self.buffer = self.buffer[1:]
                 
-        return None, None
+        return None  # Not enough data for complete frame
 
 
 class ADCOscilloscope(QMainWindow):
@@ -438,21 +443,28 @@ class ADCOscilloscope(QMainWindow):
             return
             
         try:
-            # Read multiple frames per update to keep up with data rate
-            for _ in range(10):  # Read up to 10 frames per timer tick
-                data = self.usb_dev.read_frame(timeout=10)
-                if data:
-                    self.frame_parser.add_data(data)
+            # Read multiple USB packets per update to keep up with data rate
+            for _ in range(10):  # Read up to 10 packets per timer tick
+                try:
+                    # Read raw USB packet (up to 512 bytes)
+                    chunk = self.usb_dev.ep_in.read(2048, timeout=10)
+                    if chunk:
+                        self.frame_parser.add_data(chunk)
+                except usb.core.USBError as e:
+                    if e.errno == 110 or e.errno == 10060:  # Timeout
+                        break
+                    raise
                     
             # Process frames
             updated_a = False
             updated_b = False
             
             while True:
-                channel, samples = self.frame_parser.get_frame()
-                if channel is None:
+                result = self.frame_parser.get_frame()
+                if result is None:
                     break
                     
+                channel, samples = result
                 self.frames_received += 1
                 self.sample_counter += len(samples)
                 
@@ -482,33 +494,16 @@ class ADCOscilloscope(QMainWindow):
                 
                 # Store latest frame for each channel
                 if channel == 0x01:  # Channel A
-                    # Extract only non-zero regions for display
-                    non_zero_mask = samples != 0
-                    if np.any(non_zero_mask):
-                        non_zero_samples = samples[non_zero_mask]
-                        non_zero_indices = np.where(non_zero_mask)[0]
-                        # Time axis based on sample indices
-                        self.ch_a_time = non_zero_indices.astype(float)
-                        self.ch_a_samples = non_zero_samples
-                    else:
-                        # All zeros - keep empty
-                        self.ch_a_time = np.array([])
-                        self.ch_a_samples = np.array([])
+                    # Display ALL samples (including zeros - they are valid ADC readings)
+                    # but use continuous time axis for scrolling display
+                    self.ch_a_time = np.arange(len(samples), dtype=float)
+                    self.ch_a_samples = samples
                     updated_a = True
                     
                 else:  # Channel B (0x02)
-                    # Extract only non-zero regions for display
-                    non_zero_mask = samples != 0
-                    if np.any(non_zero_mask):
-                        non_zero_samples = samples[non_zero_mask]
-                        non_zero_indices = np.where(non_zero_mask)[0]
-                        # Time axis based on sample indices
-                        self.ch_b_time = non_zero_indices.astype(float)
-                        self.ch_b_samples = non_zero_samples
-                    else:
-                        # All zeros - keep empty
-                        self.ch_b_time = np.array([])
-                        self.ch_b_samples = np.array([])
+                    # Display ALL samples (including zeros - they are valid ADC readings)
+                    self.ch_b_time = np.arange(len(samples), dtype=float)
+                    self.ch_b_samples = samples
                     updated_b = True
                     
             # Update plots only if new data arrived and decimation allows

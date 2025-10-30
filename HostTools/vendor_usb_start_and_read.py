@@ -181,6 +181,37 @@ def queue_status_bulk(dev):
         log_line(f"[HOST][GET_STATUS][BULK][ERR] {e}")
 
 
+def recover_pipe_error(dev, claim_idx, in_ep=IN_EP, out_ep=OUT_EP):
+    """Try to recover from a stalled/broken pipe on Windows (WinUSB) or libusb.
+    Steps:
+      - clear halt on IN endpoint
+      - re-select altsetting=1 to ensure endpoints are active
+      - re-send START command to resume streaming
+    Returns True if recovery attempted, False otherwise.
+    """
+    try:
+        try:
+            usb.util.clear_halt(dev, in_ep)
+            log_line(f"[HOST][RECOVER] clear_halt IN 0x{in_ep:02X} OK")
+        except Exception as e:
+            log_line(f"[HOST][RECOVER][WARN] clear_halt IN failed: {e}")
+        try:
+            dev.set_interface_altsetting(interface=claim_idx, alternate_setting=1)
+            log_line(f"[HOST][RECOVER] SetInterface(IF#{claim_idx}, alt=1) OK")
+        except Exception as e:
+            log_line(f"[HOST][RECOVER][WARN] SetInterface alt=1 failed: {e}")
+        try:
+            # Re-queue START to OUT EP to resume stream
+            w = dev.write(out_ep, bytes([0x20]), timeout=1000)
+            log_line(f"[HOST][RECOVER] START re-sent: {w} bytes")
+        except Exception as e:
+            log_line(f"[HOST][RECOVER][WARN] START re-send failed: {e}")
+        return True
+    except Exception as e:
+        log_line(f"[HOST][RECOVER][ERR] {e}")
+        return False
+
+
 def main():
     log_line(f"[HOST][CFG] VID=0x{VID:04X} PID=0x{PID:04X} intf={IFACE_INDEX} IN=0x{IN_EP:02X} OUT=0x{OUT_EP:02X} pairs={READ_COUNT} tmo={READ_TIMEOUT_MS}ms window={READ_WINDOW_SEC}s full={FULL_MODE} rate={RATE_HZ}Hz ctrlSTAT={int(USE_CTRL_STATUS)}")
     dev = usb.core.find(idVendor=VID, idProduct=PID)
@@ -283,10 +314,12 @@ def main():
     start_time = time.time()
     last_stat_print = 0.0
     rx = bytearray()
+    pipe_errs = 0
     while got < READ_COUNT and (time.time() - start_time) < READ_WINDOW_SEC:
         try:
             chunk = bytes(dev.read(IN_EP, 512, timeout=READ_TIMEOUT_MS))
             rx += chunk
+            pipe_errs = 0  # reset on success
             # Try to extract complete frames
             while True:
                 if len(rx) < 4:
@@ -301,10 +334,10 @@ def main():
                     log_line(f"[HOST_RX] ep=0x{IN_EP:02X} len={len(frame)} type=STAT head={head}")
                     st = parse_stat_frame(frame)
                     if st:
-                        base = f"ver={st['version']} flags=0x{st['flags_runtime']:04X} test={st['test_frames']} seq={st['produced_seq']} sentA/B={st['sent0']}/{st['sent1']} dma={st['dma_done0']}/{st['dma_done1']} cur_samples={st['cur_samples']} wr_seq={st['frame_wr_seq']}"
+                        base = f"ver={st['version']} flags=0x{st['flags_runtime']:04X} test={st['test_frames']} seq={st['produced_seq']} sentA/B={st['sent0']}/{st['sent1']} TxCplt={st['dbg_tx_cplt']} dma={st['dma_done0']}/{st['dma_done1']} cur_samples={st['cur_samples']} wr_seq={st['frame_wr_seq']}"
                         ext = ""
                         if 'flags2' in st:
-                            ext = f" flags2=0x{st['flags2']:04X} send_ch={st['sending_ch']} pair {st['pair_fill']}/{st['pair_send']} lastTX={st['last_tx_len']} cur_seq={st['cur_stream_seq']} prep {st['prep_ok']}/{st['prep_calls']}"
+                            ext = f" flags2=0x{st['flags2']:04X} send_ch={st['sending_ch']} pair {st['pair_fill']}/{st['pair_send']} lastTX={st['last_tx_len']} cur_seq={st['cur_stream_seq']} prep {st['prep_calls']}/{st['prep_ok']}"
                         log_line(f"[HOST_STAT] {base}{ext}")
                     got += 1
                     continue
@@ -345,10 +378,22 @@ def main():
                     if USE_CTRL_STATUS:
                         st = get_status_ctrl(dev)
                         if st:
-                            log_line(f"[HOST_STAT] ver={st['version']} flags=0x{st['flags_runtime']:04X} test={st['test_frames']} seq={st['produced_seq']} sentA/B={st['sent0']}/{st['sent1']} dma={st['dma_done0']}/{st['dma_done1']} cur_samples={st['cur_samples']} wr_seq={st['frame_wr_seq']}")
+                            log_line(f"[HOST_STAT] ver={st['version']} flags=0x{st['flags_runtime']:04X} test={st['test_frames']} seq={st['produced_seq']} sentA/B={st['sent0']}/{st['sent1']} TxCplt={st['dbg_tx_cplt']} dma={st['dma_done0']}/{st['dma_done1']} cur_samples={st['cur_samples']} wr_seq={st['frame_wr_seq']}")
                     else:
                         queue_status_bulk(dev)
                 continue
+            # Handle pipe errors gracefully: clear halt, reselect alt=1, re-send START
+            if (getattr(e, 'errno', None) in (32, 5)) or ('pipe' in msg):
+                pipe_errs += 1
+                log_line(f"[HOST_RX][PIPE] {e} (#{pipe_errs})")
+                recovered = recover_pipe_error(dev, claim_idx)
+                if recovered and pipe_errs < 5:
+                    # Give device a brief moment to settle
+                    time.sleep(0.05)
+                    continue
+                else:
+                    log_line("[HOST_RX][PIPE] unrecoverable, stopping")
+                    break
             # other errors
             log_line(f"[HOST_RX][ERR] {e}")
             break
