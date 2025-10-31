@@ -282,6 +282,8 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
     switch (cmd) {
       case 0x13u: // VND_CMD_SET_FULL_MODE
       case 0x14u: // VND_CMD_SET_PROFILE
+      case 0x18u: // VND_CMD_SET_ASYNC_MODE
+      case 0x19u: // VND_CMD_SET_CHMODE
       case 0x15u: // VND_CMD_SET_ROI_US
       case 0x20u: // VND_CMD_START_STREAM
       case 0x21u: // VND_CMD_STOP_STREAM

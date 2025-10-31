@@ -6,11 +6,16 @@ import sys, time, struct, usb.core, usb.util
 
 VID = 0xCAFE
 PID = 0x4001
-EP_OUT = 0x03
 IFACE_INDEX = 2
 CMD_START = 0x20
 CMD_STOP  = 0x21
 CMD_GET_STATUS = 0x30
+def ctrl_out(dev, bRequest, wValue=0, recipient_interface=False, timeout=500):
+    recip = usb.util.CTRL_RECIPIENT_INTERFACE if recipient_interface else usb.util.CTRL_RECIPIENT_DEVICE
+    bm = usb.util.build_request_type(usb.util.CTRL_OUT, usb.util.CTRL_TYPE_VENDOR, recip)
+    wIndex = IFACE_INDEX if recipient_interface else 0
+    return dev.ctrl_transfer(bm, bRequest, wValue, wIndex, 0, timeout=timeout)
+
 
 def ctrl_get_status(dev):
     # На Windows надёжнее адресовать DEVICE, а не INTERFACE; прошивка принимает любой recipient
@@ -70,18 +75,11 @@ def main():
         dev.set_configuration()
     except usb.core.USBError:
         pass
-    # На Windows/WinUSB/libusb требуется явно захватить интерфейс для
-    # vendor-specific CTRL (RECIPIENT_INTERFACE), иначе будет Pipe error.
+    # START stream via control EP0 (device recipient for robustness on Windows)
     try:
-        usb.util.claim_interface(dev, IFACE_INDEX)
+        ctrl_out(dev, CMD_START)
     except Exception as e:
-        # Продолжаем: на некоторых платформах auto-claim работает
-        print(f"[warn] claim_interface({IFACE_INDEX}) failed or not needed: {e}")
-    # START stream
-    try:
-        dev.write(EP_OUT, bytes([CMD_START]), timeout=500)
-    except Exception as e:
-        print(f"START write failed: {e}")
+        print(f"START ctrl failed: {e}")
         sys.exit(2)
     t_end = time.time() + 3.0
     while time.time() < t_end:
@@ -92,13 +90,9 @@ def main():
         except Exception as e:
             print(f"CTRL status err: {e}")
         time.sleep(0.3)
-    # STOP
+    # STOP via control
     try:
-        dev.write(EP_OUT, bytes([CMD_STOP]), timeout=500)
-    except Exception:
-        pass
-    try:
-        usb.util.release_interface(dev, IFACE_INDEX)
+        ctrl_out(dev, CMD_STOP)
     except Exception:
         pass
 

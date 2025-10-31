@@ -462,6 +462,41 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
     } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 && req->bRequest == 0x7Fu ) {
       /* DEEP_RESET: то же, но с переоткрытием EP */
       g_req_deep_reset = 1; USBD_CtlSendStatus(pdev); return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 &&
+                (req->bRequest == VND_CMD_START_STREAM || req->bRequest == VND_CMD_STOP_STREAM) ) {
+      /* Разрешаем START/STOP по control OUT без данных: эмулируем приём команды Vendor */
+      uint8_t cmd = (uint8_t)req->bRequest;
+      USBD_VND_DataReceived(&cmd, 1U);
+      USBD_CtlSendStatus(pdev);
+      return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 &&
+                (req->bRequest == VND_CMD_SET_ASYNC_MODE || req->bRequest == VND_CMD_SET_CHMODE ||
+                 req->bRequest == VND_CMD_SET_FULL_MODE  || req->bRequest == VND_CMD_SET_PROFILE) ) {
+      /* Альтернативный путь: принять параметр через wValue (без data stage) */
+      uint8_t tmp[2];
+      tmp[0] = (uint8_t)req->bRequest;
+      tmp[1] = (uint8_t)(req->wValue & 0xFFU);
+      USBD_VND_DataReceived(tmp, 2U);
+      USBD_CtlSendStatus(pdev);
+      return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 &&
+                (req->bRequest == VND_CMD_SET_FRAME_SAMPLES) ) {
+      /* SET_FRAME_SAMPLES: 16-битное значение в wValue (LSB first) */
+      uint8_t tmp[3];
+      tmp[0] = (uint8_t)req->bRequest;
+      tmp[1] = (uint8_t)(req->wValue & 0xFFU);
+      tmp[2] = (uint8_t)((req->wValue >> 8) & 0xFFU);
+      USBD_VND_DataReceived(tmp, 3U);
+      USBD_CtlSendStatus(pdev);
+      return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength > 0 &&
+                (req->bRequest == VND_CMD_SET_ASYNC_MODE || req->bRequest == VND_CMD_SET_CHMODE ||
+                 req->bRequest == VND_CMD_SET_FULL_MODE  || req->bRequest == VND_CMD_SET_PROFILE) ) {
+      /* Принимаем небольшие конфиги по control OUT с телом данных, доставляем в Vendor как будто по Bulk OUT */
+      hcdc->CmdOpCode = req->bRequest;
+      hcdc->CmdLength = (uint8_t)req->wLength;
+      USBD_CtlPrepareRx(pdev, (uint8_t*)hcdc->data, req->wLength); // cast
+      return (uint8_t)USBD_OK;
     } else {
       VND_LOGF("[SETUP:VND] unsupported -> STALL");
       USBD_CtlError(pdev, req);
@@ -592,11 +627,25 @@ static uint8_t USBD_CDCVND_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum)
     if (CDC_USR(pdev) && CDC_USR(pdev)->Receive) CDC_USR(pdev)->Receive(hcdc->RxBuffer, &hcdc->RxLength);
   } else if (epnum == (VND_OUT_EP & 0x7FU)) {
     vnd_rx_len = USBD_LL_GetRxDataSize(pdev, epnum);
+    /* D-Cache (STM32H7): инвалидировать диапазон RX перед чтением, иначе возможны "старые" данные */
+#if defined (SCB_InvalidateDCache_by_Addr)
+    if (vnd_rx_len > 0) {
+      uintptr_t addr = (uintptr_t)vnd_rx_buf;
+      uint32_t inv_addr = (uint32_t)(addr & ~((uintptr_t)31U));
+      uint32_t inv_len  = (uint32_t)(((addr + vnd_rx_len + 31U) & ~((uintptr_t)31U)) - inv_addr);
+      SCB_InvalidateDCache_by_Addr((uint32_t*)inv_addr, (int32_t)inv_len);
+    }
+#endif
     /* Мини-лог: подтверждаем приём однобайтовой команды */
     if (vnd_rx_len > 0) {
       printf("[CMD] 0x%02X len=%lu\r\n", (unsigned)vnd_rx_buf[0], (unsigned long)vnd_rx_len);
     }
     USBD_VND_DataReceived(vnd_rx_buf, vnd_rx_len);
+    /* Небольшой memory barrier для надёжности перед реармом приёма */
+    {
+      USB_OTG_GlobalTypeDef *usb_reg = (USB_OTG_GlobalTypeDef *)USB1_OTG_HS_PERIPH_BASE;
+      (void)usb_reg->GINTSTS; /* volatile read */
+    }
     /* Реармим */
     if (pdev->dev_speed == USBD_SPEED_HIGH)
       (void)USBD_LL_PrepareReceive(pdev, VND_OUT_EP, vnd_rx_buf, VND_DATA_HS_MAX_PACKET_SIZE);
@@ -610,8 +659,28 @@ static uint8_t USBD_CDCVND_EP0_RxReady(USBD_HandleTypeDef *pdev)
 {
   USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)pdev->pClassData;
   if (!hcdc) return (uint8_t)USBD_FAIL;
-  if (CDC_USR(pdev) && (hcdc->CmdOpCode != 0xFFU)) {
-    CDC_USR(pdev)->Control(hcdc->CmdOpCode, (uint8_t*)hcdc->data, hcdc->CmdLength); // cast
+  if (hcdc->CmdOpCode != 0xFFU) {
+    uint8_t op = hcdc->CmdOpCode;
+    uint8_t len = hcdc->CmdLength;
+    /* Если это один из наших vendor control OUT запросов с полезной нагрузкой —
+       формируем буфер [opcode | payload] и передаём в общий обработчик Vendor. */
+    if (op == VND_CMD_SET_ASYNC_MODE ||
+        op == VND_CMD_SET_CHMODE    ||
+        op == VND_CMD_SET_FULL_MODE ||
+        op == VND_CMD_SET_PROFILE) {
+      uint32_t tot = (uint32_t)len + 1U;
+      if (tot > sizeof(vnd_rx_buf)) tot = sizeof(vnd_rx_buf); /* страхуемся от выхода за границы */
+      vnd_rx_buf[0] = op;
+      if (tot > 1U) {
+        memcpy(&vnd_rx_buf[1], (uint8_t*)hcdc->data, (size_t)(tot - 1U)); // cast
+      }
+      USBD_VND_DataReceived(vnd_rx_buf, tot);
+    } else {
+      /* Иначе — это обычная CDC class команда */
+      if (CDC_USR(pdev) && CDC_USR(pdev)->Control) {
+        CDC_USR(pdev)->Control(op, (uint8_t*)hcdc->data, len); // cast
+      }
+    }
     hcdc->CmdOpCode = 0xFFU;
   }
   return (uint8_t)USBD_OK;

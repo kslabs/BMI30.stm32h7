@@ -14,6 +14,13 @@ extern "C" {
 #define VND_CMD_SET_ROI_US      0x15u /* 4 байта u32 (микросекунды) */
 /* Новая команда: установить явный размер кадра (samples_per_frame) для ~20 FPS режимов */
 #define VND_CMD_SET_FRAME_SAMPLES 0x17u /* 2 байта u16 */
+/* Режим асинхронной отправки A/B и выбор каналов */
+#ifndef VND_CMD_SET_ASYNC_MODE
+#define VND_CMD_SET_ASYNC_MODE   0x18u /* payload: u8 mode (0=pair/strict A->B, 1=async independent) */
+#endif
+#ifndef VND_CMD_SET_CHMODE
+#define VND_CMD_SET_CHMODE       0x19u /* payload: u8 mode (0=A-only, 1=B-only, 2=both) */
+#endif
 
 /* Флаги статуса времени выполнения */
 #define VND_STFLAG_STREAMING    0x0001u

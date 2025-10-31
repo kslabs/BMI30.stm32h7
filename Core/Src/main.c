@@ -801,7 +801,7 @@ int main(void)
     char line[32];
   /* Переносим строку VID/PID ниже (y=36), чтобы не конфликтовать с динамической строкой TX */
   snprintf(line, sizeof(line), "VID:%04X PID:%04X", vid, pid);
-  LCD_ShowString_Size(1, 63, line, 16, WHITE, BLACK);
+  LCD_ShowString_Size(1, 56, line, 16, WHITE, BLACK);
   }
   #endif
 
@@ -2073,7 +2073,7 @@ void DrawUSBStatus(void){
             default: text0 = "USB:--"; color0 = RED; break;
         }
     }
-    lcd_print_padded_if_changed(0,0,text0, prev_line0, sizeof(prev_line0), 7, 12, color0, BLACK);
+    lcd_print_padded_if_changed(0,0,text0, prev_line0, sizeof(prev_line0), 7, 16, color0, BLACK);
 
   /* Диагностика частоты TIM2 IRQ */
   static uint32_t prev_tim2_count = 0;
@@ -2088,7 +2088,7 @@ void DrawUSBStatus(void){
     prev_tim2_calc_ms = now;
   }
   snprintf(ds_buf,sizeof(ds_buf),"T2:%u Hz", (unsigned)tim2_hz_display);
-    lcd_print_padded_if_changed(0,12, ds_buf, prev_line1, sizeof(prev_line1), 12, 12, CYAN, BLACK);
+    lcd_print_padded_if_changed(0,14, ds_buf, prev_line1, sizeof(prev_line1), 12, 16, CYAN, BLACK);
 
   /* Скорость обмена: считаем раз в ~500мс (байты/с и семплы/с) */
   if(host_present && s == USBD_STATE_CONFIGURED){
@@ -2117,7 +2117,7 @@ void DrawUSBStatus(void){
     }
   /* Очистка legacy VID/PID убрана */
     /* Используем ширину 12 символов для гарантированного затирания хвоста */
-    lcd_print_padded_if_changed(0,24, rate_buf, prev_line2, sizeof(prev_line2), 12, 12, vnd_is_streaming()?GREEN:WHITE, BLACK);
+    lcd_print_padded_if_changed(0,28, rate_buf, prev_line2, sizeof(prev_line2), 12, 16, vnd_is_streaming()?GREEN:WHITE, BLACK);
     /* Показываем время компиляции для контроля версии - ПРИНУДИТЕЛЬНО при первом запуске */
     {
       extern const char fw_build_time[];
@@ -2128,11 +2128,11 @@ void DrawUSBStatus(void){
         memset(prev_line3, 0, sizeof(prev_line3)); // Сбросить для принудительного обновления
         build_time_shown = 1;
       }
-      lcd_print_padded_if_changed(0,36, build_time, prev_line3, sizeof(prev_line3), 16, 12, YELLOW, BLACK);
+      lcd_print_padded_if_changed(0,42, build_time, prev_line3, sizeof(prev_line3), 16, 16, YELLOW, BLACK);
     }
   } else {
   /* Очистка legacy VID/PID убрана */
-    lcd_print_padded_if_changed(0,24, host_present?"S:----":"S:----", prev_line2, sizeof(prev_line2), 12, 12, WHITE, BLACK);
+    lcd_print_padded_if_changed(0,28, host_present?"S:----":"S:----", prev_line2, sizeof(prev_line2), 12, 16, WHITE, BLACK);
     /* При отсутствии хоста показываем время компиляции */
     {
       extern const char fw_build_time[];
@@ -2143,7 +2143,7 @@ void DrawUSBStatus(void){
         memset(prev_line3, 0, sizeof(prev_line3));
         build_time_shown2 = 1;
       }
-      lcd_print_padded_if_changed(0,36, build_time, prev_line3, sizeof(prev_line3), 16, 12, YELLOW, BLACK);
+      lcd_print_padded_if_changed(0,42, build_time, prev_line3, sizeof(prev_line3), 16, 16, YELLOW, BLACK);
     }
     prev_rate_calc_ms = now;
     prev_tx_bytes = vnd_get_total_tx_bytes();

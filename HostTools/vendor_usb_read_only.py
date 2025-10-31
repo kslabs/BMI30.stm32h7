@@ -16,6 +16,7 @@ VID = int(os.getenv('VND_VID', '0xCAFE'), 16)
 PID = int(os.getenv('VND_PID', '0x4001'), 16)
 OUT_EP = 0x03
 IN_EP  = 0x83
+IFACE_INDEX = int(os.getenv('VND_INTF', '2'))
 READ_COUNT = int(os.getenv('VND_READ_COUNT', '6'))
 READ_TIMEOUT_MS = int(os.getenv('VND_READ_TIMEOUT', '1000'))
 LOG_PATH = os.getenv('VND_HOST_LOG', 'HostTools/host_rx.log')
@@ -50,17 +51,34 @@ def main():
     except usb.core.USBError:
         pass
 
+    # Try to switch Vendor IF to alt=1 explicitly
+    try:
+        usb.util.claim_interface(dev, IFACE_INDEX)
+    except Exception:
+        pass
+    try:
+        dev.set_interface_altsetting(interface=IFACE_INDEX, alternate_setting=1)
+    except Exception:
+        pass
+
     cfg, intf = find_iface_with_eps(dev)
-    if cfg is None:
-        log("[ERR] Vendor interface (0x03/0x83) not found; check driver binding")
-        sys.exit(2)
+    if cfg is None or intf is None:
+        # Fallback: still claim the known interface index
+        try:
+            usb.util.claim_interface(dev, IFACE_INDEX)
+        except Exception:
+            pass
+        intf = type('Tmp', (), {'bInterfaceNumber': IFACE_INDEX})()
 
     try:
         if dev.is_kernel_driver_active(intf.bInterfaceNumber):
             dev.detach_kernel_driver(intf.bInterfaceNumber)
     except Exception:
         pass
-    usb.util.claim_interface(dev, intf.bInterfaceNumber)
+    try:
+        usb.util.claim_interface(dev, intf.bInterfaceNumber)
+    except Exception:
+        pass
 
     got = 0
     t0 = time.time()

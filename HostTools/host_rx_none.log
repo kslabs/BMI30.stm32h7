@@ -1,0 +1,79 @@
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=20 tmo=3000ms window=12.0s full=1 async=1 chmode=0 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST][WARN] SET_WINDOWS failed: [Errno 10060] Operation timed out
+[HOST][WARN] SET_BLOCK_RATE failed: [Errno 10060] Operation timed out
+[HOST][WARN] SET_FULL_MODE failed: [Errno 10060] Operation timed out
+[HOST][WARN] SET_PROFILE failed: [Errno 10060] Operation timed out
+[HOST][WARN] SET_ASYNC_MODE failed: [Errno 10060] Operation timed out
+[HOST][WARN] SET_CHMODE failed: [Errno 10060] Operation timed out
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=20 tmo=3000ms window=12.0s full=1 async=1 chmode=0 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST][WRITE][WARN] SET_WINDOWS timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+[HOST][WARN] SET_WINDOWS failed: [Errno 10060] Operation timed out
+[HOST][WRITE][WARN] SET_BLOCK_RATE timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+[HOST][WARN] SET_BLOCK_RATE failed: [Errno 10060] Operation timed out
+[HOST][WRITE][WARN] SET_FULL_MODE timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+[HOST][WARN] SET_FULL_MODE failed: [Errno 10060] Operation timed out
+[HOST][WRITE][WARN] SET_PROFILE timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+[HOST][WARN] SET_PROFILE failed: [Errno 10060] Operation timed out
+[HOST][WRITE][WARN] SET_ASYNC_MODE timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+[HOST][WARN] SET_ASYNC_MODE failed: [Errno 10060] Operation timed out
+[HOST][WRITE][WARN] SET_CHMODE timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+[HOST][WARN] SET_CHMODE failed: [Errno 10060] Operation timed out
+[HOST][WRITE][WARN] START timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=20 tmo=3000ms window=12.0s full=1 async=1 chmode=0 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST][WRITE][WARN] SET_WINDOWS timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=0 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+[HOST][WARN] SET_WINDOWS failed: [Errno 10060] Operation timed out
+[HOST][WRITE][WARN] SET_BLOCK_RATE timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=0 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+[HOST][WARN] SET_BLOCK_RATE failed: [Errno 10060] Operation timed out
+[HOST][WRITE][WARN] SET_FULL_MODE timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=0 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+[HOST][WARN] SET_FULL_MODE failed: [Errno 10060] Operation timed out
+[HOST][WRITE][WARN] SET_PROFILE timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=0 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+[HOST][WARN] SET_PROFILE failed: [Errno 10060] Operation timed out
+[HOST][WRITE][WARN] SET_ASYNC_MODE timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=0 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+[HOST][WARN] SET_ASYNC_MODE failed: [Errno 10060] Operation timed out
+[HOST][WRITE][WARN] SET_CHMODE timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=0 OK
+[HOST][RECOVER] SetInterface alt=1 OK
+[HOST][WARN] SET_CHMODE failed: [Errno 10060] Operation timed out
+[HOST][WRITE][WARN] START timeout: [Errno 10060] Operation timed out -> try recover
+[HOST][RECOVER] clear_halt OUT 0x03 OK
+[HOST][RECOVER] SetInterface alt=0 OK
+[HOST][RECOVER] SetInterface alt=1 OK

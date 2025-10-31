@@ -32,8 +32,11 @@ def _parse_args():
     p.add_argument('--win1', nargs=2, type=int, metavar=('START','LEN'), default=(int(os.getenv('VND_WIN1_START','700')), int(os.getenv('VND_WIN1_LEN','300'))), help='Window1 start,len')
     p.add_argument('--rate-hz', type=int, default=int(os.getenv('VND_RATE_HZ','200')), help='Block rate (Hz)')
     p.add_argument('--full-mode', type=int, choices=[0,1], default=int(os.getenv('VND_FULL_MODE','1')), help='1=ADC, 0=DIAG(A-only)')
-    p.add_argument('--use-ctrl-status', action='store_true', help='Use control GET_STATUS instead of bulk 0x30')
+    # Status reporting mode during read: none (default), ctrl (EP0), or bulk (0x30 over OUT)
+    p.add_argument('--status-mode', choices=['none','ctrl','bulk'], default=os.getenv('VND_STATUS_MODE','none'), help='How to request STAT during read. Default: none')
     p.add_argument('--frame-samples', type=int, default=int(os.getenv('VND_FRAME_SAMPLES','0')), help='Samples per frame per channel (CMD 0x17). E.g., 10 for 200Hz, 15 for 300Hz (~20 FPS). 0=disabled')
+    p.add_argument('--async-mode', type=int, choices=[0,1], default=int(os.getenv('VND_ASYNC_MODE','1')), help='1=async A/B independent (default), 0=strict A->B pairs')
+    p.add_argument('--ch-mode', type=int, choices=[0,1,2], default=int(os.getenv('VND_CH_MODE','0')), help='0=A-only, 1=B-only, 2=both')
     return p.parse_args()
 
 args = _parse_args()
@@ -51,12 +54,16 @@ WIN1_START, WIN1_LEN = args.win1
 RATE_HZ = args.rate_hz
 FULL_MODE = args.full_mode
 FRAME_SAMPLES = args.frame_samples
+ASYNC_MODE = args.async_mode
+CH_MODE = args.ch_mode
 # Control GET_STATUS params
 IFACE_INDEX = args.intf  # Vendor interface index in composite config
 VND_CMD_GET_STATUS = 0x30
 VND_CMD_SET_FULL_MODE = 0x13
 VND_CMD_SET_PROFILE   = 0x14
-USE_CTRL_STATUS = args.use_ctrl_status  # 1=use ctrl_transfer, 0=use bulk 0x30 (default)
+VND_CMD_SET_ASYNC_MODE = 0x18
+VND_CMD_SET_CHMODE     = 0x19
+STATUS_MODE = args.status_mode  # 'none'|'ctrl'|'bulk'
 
 # Ensure log file exists early, even if device not found
 def _ensure_log_file():
@@ -82,12 +89,78 @@ def log_line(s: str):
         pass
 
 
+def _is_timeout(e: Exception) -> bool:
+    try:
+        # PyUSB on Windows uses errno 10060; on Unix-like: 110 or 60; or message contains 'timed out'
+        en = getattr(e, 'errno', None)
+        if en in (10060, 110, 60):
+            return True
+        if 'timed out' in str(e).lower():
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def write_vendor(dev, payload: bytes, timeout_ms: int = 1000, label: str = "CMD", max_retries: int = 1) -> int:
+    """Robust write to Vendor OUT with simple recovery on timeout.
+    - On timeout: clear_halt(OUT), try SetInterface alt=1 again, and retry once.
+    Returns number of bytes written or raises last exception.
+    """
+    try:
+        return dev.write(OUT_EP, payload, timeout=timeout_ms)
+    except Exception as e1:
+        if not _is_timeout(e1) or max_retries <= 0:
+            raise
+        log_line(f"[HOST][WRITE][WARN] {label} timeout: {e1} -> try recover")
+        # Try to recover endpoint and alt setting
+        try:
+            try:
+                dev.clear_halt(OUT_EP)
+                log_line(f"[HOST][RECOVER] clear_halt OUT 0x{OUT_EP:02X} OK")
+            except Exception as ce:
+                log_line(f"[HOST][RECOVER][WARN] clear_halt OUT failed: {ce}")
+            # Try toggling altsetting 0 -> 1 to force EP reopen on device
+            try:
+                dev.set_interface_altsetting(interface=IFACE_INDEX, alternate_setting=0)
+                log_line("[HOST][RECOVER] SetInterface alt=0 OK")
+                time.sleep(0.02)
+            except Exception as se0:
+                log_line(f"[HOST][RECOVER][WARN] SetInterface alt=0 failed: {se0}")
+            try:
+                dev.set_interface_altsetting(interface=IFACE_INDEX, alternate_setting=1)
+                log_line("[HOST][RECOVER] SetInterface alt=1 OK")
+            except Exception as se1:
+                log_line(f"[HOST][RECOVER][WARN] SetInterface alt=1 failed: {se1}")
+            time.sleep(0.02)
+            w = dev.write(OUT_EP, payload, timeout=timeout_ms)
+            log_line(f"[HOST][WRITE][OK] {label} after recover: {w} bytes")
+            return w
+        except Exception as e2:
+            raise e2
+
+
 def find_iface_with_eps(dev, out_ep=OUT_EP, in_ep=IN_EP):
+    """Try to locate the Vendor interface.
+    Priority:
+      1) interface that currently exposes both OUT/IN endpoints (works if alt=1 already active)
+      2) fallback by interface number (IFACE_INDEX), even if alt=0 has 0 endpoints
+    Returns (cfg, intf) or (None, None).
+    """
+    # First pass: endpoints present (alt=1 already)
     for cfg in dev:
         for intf in cfg:
             eps = [ep.bEndpointAddress for ep in intf]
             if out_ep in eps and in_ep in eps:
                 return cfg, intf
+    # Second pass: fallback by interface index (will require SetInterface to alt=1 later)
+    try:
+        for cfg in dev:
+            for intf in cfg:
+                if getattr(intf, 'bInterfaceNumber', None) == IFACE_INDEX:
+                    return cfg, intf
+    except Exception:
+        pass
     return None, None
 
 def parse_stat_frame(ba: bytes):
@@ -191,7 +264,8 @@ def recover_pipe_error(dev, claim_idx, in_ep=IN_EP, out_ep=OUT_EP):
     """
     try:
         try:
-            usb.util.clear_halt(dev, in_ep)
+            # Prefer device method per PyUSB API
+            dev.clear_halt(in_ep)
             log_line(f"[HOST][RECOVER] clear_halt IN 0x{in_ep:02X} OK")
         except Exception as e:
             log_line(f"[HOST][RECOVER][WARN] clear_halt IN failed: {e}")
@@ -213,7 +287,7 @@ def recover_pipe_error(dev, claim_idx, in_ep=IN_EP, out_ep=OUT_EP):
 
 
 def main():
-    log_line(f"[HOST][CFG] VID=0x{VID:04X} PID=0x{PID:04X} intf={IFACE_INDEX} IN=0x{IN_EP:02X} OUT=0x{OUT_EP:02X} pairs={READ_COUNT} tmo={READ_TIMEOUT_MS}ms window={READ_WINDOW_SEC}s full={FULL_MODE} rate={RATE_HZ}Hz ctrlSTAT={int(USE_CTRL_STATUS)}")
+    log_line(f"[HOST][CFG] VID=0x{VID:04X} PID=0x{PID:04X} intf={IFACE_INDEX} IN=0x{IN_EP:02X} OUT=0x{OUT_EP:02X} pairs={READ_COUNT} tmo={READ_TIMEOUT_MS}ms window={READ_WINDOW_SEC}s full={FULL_MODE} async={ASYNC_MODE} chmode={CH_MODE} rate={RATE_HZ}Hz statusMode={STATUS_MODE}")
     dev = usb.core.find(idVendor=VID, idProduct=PID)
     if dev is None:
         log_line(f"[ERR] Device not found VID=0x{VID:04X} PID=0x{PID:04X}")
@@ -254,21 +328,29 @@ def main():
     try:
         dev.set_interface_altsetting(interface=claim_idx, alternate_setting=1)
         log_line(f"[HOST] SetInterface(IF#{claim_idx}, alt=1) OK")
+        # Give the device stack a brief moment to open EPs after alt-switch (Windows/WinUSB is sensitive)
+        time.sleep(0.1)
+        try:
+            dev.clear_halt(OUT_EP)
+        except Exception:
+            pass
     except Exception as e:
         log_line(f"[HOST][WARN] SetInterface alt=1 failed: {e}")
 
     # Configure windows and block rate before START
     try:
         payload = struct.pack('<BHHHH', 0x10, WIN0_START, WIN0_LEN, WIN1_START, WIN1_LEN)
-        w1 = dev.write(OUT_EP, payload, timeout=1000)
+        w1 = write_vendor(dev, payload, timeout_ms=1000, label="SET_WINDOWS", max_retries=1)
         log_line(f"[HOST] SET_WINDOWS written: {w1} bytes ({WIN0_START},{WIN0_LEN}) ({WIN1_START},{WIN1_LEN})")
+        time.sleep(0.02)
     except Exception as e:
         log_line(f"[HOST][WARN] SET_WINDOWS failed: {e}")
 
     try:
         payload = struct.pack('<BH', 0x11, RATE_HZ)
-        w2 = dev.write(OUT_EP, payload, timeout=1000)
+        w2 = write_vendor(dev, payload, timeout_ms=1000, label="SET_BLOCK_RATE", max_retries=1)
         log_line(f"[HOST] SET_BLOCK_RATE written: {w2} bytes ({RATE_HZ} Hz)")
+        time.sleep(0.02)
     except Exception as e:
         log_line(f"[HOST][WARN] SET_BLOCK_RATE failed: {e}")
 
@@ -276,41 +358,68 @@ def main():
     if FRAME_SAMPLES and FRAME_SAMPLES > 0:
         try:
             payload = struct.pack('<BH', 0x17, FRAME_SAMPLES)
-            wfs = dev.write(OUT_EP, payload, timeout=1000)
+            wfs = write_vendor(dev, payload, timeout_ms=1000, label="SET_FRAME_SAMPLES", max_retries=1)
             log_line(f"[HOST] SET_FRAME_SAMPLES written: {wfs} bytes (Ns={FRAME_SAMPLES})")
+            time.sleep(0.02)
         except Exception as e:
             log_line(f"[HOST][WARN] SET_FRAME_SAMPLES failed: {e}")
 
     # Ensure full mode and default profile
     try:
         fm = 0x01 if FULL_MODE else 0x00
-        w3 = dev.write(OUT_EP, bytes([VND_CMD_SET_FULL_MODE, fm]), timeout=1000)
+        w3 = write_vendor(dev, bytes([VND_CMD_SET_FULL_MODE, fm]), timeout_ms=1000, label="SET_FULL_MODE", max_retries=1)
         log_line(f"[HOST] SET_FULL_MODE({FULL_MODE}) written: {w3} bytes")
+        time.sleep(0.02)
     except Exception as e:
         log_line(f"[HOST][WARN] SET_FULL_MODE failed: {e}")
     try:
         # Profile 2 => default B profile per firmware
-        w4 = dev.write(OUT_EP, bytes([VND_CMD_SET_PROFILE, 0x02]), timeout=1000)
+        w4 = write_vendor(dev, bytes([VND_CMD_SET_PROFILE, 0x02]), timeout_ms=1000, label="SET_PROFILE", max_retries=1)
         log_line(f"[HOST] SET_PROFILE(2) written: {w4} bytes")
+        time.sleep(0.02)
     except Exception as e:
         log_line(f"[HOST][WARN] SET_PROFILE failed: {e}")
 
+    # Toggle async mode before START (default: enabled)
+    try:
+        am = 0x01 if ASYNC_MODE else 0x00
+        w5 = write_vendor(dev, bytes([VND_CMD_SET_ASYNC_MODE, am]), timeout_ms=1000, label="SET_ASYNC_MODE", max_retries=1)
+        log_line(f"[HOST] SET_ASYNC_MODE({ASYNC_MODE}) written: {w5} bytes")
+        time.sleep(0.02)
+    except Exception as e:
+        log_line(f"[HOST][WARN] SET_ASYNC_MODE failed: {e}")
+
+    # Set channel mode (0=A-only by default per current stabilization goal)
+    try:
+        cm = CH_MODE & 0xFF
+        w6 = write_vendor(dev, bytes([VND_CMD_SET_CHMODE, cm]), timeout_ms=1000, label="SET_CHMODE", max_retries=1)
+        log_line(f"[HOST] SET_CHMODE({CH_MODE}) written: {w6} bytes")
+        time.sleep(0.02)
+    except Exception as e:
+        log_line(f"[HOST][WARN] SET_CHMODE failed: {e}")
+
     # Send START (0x20) to OUT EP
     data = bytes([0x20])
-    wlen = dev.write(OUT_EP, data, timeout=1000)
+    wlen = write_vendor(dev, data, timeout_ms=1000, label="START", max_retries=1)
     log_line(f"[HOST] START written: {wlen} bytes to EP 0x{OUT_EP:02X}")
+    time.sleep(0.02)
     # Optionally request initial STAT snapshot
-    if USE_CTRL_STATUS:
+    if STATUS_MODE == 'ctrl':
         st0 = get_status_ctrl(dev)
         if st0:
             log_line(f"[HOST_STAT0] ver={st0['version']} flags=0x{st0['flags_runtime']:04X} test={st0['test_frames']} seq={st0['produced_seq']} sentA/B={st0['sent0']}/{st0['sent1']} dma={st0['dma_done0']}/{st0['dma_done1']} cur_samples={st0['cur_samples']}")
-    else:
+    elif STATUS_MODE == 'bulk':
         queue_status_bulk(dev)
 
     # Logger is defined at module level
 
     # Read several complete frames (STAT/TEST/A/B), reassembling from 512B packets
     got = 0
+    cnt_a = 0
+    cnt_b = 0
+    cnt_stat = 0
+    timeouts = 0
+    pipe_err_total = 0
     start_time = time.time()
     last_stat_print = 0.0
     rx = bytearray()
@@ -340,6 +449,7 @@ def main():
                             ext = f" flags2=0x{st['flags2']:04X} send_ch={st['sending_ch']} pair {st['pair_fill']}/{st['pair_send']} lastTX={st['last_tx_len']} cur_seq={st['cur_stream_seq']} prep {st['prep_calls']}/{st['prep_ok']}"
                         log_line(f"[HOST_STAT] {base}{ext}")
                     got += 1
+                    cnt_stat += 1
                     continue
                 # Frame header?
                 if rx[0] == 0x5A and rx[1] == 0xA5 and rx[2] == 0x01 and len(rx) >= 16:
@@ -353,6 +463,10 @@ def main():
                     head = ' '.join(f"{b:02X}" for b in frame[:4])
                     log_line(f"[HOST_RX] ep=0x{IN_EP:02X} len={len(frame)} type={ftype} head={head}")
                     got += 1
+                    if ftype == 'A':
+                        cnt_a += 1
+                    elif ftype == 'B':
+                        cnt_b += 1
                     continue
                 # Resync: drop until next plausible header
                 idx_stat = rx.find(b'STAT')
@@ -371,20 +485,22 @@ def main():
             # Treat common timeout errnos/messages as non-fatal (Windows 10060, POSIX 110/ETIMEDOUT)
             if (getattr(e, 'errno', None) in (10060, 110, 60)) or ('timed out' in msg) or ('timeout' in msg):
                 log_line("[HOST_RX] timeout")
+                timeouts += 1
                 # Periodically request STAT to aid diagnosis (bulk preferred)
                 now = time.time()
-                if now - last_stat_print > 1.0:
+                if STATUS_MODE != 'none' and (now - last_stat_print > 1.0):
                     last_stat_print = now
-                    if USE_CTRL_STATUS:
+                    if STATUS_MODE == 'ctrl':
                         st = get_status_ctrl(dev)
                         if st:
                             log_line(f"[HOST_STAT] ver={st['version']} flags=0x{st['flags_runtime']:04X} test={st['test_frames']} seq={st['produced_seq']} sentA/B={st['sent0']}/{st['sent1']} TxCplt={st['dbg_tx_cplt']} dma={st['dma_done0']}/{st['dma_done1']} cur_samples={st['cur_samples']} wr_seq={st['frame_wr_seq']}")
-                    else:
+                    elif STATUS_MODE == 'bulk':
                         queue_status_bulk(dev)
                 continue
             # Handle pipe errors gracefully: clear halt, reselect alt=1, re-send START
             if (getattr(e, 'errno', None) in (32, 5)) or ('pipe' in msg):
                 pipe_errs += 1
+                pipe_err_total += 1
                 log_line(f"[HOST_RX][PIPE] {e} (#{pipe_errs})")
                 recovered = recover_pipe_error(dev, claim_idx)
                 if recovered and pipe_errs < 5:
@@ -414,6 +530,10 @@ def main():
         usb.util.dispose_resources(dev)
     except Exception:
         pass
+
+    # Final summary
+    elapsed = time.time() - start_time
+    log_line(f"[HOST][SUMMARY] elapsed={elapsed:.1f}s A={cnt_a} B={cnt_b} STAT={cnt_stat} timeouts={timeouts} pipe_errors={pipe_err_total}")
 
 
 if __name__ == '__main__':

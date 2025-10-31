@@ -1,4 +1,4 @@
-import usb.core, usb.util, time, struct
+import usb.core, usb.util, time, struct, argparse
 
 # Find device by VID/PID from usbd_desc.c
 VID = 0xCAFE
@@ -11,6 +11,7 @@ EP_IN  = 0x83
 CMD_START = 0x20
 CMD_STOP  = 0x21
 CMD_GET_STATUS = 0x30
+CMD_GET_STATUS_IMM = 0x31
 
 def find_dev():
     dev = usb.core.find(idVendor=VID, idProduct=PID)
@@ -71,21 +72,28 @@ def parse_stat(buf: bytes):
     }
 
 
-def main():
+def main(duration_secs: float = 5.0):
     dev = find_dev()
     # START
     dev.write(EP_OUT, bytes([CMD_START]))
     t0 = time.time()
     got_test = False
-    deadline = time.time() + 5.0
+    deadline = time.time() + float(duration_secs)
     while time.time() < deadline:
         try:
             data = dev.read(EP_IN, 512, timeout=500)
+        except usb.core.USBTimeoutError:
+            # Windows libusb backend raises USBTimeoutError (e.errno == 10060)
+            # Try GET_STATUS_IMM during stream (diagnostic)
+            try:
+                dev.write(EP_OUT, bytes([CMD_GET_STATUS_IMM]))
+            except Exception:
+                pass
+            continue
         except usb.core.USBError as e:
-            if getattr(e, 'errno', None) == 110:
-                # Try GET_STATUS during stream
+            if getattr(e, 'errno', None) in (110, 10060):
                 try:
-                    dev.write(EP_OUT, bytes([CMD_GET_STATUS]))
+                    dev.write(EP_OUT, bytes([CMD_GET_STATUS_IMM]))
                 except Exception:
                     pass
                 continue
@@ -111,4 +119,8 @@ def main():
     dev.write(EP_OUT, bytes([CMD_STOP]))
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description="Quick vendor stream status monitor")
+    parser.add_argument('--secs', type=float, default=30.0, help='Duration to run (seconds)')
+    args = parser.parse_args()
+    print(f"[INFO] Running quick status for {args.secs:.1f}s...")
+    main(duration_secs=args.secs)

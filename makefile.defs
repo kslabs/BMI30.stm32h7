@@ -1,0 +1,15 @@
+# Custom makefile definitions to auto-generate build timestamp header
+
+# Path is relative to Debug/ directory which includes this file as ..\makefile.defs
+AUTOGEN_HDR := ../Core/Inc/build_autogen.h
+AUTOGEN_SCRIPT := ../.vscode/gen_build_autogen.py
+
+# Ensure header exists before building and is refreshed each build
+.PHONY: build-autogen
+build-autogen:
+	@echo [AUTOGEN] Generating $(AUTOGEN_HDR)
+	@py -3 $(AUTOGEN_SCRIPT) $(AUTOGEN_HDR)
+
+# Make sure autogen runs before the main build
+main-build: build-autogen
+all: build-autogen

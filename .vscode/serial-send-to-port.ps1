@@ -11,7 +11,10 @@ try {
   $bytes = New-Object byte[] ($clean.Length / 2)
   for ($i=0; $i -lt $bytes.Length; $i++) { $bytes[$i] = [Convert]::ToByte($clean.Substring($i*2,2),16) }
 
-  $sp = New-Object System.IO.Ports.SerialPort $Port, [int]$Baud, 'None', 8, 'One'
+  # Be resilient if Baud contains accidental prefix like "[int]115200"
+  $baudClean = ($Baud -replace "\[int\]", "")
+  $baudInt = [int]$baudClean
+  $sp = New-Object System.IO.Ports.SerialPort $Port, $baudInt, 'None', 8, 'One'
   $sp.Handshake = [System.IO.Ports.Handshake]::None
   $sp.NewLine = "`r`n"
   $sp.ReadTimeout = 300

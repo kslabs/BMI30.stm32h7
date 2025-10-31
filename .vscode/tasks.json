@@ -136,6 +136,31 @@
 			}
 		},
 		{
+			"label": "Serial: Monitor COM9 (raw to file)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/serial-monitor.ps1",
+				"-Port",
+				"COM9",
+				"-Baud",
+				"115200",
+				"-LogPath",
+				".vscode/serial_raw.log"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			}
+		},
+		{
 			"label": "CDC: Send START (CDC COM)",
 			"type": "shell",
 			"command": "powershell.exe",
@@ -157,6 +182,56 @@
 				"reveal": "always",
 				"panel": "shared"
 			}
+		},
+		{
+			"label": "CDC: SET ASYNC=1 (CDC COM)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/serial-send-to-port.ps1",
+				"-Port",
+				"${input:cdcPort}",
+				"-Hex",
+				"18 01"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": { "reveal": "always", "panel": "shared" }
+		},
+		{
+			"label": "CDC: SET CHMODE A-only (CDC COM)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/serial-send-to-port.ps1",
+				"-Port",
+				"${input:cdcPort}",
+				"-Hex",
+				"19 00"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": { "reveal": "always", "panel": "shared" }
+		},
+		{
+			"label": "CDC: A-only + START (CDC COM)",
+			"dependsOn": [
+				"CDC: SET ASYNC=1 (CDC COM)",
+				"CDC: SET CHMODE A-only (CDC COM)",
+				"CDC: Send START (CDC COM)"
+			],
+			"dependsOrder": "sequence",
+			"group": "none"
 		},
 		{
 			"label": "Vendor USB: READ-ONLY via PyUSB",
@@ -219,6 +294,72 @@
 				"reveal": "always",
 				"panel": "shared"
 			}
+		},
+		{
+			"label": "Vendor USB: CTRL START (EP0)",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"HostTools/vendor_ctrl_start_only.py",
+				"--async", "1",
+				"--chmode", "0",
+				"--full", "1",
+				"--profile", "2"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": { "reveal": "always", "panel": "shared" }
+		},
+		{
+			"label": "CTRL START + READ-ONLY",
+			"dependsOn": [
+				"Vendor USB: CTRL START (EP0)",
+				"Vendor USB: READ-ONLY via PyUSB"
+			],
+			"dependsOrder": "sequence",
+			"group": "none"
+		},
+		{
+			"label": "Host: CTRL START A-only (EP0)",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"HostTools/vendor_ctrl_start_only.py",
+				"--async", "1",
+				"--chmode", "0",
+				"--full", "1",
+				"--profile", "2"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": { "reveal": "always", "panel": "shared" }
+		},
+		{
+			"label": "Host: Smoke test 120s",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"HostTools/vendor_read_smoke.py",
+				"--secs", "120",
+				"--timeout", "300",
+				"--summary", "HostTools/host_smoke_summary.txt"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": { "reveal": "always", "panel": "shared" }
+		},
+		{
+			"label": "Run 2-min smoke (A-only)",
+			"dependsOn": [
+				"Host: CTRL START A-only (EP0)",
+				"Host: Smoke test 120s"
+			],
+			"dependsOrder": "sequence",
+			"group": "none"
 		},
 		{
 			"label": "Vendor USB: START via PyUSB",
@@ -415,6 +556,33 @@
 			"group": "none"
 		},
 		{
+			"label": "Run quick status (30s)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/vendor_quick_status.py\" --secs 30"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			}
+		},
+		{
+			"label": "Catch stall: raw log + quick (30s)",
+			"dependsOn": [
+				"Serial: Monitor COM9 (raw to file)",
+				"Run quick status (30s)"
+			],
+			"dependsOrder": "sequence",
+			"group": "none"
+		},
+		{
 			"label": "Run diag via py launcher",
 			"type": "shell",
 			"command": "powershell",
@@ -437,10 +605,28 @@
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope.py\" --ns 300"
+				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope.py\" --ns 300 --profile 1 --single"
 			],
 			"isBackground": false,
 			"group": "none"
+		},
+		{
+			"label": "Locate GUI oscilloscope (path)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"$f = Get-ChildItem -Path '${workspaceFolder}' -Recurse -Filter 'gui_oscilloscope.py' -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName; if ($f) { Write-Host \"Found:\" $f; Write-Host \"Run:\"; Write-Host (\"py -3 `\"$f`\" --ns 300\"); } else { Write-Host \"gui_oscilloscope.py not found under ${workspaceFolder}\" }"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			}
 		},
 		{
 			"label": "Build (make -C Debug all)",
