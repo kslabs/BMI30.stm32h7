@@ -8,9 +8,9 @@ extern "C" {
 // Семантическая версия прошивки
 #define FW_VERSION_MAJOR 1
 #define FW_VERSION_MINOR 2
-#define FW_VERSION_PATCH 3  // Тестовая версия с TIM2 синхронизацией
+#define FW_VERSION_PATCH 4  // DMA 16-bit + GUI keepalive
 
-#define FW_VERSION_STR  "1.2.3"
+#define FW_VERSION_STR  "1.2.4"
 
 // Опционально: можно переопределить через ключ компиляции -DGIT_HASH="..."
 #ifndef GIT_HASH

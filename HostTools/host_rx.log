@@ -70946,3 +70946,1104 @@
 [HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
 [HOST] STOP written: 1 bytes
 [HOST][SUMMARY] elapsed=120.0s A=20665 B=20665 STAT=0 timeouts=0 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=0 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(0) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST] STOP written: 1 bytes
+[HOST][SUMMARY] elapsed=0.2s A=8 B=0 STAT=0 timeouts=0 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=0 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(0) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST] STOP written: 1 bytes
+[HOST][SUMMARY] elapsed=0.2s A=8 B=0 STAT=0 timeouts=0 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=0 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(0) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST] STOP written: 1 bytes
+[HOST][SUMMARY] elapsed=0.3s A=8 B=0 STAT=0 timeouts=0 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=0 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(0) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST] STOP written: 1 bytes
+[HOST][SUMMARY] elapsed=0.1s A=8 B=0 STAT=0 timeouts=0 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=200 tmo=3000ms window=10.0s full=1 async=0 chmode=2 rate=200Hz statusMode=ctrl
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] SET_ASYNC_MODE(0) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST] STOP written: 1 bytes
+[HOST][SUMMARY] elapsed=1.5s A=100 B=100 STAT=0 timeouts=0 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=400 tmo=3000ms window=10.0s full=1 async=0 chmode=2 rate=200Hz statusMode=ctrl
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] SET_ASYNC_MODE(0) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] timeout
+[HOST_RX] timeout
+[HOST_STAT] ver=1 flags=0x0001 test=1 seq=0 sentA/B=0/0 TxCplt=208 dma=63956/63979 cur_samples=0 wr_seq=0
+[HOST_RX] timeout
+[HOST_STAT] ver=1 flags=0x0000 test=0 seq=0 sentA/B=38/37 TxCplt=283 dma=65963/65986 cur_samples=0 wr_seq=1895
+[HOST] STOP written: 1 bytes
+[HOST][SUMMARY] elapsed=12.7s A=38 B=37 STAT=0 timeouts=3 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=0 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(0) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST] STOP written: 1 bytes
+[HOST][SUMMARY] elapsed=0.1s A=8 B=0 STAT=0 timeouts=0 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=500 tmo=5000ms window=12.0s full=1 async=0 chmode=2 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (0,1000) (0,0)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] SET_ASYNC_MODE(0) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] timeout
+[HOST_RX] timeout
+[HOST] STOP written: 1 bytes
+[HOST][SUMMARY] elapsed=15.1s A=4 B=3 STAT=0 timeouts=2 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=200 tmo=5000ms window=8.0s full=1 async=0 chmode=2 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (0,1000) (0,0)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] SET_ASYNC_MODE(0) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST] STOP written: 1 bytes
+[HOST][SUMMARY] elapsed=1.8s A=100 B=100 STAT=0 timeouts=0 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=400 tmo=5000ms window=8.0s full=1 async=0 chmode=2 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (0,1000) (0,0)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] SET_ASYNC_MODE(0) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
+[HOST] STOP written: 1 bytes
+[HOST][SUMMARY] elapsed=2.9s A=200 B=200 STAT=0 timeouts=0 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=0 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(0) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST] STOP written: 1 bytes
+[HOST][SUMMARY] elapsed=0.2s A=8 B=0 STAT=0 timeouts=0 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=0 rate=200Hz statusMode=none
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(2) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(0) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST_RX] ep=0x83 len=632 type=A head=5A A5 01 01
+[HOST] STOP written: 1 bytes
+[HOST][SUMMARY] elapsed=0.2s A=8 B=0 STAT=0 timeouts=0 pipe_errors=0

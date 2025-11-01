@@ -206,3 +206,28 @@ make -C Debug flash_full
 
 (Добавлять ниже датированные записи)
 
+## 2025-11-01: Версия v1.2.4 — DMA 16-bit + GUI keepalive
+
+Статус: локальный релиз в ветке `restore/diag-120s`, тег `v1.2.4` (локально).
+
+Изменения:
+- Перевод DMA выравнивания для ADC1/ADC2 на 16 бит (HALFWORD) в `stm32h7xx_hal_msp.c`.
+  - Было: `DMA_PDATAALIGN_WORD` / `DMA_MDATAALIGN_WORD`
+  - Стало: `DMA_PDATAALIGN_HALFWORD` / `DMA_MDATAALIGN_HALFWORD`
+  - Соответствует `ADC_RESOLUTION_16B` и буферам `uint16_t` (`adc_stream.c`).
+- GUI осциллограф (`HostTools/gui_oscilloscope.py`):
+  - Добавлен keepalive-сторожок, который при длительном простое повторно отправляет конфигурацию и `START`.
+  - Генератор кадров отдаёт последний известный кадр при отсутствии новых данных (UI остаётся отзывчивым).
+  - Отключено кэширование кадров в `FuncAnimation` (убрано предупреждение).
+
+Известные особенности:
+- У некоторых запусков GUI возможно отсутствие мгновенного отображения осциллограммы — keepalive пытается восстановить поток; при необходимости перезапустить GUI или устройство.
+
+Как собрать и прошить:
+```
+make -C Debug all
+make -C Debug flash_full
+```
+
+Коммит: release v1.2.4 (ADC DMA 16-bit, GUI keepalive)
+

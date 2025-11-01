@@ -32,6 +32,7 @@ CMD_SET_FRAME_SAMPLES=0x17
 CMD_SET_FULL_MODE=0x13
 CMD_SET_PROFILE=0x14
 CMD_SET_CHMODE=0x19  # 0=A-only, 1=B-only, 2=both
+CMD_SET_ASYNC_MODE=0x18  # 0=strict A->B pairs, 1=async
 
 HDR_SIZE=32
 
@@ -79,18 +80,19 @@ def parse_hdr(b: bytes):
     }
 
 def reader_thread(dev, out_q: queue.Queue, stop_ev: threading.Event):
-    # Перенесём логику блоков в статус
+    """Читает из EP_IN и реассамблирует кадры из 512-байтовых чанков.
+    Пропускает STAT и TEST кадры, в очередь кладёт пары (hdr, payload)."""
     global g_status
-    last_seq = None
+    rx = bytearray()
     while not stop_ev.is_set():
         try:
-            data = dev.read(EP_IN, 4096, timeout=1000)
-            # Успешное чтение — сбросим счётчик подряд идущих таймаутов
+            data = dev.read(EP_IN, 512, timeout=1000)
             if g_status is not None:
                 g_status.on_read_ok()
+            rx += bytes(data)
         except usb.core.USBError as e:
-            # errno 110 = timeout
-            if getattr(e, 'errno', None) == 110:
+            # Windows timeout errno = 10060, POSIX = 110/60
+            if getattr(e, 'errno', None) in (10060, 110, 60) or 'timed out' in str(e).lower():
                 if g_status is not None:
                     g_status.on_timeout()
                 continue
@@ -102,15 +104,81 @@ def reader_thread(dev, out_q: queue.Queue, stop_ev: threading.Event):
             if g_status is not None:
                 g_status.on_error(repr(e))
             continue
-        b = bytes(data)
-        h = parse_hdr(b)
-        if not h or h['magic'] != 0xA55A:
+
+        # Пробуем извлечь несколько кадров из rx
+        i = 0
+        L = len(rx)
+        mv = memoryview(rx)
+        while True:
+            if i + 4 > L:
+                break
+            # Пропускаем статусные пакеты (STAT, 52/64B)
+            if mv[i:i+4].tobytes() == b'STAT':
+                if i + 64 <= L:
+                    i += 64; continue
+                elif i + 52 <= L:
+                    i += 52; continue
+                else:
+                    break
+            # Заголовок поточного кадра?
+            if mv[i:i+3].tobytes() == b"\x5A\xA5\x01" and i + 16 <= L:
+                flags = mv[i+3]
+                total_samples = int(mv[i+12]) | (int(mv[i+13]) << 8)
+                flen = HDR_SIZE + total_samples * 2
+                if i + flen > L:
+                    # неполный кадр — ждём
+                    break
+                # Тестовый кадр пропустим
+                if (flags & 0x80) != 0:
+                    i += flen
+                    continue
+                # Собираем заголовок/поля
+                seq = struct.unpack_from('<I', mv[i+4:i+8])[0]
+                ts  = struct.unpack_from('<I', mv[i+8:i+12])[0]
+                ns  = total_samples
+                hdr = {'magic': 0xA55A, 'ver': 1, 'flags': flags, 'seq': seq, 'ts': ts, 'ns': ns}
+                payload = bytes(mv[i+HDR_SIZE:i+flen])
+                if g_status is not None:
+                    g_status.on_frame_header(hdr)
+                out_q.put((hdr, payload))
+                i += flen
+                continue
+            # Ресинхронизация: ищем ближайший STAT или заголовок
+            idx_stat = rx.find(b'STAT', i+1)
+            idx_hdr  = rx.find(b"\x5A\xA5\x01", i+1)
+            nxt = -1
+            if idx_stat != -1 and (idx_hdr == -1 or idx_stat < idx_hdr):
+                nxt = idx_stat
+            elif idx_hdr != -1:
+                nxt = idx_hdr
+            if nxt == -1:
+                # до конца буфера ничего полезного
+                i = L
+                break
+            i = nxt
+        # сохраняем хвост
+        rx = bytearray(mv[i:].tobytes()) if i < L else bytearray()
+
+def keepalive_thread(dev, stop_ev: threading.Event, reconfig_payloads: list, idle_ms: int = 1500):
+    """Если долго нет кадров, мягко переотправляем конфиг и START, чтобы восстановить поток."""
+    global g_status
+    last_kick = 0.0
+    while not stop_ev.is_set():
+        time.sleep(0.5)
+        if g_status is None:
             continue
-        payload = b[HDR_SIZE:HDR_SIZE + h['ns']*2]
-        # Обновим статус и поставим в очередь
-        if g_status is not None:
-            g_status.on_frame_header(h)
-        out_q.put((h, payload))
+        snap = g_status.snapshot()
+        slh = snap.get('since_last_hdr')
+        now = time.time()
+        if slh is not None and slh*1000.0 > idle_ms and (now - last_kick) > 0.8:
+            try:
+                for payload in reconfig_payloads:
+                    send_cmd(dev, bytes(payload))
+                send_cmd(dev, bytes([CMD_START]))
+                last_kick = now
+            except Exception:
+                # проигнорируем и попробуем снова позже
+                pass
 
 class GuiStatus:
     def __init__(self, q: queue.Queue, ns: int):
@@ -257,23 +325,31 @@ def main():
 
     dev = find_dev()
 
-    # Configure stream
-    win_payload = [CMD_SET_WINDOWS] + le16(100) + le16(args.ns) + le16(700) + le16(args.ns)
-    send_cmd(dev, bytes(win_payload))
-    send_cmd(dev, bytes([CMD_SET_FRAME_SAMPLES] + le16(args.ns)))
-    send_cmd(dev, bytes([CMD_SET_FULL_MODE, 1]))
-    send_cmd(dev, bytes([CMD_SET_PROFILE, args.profile]))
-    # Выбор режимов каналов: по умолчанию — один канал A для стабилизации
+    # Configure stream (готовим список для возможного повторного применения keepalive)
+    reconfig = []
+    # Непрерывное окно передачи: (0,1000) и отключённое второе окно
+    win_payload = [CMD_SET_WINDOWS] + le16(0) + le16(1000) + le16(0) + le16(0)
+    reconfig.append(win_payload)
+    # Фиксируем размер кадра в сэмплах для стабильной визуализации
+    reconfig.append([CMD_SET_FRAME_SAMPLES] + le16(args.ns))
+    reconfig.append([CMD_SET_FULL_MODE, 1])
+    reconfig.append([CMD_SET_PROFILE, args.profile])
+    # Строгие пары A->B
+    reconfig.append([CMD_SET_ASYNC_MODE, 0x00])
+    # Режим каналов: single => A-only, иначе обе
+    reconfig.append([CMD_SET_CHMODE, 0x00 if args.single else 0x02])
+    # Информативный параметр
+    reconfig.append([CMD_SET_BLOCK_HZ] + le16(200 if args.profile == 1 else 300))
+    # Применим конфигурацию сейчас
+    for payload in reconfig:
+        try:
+            send_cmd(dev, bytes(payload))
+        except Exception:
+            pass
     try:
-        send_cmd(dev, bytes([CMD_SET_CHMODE, 0x00 if args.single else 0x02]))
+        send_cmd(dev, bytes([CMD_START]))
     except Exception:
         pass
-    # Подскажем устройству целевую частоту блоков (для LCD/диагностики), фактическая задаётся профилем
-    try:
-        send_cmd(dev, bytes([CMD_SET_BLOCK_HZ] + le16(200 if args.profile == 1 else 300)))
-    except Exception:
-        pass
-    send_cmd(dev, bytes([CMD_START]))
 
     q = queue.Queue(maxsize=1000)
     stop_ev = threading.Event()
@@ -284,6 +360,9 @@ def main():
     t.start()
     tlog = threading.Thread(target=status_logger_thread, args=(stop_ev,), daemon=True)
     tlog.start()
+    # Keepalive-сторожок
+    tka = threading.Thread(target=keepalive_thread, args=(dev, stop_ev, reconfig), daemon=True)
+    tka.start()
 
     plot = LivePlot(args.ns, args.single)
 
@@ -293,11 +372,12 @@ def main():
         last_seq = None
         a_buf = None
         last_a_ts = None
+        last_frame = (0.0, 0, [], None) if args.single else (0.0, 0, [], [])
         while True:
             # collect until we get A then B of same seq
             try:
                 while True:
-                    h, p = q.get(timeout=1.0)
+                    h, p = q.get(timeout=0.3)
                     if h['flags'] == 0x01:  # A
                         if args.single:
                             # Оцениваем частоту по разнице меток времени A→A
@@ -318,7 +398,8 @@ def main():
                             a_vals = [p[2*i] | (p[2*i+1]<<8) for i in range(ns)]
                             if g_status is not None:
                                 g_status.on_pair_done(rate_med, h['seq'])
-                            yield (rate_med, h['seq'], a_vals, None)
+                            last_frame = (rate_med, h['seq'], a_vals, None)
+                            yield last_frame
                             break
                         else:
                             last_seq = h['seq']
@@ -344,13 +425,15 @@ def main():
                         # обновим статус по завершённой паре
                         if g_status is not None:
                             g_status.on_pair_done(rate_med, last_seq)
-                        yield (rate_med, last_seq, a_vals, b_vals)
+                        last_frame = (rate_med, last_seq, a_vals, b_vals)
+                        yield last_frame
                         a_buf = None
                         break
             except queue.Empty:
-                continue
+                # Нет новых данных — отдаём последний кадр, чтобы GUI не зависал
+                yield last_frame
 
-    ani = animation.FuncAnimation(plot.fig, plot.update, gen(), interval=50, blit=False)
+    ani = animation.FuncAnimation(plot.fig, plot.update, gen(), interval=50, blit=False, cache_frame_data=False)
 
     def on_close(evt):
         stop_ev.set()

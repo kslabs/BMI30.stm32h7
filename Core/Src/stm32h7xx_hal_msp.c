@@ -119,8 +119,10 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
     hdma_adc1.Init.Direction = DMA_PERIPH_TO_MEMORY;
     hdma_adc1.Init.PeriphInc = DMA_PINC_DISABLE;
     hdma_adc1.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_adc1.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-    hdma_adc1.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+   /* Для 16-битного АЦП поток DMA должен работать с полусловами (16 бит),
+     иначе будут разрывы и неверная интерпретация данных в uint16_t буферах. */
+   hdma_adc1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+   hdma_adc1.Init.MemDataAlignment    = DMA_MDATAALIGN_HALFWORD;
     hdma_adc1.Init.Mode = DMA_CIRCULAR;
     hdma_adc1.Init.Priority = DMA_PRIORITY_LOW;
     hdma_adc1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
@@ -162,8 +164,9 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
     hdma_adc2.Init.Direction = DMA_PERIPH_TO_MEMORY;
     hdma_adc2.Init.PeriphInc = DMA_PINC_DISABLE;
     hdma_adc2.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_adc2.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-    hdma_adc2.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+  /* Аналогично ADC1: выравнивание по 16 бит для корректной выборки в uint16_t буферы */
+  hdma_adc2.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+  hdma_adc2.Init.MemDataAlignment    = DMA_MDATAALIGN_HALFWORD;
     hdma_adc2.Init.Mode = DMA_CIRCULAR;
     hdma_adc2.Init.Priority = DMA_PRIORITY_LOW;
     hdma_adc2.Init.FIFOMode = DMA_FIFOMODE_DISABLE;

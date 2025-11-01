@@ -1084,7 +1084,8 @@ static void vnd_emergency_keepalive(uint32_t now_ms)
     last_emerg_ms = now_ms;
     uint8_t tbuf[32+16]; memset(tbuf,0,sizeof(tbuf));
     vnd_frame_hdr_t *h = (vnd_frame_hdr_t*)tbuf;
-    h->magic = 0xA55A; h->ver = 0x01; h->flags = 0x80; h->seq = 0; h->timestamp = HAL_GetTick(); h->total_samples = 8;
+    /* Исправление формата тестового кадра по спецификации: флаг 0x81 (ADC0 + TEST) */
+    h->magic = 0xA55A; h->ver = 0x01; h->flags = 0x81; h->seq = 0; h->timestamp = HAL_GetTick(); h->total_samples = 8;
     for(uint16_t i=0;i<8;i++){ tbuf[32+2*i]=(uint8_t)i; tbuf[32+2*i+1]=(uint8_t)(i>>8); }
     vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = sizeof(tbuf); vnd_last_tx_start_ms = HAL_GetTick();
     if(USBD_VND_Transmit(&hUsbDeviceHS, tbuf, sizeof(tbuf)) == USBD_OK){
@@ -1113,7 +1114,8 @@ static void vnd_try_send_test_from_task(void)
     last_try_ms = now;
     uint8_t tbuf[32+16]; memset(tbuf,0,sizeof(tbuf));
     vnd_frame_hdr_t *h = (vnd_frame_hdr_t*)tbuf;
-    h->magic = 0xA55A; h->ver = 0x01; h->flags = 0x80; h->seq = 0; h->timestamp = HAL_GetTick(); h->total_samples = 8;
+    /* Исправление формата тестового кадра по спецификации: флаг 0x81 (ADC0 + TEST) */
+    h->magic = 0xA55A; h->ver = 0x01; h->flags = 0x81; h->seq = 0; h->timestamp = HAL_GetTick(); h->total_samples = 8;
     for(uint16_t i=0;i<8;i++){ tbuf[32+2*i]=(uint8_t)i; tbuf[32+2*i+1]=(uint8_t)(i>>8); }
     vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = sizeof(tbuf); vnd_last_tx_start_ms = HAL_GetTick();
     if(USBD_VND_Transmit(&hUsbDeviceHS, tbuf, sizeof(tbuf)) == USBD_OK){
