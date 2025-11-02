@@ -405,7 +405,8 @@
 				"--status-mode", "none",
 				"--ch-mode", "2",
 				"--async-mode", "1",
-				"--check-nonzero", "1"
+				"--check-nonzero", "1",
+				"--log-path", "HostTools/host_rx_last.log"
 			],
 			"isBackground": false,
 			"group": "none",
