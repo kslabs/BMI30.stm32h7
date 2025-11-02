@@ -313,6 +313,33 @@
 			"presentation": { "reveal": "always", "panel": "shared" }
 		},
 		{
+			"label": "Vendor USB: CTRL START both (EP0)",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"HostTools/vendor_ctrl_start_only.py",
+				"--async", "1",
+				"--chmode", "2",
+				"--full", "1",
+				"--profile", "2",
+				"--frame-samples", "300"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": { "reveal": "always", "panel": "shared" }
+		},
+		{
+			"label": "Run 120s no-zero (EP0 start)",
+			"dependsOn": [
+				"Vendor USB: CTRL START both (EP0)",
+				"Host: 120s no-zero check"
+			],
+			"dependsOrder": "sequence",
+			"group": "none"
+		},
+		{
 			"label": "CTRL START + READ-ONLY",
 			"dependsOn": [
 				"Vendor USB: CTRL START (EP0)",
