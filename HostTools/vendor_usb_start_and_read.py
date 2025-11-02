@@ -40,6 +40,8 @@ def _parse_args():
     # Data validation options
     p.add_argument('--check-nonzero', type=int, choices=[0,1], default=int(os.getenv('VND_CHECK_NONZERO','1')),
                    help='If enabled, treat any A/B frame with all-zero samples as error and set non-zero exit code')
+    p.add_argument('--skip-config', type=int, choices=[0,1], default=int(os.getenv('VND_SKIP_CONFIG','0')),
+                   help='Skip sending SET_* and START over bulk OUT (useful if START was done via EP0)')
     return p.parse_args()
 
 args = _parse_args()
@@ -60,6 +62,7 @@ FRAME_SAMPLES = args.frame_samples
 ASYNC_MODE = args.async_mode
 CH_MODE = args.ch_mode
 CHECK_NONZERO = bool(args.check_nonzero)
+SKIP_CONFIG = bool(args.skip_config)
 # Control GET_STATUS params
 IFACE_INDEX = args.intf  # Vendor interface index in composite config
 VND_CMD_GET_STATUS = 0x30
@@ -341,72 +344,76 @@ def main():
     except Exception as e:
         log_line(f"[HOST][WARN] SetInterface alt=1 failed: {e}")
 
-    # Configure windows and block rate before START
-    try:
-        payload = struct.pack('<BHHHH', 0x10, WIN0_START, WIN0_LEN, WIN1_START, WIN1_LEN)
-        w1 = write_vendor(dev, payload, timeout_ms=1000, label="SET_WINDOWS", max_retries=1)
-        log_line(f"[HOST] SET_WINDOWS written: {w1} bytes ({WIN0_START},{WIN0_LEN}) ({WIN1_START},{WIN1_LEN})")
-        time.sleep(0.02)
-    except Exception as e:
-        log_line(f"[HOST][WARN] SET_WINDOWS failed: {e}")
-
-    try:
-        payload = struct.pack('<BH', 0x11, RATE_HZ)
-        w2 = write_vendor(dev, payload, timeout_ms=1000, label="SET_BLOCK_RATE", max_retries=1)
-        log_line(f"[HOST] SET_BLOCK_RATE written: {w2} bytes ({RATE_HZ} Hz)")
-        time.sleep(0.02)
-    except Exception as e:
-        log_line(f"[HOST][WARN] SET_BLOCK_RATE failed: {e}")
-
-    # Optional: set frame samples for ~20 FPS
-    if FRAME_SAMPLES and FRAME_SAMPLES > 0:
+    if not SKIP_CONFIG:
+        # Configure windows and block rate before START
         try:
-            payload = struct.pack('<BH', 0x17, FRAME_SAMPLES)
-            wfs = write_vendor(dev, payload, timeout_ms=1000, label="SET_FRAME_SAMPLES", max_retries=1)
-            log_line(f"[HOST] SET_FRAME_SAMPLES written: {wfs} bytes (Ns={FRAME_SAMPLES})")
+            payload = struct.pack('<BHHHH', 0x10, WIN0_START, WIN0_LEN, WIN1_START, WIN1_LEN)
+            w1 = write_vendor(dev, payload, timeout_ms=1000, label="SET_WINDOWS", max_retries=1)
+            log_line(f"[HOST] SET_WINDOWS written: {w1} bytes ({WIN0_START},{WIN0_LEN}) ({WIN1_START},{WIN1_LEN})")
             time.sleep(0.02)
         except Exception as e:
-            log_line(f"[HOST][WARN] SET_FRAME_SAMPLES failed: {e}")
+            log_line(f"[HOST][WARN] SET_WINDOWS failed: {e}")
 
-    # Ensure full mode and default profile
-    try:
-        fm = 0x01 if FULL_MODE else 0x00
-        w3 = write_vendor(dev, bytes([VND_CMD_SET_FULL_MODE, fm]), timeout_ms=1000, label="SET_FULL_MODE", max_retries=1)
-        log_line(f"[HOST] SET_FULL_MODE({FULL_MODE}) written: {w3} bytes")
-        time.sleep(0.02)
-    except Exception as e:
-        log_line(f"[HOST][WARN] SET_FULL_MODE failed: {e}")
-    try:
-        # Profile 2 => default B profile per firmware
-        w4 = write_vendor(dev, bytes([VND_CMD_SET_PROFILE, 0x02]), timeout_ms=1000, label="SET_PROFILE", max_retries=1)
-        log_line(f"[HOST] SET_PROFILE(2) written: {w4} bytes")
-        time.sleep(0.02)
-    except Exception as e:
-        log_line(f"[HOST][WARN] SET_PROFILE failed: {e}")
+        try:
+            payload = struct.pack('<BH', 0x11, RATE_HZ)
+            w2 = write_vendor(dev, payload, timeout_ms=1000, label="SET_BLOCK_RATE", max_retries=1)
+            log_line(f"[HOST] SET_BLOCK_RATE written: {w2} bytes ({RATE_HZ} Hz)")
+            time.sleep(0.02)
+        except Exception as e:
+            log_line(f"[HOST][WARN] SET_BLOCK_RATE failed: {e}")
 
-    # Toggle async mode before START (default: enabled)
-    try:
-        am = 0x01 if ASYNC_MODE else 0x00
-        w5 = write_vendor(dev, bytes([VND_CMD_SET_ASYNC_MODE, am]), timeout_ms=1000, label="SET_ASYNC_MODE", max_retries=1)
-        log_line(f"[HOST] SET_ASYNC_MODE({ASYNC_MODE}) written: {w5} bytes")
-        time.sleep(0.02)
-    except Exception as e:
-        log_line(f"[HOST][WARN] SET_ASYNC_MODE failed: {e}")
+        # Optional: set frame samples for ~20 FPS
+        if FRAME_SAMPLES and FRAME_SAMPLES > 0:
+            try:
+                payload = struct.pack('<BH', 0x17, FRAME_SAMPLES)
+                wfs = write_vendor(dev, payload, timeout_ms=1000, label="SET_FRAME_SAMPLES", max_retries=1)
+                log_line(f"[HOST] SET_FRAME_SAMPLES written: {wfs} bytes (Ns={FRAME_SAMPLES})")
+                time.sleep(0.02)
+            except Exception as e:
+                log_line(f"[HOST][WARN] SET_FRAME_SAMPLES failed: {e}")
 
-    # Set channel mode (0=A-only by default per current stabilization goal)
-    try:
-        cm = CH_MODE & 0xFF
-        w6 = write_vendor(dev, bytes([VND_CMD_SET_CHMODE, cm]), timeout_ms=1000, label="SET_CHMODE", max_retries=1)
-        log_line(f"[HOST] SET_CHMODE({CH_MODE}) written: {w6} bytes")
-        time.sleep(0.02)
-    except Exception as e:
-        log_line(f"[HOST][WARN] SET_CHMODE failed: {e}")
+        # Ensure full mode and default profile
+        try:
+            fm = 0x01 if FULL_MODE else 0x00
+            w3 = write_vendor(dev, bytes([VND_CMD_SET_FULL_MODE, fm]), timeout_ms=1000, label="SET_FULL_MODE", max_retries=1)
+            log_line(f"[HOST] SET_FULL_MODE({FULL_MODE}) written: {w3} bytes")
+            time.sleep(0.02)
+        except Exception as e:
+            log_line(f"[HOST][WARN] SET_FULL_MODE failed: {e}")
+        try:
+            # Profile 2 => default B profile per firmware
+            w4 = write_vendor(dev, bytes([VND_CMD_SET_PROFILE, 0x02]), timeout_ms=1000, label="SET_PROFILE", max_retries=1)
+            log_line(f"[HOST] SET_PROFILE(2) written: {w4} bytes")
+            time.sleep(0.02)
+        except Exception as e:
+            log_line(f"[HOST][WARN] SET_PROFILE failed: {e}")
 
-    # Send START (0x20) to OUT EP
-    data = bytes([0x20])
-    wlen = write_vendor(dev, data, timeout_ms=1000, label="START", max_retries=1)
-    log_line(f"[HOST] START written: {wlen} bytes to EP 0x{OUT_EP:02X}")
-    time.sleep(0.02)
+        # Toggle async mode before START (default: enabled)
+        try:
+            am = 0x01 if ASYNC_MODE else 0x00
+            w5 = write_vendor(dev, bytes([VND_CMD_SET_ASYNC_MODE, am]), timeout_ms=1000, label="SET_ASYNC_MODE", max_retries=1)
+            log_line(f"[HOST] SET_ASYNC_MODE({ASYNC_MODE}) written: {w5} bytes")
+            time.sleep(0.02)
+        except Exception as e:
+            log_line(f"[HOST][WARN] SET_ASYNC_MODE failed: {e}")
+
+        # Set channel mode (0=A-only by default per current stabilization goal)
+        try:
+            cm = CH_MODE & 0xFF
+            w6 = write_vendor(dev, bytes([VND_CMD_SET_CHMODE, cm]), timeout_ms=1000, label="SET_CHMODE", max_retries=1)
+            log_line(f"[HOST] SET_CHMODE({CH_MODE}) written: {w6} bytes")
+            time.sleep(0.02)
+        except Exception as e:
+            log_line(f"[HOST][WARN] SET_CHMODE failed: {e}")
+
+        # Send START (0x20) to OUT EP
+        try:
+            data = bytes([0x20])
+            wlen = write_vendor(dev, data, timeout_ms=1000, label="START", max_retries=1)
+            log_line(f"[HOST] START written: {wlen} bytes to EP 0x{OUT_EP:02X}")
+            time.sleep(0.02)
+        except Exception as e:
+            log_line(f"[HOST][WARN] START failed: {e}")
     # Optionally request initial STAT snapshot
     if STATUS_MODE == 'ctrl':
         st0 = get_status_ctrl(dev)
