@@ -37,6 +37,9 @@ def _parse_args():
     p.add_argument('--frame-samples', type=int, default=int(os.getenv('VND_FRAME_SAMPLES','0')), help='Samples per frame per channel (CMD 0x17). E.g., 10 for 200Hz, 15 for 300Hz (~20 FPS). 0=disabled')
     p.add_argument('--async-mode', type=int, choices=[0,1], default=int(os.getenv('VND_ASYNC_MODE','1')), help='1=async A/B independent (default), 0=strict A->B pairs')
     p.add_argument('--ch-mode', type=int, choices=[0,1,2], default=int(os.getenv('VND_CH_MODE','0')), help='0=A-only, 1=B-only, 2=both')
+    # Data validation options
+    p.add_argument('--check-nonzero', type=int, choices=[0,1], default=int(os.getenv('VND_CHECK_NONZERO','1')),
+                   help='If enabled, treat any A/B frame with all-zero samples as error and set non-zero exit code')
     return p.parse_args()
 
 args = _parse_args()
@@ -56,6 +59,7 @@ FULL_MODE = args.full_mode
 FRAME_SAMPLES = args.frame_samples
 ASYNC_MODE = args.async_mode
 CH_MODE = args.ch_mode
+CHECK_NONZERO = bool(args.check_nonzero)
 # Control GET_STATUS params
 IFACE_INDEX = args.intf  # Vendor interface index in composite config
 VND_CMD_GET_STATUS = 0x30
@@ -287,7 +291,7 @@ def recover_pipe_error(dev, claim_idx, in_ep=IN_EP, out_ep=OUT_EP):
 
 
 def main():
-    log_line(f"[HOST][CFG] VID=0x{VID:04X} PID=0x{PID:04X} intf={IFACE_INDEX} IN=0x{IN_EP:02X} OUT=0x{OUT_EP:02X} pairs={READ_COUNT} tmo={READ_TIMEOUT_MS}ms window={READ_WINDOW_SEC}s full={FULL_MODE} async={ASYNC_MODE} chmode={CH_MODE} rate={RATE_HZ}Hz statusMode={STATUS_MODE}")
+    log_line(f"[HOST][CFG] VID=0x{VID:04X} PID=0x{PID:04X} intf={IFACE_INDEX} IN=0x{IN_EP:02X} OUT=0x{OUT_EP:02X} pairs={READ_COUNT} tmo={READ_TIMEOUT_MS}ms window={READ_WINDOW_SEC}s full={FULL_MODE} async={ASYNC_MODE} chmode={CH_MODE} rate={RATE_HZ}Hz statusMode={STATUS_MODE} checkNonZero={int(CHECK_NONZERO)}")
     dev = usb.core.find(idVendor=VID, idProduct=PID)
     if dev is None:
         log_line(f"[ERR] Device not found VID=0x{VID:04X} PID=0x{PID:04X}")
@@ -424,6 +428,9 @@ def main():
     last_stat_print = 0.0
     rx = bytearray()
     pipe_errs = 0
+    zero_frames_total = 0
+    zero_frames_a = 0
+    zero_frames_b = 0
     while got < READ_COUNT and (time.time() - start_time) < READ_WINDOW_SEC:
         try:
             chunk = bytes(dev.read(IN_EP, 512, timeout=READ_TIMEOUT_MS))
@@ -459,9 +466,21 @@ def main():
                         break
                     flags = rx[3]
                     ftype = 'TEST' if (flags & 0x80) else ('A' if flags == 0x01 else ('B' if flags == 0x02 else 'UNK'))
+                    seq = int.from_bytes(rx[4:8], 'little', signed=False)
                     frame = bytes(rx[:flen]); rx = rx[flen:]
                     head = ' '.join(f"{b:02X}" for b in frame[:4])
                     log_line(f"[HOST_RX] ep=0x{IN_EP:02X} len={len(frame)} type={ftype} head={head}")
+                    # Non-zero validation on A/B only
+                    if CHECK_NONZERO and (ftype == 'A' or ftype == 'B'):
+                        payload = frame[32:32 + total_samples * 2]
+                        is_zero = all(b == 0 for b in payload) if len(payload) > 0 else True
+                        if is_zero:
+                            zero_frames_total += 1
+                            if ftype == 'A':
+                                zero_frames_a += 1
+                            elif ftype == 'B':
+                                zero_frames_b += 1
+                            log_line(f"[HOST][ZERO][ERR] All-zero {ftype} frame detected: seq={seq} ns={total_samples}")
                     got += 1
                     if ftype == 'A':
                         cnt_a += 1
@@ -533,7 +552,11 @@ def main():
 
     # Final summary
     elapsed = time.time() - start_time
-    log_line(f"[HOST][SUMMARY] elapsed={elapsed:.1f}s A={cnt_a} B={cnt_b} STAT={cnt_stat} timeouts={timeouts} pipe_errors={pipe_err_total}")
+    log_line(f"[HOST][SUMMARY] elapsed={elapsed:.1f}s A={cnt_a} B={cnt_b} STAT={cnt_stat} timeouts={timeouts} pipe_errors={pipe_err_total} zero_total={zero_frames_total} zeroA={zero_frames_a} zeroB={zero_frames_b}")
+
+    # Exit code policy: if non-zero check enabled and any all-zero frames seen -> non-zero exit
+    if CHECK_NONZERO and zero_frames_total > 0:
+        sys.exit(3)
 
 
 if __name__ == '__main__':

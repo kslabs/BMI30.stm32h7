@@ -394,6 +394,24 @@
 			}
 		},
 		{
+			"label": "Host: 120s no-zero check",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"HostTools/vendor_usb_start_and_read.py",
+				"--pairs", "100000",
+				"--window-sec", "120",
+				"--status-mode", "none",
+				"--ch-mode", "2",
+				"--async-mode", "1",
+				"--check-nonzero", "1"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": { "reveal": "always", "panel": "shared" }
+		},
+		{
 			"label": "Host: START+READ (robust)",
 			"type": "shell",
 			"command": "powershell",
