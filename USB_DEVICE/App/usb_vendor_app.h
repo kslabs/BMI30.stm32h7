@@ -127,6 +127,10 @@ void vnd_get_adc_minmax(int16_t *adc0_min, int16_t *adc0_max,
 /* Тестовый генератор (пилообразный сигнал) — объявление доступно и для main.c */
 void vnd_generate_test_sawtooth(void);
 
+/* FPS и статистика производительности */
+void vnd_report_fps_stats(void);
+void vnd_print_perf_stats(void);
+
 #ifdef __cplusplus
 }
 #endif

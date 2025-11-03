@@ -24,6 +24,9 @@
 /* USER CODE BEGIN INCLUDE */
 #include "usb_cdc_proto.h"       /* usb_stream_init, usb_stream_on_rx_bytes */
 #include "usbd_cdc_custom.h"     /* USBD_VND_DataReceived prototype */
+#include "main.h"                /* Led_Test_GPIO_Port, Led_Test_Pin */
+#include "build_info.h"          /* fw_git_hash, fw_build_date, fw_build_time */
+#include "usb_vendor_app.h"      /* vnd_report_fps_stats, vnd_print_perf_stats */
 
 /* USER CODE END INCLUDE */
 
@@ -33,6 +36,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+static volatile uint32_t led_off_tick = 0; // Время выключения LED после индикации UART RX
 
 /* USER CODE END PV */
 
@@ -271,22 +275,66 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
   static volatile uint32_t cdc_rx_count = 0;
   static volatile uint8_t last_cmd = 0;
   static volatile uint32_t last_len = 0;
+  
   cdc_rx_count++;
   if(*Len > 0) last_cmd = Buf[0];
   last_len = *Len;
   (void)cdc_rx_count; (void)last_cmd; (void)last_len; // suppress warnings
   
-  // Проверка текстовой команды RESET
+  // Индикация приёма UART данных через LED - мигать при любом событии RX
+  HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_SET); // Включить LED
+  led_off_tick = HAL_GetTick() + 100; // Выключить через 100ms
+  
+  // Проверка текстовых команд для отладки через UART (COM4)
+  
+  // HELP - список доступных команд
+  if (*Len >= 4 && Buf[0] == 'H' && Buf[1] == 'E' && Buf[2] == 'L' && Buf[3] == 'P') {
+    printf("\r\n=== DEBUG COMMANDS ===\r\n");
+    printf("VER     - firmware version (git commit, build date)\r\n");
+    printf("STATUS  - current state (streaming, counters, fps)\r\n");
+    printf("PERF    - performance stats (prepare/tx/interval timings)\r\n");
+    printf("FPS     - FPS statistics only\r\n");
+    printf("RESET   - software reset (reboot device)\r\n");
+    printf("HELP    - this help message\r\n");
+    printf("=====================\r\n");
+  }
+  
+  // VER/VERSION - версия firmware
+  if ((*Len >= 3 && Buf[0] == 'V' && Buf[1] == 'E' && Buf[2] == 'R') ||
+      (*Len >= 7 && Buf[0] == 'V' && Buf[1] == 'E' && Buf[2] == 'R' && 
+                    Buf[3] == 'S' && Buf[4] == 'I' && Buf[5] == 'O' && Buf[6] == 'N')) {
+    printf("\r\n=== FIRMWARE VERSION ===\r\n");
+    printf("Version: %s\r\n", FW_VERSION_STR);
+    printf("Git:     %s\r\n", fw_git_hash);
+    printf("Built:   %s %s\r\n", fw_build_date, fw_build_time);
+    printf("VND_PAIR_BUFFERS: %d\r\n", 8);
+    printf("========================\r\n");
+  }
+  
+  // STATUS - текущее состояние устройства  
+  if (*Len >= 6 && Buf[0] == 'S' && Buf[1] == 'T' && Buf[2] == 'A' && 
+                   Buf[3] == 'T' && Buf[4] == 'U' && Buf[5] == 'S') {
+    printf("\r\n=== DEVICE STATUS ===\r\n");
+    printf("Uptime: %lu ms\r\n", HAL_GetTick());
+    printf("Use 'PERF' or 'FPS' for detailed statistics\r\n");
+    printf("=====================\r\n");
+  }
+  
+  // FPS - только FPS статистика (легковесная версия PERF)
+  if (*Len >= 3 && Buf[0] == 'F' && Buf[1] == 'P' && Buf[2] == 'S') {
+    vnd_report_fps_stats();
+  }
+  
+  // PERF - полная статистика производительности
+  if (*Len >= 4 && Buf[0] == 'P' && Buf[1] == 'E' && Buf[2] == 'R' && Buf[3] == 'F') {
+    vnd_print_perf_stats();
+  }
+  
+  // RESET - перезагрузка устройства
   if (*Len >= 5 && Buf[0] == 'R' && Buf[1] == 'E' && Buf[2] == 'S' && Buf[3] == 'E' && Buf[4] == 'T') {
     printf("[CDC] RESET command received - performing software reset\r\n");
     HAL_Delay(100); // Дать время на отправку сообщения
     NVIC_SystemReset(); // Программный сброс
-  }
-  
-  // Проверка текстовой команды PERF - вывести статистику производительности
-  if (*Len >= 4 && Buf[0] == 'P' && Buf[1] == 'E' && Buf[2] == 'R' && Buf[3] == 'F') {
-    extern void vnd_print_perf_stats(void);
-    vnd_print_perf_stats();
   }
   
   // Проксируем команды протокола в Vendor и отключаем CDC-протокол для этих команд,
@@ -365,6 +413,15 @@ static int8_t CDC_TransmitCplt_HS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
 }
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
+
+// Проверка и выключение LED по таймауту (вызывается из main loop)
+void CDC_LED_Process(void)
+{
+  if(led_off_tick != 0 && HAL_GetTick() >= led_off_tick) {
+    HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_RESET); // Выключить LED
+    led_off_tick = 0;
+  }
+}
 
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */
 

@@ -1019,6 +1019,9 @@ int main(void)
     extern void Vendor_Stream_Task(void);
     Vendor_Stream_Task();
   }
+  // Проверка и выключение LED по таймауту (UART RX индикация)
+  extern void CDC_LED_Process(void);
+  CDC_LED_Process();
 #endif
 
   /* Периодическое обновление статуса на LCD (вернули после отката) */
@@ -1923,7 +1926,8 @@ static void MX_GPIO_Init(void)
   // По умолчанию выключаем подсветку (active low -> высокий уровень)
   BL_OFF();
 #endif
-  HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_SET);
+  // Светодиод выключен по умолчанию (индицирует только прием команд UART)
+  HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_RESET);
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
@@ -1946,16 +1950,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     #endif
   }
   else if (htim->Instance == TIM6) {
-    static uint16_t div = 0; // делитель частоты мигания
+    // Убрано мигание LED - теперь LED индицирует приём команд UART
     tim6_irq_count++;
-    if (++div >= 20) {       // быстреее мигание для наглядности (~2–4 Гц в зависимости от частоты TIM6)
-      div = 0;
-      #if !SAFE_MINIMAL
-        HAL_GPIO_TogglePin(Led_Test_GPIO_Port, Led_Test_Pin);
-        tim6_led_toggled_flag = 1; // попросим main вывести лог
-        tim6_led_toggle_counter++;
-      #endif
-    }
 #ifdef HAL_IWDG_MODULE_ENABLED
     #ifndef DIAG_DISABLE_IWDG
       HAL_IWDG_Refresh(&hiwdg1); // кормим сторож (пока без унифицированного макроса)

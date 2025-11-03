@@ -596,7 +596,7 @@ static void vnd_force_complete_test_meta_if_stale(void)
 }
 
 /* === Функция вывода FPS статистики и профилирования по CDC === */
-static void vnd_report_fps_stats(void)
+void vnd_report_fps_stats(void)
 {
     uint32_t now_ms = HAL_GetTick();
     uint32_t elapsed_ms = now_ms - fps_measurement_start_ms;
