@@ -267,11 +267,26 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 11 */
+  // ДИАГНОСТИКА: безопасный вывод через переменную (не printf в прерывании)
+  static volatile uint32_t cdc_rx_count = 0;
+  static volatile uint8_t last_cmd = 0;
+  static volatile uint32_t last_len = 0;
+  cdc_rx_count++;
+  if(*Len > 0) last_cmd = Buf[0];
+  last_len = *Len;
+  (void)cdc_rx_count; (void)last_cmd; (void)last_len; // suppress warnings
+  
   // Проверка текстовой команды RESET
   if (*Len >= 5 && Buf[0] == 'R' && Buf[1] == 'E' && Buf[2] == 'S' && Buf[3] == 'E' && Buf[4] == 'T') {
     printf("[CDC] RESET command received - performing software reset\r\n");
     HAL_Delay(100); // Дать время на отправку сообщения
     NVIC_SystemReset(); // Программный сброс
+  }
+  
+  // Проверка текстовой команды PERF - вывести статистику производительности
+  if (*Len >= 4 && Buf[0] == 'P' && Buf[1] == 'E' && Buf[2] == 'R' && Buf[3] == 'F') {
+    extern void vnd_print_perf_stats(void);
+    vnd_print_perf_stats();
   }
   
   // Проксируем команды протокола в Vendor и отключаем CDC-протокол для этих команд,

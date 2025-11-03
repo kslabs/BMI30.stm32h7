@@ -218,6 +218,43 @@ static uint32_t diag_prepared_seq = 0xFFFFFFFFu;
 static uint32_t diag_current_pair_seq = 0xFFFFFFFFu;
 static uint16_t win_start0 = 0, win_len0 = 0, win_start1 = 0, win_len1 = 0;
 
+/* === FPS измерение === */
+static uint32_t fps_pair_count = 0;       /* Кол-во завершённых пар с момента старта измерения */
+static uint32_t fps_frame_a_count = 0;    /* Кол-во отправленных A-кадров */
+static uint32_t fps_frame_b_count = 0;    /* Кол-во отправленных B-кадров */
+static uint32_t fps_prepare_count = 0;    /* Кол-во вызовов vnd_prepare_pair */
+static uint32_t fps_measurement_start_ms = 0; /* Время начала измерения */
+static uint32_t fps_last_report_ms = 0;   /* Время последнего отчёта */
+
+/* === Профилирование производительности === */
+typedef struct {
+    uint32_t prepare_total_us;    /* Суммарное время подготовки пар (мкс) */
+    uint32_t prepare_count;       /* Кол-во вызовов prepare */
+    uint32_t transmit_total_us;   /* Суммарное время transmit (мкс) */
+    uint32_t transmit_count;      /* Кол-во вызовов transmit */
+    uint32_t txcplt_total_us;     /* Суммарное время TxCplt (мкс) */
+    uint32_t txcplt_count;        /* Кол-во вызовов TxCplt */
+    uint32_t last_pair_complete_ms; /* Время последнего завершения пары */
+    uint32_t min_pair_interval_ms;  /* Минимальный интервал между парами */
+    uint32_t max_pair_interval_ms;  /* Максимальный интервал между парами */
+} perf_stats_t;
+
+static perf_stats_t perf_stats = {0};
+
+/* Вспомогательная функция для получения времени в микросекундах (используем HAL_GetTick с умножением) */
+static inline uint32_t get_us_approx(void) {
+    /* Приблизительно: 1 мс = 1000 мкс. Для более точного измерения нужен DWT, 
+       но HAL_GetTick безопаснее и достаточно точен для наших целей */
+    static uint32_t last_tick = 0;
+    static uint32_t us_offset = 0;
+    uint32_t tick = HAL_GetTick();
+    if(tick != last_tick){
+        us_offset = 0;
+        last_tick = tick;
+    }
+    return tick * 1000 + us_offset++;
+}
+
 /* Локальная утилита: обновить LCD параметрами, присланными хостом */
 static void vnd_update_lcd_params(void)
 {
@@ -319,8 +356,10 @@ static void vnd_cdc_periodic_stats(uint32_t now_ms)
     uint64_t d   = (cur >= cdc_stats_prev_bytes) ? (cur - cdc_stats_prev_bytes) : 0ULL;
     cdc_stats_prev_bytes = cur;
     uint32_t bps = (uint32_t)d; /* за ~1 секунду */
-    cdc_logf("STAT bytes_total=%llu bps=%lu streaming=%u diag=%u",
-             (unsigned long long)cur, (unsigned long)bps, (unsigned)streaming, (unsigned)diag_mode_active);
+    /* Добавляем количество переданных кадров A/B для сравнения с host RX */
+    cdc_logf("STAT bytes_total=%llu bps=%lu streaming=%u diag=%u sentA=%lu sentB=%lu seq=%lu",
+             (unsigned long long)cur, (unsigned long)bps, (unsigned)streaming, (unsigned)diag_mode_active,
+             (unsigned long)dbg_sent_ch0_total, (unsigned long)dbg_sent_ch1_total, (unsigned long)stream_seq);
 }
 
 /* Заголовок кадра */
@@ -367,7 +406,7 @@ typedef struct {
     uint8_t  buf[VND_FRAME_MAX_SIZE];
 } ChanFrame;
 
-#define VND_PAIR_BUFFERS 8  /* Увеличено для избежания перезаписи во время USB-передачи */
+#define VND_PAIR_BUFFERS 8  /* Возврат к 8 для стабильности */
 static ChanFrame g_frames[VND_PAIR_BUFFERS][2];
 static uint8_t pair_fill_idx = 0;
 static uint8_t pair_send_idx = 0;
@@ -556,6 +595,79 @@ static void vnd_force_complete_test_meta_if_stale(void)
 #endif
 }
 
+/* === Функция вывода FPS статистики и профилирования по CDC === */
+static void vnd_report_fps_stats(void)
+{
+    uint32_t now_ms = HAL_GetTick();
+    uint32_t elapsed_ms = now_ms - fps_measurement_start_ms;
+    
+    if(elapsed_ms < 100) return; /* Слишком рано для измерения */
+    
+    /* Вычисляем FPS */
+    float elapsed_sec = (float)elapsed_ms / 1000.0f;
+    float pair_fps = (float)fps_pair_count / elapsed_sec;
+    float frame_a_fps = (float)fps_frame_a_count / elapsed_sec;
+    float frame_b_fps = (float)fps_frame_b_count / elapsed_sec;
+    float prepare_fps = (float)fps_prepare_count / elapsed_sec;
+    
+    /* Вычисляем средние времена */
+    uint32_t avg_prepare_us = (perf_stats.prepare_count > 0) ? 
+        (perf_stats.prepare_total_us / perf_stats.prepare_count) : 0;
+    uint32_t avg_transmit_us = (perf_stats.transmit_count > 0) ?
+        (perf_stats.transmit_total_us / perf_stats.transmit_count) : 0;
+    uint32_t avg_txcplt_us = (perf_stats.txcplt_count > 0) ?
+        (perf_stats.txcplt_total_us / perf_stats.txcplt_count) : 0;
+    
+    cdc_logf("FPS pairs=%.1f A=%.1f B=%.1f prep=%.1f (%.1fs)",
+        pair_fps, frame_a_fps, frame_b_fps, prepare_fps, elapsed_sec);
+    cdc_logf("PERF prepare=%luus tx=%luus txcplt=%luus pair_int=%lu..%lums",
+        (unsigned long)avg_prepare_us, (unsigned long)avg_transmit_us, 
+        (unsigned long)avg_txcplt_us,
+        (unsigned long)perf_stats.min_pair_interval_ms,
+        (unsigned long)perf_stats.max_pair_interval_ms);
+    
+    fps_last_report_ms = now_ms;
+}
+
+/* === Функция вывода детального профилирования по запросу === */
+void vnd_print_perf_stats(void)
+{
+    uint32_t now_ms = HAL_GetTick();
+    uint32_t elapsed_ms = now_ms - fps_measurement_start_ms;
+    float elapsed_sec = (elapsed_ms > 0) ? ((float)elapsed_ms / 1000.0f) : 0.001f;
+    
+    /* FPS */
+    float pair_fps = (float)fps_pair_count / elapsed_sec;
+    float frame_a_fps = (float)fps_frame_a_count / elapsed_sec;
+    float frame_b_fps = (float)fps_frame_b_count / elapsed_sec;
+    
+    /* Средние времена */
+    uint32_t avg_prepare_us = (perf_stats.prepare_count > 0) ? 
+        (perf_stats.prepare_total_us / perf_stats.prepare_count) : 0;
+    uint32_t avg_transmit_us = (perf_stats.transmit_count > 0) ?
+        (perf_stats.transmit_total_us / perf_stats.transmit_count) : 0;
+    uint32_t avg_txcplt_us = (perf_stats.txcplt_count > 0) ?
+        (perf_stats.txcplt_total_us / perf_stats.txcplt_count) : 0;
+    
+    cdc_logf("=== PERFORMANCE STATS (%.1fs) ===", elapsed_sec);
+    cdc_logf("FPS: pairs=%.1f A=%.1f B=%.1f", pair_fps, frame_a_fps, frame_b_fps);
+    cdc_logf("COUNTS: pairs=%lu A=%lu B=%lu prep=%lu",
+        (unsigned long)fps_pair_count, (unsigned long)fps_frame_a_count,
+        (unsigned long)fps_frame_b_count, (unsigned long)fps_prepare_count);
+    cdc_logf("TIMING: prepare=%luus tx=%luus txcplt=%luus",
+        (unsigned long)avg_prepare_us, (unsigned long)avg_transmit_us,
+        (unsigned long)avg_txcplt_us);
+    cdc_logf("INTERVAL: min=%lums max=%lums",
+        (unsigned long)perf_stats.min_pair_interval_ms,
+        (unsigned long)perf_stats.max_pair_interval_ms);
+    
+    /* Диагностика ADC */
+    extern volatile uint32_t frame_wr_seq, frame_rd_seq;
+    cdc_logf("ADC: wr=%lu rd=%lu skipped=%lu",
+        (unsigned long)frame_wr_seq, (unsigned long)frame_rd_seq,
+        (unsigned long)dbg_skipped_frames);
+}
+
 /* Отправка отложенного STAT только из таска */
 static void vnd_try_send_pending_status_from_task(void)
 {
@@ -633,24 +745,19 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
     if(simple_tx_mode)       f2 |= 1u<<8;
     if(diag_mode_active)     f2 |= 1u<<9;
     if(first_pair_done)      f2 |= 1u<<10; /* переместим ниже биты READY/SENDING */
-    /* Доп. диагностика: наличие готовых кадров в текущей паре */
+    /* Доп. диагностика: наличие готовых кадров в g_frames[0] */
     {
-        ChanFrame *fa = &g_frames[pair_send_idx][0];
-        ChanFrame *fb = &g_frames[pair_send_idx][1];
+        ChanFrame *fa = &g_frames[0][0];
+        ChanFrame *fb = &g_frames[0][1];
         if (fa->st == FB_READY) f2 |= 1u<<11;
         if (fb->st == FB_READY) f2 |= 1u<<12;
         /* Новые биты: состояние SENDING для A/B чтобы различать READY и активную передачу */
         if (fa->st == FB_SENDING) f2 |= 1u<<13;
         if (fb->st == FB_SENDING) f2 |= 1u<<14;
-        /* ДОБАВЛЕНО: наличие готовых кадров в буфере подготовки (pair_fill_idx) */
-        ChanFrame *fa_fill = &g_frames[pair_fill_idx][0];
-        ChanFrame *fb_fill = &g_frames[pair_fill_idx][1];
-    if (fa_fill->st == FB_READY) f2 |= 1u<<15;
-    /* Места под отдельный бит для B_fill нет в v1: пропускаем, чтобы не конфликтовать с битом0 */
     }
     g_status.flags2 = f2;
     g_status.sending_ch = sending_channel;
-    g_status.pair_idx = (uint16_t)(((uint16_t)pair_fill_idx << 8) | (uint16_t)pair_send_idx);
+    g_status.pair_idx = 0; /* В single-slot режиме всегда 0 */
     g_status.last_tx_len = vnd_last_tx_len;
     g_status.cur_stream_seq = stream_seq;
      /* Переиспользуем резервные поля для отладки на хосте (совместимо с parser'ом):
@@ -680,8 +787,13 @@ uint8_t vnd_is_streaming(void){ return streaming; }
 
 static void vnd_prepare_pair(void)
 {
+    uint32_t t_start = get_us_approx(); /* Начало измерения */
+    
     dbg_prepare_calls++;
-    VND_LOG("PREPARE_PAIR called (fill_idx=%u)", (unsigned)pair_fill_idx);
+    /* УПРОЩЁННАЯ ЛОГИКА: всегда готовим в slot 0, один активный буфер */
+    static const uint8_t active_slot = 0;
+    
+    VND_LOG("PREPARE_PAIR slot=%u", active_slot);
     uint16_t *ch1 = NULL, *ch2 = NULL; uint16_t samples = 0;
     
 #if USE_TEST_SAWTOOTH
@@ -741,9 +853,11 @@ static void vnd_prepare_pair(void)
         dbg_partial_frame_abort++;
         return;
     }
-    ChanFrame *f0 = &g_frames[pair_fill_idx][0];
-    ChanFrame *f1 = &g_frames[pair_fill_idx][1];
-    if(f0->st != FB_FILL || f1->st != FB_FILL) return;
+    ChanFrame *f0 = &g_frames[active_slot][0];
+    ChanFrame *f1 = &g_frames[active_slot][1];
+    /* Если пара уже подготовлена (оба READY или SENDING), не переписываем */
+    if((f0->st == FB_READY || f0->st == FB_SENDING) && (f1->st == FB_READY || f1->st == FB_SENDING)) return;
+    /* Сбросим оба кадра в начальное состояние для заполнения */
     memset(f0->buf, 0, sizeof(f0->buf)); memset(f1->buf, 0, sizeof(f1->buf));
     uint32_t pair_timestamp = HAL_GetTick();
     /* подробный лог пары убран для снижения нагрузки */
@@ -770,9 +884,16 @@ static void vnd_prepare_pair(void)
     vnd_frame_hdr_t *h1 = (vnd_frame_hdr_t*)f1->buf; h1->timestamp = pair_timestamp;
     vnd_build_frame(f0); vnd_build_frame(f1);
     if(f0->st == FB_FILL || f1->st == FB_FILL){ dbg_partial_frame_abort++; VND_LOG("build failed"); return; }
-    /* VND_LOG("Pair prepared, fill_idx=%u", pair_fill_idx); */
-    pair_fill_idx = (pair_fill_idx + 1u) % VND_PAIR_BUFFERS;
+    /* В режиме single-slot не двигаем индексы */
     dbg_prepare_ok++;
+    /* FPS: счётчик подготовленных пар */
+    fps_prepare_count++;
+    
+    /* Измерение времени prepare */
+    uint32_t t_end = get_us_approx();
+    uint32_t duration = t_end - t_start;
+    perf_stats.prepare_total_us += duration;
+    perf_stats.prepare_count++;
 }
 
 static void vnd_build_frame(ChanFrame *cf)
@@ -804,29 +925,19 @@ static int vnd_find_pair_by_seq(uint32_t seq)
 static int vnd_async_try_tx(void)
 {
     if(vnd_ep_busy) return 0;
-    /* Подготовим ещё данные, если текущая позиция заполнения пуста */
-    if(g_frames[pair_fill_idx][0].st == FB_FILL || g_frames[pair_fill_idx][1].st == FB_FILL){
+    /* В single-slot режиме проверяем только g_frames[0] */
+    ChanFrame *fa = &g_frames[0][0];
+    ChanFrame *fb = &g_frames[0][1];
+    /* Если пара пуста, подготовим */
+    if(fa->st == FB_FILL || fb->st == FB_FILL){
         vnd_prepare_pair();
     }
-    /* Отправляем самый старый READY кадр, начиная с pair_send_idx */
-    for(uint8_t off=0; off<VND_PAIR_BUFFERS; off++){
-        uint8_t idx = (uint8_t)((pair_send_idx + off) % VND_PAIR_BUFFERS);
-        ChanFrame *fa = &g_frames[idx][0];
-        ChanFrame *fb = &g_frames[idx][1];
-        /* Если пара целиком уже отослана (оба FB_FILL) и это голова — продвинем голову */
-        if(off==0 && fa->st==FB_FILL && fb->st==FB_FILL){
-            pair_send_idx = (uint8_t)((pair_send_idx + 1u) % VND_PAIR_BUFFERS);
-            /* Завершение пары для счётчика stream_seq */
-            stream_seq++; dbg_produced_seq++; if(!first_pair_done){ first_pair_done = 1; }
-            continue;
-        }
-        if(fa->st == FB_READY){
-            if(vnd_transmit_frame(fa->buf, fa->frame_size, 0, 0, "ADC0-ASY") == USBD_OK){ fa->st = FB_SENDING; sending_channel = 0; return 1; }
-        }
-        /* В A-only режиме пропускаем отправку B-кадров */
-        if(vnd_ch_mode != 0 && fb->st == FB_READY){
-            if(vnd_transmit_frame(fb->buf, fb->frame_size, 0, 0, "ADC1-ASY") == USBD_OK){ fb->st = FB_SENDING; sending_channel = 1; return 1; }
-        }
+    if(fa->st == FB_READY){
+        if(vnd_transmit_frame(fa->buf, fa->frame_size, 0, 0, "ADC0-ASY") == USBD_OK){ fa->st = FB_SENDING; sending_channel = 0; return 1; }
+    }
+    /* В A-only режиме пропускаем отправку B-кадров */
+    if(vnd_ch_mode != 0 && fb->st == FB_READY){
+        if(vnd_transmit_frame(fb->buf, fb->frame_size, 0, 0, "ADC1-ASY") == USBD_OK){ fb->st = FB_SENDING; sending_channel = 1; return 1; }
     }
     return 0;
 }
@@ -1014,8 +1125,8 @@ static int vnd_try_send_B_immediate(void)
         }
         return 0;
     }
-    /* Полный режим: отправляем B из текущего pair_send_idx, если READY */
-    ChanFrame *fB = &g_frames[pair_send_idx][1];
+    /* Полный режим: отправляем B из g_frames[0], если READY */
+    ChanFrame *fB = &g_frames[0][1];
     if(fB->st != FB_READY) return 0;
     /* Корректируем seq при необходимости (безопасно) */
     if(fB->frame_size >= VND_FRAME_HDR_SIZE){
@@ -1045,10 +1156,10 @@ static int vnd_try_send_A_nextpair_immediate(void)
         return 0;
     }
     /* Полный режим: убедимся, что в буфере подготовки есть готовый A; если нет — попробуем собрать */
-    ChanFrame *fA = &g_frames[pair_send_idx][0];
+    ChanFrame *fA = &g_frames[0][0];
     if(fA->st != FB_READY){
         vnd_prepare_pair();
-        fA = &g_frames[pair_send_idx][0];
+        fA = &g_frames[0][0];
         if(fA->st != FB_READY) return 0;
     }
     /* Принудительно синхронизируем seq A с текущим stream_seq для консистентности пары */
@@ -1243,7 +1354,7 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
     /* ВАЖНО: сначала попробуем подготовить пару A/B, чтобы не зациклиться на ранних STAT.
        Подготовка пары не зависит от занятости EP, поэтому убираем лишний гейтинг по vnd_ep_busy. */
     {
-        ChanFrame *fA0 = &g_frames[pair_send_idx][0];
+        ChanFrame *fA0 = &g_frames[0][0];
         if(fA0->st != FB_READY){ vnd_prepare_pair(); }
     }
     /* Раннее окно для GET_STATUS до первой пары — отключено: STAT по IN только между парами. */
@@ -1355,9 +1466,9 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
             /* если не получилось — просто продолжим общий цикл */
         }
         /* Гарантируем, что текущая пара действительно подготовлена: если A ещё не готов (FB_FILL) — соберём пару сейчас. */
-        ChanFrame *fA_pre = &g_frames[pair_send_idx][0];
+        ChanFrame *fA_pre = &g_frames[0][0];
         if(fA_pre->st == FB_FILL && !vnd_ep_busy){ vnd_prepare_pair(); }
-        ChanFrame *fB = &g_frames[pair_send_idx][1];
+        ChanFrame *fB = &g_frames[0][1];
         if(fB->st == FB_READY){
             /* Перед отправкой B корректируем seq, если он отличается от ожидаемого stream_seq */
             if(fB->frame_size >= VND_FRAME_HDR_SIZE){
@@ -1386,14 +1497,14 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
             static uint32_t last_cdc_ms = 0;
             uint32_t now_ms = HAL_GetTick();
             if(now_ms - last_log_ms > 200){
-                VND_LOG("WAIT_B st=%u pair_send=%u fill_idx=%u seq=%lu cur_seq=%lu", (unsigned)fB->st, (unsigned)pair_send_idx, (unsigned)pair_fill_idx, (unsigned long)fB->seq, (unsigned long)stream_seq);
+                VND_LOG("WAIT_B st=%u seq=%lu cur_seq=%lu", (unsigned)fB->st, (unsigned long)fB->seq, (unsigned long)stream_seq);
                 last_log_ms = now_ms;
             }
             if(now_ms - last_cdc_ms > 1000){
                 extern uint8_t USBD_VND_TxIsBusy(void);
                 uint8_t ll_busy = USBD_VND_TxIsBusy();
-                const char *stA = (g_frames[pair_send_idx][0].st==FB_READY?"READY":(g_frames[pair_send_idx][0].st==FB_SENDING?"SENDING":"FILL"));
-                const char *stB = (g_frames[pair_send_idx][1].st==FB_READY?"READY":(g_frames[pair_send_idx][1].st==FB_SENDING?"SENDING":"FILL"));
+                const char *stA = (g_frames[0][0].st==FB_READY?"READY":(g_frames[0][0].st==FB_SENDING?"SENDING":"FILL"));
+                const char *stB = (g_frames[0][1].st==FB_READY?"READY":(g_frames[0][1].st==FB_SENDING?"SENDING":"FILL"));
                 uint32_t age_ms = pending_B_since_ms? (now_ms - pending_B_since_ms) : 0;
                 cdc_logf("DBG WAIT_B age=%lums A=%s B=%s ep_busy=%u ll_busy=%u metaDepth=%u lastTX=%u", (unsigned long)age_ms, stA, stB, (unsigned)vnd_ep_busy, (unsigned)ll_busy, (unsigned)vnd_tx_meta_depth(), (unsigned)vnd_last_tx_len);
                 last_cdc_ms = now_ms;
@@ -1403,11 +1514,11 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
                 /* Не закрываем пару! Снимаем busy, нейтрализуем старую мета и переотправляем B */
                 extern void USBD_VND_ForceTxIdle(void); USBD_VND_ForceTxIdle();
                 vnd_ep_busy = 0; vnd_tx_ready = 1; vnd_inflight = 0;
-                vnd_meta_neutralize(0x02, g_frames[pair_send_idx][1].seq);
-                g_frames[pair_send_idx][1].st = FB_READY; sending_channel = 0xFF;
-                VND_LOG("B_TXCPLT_WD (>150ms) -> retry B seq=%lu", (unsigned long)g_frames[pair_send_idx][1].seq);
+                vnd_meta_neutralize(0x02, g_frames[0][1].seq);
+                g_frames[0][1].st = FB_READY; sending_channel = 0xFF;
+                VND_LOG("B_TXCPLT_WD (>150ms) -> retry B seq=%lu", (unsigned long)g_frames[0][1].seq);
                 /* Попробуем сразу переотправить */
-                ChanFrame *fB2 = &g_frames[pair_send_idx][1];
+                ChanFrame *fB2 = &g_frames[0][1];
                 if(!vnd_ep_busy && fB2->st == FB_READY){
                     if(vnd_transmit_frame(fB2->buf, fB2->frame_size, 0, 0, "ADC1-RETRY") == USBD_OK){ fB2->st = FB_SENDING; sending_channel = 1; return; }
                 }
@@ -1418,8 +1529,8 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
         do {
             uint32_t now_ms2 = HAL_GetTick();
             if(!vnd_ep_busy && sending_channel == 0xFF && (now_ms2 - vnd_last_txcplt_ms) > 40){
-                ChanFrame *fBchk = &g_frames[pair_send_idx][1];
-                ChanFrame *fAchk = &g_frames[pair_send_idx][0];
+                ChanFrame *fBchk = &g_frames[0][1];
+                ChanFrame *fAchk = &g_frames[0][0];
                 if(fAchk->st != FB_SENDING && fBchk->st != FB_SENDING){
                     if(fBchk->st == FB_READY){
                         /* Перед отправкой по вотчдогу также поправим seq при необходимости */
@@ -1439,7 +1550,7 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
             }
         } while(0);
     } else {
-    ChanFrame *fA = &g_frames[pair_send_idx][0];
+    ChanFrame *fA = &g_frames[0][0];
         /* Watchdog: если A завис в SENDING и долго нет TxCplt — считаем A завершённым и переходим к B */
         do {
             uint32_t now_ms = HAL_GetTick();
@@ -1448,11 +1559,15 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
                 VND_LOG("A_TXCPLT_WD (>120ms) -> open pending_B, neutralize A meta, continue");
                 extern void USBD_VND_ForceTxIdle(void); USBD_VND_ForceTxIdle();
                 vnd_ep_busy = 0; vnd_tx_ready = 1; vnd_inflight = 0; sending_channel = 0xFF;
-                vnd_meta_neutralize(0x01, g_frames[pair_send_idx][0].seq);
+                vnd_meta_neutralize(0x01, g_frames[0][0].seq);
                 pending_B = 1; pending_B_since_ms = now_ms;
             }
         } while(0);
-        if(fA->st != FB_READY){ vnd_prepare_pair(); fA = &g_frames[pair_send_idx][0]; }
+        if(fA->st != FB_READY){ 
+            vnd_prepare_pair(); 
+            /* В single-slot режиме всегда работаем с g_frames[0] */
+            fA = &g_frames[0][0]; 
+        }
     if(fA->st == FB_READY){
             /* Искусственных задержек между кадрами нет: отправляем A сразу при готовности EP и данных */
             /* Отправляем A: в режиме без TEST не проверяем test_in_flight вовсе */
@@ -1474,6 +1589,15 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
                     pending_B = 1; pending_B_since_ms = HAL_GetTick();
                 }
                 return;
+            } else {
+                /* ДИАГНОСТИКА: почему не удалось отправить A */
+                static uint32_t last_tx_fail_log = 0;
+                if((now - last_tx_fail_log) > 500){
+                    last_tx_fail_log = now;
+                    extern uint8_t USBD_VND_TxIsBusy(void);
+                    cdc_logf("FAIL_TX_A ep_busy=%u ll_busy=%u inflight=%u ready=%u",
+                        (unsigned)vnd_ep_busy, (unsigned)USBD_VND_TxIsBusy(), (unsigned)vnd_inflight, (unsigned)vnd_tx_ready);
+                }
             }
 #else
             /* Отправляем A только если нет теста в полёте и нет необработанного TEST в FIFO */
@@ -1502,15 +1626,37 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
     }
     /* Периодическая CDC-статистика по байтам/скорости */
     vnd_cdc_periodic_stats(now);
+    
+    /* ДИАГНОСТИКА: детальное состояние передачи каждые 2 секунды */
+    {
+        static uint32_t last_diag_detail_ms = 0;
+        if(streaming && (now - last_diag_detail_ms) > 2000){
+            last_diag_detail_ms = now;
+            extern uint8_t USBD_VND_TxIsBusy(void);
+            uint8_t ll_busy = USBD_VND_TxIsBusy();
+            ChanFrame *fA = &g_frames[0][0];
+            ChanFrame *fB = &g_frames[0][1];
+            const char *stA = (fA->st==FB_READY?"RDY":(fA->st==FB_SENDING?"SND":"FIL"));
+            const char *stB = (fB->st==FB_READY?"RDY":(fB->st==FB_SENDING?"SND":"FIL"));
+            cdc_logf("DBG ep_busy=%u ll_busy=%u ch=%u pendB=%u A_st=%s B_st=%s metaD=%u",
+                (unsigned)vnd_ep_busy, (unsigned)ll_busy, (unsigned)sending_channel, (unsigned)pending_B,
+                stA, stB, (unsigned)vnd_tx_meta_depth());
+        }
+    }
+    
     /* Периодическое обновление дисплея LCD с информацией о потоке */
     // stream_display_periodic_update();
-    /* Небольшой NAK-watchdog: если давно не было завершений — попросим мягкий ресет класса.
-       Он выполнится асинхронно и не блокирует EP0. */
+    /* Раньше здесь запрашивали мягкий ресет класса при отсутствии TXCPLT >1.5s.
+       Это приводило к незаметной для хоста остановке стрима (streaming=0) и последующим тайм‑ауторам.
+       Вместо софт‑ресета делаем бережный kick: снимаем busy и пробуем продолжить передачу.
+       Более глубокий kick есть ниже (WDG_KICK >3s). */
     if((now - vnd_last_txcplt_ms) > 1500){
-        extern void USBD_VND_RequestSoftReset(void);
-        USBD_VND_RequestSoftReset();
-        vnd_last_txcplt_ms = now; /* предотвратить лавину запросов */
-        VND_LOG("WDG_SOFT_RESET_REQ");
+        extern void USBD_VND_ForceTxIdle(void);
+        USBD_VND_ForceTxIdle();
+        vnd_ep_busy = 0; vnd_tx_ready = 1; vnd_inflight = 0; sending_channel = 0xFF;
+        /* не трогаем streaming/test/pending_B — даём пайплайну восстановиться */
+        vnd_last_txcplt_ms = now; /* предотвратить лавину */
+        VND_LOG("WDG_SOFT_RESET_BYPASS -> force idle");
     }
     /* Аварийный keepalive тестом — только в диагностике; в полном режиме не посылаем TEST повторно */
     if(!full_mode){
@@ -1534,6 +1680,12 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
             last_diag_ms = now;
         }
     } while(0);
+    
+    /* === FPS отчёт каждые 2 секунды === */
+    if(streaming && (now - fps_last_report_ms) > 2000){
+        vnd_report_fps_stats();
+        fps_last_report_ms = now;
+    }
 
     /* Ускоренный watchdog: считаем зависанием при > 3000мс без TXCPLT и мягко пинаем TX */
     if(streaming && (now - vnd_last_txcplt_ms) > 3000){
@@ -1615,27 +1767,64 @@ void USBD_VND_TxCplt(void)
                 int idx = vnd_find_pair_by_seq(eff_seq);
                 if(idx >= 0){
                     ChanFrame *cf = &g_frames[(uint8_t)idx][(uint8_t)ch];
-                    if(ch==0){ dbg_tx_sent++; dbg_sent_ch0_total++; dbg_sent_seq_adc0++; vnd_total_tx_samples += (uint64_t)cf->samples; }
-                    else     { dbg_tx_sent++; dbg_sent_ch1_total++; dbg_sent_seq_adc1++; vnd_total_tx_samples += (uint64_t)cf->samples; }
+                    if(ch==0){ 
+                        dbg_tx_sent++; dbg_sent_ch0_total++; dbg_sent_seq_adc0++; 
+                        vnd_total_tx_samples += (uint64_t)cf->samples;
+                        fps_frame_a_count++; /* FPS: счётчик A-кадров */
+                    }
+                    else{ 
+                        dbg_tx_sent++; dbg_sent_ch1_total++; dbg_sent_seq_adc1++; 
+                        vnd_total_tx_samples += (uint64_t)cf->samples;
+                        fps_frame_b_count++; /* FPS: счётчик B-кадров */
+                    }
                     /* Если A-only/B-only — закрываем сразу пару */
                     if((vnd_ch_mode == 0 && ch == 0) || (vnd_ch_mode == 1 && ch == 1)){
                         g_frames[(uint8_t)idx][0].st = FB_FILL;
                         g_frames[(uint8_t)idx][1].st = FB_FILL;
                         sending_channel = 0xFF;
-                        /* Сдвигаем head до первой непустой пары, инкрементируем seq */
-                        while(g_frames[pair_send_idx][0].st == FB_FILL && g_frames[pair_send_idx][1].st == FB_FILL){
-                            pair_send_idx = (uint8_t)((pair_send_idx + 1u) % VND_PAIR_BUFFERS);
-                            stream_seq++; dbg_produced_seq++; if(!first_pair_done){ first_pair_done = 1; }
+                        /* В single-slot режиме просто увеличиваем stream_seq */
+                        stream_seq++; dbg_produced_seq++;
+                        fps_pair_count++; /* FPS: счётчик завершённых пар */
+                        
+                        /* Измерение интервала между парами */
+                        uint32_t now_ms = HAL_GetTick();
+                        if(perf_stats.last_pair_complete_ms != 0){
+                            uint32_t interval = now_ms - perf_stats.last_pair_complete_ms;
+                            if(perf_stats.min_pair_interval_ms == 0 || interval < perf_stats.min_pair_interval_ms){
+                                perf_stats.min_pair_interval_ms = interval;
+                            }
+                            if(interval > perf_stats.max_pair_interval_ms){
+                                perf_stats.max_pair_interval_ms = interval;
+                            }
                         }
+                        perf_stats.last_pair_complete_ms = now_ms;
+                        
+                        if(!first_pair_done){ first_pair_done = 1; }
                         /* Немедленно инициировать следующую передачу */
                         if(!vnd_ep_busy){ vnd_tx_kick = 1; (void)vnd_async_try_tx(); }
                     } else {
                         /* обычный async для обоих каналов */
                         cf->st = FB_FILL;
                         sending_channel = 0xFF;
-                        while(g_frames[pair_send_idx][0].st == FB_FILL && g_frames[pair_send_idx][1].st == FB_FILL){
-                            pair_send_idx = (uint8_t)((pair_send_idx + 1u) % VND_PAIR_BUFFERS);
-                            stream_seq++; dbg_produced_seq++; if(!first_pair_done){ first_pair_done = 1; }
+                        /* В single-slot: если оба канала завершены, закрываем пару */
+                        if(g_frames[0][0].st == FB_FILL && g_frames[0][1].st == FB_FILL){
+                            stream_seq++; dbg_produced_seq++;
+                            fps_pair_count++; /* FPS: счётчик завершённых пар */
+                            
+                            /* Измерение интервала между парами */
+                            uint32_t now_ms = HAL_GetTick();
+                            if(perf_stats.last_pair_complete_ms != 0){
+                                uint32_t interval = now_ms - perf_stats.last_pair_complete_ms;
+                                if(perf_stats.min_pair_interval_ms == 0 || interval < perf_stats.min_pair_interval_ms){
+                                    perf_stats.min_pair_interval_ms = interval;
+                                }
+                                if(interval > perf_stats.max_pair_interval_ms){
+                                    perf_stats.max_pair_interval_ms = interval;
+                                }
+                            }
+                            perf_stats.last_pair_complete_ms = now_ms;
+                            
+                            if(!first_pair_done){ first_pair_done = 1; }
                         }
                         if(!vnd_ep_busy){ vnd_tx_kick = 1; (void)vnd_async_try_tx(); }
                     }
@@ -1854,6 +2043,15 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 vnd_last_txcplt_ms = HAL_GetTick();
                 /* Разрешим STAT только после первой завершённой пары */
                 first_pair_done = 0; pending_status = 0; vnd_status_permit_once = 0;
+                /* Инициализация FPS измерения */
+                fps_measurement_start_ms = HAL_GetTick();
+                fps_last_report_ms = fps_measurement_start_ms;
+                fps_pair_count = 0;
+                fps_frame_a_count = 0;
+                fps_frame_b_count = 0;
+                fps_prepare_count = 0;
+                /* Инициализация профилирования */
+                memset(&perf_stats, 0, sizeof(perf_stats));
                 /* Индикация START */
                 vnd_tx_bytes_at_start = vnd_total_tx_bytes;
                 HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_SET);
