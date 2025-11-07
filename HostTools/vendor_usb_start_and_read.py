@@ -46,6 +46,10 @@ def _parse_args():
     # Early abort if no RX
     p.add_argument('--abort-no-rx-sec', type=float, default=float(os.getenv('VND_ABORT_NO_RX_SEC','5.0')), help='Abort test if no frames received within this time (sec). Default 5.0')
     p.add_argument('--abort-count-mode', choices=['data','any'], default=os.getenv('VND_ABORT_COUNT_MODE','data'), help='data = only A/B frames count; any = any frame (incl. STAT/TEST). Default data')
+    # Fail-fast thresholds (per aggregate interval unless specified otherwise)
+    p.add_argument('--fail-max-timeouts', type=int, default=int(os.getenv('VND_FAIL_MAX_TIMEOUTS','0')), help='Abort if timeouts per aggregate interval exceed this value (0=disabled)')
+    p.add_argument('--fail-max-pipes', type=int, default=int(os.getenv('VND_FAIL_MAX_PIPES','0')), help='Abort if pipe errors per aggregate interval exceed this value (0=disabled)')
+    p.add_argument('--fail-lag-frames', type=int, default=int(os.getenv('VND_FAIL_LAG_FRAMES','0')), help='Abort if cumulative (devTX - hostRX) A+B frame lag exceeds this value (requires --status-mode ctrl; 0=disabled)')
     return p.parse_args()
 
 args = _parse_args()
@@ -71,6 +75,10 @@ START_CHECK_SEC = args.start_check_sec if args.start_check_sec > 0 else 2.0
 START_RETRIES = max(0, args.start_retries)
 ABORT_NO_RX_SEC = args.abort_no_rx_sec if args.abort_no_rx_sec > 0 else 0.0
 ABORT_COUNT_MODE = args.abort_count_mode
+# Fail-fast thresholds
+FAIL_MAX_TIMEOUTS = max(0, args.fail_max_timeouts)
+FAIL_MAX_PIPES = max(0, args.fail_max_pipes)
+FAIL_LAG_FRAMES = max(0, args.fail_lag_frames)
 # Control GET_STATUS params
 IFACE_INDEX = args.intf  # Vendor interface index in composite config
 VND_CMD_GET_STATUS = 0x30
@@ -529,6 +537,8 @@ def main():
     last_dev_sent0 = None
     last_dev_sent1 = None
     last_dev_txcplt = None
+    # Accumulated lag between device TX (A+B) and host RX (A+B) across intervals
+    lag_accum_ab = 0
     rx = bytearray()
     pipe_errs = 0
     aborted_no_rx = False
@@ -536,7 +546,7 @@ def main():
 
     def _rx_count():
         return (cnt_a + cnt_b) if ABORT_COUNT_MODE == 'data' else got
-    while got < READ_COUNT and (time.time() - start_time) < READ_WINDOW_SEC:
+    while ((READ_COUNT <= 0) or (got < READ_COUNT)) and (time.time() - start_time) < READ_WINDOW_SEC:
         try:
             chunk = bytes(dev.read(IN_EP, 512, timeout=READ_TIMEOUT_MS))
             rx += chunk
@@ -605,6 +615,7 @@ def main():
                 fps_b = agg_b / dt if dt > 0 else 0.0
                 # Optionally poll device counters once per interval to compare TX vs RX
                 dev_info = ""
+                dev_dA = dev_dB = dev_dT = None
                 if STATUS_MODE == 'ctrl':
                     st = get_status_ctrl(dev, timeout_ms=150)
                     if st is not None:
@@ -614,11 +625,34 @@ def main():
                         dA = s0 - (last_dev_sent0 if last_dev_sent0 is not None else s0)
                         dB = s1 - (last_dev_sent1 if last_dev_sent1 is not None else s1)
                         dT = tx - (last_dev_txcplt if last_dev_txcplt is not None else tx)
+                        dev_dA, dev_dB, dev_dT = dA, dB, dT
                         dev_info = f" devTX A={dA} B={dB} TxCplt={dT} (tot A={s0} B={s1} TxCplt={tx})"
                         last_dev_sent0, last_dev_sent1, last_dev_txcplt = s0, s1, tx
+                # Fail-fast checks (per-aggregate)
+                if FAIL_MAX_TIMEOUTS and agg_timeouts > FAIL_MAX_TIMEOUTS:
+                    aborted_no_rx = True
+                    abort_reason = f"timeouts per {LOG_INTERVAL:.1f}s interval exceeded ({agg_timeouts}>{FAIL_MAX_TIMEOUTS})"
+                if not abort_reason and FAIL_MAX_PIPES and agg_pipes > FAIL_MAX_PIPES:
+                    aborted_no_rx = True
+                    abort_reason = f"pipe errors per {LOG_INTERVAL:.1f}s interval exceeded ({agg_pipes}>{FAIL_MAX_PIPES})"
+                if not abort_reason and FAIL_LAG_FRAMES and STATUS_MODE == 'ctrl' and dev_dA is not None and dev_dB is not None:
+                    host_ab = (agg_a + agg_b)
+                    dev_ab = (dev_dA + dev_dB)
+                    delta_lag = dev_ab - host_ab
+                    if delta_lag > 0:
+                        lag_accum_ab += delta_lag
+                    # If host caught up, allow partial forgiveness but do not go below 0
+                    elif delta_lag < 0:
+                        lag_accum_ab = max(0, lag_accum_ab + delta_lag)
+                    if lag_accum_ab > FAIL_LAG_FRAMES:
+                        aborted_no_rx = True
+                        abort_reason = f"host RX lags device TX by >{FAIL_LAG_FRAMES} frames (accum={lag_accum_ab})"
                 log_line(f"[HOST_SUM] +{dt:.1f}s A={agg_a} ({fps_a:.1f}/s) B={agg_b} ({fps_b:.1f}/s) STAT={agg_stat} timeouts={agg_timeouts} pipes={agg_pipes}{dev_info}")
                 agg_a = agg_b = agg_stat = agg_timeouts = agg_pipes = 0
                 last_agg_print = now_agg
+                if abort_reason:
+                    log_line(f"[HOST][ABORT] {abort_reason}")
+                    break
             # Early abort if no RX for too long
             if ABORT_NO_RX_SEC > 0 and _rx_count() == 0 and (time.time() - start_time) >= ABORT_NO_RX_SEC:
                 aborted_no_rx = True
@@ -640,6 +674,7 @@ def main():
                     fps_a = agg_a / dt if dt > 0 else 0.0
                     fps_b = agg_b / dt if dt > 0 else 0.0
                     dev_info = ""
+                    dev_dA = dev_dB = dev_dT = None
                     if STATUS_MODE == 'ctrl':
                         st = get_status_ctrl(dev, timeout_ms=150)
                         if st is not None:
@@ -649,11 +684,33 @@ def main():
                             dA = s0 - (last_dev_sent0 if last_dev_sent0 is not None else s0)
                             dB = s1 - (last_dev_sent1 if last_dev_sent1 is not None else s1)
                             dT = tx - (last_dev_txcplt if last_dev_txcplt is not None else tx)
+                            dev_dA, dev_dB, dev_dT = dA, dB, dT
                             dev_info = f" devTX A={dA} B={dB} TxCplt={dT} (tot A={s0} B={s1} TxCplt={tx})"
                             last_dev_sent0, last_dev_sent1, last_dev_txcplt = s0, s1, tx
+                    # Fail-fast checks (per-aggregate)
+                    if FAIL_MAX_TIMEOUTS and agg_timeouts > FAIL_MAX_TIMEOUTS:
+                        aborted_no_rx = True
+                        abort_reason = f"timeouts per {LOG_INTERVAL:.1f}s interval exceeded ({agg_timeouts}>{FAIL_MAX_TIMEOUTS})"
+                    if not abort_reason and FAIL_MAX_PIPES and agg_pipes > FAIL_MAX_PIPES:
+                        aborted_no_rx = True
+                        abort_reason = f"pipe errors per {LOG_INTERVAL:.1f}s interval exceeded ({agg_pipes}>{FAIL_MAX_PIPES})"
+                    if not abort_reason and FAIL_LAG_FRAMES and STATUS_MODE == 'ctrl' and dev_dA is not None and dev_dB is not None:
+                        host_ab = (agg_a + agg_b)
+                        dev_ab = (dev_dA + dev_dB)
+                        delta_lag = dev_ab - host_ab
+                        if delta_lag > 0:
+                            lag_accum_ab += delta_lag
+                        elif delta_lag < 0:
+                            lag_accum_ab = max(0, lag_accum_ab + delta_lag)
+                        if lag_accum_ab > FAIL_LAG_FRAMES:
+                            aborted_no_rx = True
+                            abort_reason = f"host RX lags device TX by >{FAIL_LAG_FRAMES} frames (accum={lag_accum_ab})"
                     log_line(f"[HOST_SUM] +{dt:.1f}s A={agg_a} ({fps_a:.1f}/s) B={agg_b} ({fps_b:.1f}/s) STAT={agg_stat} timeouts={agg_timeouts} pipes={agg_pipes}{dev_info}")
                     agg_a = agg_b = agg_stat = agg_timeouts = agg_pipes = 0
                     last_agg_print = now_agg
+                    if abort_reason:
+                        log_line(f"[HOST][ABORT] {abort_reason}")
+                        break
                 # Periodically request STAT to aid diagnosis (bulk preferred)
                 now = time.time()
                 if STATUS_MODE != 'none' and (now - last_stat_print > 1.0):
@@ -718,7 +775,9 @@ def main():
                 dev_tot = f" dev_tot A={st.get('sent0',0)} B={st.get('sent1',0)} TxCplt={st.get('dbg_tx_cplt',0)} seq={st.get('produced_seq',0)}"
         except Exception:
             pass
-    log_line(f"[HOST][SUMMARY] elapsed={elapsed:.1f}s A={cnt_a} B={cnt_b} STAT={cnt_stat} timeouts={timeouts} pipe_errors={pipe_err_total}{dev_tot}")
+    # Include lag accumulator into summary if enabled
+    lag_info = f" lag_accum={lag_accum_ab}" if FAIL_LAG_FRAMES else ""
+    log_line(f"[HOST][SUMMARY] elapsed={elapsed:.1f}s A={cnt_a} B={cnt_b} STAT={cnt_stat} timeouts={timeouts} pipe_errors={pipe_err_total}{lag_info}{dev_tot}")
 
     # Exit code policy: abort if no frames received
     if aborted_no_rx or (cnt_a + cnt_b + cnt_stat) == 0:
