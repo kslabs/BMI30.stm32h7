@@ -36,10 +36,12 @@ function Invoke-Cmd([string]$cmd, [string]$arguments){
 Push-Location (Resolve-Path $WorkingDir)
 try {
   # Prefer Python Launcher if present
+  # Default args for high-throughput run: profile0 (200Hz/1360), status via ctrl, unlimited pairs with 60s window
+  $argsLine = "`"$ScriptPath`" --profile 0 --status-mode bulk --pairs 0 --window-sec 60 --log-interval 5.0 --abort-no-rx-sec 15"
   $cmds = @(
-    @{cmd='py'; arguments="-3 `"$ScriptPath`""},
-    @{cmd='python'; arguments="`"$ScriptPath`""},
-    @{cmd='py'; arguments="`"$ScriptPath`""}
+    @{cmd='py'; arguments="-3 $argsLine"},
+    @{cmd='python'; arguments=$argsLine},
+    @{cmd='py'; arguments=$argsLine}
   )
   $ok = $false
   foreach($c in $cmds){
