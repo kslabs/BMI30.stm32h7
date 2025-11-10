@@ -48,7 +48,7 @@
 			"group": "build"
 		},
 		{
-			"label": "Serial: Start COM9 @115200",
+			"label": "Serial: Start COM4 @115200",
 			"type": "shell",
 			"command": "powershell.exe",
 			"args": [
@@ -58,7 +58,7 @@
 				"-File",
 				".vscode/serial-monitor.ps1",
 				"-Port",
-				"COM9",
+				"COM4",
 				"-Baud",
 				"115200"
 			],
@@ -90,7 +90,7 @@
 			}
 		},
 		{
-			"label": "Serial: VND_* monitor (COM9)",
+			"label": "Serial: VND_* monitor (COM4)",
 			"type": "shell",
 			"command": "powershell.exe",
 			"args": [
@@ -100,7 +100,7 @@
 				"-File",
 				".vscode/serial-monitor.ps1",
 				"-Port",
-				"COM9",
+				"COM4",
 				"-Baud",
 				"115200",
 				"-FilterRegex",
@@ -113,7 +113,7 @@
 			"group": "none"
 		},
 		{
-			"label": "Serial: Monitor COM9 (raw)",
+			"label": "Serial: Monitor COM4 (raw)",
 			"type": "shell",
 			"command": "powershell.exe",
 			"args": [
@@ -123,7 +123,7 @@
 				"-File",
 				".vscode/serial-monitor.ps1",
 				"-Port",
-				"COM9",
+				"COM4",
 				"-Baud",
 				"115200"
 			],
@@ -136,7 +136,26 @@
 			}
 		},
 		{
-			"label": "Serial: Monitor COM9 (raw to file)",
+			"label": "CDC: Verify VER (CDC COM)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/check-ver.ps1",
+				"-Port",
+				"${input:cdcPort}",
+				"-Baud",
+				"115200"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": { "reveal": "always", "panel": "shared" }
+		},
+		{
+			"label": "Serial: Monitor COM4 (raw to file)",
 			"type": "shell",
 			"command": "powershell.exe",
 			"args": [
@@ -146,7 +165,7 @@
 				"-File",
 				".vscode/serial-monitor.ps1",
 				"-Port",
-				"COM9",
+				"COM4",
 				"-Baud",
 				"115200",
 				"-LogPath",
@@ -394,7 +413,7 @@
 			}
 		},
 		{
-			"label": "Host: START+READ (robust)",
+			"label": "Host: Stream 60s (bulk STAT)",
 			"type": "shell",
 			"command": "powershell",
 			"args": [
@@ -402,19 +421,183 @@
 				"-ExecutionPolicy",
 				"Bypass",
 				"-File",
-				".vscode/run-host-start-and-read.ps1"
+				".vscode/run-host-start-and-read.ps1",
+				"-ProfileId","0",
+				"-WindowSec","60",
+				"-StatusMode","bulk",
+				"-LogInterval","5.0",
+				"-AbortNoRxSec","20",
+				"-StartRetries","5",
+				"-StartCheckSec","3.5"
 			],
 			"isBackground": false,
 			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "shared"
-			}
+			"presentation": {"reveal": "always", "panel": "shared"}
 		},
+		{
+			"label": "Host: Stream 300s (ctrl STAT)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/run-host-start-and-read.ps1",
+				"-ProfileId","0",
+				"-WindowSec","300",
+				"-StatusMode","ctrl",
+				"-LogInterval","5.0",
+				"-AbortNoRxSec","30",
+				"-StartRetries","6",
+				"-StartCheckSec","4.0"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"}
+		},
+		{
+			"label": "Host: Stream 30s (ctrl STAT)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/run-host-start-and-read.ps1",
+				"-ProfileId","0",
+				"-WindowSec","30",
+				"-StatusMode","ctrl",
+				"-LogInterval","5.0",
+				"-AbortNoRxSec","10",
+				"-StartRetries","5",
+				"-StartCheckSec","3.5"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"}
+		},
+		{
+			"label": "Host: Stream 30s (run #1)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/run-host-start-and-read.ps1",
+				"-ProfileId","0",
+				"-WindowSec","30",
+				"-StatusMode","ctrl",
+				"-LogInterval","5.0",
+				"-AbortNoRxSec","10",
+				"-StartRetries","5",
+				"-StartCheckSec","3.5"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"}
+		},
+		{
+			"label": "Host: Stream 30s (run #2)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/run-host-start-and-read.ps1",
+				"-ProfileId","0",
+				"-WindowSec","30",
+				"-StatusMode","ctrl",
+				"-LogInterval","5.0",
+				"-AbortNoRxSec","10",
+				"-StartRetries","5",
+				"-StartCheckSec","3.5"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"}
+		},
+		{
+			"label": "Host: Stream 30s (run #3)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/run-host-start-and-read.ps1",
+				"-ProfileId","0",
+				"-WindowSec","30",
+				"-StatusMode","ctrl",
+				"-LogInterval","5.0",
+				"-AbortNoRxSec","10",
+				"-StartRetries","5",
+				"-StartCheckSec","3.5"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"}
+		},
+		{
+			"label": "Run 3x30s (ctrl STAT)",
+			"dependsOn": [
+				"Host: Stream 30s (run #1)",
+				"Host: Stream 30s (run #2)",
+				"Host: Stream 30s (run #3)"
+			],
+			"dependsOrder": "sequence",
+			"group": "none"
+		},
+		{
+			"label": "Run gated 3x30s (ctrl STAT)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/run-3x30s-ctrl.ps1",
+				"-ProfileId","0",
+				"-WindowSec","30",
+				"-PauseBetweenSec","1.0",
+				"-StatusMode","ctrl"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"}
+		},
+			{
+				"label": "Run 3x5min host tests",
+				"type": "shell",
+				"command": "powershell",
+				"args": [
+					"-NoProfile",
+					"-ExecutionPolicy",
+					"Bypass",
+					"-File",
+					".vscode/run-3x5min-tests.ps1",
+					"-Runs", "3",
+					"-WindowSec", "300",
+					"-AbortNoRxSec", "20",
+					"-PauseBetweenRunsSec", "5",
+					"-ProfileId", "0",
+					"-StatusMode", "bulk"
+				],
+				"isBackground": false,
+				"group": "none",
+				"presentation": { "reveal": "always", "panel": "shared" }
+			},
 		{
 			"label": "Run full host test",
 			"dependsOn": [
-				"Serial: Monitor COM9 (raw)",
+				"Serial: Monitor COM4 (raw)",
 				"Host: START+READ (robust)"
 			],
 			"dependsOrder": "sequence",
@@ -432,6 +615,17 @@
 			"problemMatcher": [
 				"$gcc"
 			]
+		},
+		{
+			"label": "Build+Flash+Verify+3x5min",
+			"dependsOn": [
+				"Build (Debug)",
+				"Flash (OpenOCD)",
+				"CDC: Verify VER (CDC COM)",
+				"Run 3x5min host tests"
+			],
+			"dependsOrder": "sequence",
+			"group": "build"
 		},
 		{
 			"label": "Build+Flash",
@@ -536,7 +730,7 @@
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"python \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/vendor_enable_diag_and_read.py\""
+				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/vendor_enable_diag_and_read.py\""
 			],
 			"isBackground": false,
 			"group": "none"
@@ -544,28 +738,16 @@
 		{
 			"label": "Run quick status",
 			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"python \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/vendor_quick_status.py\""
-			],
+			"command": "quick_status.cmd",
+			"args": [],
 			"isBackground": false,
 			"group": "none"
 		},
 		{
 			"label": "Run quick status (30s)",
 			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/vendor_quick_status.py\" --secs 30"
-			],
+			"command": "quick_status.cmd",
+			"args": ["--secs", "30"],
 			"isBackground": false,
 			"group": "none",
 			"presentation": {
@@ -576,7 +758,7 @@
 		{
 			"label": "Catch stall: raw log + quick (30s)",
 			"dependsOn": [
-				"Serial: Monitor COM9 (raw to file)",
+				"Serial: Monitor COM4 (raw to file)",
 				"Run quick status (30s)"
 			],
 			"dependsOrder": "sequence",
@@ -652,20 +834,6 @@
 				"flash_full"
 			],
 			"isBackground": false,
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Build after patch",
-			"type": "shell",
-			"command": "make",
-			"args": [
-				"-C",
-				"Debug",
-				"all"
-			],
 			"problemMatcher": [
 				"$gcc"
 			],
@@ -798,7 +966,7 @@
 			"id": "cdcPort",
 			"type": "promptString",
 			"description": "CDC COM port (не ST-LINK, посмотрите в Диспетчере устройств)",
-			"default": "COM9"
+			"default": "COM4"
 		}
 	]
 }

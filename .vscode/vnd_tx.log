@@ -771,3 +771,20 @@
 [VND_TX] ep=0x83 len=64 head=53 54 41 54
 [VND] STAT_TX ACK-START (immediate) len=64 depth=1
 [VND] SIZE_LOCK 10 (raw=912 trunc=0)
+[VND_RCV] #1 CMD 0x10 len=9
+[VND_RCV] #2 CMD 0x11 len=3
+[VND_RCV] #3 CMD 0x13 len=2
+[VND_RCV] #4 CMD 0x14 len=2
+[VND_RCV] #5 CMD 0x18 len=2
+[VND_RCV] #6 CMD 0x19 len=2
+[VND_RCV] #7 CMD 0x20 len=1
+[VND_RCV] #8 CMD 0x21 len=1
+[VND_RCV] #9 CMD 0x10 len=9
+[VND_RCV] #10 CMD 0x11 len=3
+[VND_RCV] #11 CMD 0x13 len=2
+[VND_RCV] #12 CMD 0x14 len=2
+[VND_RCV] #13 CMD 0x18 len=2
+[VND_RCV] #14 CMD 0x19 len=2
+[VND_RCV] #15 CMD 0x20 len=1
+[VND_RCV] #16 CMD 0x21 len=1
+[VND_RCV] #17 CMD 0x10 len=9

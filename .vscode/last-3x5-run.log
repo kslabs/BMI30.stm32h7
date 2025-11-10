@@ -1,0 +1,23 @@
+﻿================ 3x5 TEST HARNESS START ================
+Timestamp: 2025-11-08 17:40:50
+PSVersion: 5.1.19041.6456
+PSScriptRoot: C:\Users\TEST\Documents\Work\BMI20\STM32\BMI30.stm32h7\.vscode
+WorkingDir (arg): C:\Users\TEST\Documents\Work\BMI20\STM32\BMI30.stm32h7\.vscode/..
+WorkingDir (resolved): C:\Users\TEST\Documents\Work\BMI20\STM32\BMI30.stm32h7
+ScriptPath (arg): HostTools/vendor_usb_start_and_read.py
+ScriptPath (resolved): C:\Users\TEST\Documents\Work\BMI20\STM32\BMI30.stm32h7\HostTools\vendor_usb_start_and_read.py
+Env:PYTHONUNBUFFERED=1
+Env:PATH=c:\Users\TEST\.vscode\extensions\stmicroelectronics.stm32cube-ide-core-1.0.3\resources\binaries\win32\x86_64;c:/Users/TEST/.vscode/extensions/stmicroelectronics.stm32cube-ide-build-cmake-1.42.2/resources/cube-cmake/win32;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\Git\cmd;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\Git\cmd;C:\Users\TEST\AppData\Local\Programs\Python\Launcher\;C:\Users\TEST\AppData\Local\Microsoft\WindowsApps;C:\Users\TEST\AppData\Local\Programs\Microsoft VS Code\bin;c:\Users\TEST\AppData\Roaming\Code\User\globalStorage\github.copilot-chat\debugCommand;c:\Users\TEST\Documents\Work\BMI20\STM32\xpack-arm-none-eabi-gcc-14.2.1-1.1-win32-x64\xpack-arm-none-eabi-gcc-14.2.1-1.1\bin;C:\Program Files (x86)\GnuWin32\bin;c:\Users\TEST\Documents\Work\BMI20\STM32\xpack-openocd-0.12.0-2-win32-x64\xpack-openocd-0.12.0-2\bin;c:\Users\TEST\.vscode\extensions\ms-python.debugpy-2025.14.1-win32-x64\bundled\scripts\noConfigScripts;c:\Users\TEST\AppData\Roaming\Code\User\globalStorage\github.copilot-chat\debugCommand
+[CHECK] Interpreter diagnostics skipped by '-NoInterpreterDiag'
+[HOST][ATTEMPT] run=1 attempt=1 cmd=C:\Users\TEST\AppData\Local\Programs\Python\Launcher\py.exe args=-3 -u "HostTools/vendor_usb_start_and_read.py" --profile 0 --status-mode bulk --pairs 0 --window-sec 300 --log-interval 5.0 --abort-no-rx-sec 20 --frame-samples 10
+[HOST][EXIT] code=0 out_len=- err_len=-
+[HOST][ATTEMPT] run=2 attempt=1 cmd=C:\Users\TEST\AppData\Local\Programs\Python\Launcher\py.exe args=-3 -u "HostTools/vendor_usb_start_and_read.py" --profile 0 --status-mode bulk --pairs 0 --window-sec 300 --log-interval 5.0 --abort-no-rx-sec 20 --frame-samples 10
+[HOST][EXIT] code=2 out_len=- err_len=-
+[HOST][ATTEMPT_FAIL] run=2 attempt=1 code=2 cmd=C:\Users\TEST\AppData\Local\Programs\Python\Launcher\py.exe
+[HOST][ATTEMPT] run=2 attempt=2 cmd=C:\Users\TEST\AppData\Local\Programs\Python\Launcher\py.exe args=-u "HostTools/vendor_usb_start_and_read.py" --profile 0 --status-mode bulk --pairs 0 --window-sec 300 --log-interval 5.0 --abort-no-rx-sec 20 --frame-samples 10
+[HOST][EXIT] code=2 out_len=- err_len=-
+[HOST][ATTEMPT_FAIL] run=2 attempt=2 code=2 cmd=C:\Users\TEST\AppData\Local\Programs\Python\Launcher\py.exe
+[HOST][ATTEMPT] run=2 attempt=3 cmd=py args=-3 -u "HostTools/vendor_usb_start_and_read.py" --profile 0 --status-mode bulk --pairs 0 --window-sec 300 --log-interval 5.0 --abort-no-rx-sec 20 --frame-samples 10
+[HOST][EXIT] code=0 out_len=- err_len=-
+[HOST][ATTEMPT] run=3 attempt=1 cmd=C:\Users\TEST\AppData\Local\Programs\Python\Launcher\py.exe args=-3 -u "HostTools/vendor_usb_start_and_read.py" --profile 0 --status-mode bulk --pairs 0 --window-sec 300 --log-interval 5.0 --abort-no-rx-sec 20 --frame-samples 10
+[HOST][EXIT] code=0 out_len=- err_len=-

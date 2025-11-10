@@ -364,6 +364,26 @@ static inline void LED_OFF(void){ HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test
   #define BL_ON()  HAL_GPIO_WritePin(LCD_Led_GPIO_Port, LCD_Led_Pin, GPIO_PIN_SET)
   #define BL_OFF() HAL_GPIO_WritePin(LCD_Led_GPIO_Port, LCD_Led_Pin, GPIO_PIN_RESET)
 #endif
+// === UART1 RX мониторинг для индикации приходящих байт (COM4) ===
+// По любой принятой байтовой посылке зажигаем LED и гасим через ~100ms.
+static volatile uint32_t uart1_led_off_tick = 0;          // таймаут выключения LED после RX
+static uint8_t uart1_rx_byte = 0;                         // одиночный байт приёмника
+static volatile uint32_t uart1_rx_count = 0;              // счётчик принятых байт
+static volatile uint32_t uart1_last_rx_ms = 0;            // время последнего приёма
+// Кольцевой буфер для потенциального анализа команд (пока только индикация)
+#define UART1_RX_RING_SZ 128
+static uint8_t uart1_rx_ring[UART1_RX_RING_SZ];
+static volatile uint16_t uart1_rx_ring_wr = 0;
+static volatile uint16_t uart1_rx_ring_rd = 0;
+// Линейный буфер команды до CR/LF
+#define UART1_CMD_MAX 96
+static char uart1_cmd_buf[UART1_CMD_MAX];
+static uint16_t uart1_cmd_len = 0;
+// Быстрый inline для установки LED (используем уже определённые макросы LED_ON/LED_OFF ниже)
+static inline void uart1_rx_led_pulse(void){
+  LED_ON();
+  uart1_led_off_tick = HAL_GetTick() + 100; // держим LED включённым 100мс после каждого байта
+}
 /* USER CODE END 0 */
 
 /**
@@ -638,7 +658,7 @@ int main(void)
 
   // Запуск каналов для TIM2
 #if !SAFE_MINIMAL
-    for(volatile uint32_t d=0; d<200000000UL; ++d){ __NOP(); }
+  // УДАЛЕНА гигантская задержка 200M NOP (~0.36s) - не нужна
   MX_GPIO_Init();
   /* Trap после MX_GPIO_Init */
 #if defined(DIAG_TRAP_STAGE) && (DIAG_TRAP_STAGE==4)
@@ -1027,7 +1047,15 @@ int main(void)
   /* Периодическое обновление статуса на LCD (вернули после отката) */
   {
     static uint32_t last_lcd_ms = 0;
-    if (now - last_lcd_ms >= 100) { // ~10 Гц
+    static uint8_t lcd_first_update = 1;
+    // Первое обновление сразу после старта (в течение первых 200ms)
+    if (lcd_first_update && now >= 200) {
+      lcd_first_update = 0;
+      last_lcd_ms = now;
+      DrawUSBStatus();
+    }
+    // Последующие обновления каждые 100ms
+    else if (!lcd_first_update && (now - last_lcd_ms >= 100)) { // ~10 Гц
       last_lcd_ms = now;
       DrawUSBStatus();
     }
@@ -1057,6 +1085,68 @@ int main(void)
   if ((loop_count % 1000u)==0) uart1_raw_putc('.');
   #endif
   if(iwdg_enabled_runtime){ printf("[WARN] IWDG active unexpected\r\n"); }
+  /* Обработка таймаута выключения LED после UART1 RX */
+  if(uart1_led_off_tick && HAL_GetTick() >= uart1_led_off_tick){
+    LED_OFF();
+    uart1_led_off_tick = 0;
+  }
+  /* Обработка приёма по UART1: сбор строки и разбор команд (вне ISR) */
+  while(uart1_rx_ring_rd != uart1_rx_ring_wr){
+    uint8_t ch = uart1_rx_ring[uart1_rx_ring_rd & (UART1_RX_RING_SZ-1)];
+    uart1_rx_ring_rd++;
+    if(ch == '\r' || ch == '\n'){
+      if(uart1_cmd_len > 0){
+        // Завершаем строку и парсим
+        uart1_cmd_buf[(uart1_cmd_len < (UART1_CMD_MAX-1)) ? uart1_cmd_len : (UART1_CMD_MAX-1)] = 0;
+        // Преобразуем в верхний регистр для простого сравнения
+        for(uint16_t i=0;i<uart1_cmd_len;i++){
+          char c = uart1_cmd_buf[i];
+          if(c >= 'a' && c <= 'z') uart1_cmd_buf[i] = (char)(c - 'a' + 'A');
+        }
+        // Обработка команд аналогично USB CDC
+        if(strncmp(uart1_cmd_buf, "HELP", 4) == 0){
+          printf("\r\n=== DEBUG COMMANDS (UART1) ===\r\n");
+          printf("VER     - firmware version (git commit, build date)\r\n");
+          printf("STATUS  - current state (streaming, counters, fps)\r\n");
+          printf("PERF    - performance stats (prepare/tx/interval timings)\r\n");
+          printf("FPS     - FPS statistics only\r\n");
+          printf("RESET   - software reset (reboot device)\r\n");
+          printf("HELP    - this help message\r\n");
+          printf("===============================\r\n");
+        } else if(strncmp(uart1_cmd_buf, "VER", 3) == 0 || strncmp(uart1_cmd_buf, "VERSION", 7) == 0){
+          printf("\r\n=== FIRMWARE VERSION (UART1) ===\r\n");
+          printf("Version: %s\r\n", FW_VERSION_STR);
+          printf("Git:     %s\r\n", fw_git_hash);
+          printf("Built:   %s %s\r\n", fw_build_date, fw_build_time);
+          printf("VND_PAIR_BUFFERS: %d\r\n", 8);
+          printf("================================\r\n");
+        } else if(strncmp(uart1_cmd_buf, "STATUS", 6) == 0){
+          printf("\r\n=== DEVICE STATUS (UART1) ===\r\n");
+          printf("Uptime: %lu ms\r\n", HAL_GetTick());
+          printf("Use 'PERF' or 'FPS' for detailed statistics\r\n");
+          printf("==============================\r\n");
+        } else if(strncmp(uart1_cmd_buf, "FPS", 3) == 0){
+          vnd_report_fps_stats();
+        } else if(strncmp(uart1_cmd_buf, "PERF", 4) == 0){
+          vnd_print_perf_stats();
+        } else if(strncmp(uart1_cmd_buf, "RESET", 5) == 0){
+          printf("[UART] RESET command received - performing software reset\r\n");
+          HAL_Delay(100);
+          NVIC_SystemReset();
+        } else {
+          printf("[UART] Unknown command: '%s'\r\n", uart1_cmd_buf);
+        }
+        uart1_cmd_len = 0; // сброс буфера
+      }
+    } else if(ch == 0x08 || ch == 0x7F){
+      // backspace
+      if(uart1_cmd_len > 0) uart1_cmd_len--;
+    } else {
+      if(uart1_cmd_len < (UART1_CMD_MAX-1)){
+        uart1_cmd_buf[uart1_cmd_len++] = (char)ch;
+      }
+    }
+  }
   /* Подсчёт длительности итерации */
   uint32_t dwt_end = DWT->CYCCNT;
   loop_cycle_accum += (uint32_t)(dwt_end - dwt_start);
@@ -1200,7 +1290,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T15_TRGO;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
-  hadc1.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_CIRCULAR;
+  hadc1.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_CIRCULAR;  /* CIRCULAR: DMA автоперезапуск */
   hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc1.Init.LeftBitShift = ADC_LEFTBITSHIFT_NONE;
   hadc1.Init.OversamplingMode = DISABLE;
@@ -1265,7 +1355,7 @@ static void MX_ADC2_Init(void)
   hadc2.Init.DiscontinuousConvMode = DISABLE;
   hadc2.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T15_TRGO;
   hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
-  hadc2.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_CIRCULAR;
+  hadc2.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_ONESHOT;  /* ИЗМЕНЕНО: oneshot т.к. перезапускаем вручную */
   hadc2.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc2.Init.LeftBitShift = ADC_LEFTBITSHIFT_NONE;
   hadc2.Init.OversamplingMode = DISABLE;
@@ -1827,6 +1917,12 @@ static void MX_USART1_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
+  // Запускаем прерывания приёма одиночных байтов для индикации LED
+  if (HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1) != HAL_OK) {
+    printf("[UART1][ERR] HAL_UART_Receive_IT failed\r\n");
+  } else {
+    printf("[UART1] RX interrupt armed\r\n");
+  }
   /* USER CODE END USART1_Init 2 */
 
 }
@@ -1962,6 +2058,33 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       extern void usb_vendor_periodic_tick(void);
       usb_vendor_periodic_tick();
     #endif
+  }
+}
+
+// Callback по завершении приёма байта (USART1 RX interrupt)
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if(huart->Instance == USART1){
+    uart1_rx_count++;
+    uart1_last_rx_ms = HAL_GetTick();
+    // Сохраняем в кольцевой буфер (без сложного парсинга)
+    uart1_rx_ring[uart1_rx_ring_wr & (UART1_RX_RING_SZ-1)] = uart1_rx_byte;
+    uart1_rx_ring_wr++;
+    // Импульс LED
+    uart1_rx_led_pulse();
+    // Эхо обратно в UART1, чтобы пользователь видел, что принято
+    if(uart1_rx_byte == '\r'){
+      uart1_raw_putc('\r');
+      uart1_raw_putc('\n');
+    } else {
+      uart1_raw_putc((char)uart1_rx_byte);
+    }
+    // Переустанавливаем приём следующего байта
+    if(HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1) != HAL_OK){
+      // Если ошибка – попробуем восстановить через краткую задержку
+      HAL_Delay(1);
+      HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1);
+    }
   }
 }
 

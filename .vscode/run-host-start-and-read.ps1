@@ -1,6 +1,14 @@
 param(
   [string]$ScriptPath = "HostTools/vendor_usb_start_and_read.py",
-  [string]$WorkingDir = "$PSScriptRoot/.."
+  [string]$WorkingDir = "$PSScriptRoot/..",
+  [int]$ProfileId = 0,
+  [double]$WindowSec = 60,
+  [ValidateSet('none','ctrl','bulk')]
+  [string]$StatusMode = 'bulk',
+  [double]$LogInterval = 5.0,
+  [double]$AbortNoRxSec = 20,
+  [int]$StartRetries = 5,
+  [double]$StartCheckSec = 3.5
 )
 
 # Robust launcher for HostTools/vendor_usb_start_and_read.py
@@ -36,8 +44,9 @@ function Invoke-Cmd([string]$cmd, [string]$arguments){
 Push-Location (Resolve-Path $WorkingDir)
 try {
   # Prefer Python Launcher if present
-  # Default args for high-throughput run: profile0 (200Hz/1360), status via ctrl, unlimited pairs with 60s window
-  $argsLine = "`"$ScriptPath`" --profile 0 --status-mode bulk --pairs 0 --window-sec 60 --log-interval 5.0 --abort-no-rx-sec 15"
+  # Build arguments from parameters
+  $env:VND_MIN_STAT_SEC = "0.5"  # throttle STAT polls
+  $argsLine = "`"$ScriptPath`" --profile $ProfileId --status-mode $StatusMode --pairs 0 --window-sec $WindowSec --log-interval $LogInterval --abort-no-rx-sec $AbortNoRxSec --start-retries $StartRetries --start-check-sec $StartCheckSec"
   $cmds = @(
     @{cmd='py'; arguments="-3 $argsLine"},
     @{cmd='python'; arguments=$argsLine},

@@ -42,8 +42,8 @@ def _parse_args():
     p.add_argument('--verbose', action='store_true', help='Print each received frame (default: aggregate 1 Hz)')
     p.add_argument('--log-interval', type=float, default=float(os.getenv('VND_LOG_INTERVAL','1.0')), help='Aggregate log interval in seconds (default 1.0)')
     # Start robustness
-    p.add_argument('--start-check-sec', type=float, default=float(os.getenv('VND_START_CHECK_SEC','2.0')), help='Time budget to ensure stream started (probe+optional kick)')
-    p.add_argument('--start-retries', type=int, default=int(os.getenv('VND_START_RETRIES','2')), help='How many START re-sends on failed start')
+    p.add_argument('--start-check-sec', type=float, default=float(os.getenv('VND_START_CHECK_SEC','3.5')), help='Initial time budget to observe first activity before first kick (default 3.5s)')
+    p.add_argument('--start-retries', type=int, default=int(os.getenv('VND_START_RETRIES','5')), help='How many START re-sends on failed start (default 5)')
     # Early abort if no RX
     p.add_argument('--abort-no-rx-sec', type=float, default=float(os.getenv('VND_ABORT_NO_RX_SEC','5.0')), help='Abort test if no frames received within this time (sec). Default 5.0')
     p.add_argument('--abort-count-mode', choices=['data','any'], default=os.getenv('VND_ABORT_COUNT_MODE','data'), help='data = only A/B frames count; any = any frame (incl. STAT/TEST). Default data')
@@ -53,6 +53,10 @@ def _parse_args():
     p.add_argument('--fail-max-timeouts', type=int, default=int(os.getenv('VND_FAIL_MAX_TIMEOUTS','0')), help='Abort if timeouts per aggregate interval exceed this value (0=disabled)')
     p.add_argument('--fail-max-pipes', type=int, default=int(os.getenv('VND_FAIL_MAX_PIPES','0')), help='Abort if pipe errors per aggregate interval exceed this value (0=disabled)')
     p.add_argument('--fail-lag-frames', type=int, default=int(os.getenv('VND_FAIL_LAG_FRAMES','0')), help='Abort if cumulative (devTX - hostRX) A+B frame lag exceeds this value (requires --status-mode ctrl; 0=disabled)')
+    # Start detection policy
+    p.add_argument('--start-allow-stat', action='store_true', help='Treat seeing a STAT packet as a successful start (default: disabled; require A/B header or advancing device A/B counters)')
+    # Optional JSON summary output
+    p.add_argument('--summary-json', type=str, default=os.getenv('VND_SUMMARY_JSON',''), help='If set, write final summary as JSON to this path')
     return p.parse_args()
 
 args = _parse_args()
@@ -74,10 +78,14 @@ ASYNC_MODE = args.async_mode
 CH_MODE = args.ch_mode
 VERBOSE = bool(args.verbose)
 LOG_INTERVAL = args.log_interval if args.log_interval > 0 else 1.0
-START_CHECK_SEC = args.start_check_sec if args.start_check_sec > 0 else 2.0
+START_CHECK_SEC = args.start_check_sec if args.start_check_sec > 0 else 3.5
 START_RETRIES = max(0, args.start_retries)
 ABORT_NO_RX_SEC = args.abort_no_rx_sec if args.abort_no_rx_sec > 0 else 0.0
 ABORT_COUNT_MODE = args.abort_count_mode
+# Start policy
+START_ALLOW_STAT = bool(args.start_allow_stat)
+# Optional JSON path
+SUMMARY_JSON_PATH = args.summary_json if getattr(args, 'summary_json', '') else ''
 # Fail-fast thresholds
 FAIL_MAX_TIMEOUTS = max(0, args.fail_max_timeouts)
 FAIL_MAX_PIPES = max(0, args.fail_max_pipes)
@@ -316,75 +324,91 @@ def recover_pipe_error(dev, claim_idx, in_ep=IN_EP, out_ep=OUT_EP):
 
 
 def ensure_stream_started(dev, claim_idx) -> bool:
-    """Try to confirm the stream started by either receiving a first frame
-    or seeing device counters advance; perform one kick (alt0->alt1, clear_halt, re-START)
-    per retry. Returns True if started, False otherwise.
+    """Robust start detection with graceful patience:
+      - Initial grace window START_CHECK_SEC (default 3.5s) for natural first frame.
+      - During grace: fast probes (100ms) + optional STAT poll every 0.5s.
+      - After grace: up to START_RETRIES structured kicks (alt toggle + START re-send), each granting another grace window.
+      - Bulk/ctrl status requests (if enabled) are opportunistically queued to stimulate early STAT.
+    Returns True on first observed STAT or frame header or advancing device counters.
     """
-    deadline = time.time() + START_CHECK_SEC
+    t0 = time.time()
+    deadline = t0 + START_CHECK_SEC
     rx_local = bytearray()
     tries = 0
-    while time.time() < deadline or tries < START_RETRIES:
-        # 1) Quick read probe (small timeout)
+    last_stat_req = 0.0
+    STAT_POLL_MIN = 0.5
+    while True:
+        now = time.time()
+        # Exit condition
+        if not (now < deadline or tries < START_RETRIES):
+            return False
+        # 1) Quick read probe
         try:
             chunk = bytes(dev.read(IN_EP, 512, timeout=100))
             rx_local += chunk
-            # any recognizable frame?
             if len(rx_local) >= 4:
                 if rx_local[0:4] == b'STAT':
+                    # Не считаем наличие STAT достаточным признаком старта,
+                    # если явно не разрешено через флаг. Ждём A/B заголовок или рост счётчиков устройства.
+                    if START_ALLOW_STAT:
+                        log_line(f"[HOST][START][TIME] {now-t0:.3f}s (STAT)")
+                        return True
+                    # иначе просто резинхронизируем буфер
+                if rx_local[0:3] == b'\x5A\xA5\x01':
+                    log_line(f"[HOST][START][TIME] {now-t0:.3f}s (HDR)")
                     return True
-                if rx_local[0] == 0x5A and rx_local[1] == 0xA5 and rx_local[2] == 0x01:
-                    return True
-                # try resync minimal
+                # Resync minimal
                 idx_stat = rx_local.find(b'STAT')
                 idx_hdr = rx_local.find(b"\x5A\xA5\x01")
-                idx = -1
+                best = -1
                 if idx_stat != -1 and (idx_hdr == -1 or idx_stat < idx_hdr):
-                    idx = idx_stat
+                    best = idx_stat
                 elif idx_hdr != -1:
-                    idx = idx_hdr
-                if idx > 0:
-                    rx_local = rx_local[idx:]
-        except usb.core.USBError as e:
-            # ignore timeouts
+                    best = idx_hdr
+                if best > 0:
+                    rx_local = rx_local[best:]
+        except usb.core.USBError:
             pass
-
-        # 2) If allowed, check device counters over EP0 without spamming
+        # 2) Counter-based detection (cheap, EP0)
         try:
-            st = get_status_ctrl(dev, timeout_ms=150, quiet=True)
-            if st is not None:
-                if (st.get('sent0',0) > 0) or (st.get('sent1',0) > 0) or (st.get('dbg_tx_cplt',0) > 0):
-                    return True
+            st = get_status_ctrl(dev, timeout_ms=120, quiet=True)
+            # Считаем старт успешным только при наличии отправленных A/B или хотя бы одного завершённого TX (hdr/STAT)
+            if st and (st.get('sent0',0) or st.get('sent1',0) or st.get('dbg_tx_cplt',0)):
+                log_line(f"[HOST][START][TIME] {time.time()-t0:.3f}s (CTRL)")
+                return True
         except Exception:
             pass
-
-        # 3) Perform a kick if we still haven't started and we have retries left
-        if time.time() >= deadline and tries < START_RETRIES:
+        # 3) Opportunistic STAT request over bulk to wake device early
+        if STATUS_MODE == 'bulk' and (now - last_stat_req) >= STAT_POLL_MIN:
+            try:
+                dev.write(OUT_EP, bytes([VND_CMD_GET_STATUS]), timeout=200)
+                last_stat_req = now
+            except Exception:
+                pass
+        # 4) Kicks after grace expires
+        if now >= deadline and tries < START_RETRIES:
             tries += 1
             log_line(f"[HOST][START][KICK] retry {tries}/{START_RETRIES}")
             try:
-                try:
-                    dev.clear_halt(IN_EP)
-                except Exception:
-                    pass
+                try: dev.clear_halt(IN_EP)
+                except Exception: pass
+                try: dev.clear_halt(OUT_EP)
+                except Exception: pass
                 try:
                     dev.set_interface_altsetting(interface=claim_idx, alternate_setting=0)
-                    time.sleep(0.03)
-                except Exception:
-                    pass
-                try:
+                    time.sleep(0.04)
                     dev.set_interface_altsetting(interface=claim_idx, alternate_setting=1)
-                    time.sleep(0.05)
-                except Exception:
-                    pass
+                    time.sleep(0.06)
+                except Exception: pass
                 try:
-                    dev.write(OUT_EP, bytes([0x20]), timeout=500)
+                    dev.write(OUT_EP, bytes([0x20]), timeout=600)
                 except Exception as e:
                     log_line(f"[HOST][START][KICK][WARN] START failed: {e}")
             except Exception as e:
                 log_line(f"[HOST][START][KICK][ERR] {e}")
-            # extend deadline a bit for next probe
             deadline = time.time() + START_CHECK_SEC
-    return False
+        # Small breather to avoid busy spin
+        time.sleep(0.02)
 
 
 def main():
@@ -499,6 +523,9 @@ def main():
     except Exception as e:
         log_line(f"[HOST][WARN] SET_CHMODE failed: {e}")
 
+    # Небольшая пауза после всех SET_* перед START, чтобы устройство стабилизировало состояние EP/конфигурацию
+    time.sleep(0.10)
+
     # Send START (0x20) to OUT EP
     data = bytes([0x20])
     wlen = write_vendor(dev, data, timeout_ms=1000, label="START", max_retries=1)
@@ -527,7 +554,7 @@ def main():
         except Exception:
             pass
         sys.exit(2)
-    # Optionally request initial STAT snapshot
+    # Optionally request initial STAT snapshot (throttled)
     if STATUS_MODE == 'ctrl':
         st0 = get_status_ctrl(dev)
         if st0:
@@ -542,6 +569,11 @@ def main():
     cnt_a = 0
     cnt_b = 0
     cnt_stat = 0
+    # Zero-frame analysis counters (frames whose payload samples are all 0x0000)
+    zero_a = 0
+    zero_b = 0
+    data_a = 0  # non-zero
+    data_b = 0
     timeouts = 0
     pipe_err_total = 0
     start_time = time.time()
@@ -553,6 +585,13 @@ def main():
     agg_stat = 0
     agg_timeouts = 0
     agg_pipes = 0
+    # Суммарные байты за интервал (инициализируем заранее, чтобы избежать UnboundLocalError при ветке без первых успешных чтений)
+    agg_bytes = 0
+    # Per-interval zero/data counters
+    agg_zero_a = 0
+    agg_zero_b = 0
+    agg_data_a = 0
+    agg_data_b = 0
     # Device-side counters for per-second delta (only when STATUS_MODE == 'ctrl')
     last_dev_sent0 = None
     last_dev_sent1 = None
@@ -563,8 +602,13 @@ def main():
     pipe_errs = 0
     aborted_no_rx = False
     abort_reason = ""
+    # Повторные попытки при отсутствии приёма — мягкая перезапуск/"bus kick" (alt 0->1, clear_halt, START)
+    no_rx_retries = int(os.getenv('VND_NO_RX_RETRIES','2'))
+    used_norx_retries = 0
     # Track last STAT for bulk/fallback loss metrics
     last_stat_status = None
+    # Throttle for STAT polls to reduce contention (min 0.5s)
+    MIN_STAT_INTERVAL = max(0.5, float(os.getenv('VND_MIN_STAT_SEC','0.5')))
 
     def _rx_count():
         return (cnt_a + cnt_b) if ABORT_COUNT_MODE == 'data' else got
@@ -573,6 +617,10 @@ def main():
             chunk = bytes(dev.read(IN_EP, 512, timeout=READ_TIMEOUT_MS))
             rx += chunk
             pipe_errs = 0  # reset on success
+            total_bytes = len(chunk)
+            # Accumulate per-interval raw bytes (host-side throughput)
+            # Счётчик байт за интервал: уже инициализирован выше, не проверяем locals()
+            agg_bytes += total_bytes
             # Try to extract complete frames
             while True:
                 if len(rx) < 4:
@@ -615,9 +663,26 @@ def main():
                     if ftype == 'A':
                         cnt_a += 1
                         agg_a += 1
+                        # Zero-frame classification (only sample payload, skip header 32 bytes)
+                        if total_samples > 0:
+                            samples_bytes = frame[32:32 + total_samples * 2]
+                            if samples_bytes and all(b == 0 for b in samples_bytes):
+                                zero_a += 1
+                                agg_zero_a += 1
+                            else:
+                                data_a += 1
+                                agg_data_a += 1
                     elif ftype == 'B':
                         cnt_b += 1
                         agg_b += 1
+                        if total_samples > 0:
+                            samples_bytes = frame[32:32 + total_samples * 2]
+                            if samples_bytes and all(b == 0 for b in samples_bytes):
+                                zero_b += 1
+                                agg_zero_b += 1
+                            else:
+                                data_b += 1
+                                agg_data_b += 1
                     continue
                 # Resync: drop until next plausible header
                 idx_stat = rx.find(b'STAT')
@@ -637,10 +702,11 @@ def main():
                 dt = now_agg - last_agg_print
                 fps_a = agg_a / dt if dt > 0 else 0.0
                 fps_b = agg_b / dt if dt > 0 else 0.0
+                mbps = (agg_bytes * 8.0 / dt / 1_000_000.0) if dt>0 else 0.0
                 # Optionally poll device counters once per interval to compare TX vs RX
                 dev_info = ""
                 dev_dA = dev_dB = dev_dT = None
-                if STATUS_MODE == 'ctrl':
+                if STATUS_MODE == 'ctrl' and (now_agg - last_stat_print) >= MIN_STAT_INTERVAL:
                     st = get_status_ctrl(dev, timeout_ms=150)
                     if st is not None:
                         s0 = st.get('sent0', 0)
@@ -671,18 +737,64 @@ def main():
                     if lag_accum_ab > FAIL_LAG_FRAMES:
                         aborted_no_rx = True
                         abort_reason = f"host RX lags device TX by >{FAIL_LAG_FRAMES} frames (accum={lag_accum_ab})"
-                log_line(f"[HOST_SUM] +{dt:.1f}s A={agg_a} ({fps_a:.1f}/s) B={agg_b} ({fps_b:.1f}/s) STAT={agg_stat} timeouts={agg_timeouts} pipes={agg_pipes}{dev_info}")
+                # Idle heuristic: fraction of interval consumed by timeout events (each timeout ~READ_TIMEOUT_MS) — coarse
+                idle_est = 0.0
+                if READ_TIMEOUT_MS>0 and agg_timeouts>0:
+                    approx_timeout_time = min(dt, (agg_timeouts * READ_TIMEOUT_MS)/1000.0)
+                    idle_est = approx_timeout_time / dt * 100.0
+                # Zero-frame percentages within interval
+                z_pct_a = (agg_zero_a / agg_a * 100.0) if agg_a > 0 and agg_zero_a > 0 else 0.0
+                z_pct_b = (agg_zero_b / agg_b * 100.0) if agg_b > 0 and agg_zero_b > 0 else 0.0
+                log_line(f"[STAT] +{dt:.1f}s A={agg_a} ({fps_a:.1f}/s,z0={agg_zero_a},z%={z_pct_a:.2f}) B={agg_b} ({fps_b:.1f}/s,z0={agg_zero_b},z%={z_pct_b:.2f}) STAT={agg_stat} bytes={agg_bytes} mbps={mbps:.3f} timeouts={agg_timeouts} pipes={agg_pipes} idle~{idle_est:.1f}%{dev_info}")
                 agg_a = agg_b = agg_stat = agg_timeouts = agg_pipes = 0
+                agg_bytes = 0
+                agg_zero_a = agg_zero_b = agg_data_a = agg_data_b = 0
                 last_agg_print = now_agg
                 if abort_reason:
                     log_line(f"[HOST][ABORT] {abort_reason}")
                     break
             # Early abort if no RX for too long
             if ABORT_NO_RX_SEC > 0 and _rx_count() == 0 and (time.time() - start_time) >= ABORT_NO_RX_SEC:
-                aborted_no_rx = True
-                abort_reason = f"no RX for {ABORT_NO_RX_SEC:.1f}s (mode={ABORT_COUNT_MODE})"
-                log_line(f"[HOST][ABORT] {abort_reason}")
-                break
+                # Одноразово попробуем получить STAT через EP0 для диагностики перед перезапуском/абортом
+                if STATUS_MODE == 'bulk':
+                    stn = get_status_ctrl(dev, timeout_ms=200, quiet=False)
+                    if stn is not None:
+                        log_line(f"[HOST][NRX][STAT] sentA/B={stn.get('sent0',0)}/{stn.get('sent1',0)} txcplt={stn.get('dbg_tx_cplt',0)} flags=0x{stn.get('flags_runtime',0):04X}")
+                if used_norx_retries < no_rx_retries:
+                    used_norx_retries += 1
+                    log_line(f"[HOST][NRX][RETRY] kick #{used_norx_retries}/{no_rx_retries}")
+                    try:
+                        try:
+                            dev.clear_halt(IN_EP)
+                        except Exception:
+                            pass
+                        try:
+                            dev.clear_halt(OUT_EP)
+                        except Exception:
+                            pass
+                        try:
+                            dev.set_interface_altsetting(interface=claim_idx, alternate_setting=0)
+                            time.sleep(0.03)
+                            dev.set_interface_altsetting(interface=claim_idx, alternate_setting=1)
+                            time.sleep(0.05)
+                        except Exception:
+                            pass
+                        # re-START
+                        try:
+                            dev.write(OUT_EP, bytes([0x20]), timeout=500)
+                            log_line("[HOST][NRX][RETRY] START re-sent")
+                        except Exception as e:
+                            log_line(f"[HOST][NRX][RETRY][WARN] START failed: {e}")
+                    except Exception as e:
+                        log_line(f"[HOST][NRX][RETRY][ERR] {e}")
+                    # Сброс таймера без обнуления общих счётчиков
+                    start_time = time.time()
+                    continue
+                else:
+                    aborted_no_rx = True
+                    abort_reason = f"no RX for {ABORT_NO_RX_SEC:.1f}s (mode={ABORT_COUNT_MODE})"
+                    log_line(f"[HOST][ABORT] {abort_reason}")
+                    break
         except usb.core.USBError as e:
             msg = str(e).lower()
             # Treat common timeout errnos/messages as non-fatal (Windows 10060, POSIX 110/ETIMEDOUT)
@@ -699,7 +811,7 @@ def main():
                     fps_b = agg_b / dt if dt > 0 else 0.0
                     dev_info = ""
                     dev_dA = dev_dB = dev_dT = None
-                    if STATUS_MODE == 'ctrl':
+                    if STATUS_MODE == 'ctrl' and (now_agg - last_stat_print) >= MIN_STAT_INTERVAL:
                         st = get_status_ctrl(dev, timeout_ms=150)
                         if st is not None:
                             s0 = st.get('sent0', 0)
@@ -729,15 +841,24 @@ def main():
                         if lag_accum_ab > FAIL_LAG_FRAMES:
                             aborted_no_rx = True
                             abort_reason = f"host RX lags device TX by >{FAIL_LAG_FRAMES} frames (accum={lag_accum_ab})"
-                    log_line(f"[HOST_SUM] +{dt:.1f}s A={agg_a} ({fps_a:.1f}/s) B={agg_b} ({fps_b:.1f}/s) STAT={agg_stat} timeouts={agg_timeouts} pipes={agg_pipes}{dev_info}")
+                    mbps = (agg_bytes * 8.0 / dt / 1_000_000.0) if dt>0 else 0.0
+                    idle_est = 0.0
+                    if READ_TIMEOUT_MS>0 and agg_timeouts>0:
+                        approx_timeout_time = min(dt, (agg_timeouts * READ_TIMEOUT_MS)/1000.0)
+                        idle_est = approx_timeout_time / dt * 100.0
+                    z_pct_a = (agg_zero_a / agg_a * 100.0) if agg_a > 0 and agg_zero_a > 0 else 0.0
+                    z_pct_b = (agg_zero_b / agg_b * 100.0) if agg_b > 0 and agg_zero_b > 0 else 0.0
+                    log_line(f"[STAT] +{dt:.1f}s A={agg_a} ({fps_a:.1f}/s,z0={agg_zero_a},z%={z_pct_a:.2f}) B={agg_b} ({fps_b:.1f}/s,z0={agg_zero_b},z%={z_pct_b:.2f}) STAT={agg_stat} bytes={agg_bytes} mbps={mbps:.3f} timeouts={agg_timeouts} pipes={agg_pipes} idle~{idle_est:.1f}%{dev_info}")
                     agg_a = agg_b = agg_stat = agg_timeouts = agg_pipes = 0
+                    agg_bytes = 0
+                    agg_zero_a = agg_zero_b = agg_data_a = agg_data_b = 0
                     last_agg_print = now_agg
                     if abort_reason:
                         log_line(f"[HOST][ABORT] {abort_reason}")
                         break
                 # Periodically request STAT to aid diagnosis (bulk preferred)
                 now = time.time()
-                if STATUS_MODE != 'none' and (now - last_stat_print > 1.0):
+                if STATUS_MODE != 'none' and (now - last_stat_print) >= MIN_STAT_INTERVAL:
                     last_stat_print = now
                     if STATUS_MODE == 'ctrl':
                         st = get_status_ctrl(dev, quiet=False)
@@ -747,10 +868,43 @@ def main():
                         queue_status_bulk(dev)
                 # Early abort if no RX for too long
                 if ABORT_NO_RX_SEC > 0 and _rx_count() == 0 and (time.time() - start_time) >= ABORT_NO_RX_SEC:
-                    aborted_no_rx = True
-                    abort_reason = f"no RX for {ABORT_NO_RX_SEC:.1f}s (mode={ABORT_COUNT_MODE})"
-                    log_line(f"[HOST][ABORT] {abort_reason}")
-                    break
+                    if STATUS_MODE == 'bulk':
+                        stn = get_status_ctrl(dev, timeout_ms=200, quiet=False)
+                        if stn is not None:
+                            log_line(f"[HOST][NRX][STAT] sentA/B={stn.get('sent0',0)}/{stn.get('sent1',0)} txcplt={stn.get('dbg_tx_cplt',0)} flags=0x{stn.get('flags_runtime',0):04X}")
+                    if used_norx_retries < no_rx_retries:
+                        used_norx_retries += 1
+                        log_line(f"[HOST][NRX][RETRY] kick #{used_norx_retries}/{no_rx_retries}")
+                        try:
+                            try:
+                                dev.clear_halt(IN_EP)
+                            except Exception:
+                                pass
+                            try:
+                                dev.clear_halt(OUT_EP)
+                            except Exception:
+                                pass
+                            try:
+                                dev.set_interface_altsetting(interface=claim_idx, alternate_setting=0)
+                                time.sleep(0.03)
+                                dev.set_interface_altsetting(interface=claim_idx, alternate_setting=1)
+                                time.sleep(0.05)
+                            except Exception:
+                                pass
+                            try:
+                                dev.write(OUT_EP, bytes([0x20]), timeout=500)
+                                log_line("[HOST][NRX][RETRY] START re-sent")
+                            except Exception as e:
+                                log_line(f"[HOST][NRX][RETRY][WARN] START failed: {e}")
+                        except Exception as e:
+                            log_line(f"[HOST][NRX][RETRY][ERR] {e}")
+                        start_time = time.time()
+                        continue
+                    else:
+                        aborted_no_rx = True
+                        abort_reason = f"no RX for {ABORT_NO_RX_SEC:.1f}s (mode={ABORT_COUNT_MODE})"
+                        log_line(f"[HOST][ABORT] {abort_reason}")
+                        break
                 continue
             # Handle pipe errors gracefully: clear halt, reselect alt=1, re-send START
             if (getattr(e, 'errno', None) in (32, 5)) or ('pipe' in msg):
@@ -832,7 +986,10 @@ def main():
             dev_tot = f" dev_tot A={final_status.get('sent0',0)} B={final_status.get('sent1',0)} TxCplt={final_status.get('dbg_tx_cplt',0)} seq={final_status.get('produced_seq',0)}"
     # Include lag accumulator into summary if enabled
     lag_info = f" lag_accum={lag_accum_ab}" if FAIL_LAG_FRAMES else ""
-    log_line(f"[HOST][SUMMARY] elapsed={elapsed:.1f}s A={cnt_a} B={cnt_b} STAT={cnt_stat} timeouts={timeouts} pipe_errors={pipe_err_total}{lag_info}{dev_tot}")
+    # Final zero-frame stats
+    z_pct_a_total = (zero_a / cnt_a * 100.0) if cnt_a > 0 and zero_a > 0 else 0.0
+    z_pct_b_total = (zero_b / cnt_b * 100.0) if cnt_b > 0 and zero_b > 0 else 0.0
+    log_line(f"[HOST][SUMMARY] elapsed={elapsed:.1f}s A={cnt_a} (z0={zero_a},z%={z_pct_a_total:.2f}) B={cnt_b} (z0={zero_b},z%={z_pct_b_total:.2f}) STAT={cnt_stat} timeouts={timeouts} pipe_errors={pipe_err_total}{lag_info}{dev_tot}")
 
     # Loss metrics: compare device sent vs host received (only when STATUS_MODE=ctrl and final_status present)
     if final_status is not None:
@@ -864,6 +1021,19 @@ def main():
     except Exception as e:
         log_line(f"[HOST] STOP write failed: {e}")
 
+    # Мягкий сброс altsetting для очистки состояний EP перед следующими запусками в той же сессии
+    try:
+        try:
+            dev.set_interface_altsetting(interface=claim_idx, alternate_setting=0)
+            time.sleep(0.02)
+            dev.set_interface_altsetting(interface=claim_idx, alternate_setting=1)
+            time.sleep(0.02)
+            log_line("[HOST] Alt reset 0->1 done")
+        except Exception:
+            pass
+    except Exception:
+        pass
+
     try:
         usb.util.release_interface(dev, claim_idx)
     except Exception:
@@ -873,6 +1043,39 @@ def main():
         usb.util.dispose_resources(dev)
     except Exception:
         pass
+
+    # Запись JSON-резюме при необходимости
+    if SUMMARY_JSON_PATH:
+        try:
+            import json
+            out = {
+                'elapsed_sec': round(elapsed, 3),
+                'A': cnt_a,
+                'B': cnt_b,
+                'STAT': cnt_stat,
+                'timeouts': timeouts,
+                'pipe_errors': pipe_err_total,
+                'zero_a': zero_a,
+                'zero_b': zero_b,
+                'data_a': data_a,
+                'data_b': data_b,
+            }
+            if final_status is not None:
+                out['dev_tot'] = {
+                    'sentA': int(final_status.get('sent0',0)),
+                    'sentB': int(final_status.get('sent1',0)),
+                    'TxCplt': int(final_status.get('dbg_tx_cplt',0)),
+                    'seq': int(final_status.get('produced_seq',0)),
+                }
+            # ensure directory exists
+            d = os.path.dirname(SUMMARY_JSON_PATH)
+            if d and not os.path.isdir(d):
+                os.makedirs(d, exist_ok=True)
+            with open(SUMMARY_JSON_PATH, 'w', encoding='utf-8') as jf:
+                json.dump(out, jf, ensure_ascii=False, indent=2)
+            log_line(f"[HOST][SUMMARY][JSON] written to {SUMMARY_JSON_PATH}")
+        except Exception as je:
+            log_line(f"[HOST][SUMMARY][JSON][ERR] {je}")
 
     # Exit code policy: abort if no frames received
     if aborted_no_rx or (cnt_a + cnt_b + cnt_stat) == 0:

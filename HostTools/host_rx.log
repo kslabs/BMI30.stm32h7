@@ -70946,3 +70946,2292 @@
 [HOST_RX] ep=0x83 len=632 type=B head=5A A5 01 02
 [HOST] STOP written: 1 bytes
 [HOST][SUMMARY] elapsed=120.0s A=20665 B=20665 STAT=0 timeouts=0 pipe_errors=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=none verbose=0 interval=1.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][OK] stream activity detected
+[HOST_SUM] +3.0s A=0 (0.0/s) B=1 (0.3/s) STAT=0 timeouts=1 pipes=0
+[HOST_SUM] +3.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=1 pipes=0
+[HOST_SUM] +3.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=1 pipes=0
+[HOST_SUM] +3.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=1 pipes=0
+[HOST_SUM] +3.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=1 pipes=0
+[HOST_SUM] +3.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=1 pipes=0
+[HOST_SUM] +3.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=1 pipes=0
+[HOST_SUM] +3.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=1 pipes=0
+[HOST_SUM] +3.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=1 pipes=0
+[HOST_SUM] +3.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=1 pipes=0
+[HOST][SUMMARY] elapsed=30.1s A=0 B=1 STAT=0 timeouts=10 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][OK] stream activity detected
+[HOST_SUM] +5.1s A=302 (59.4/s) B=303 (59.6/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=315 (62.8/s) B=315 (62.8/s) STAT=0 timeouts=0 pipes=0 devTX A=0 B=0 TxCplt=0 (tot A=303 B=301 TxCplt=606)
+[HOST_SUM] +5.0s A=307 (61.3/s) B=307 (61.3/s) STAT=0 timeouts=0 pipes=0 devTX A=315 B=313 TxCplt=630 (tot A=618 B=614 TxCplt=1236)
+[HOST_SUM] +5.0s A=272 (54.4/s) B=272 (54.4/s) STAT=0 timeouts=0 pipes=0 devTX A=307 B=300 TxCplt=614 (tot A=925 B=914 TxCplt=1850)
+[HOST_SUM] +5.0s A=307 (61.3/s) B=307 (61.3/s) STAT=0 timeouts=0 pipes=0 devTX A=272 B=268 TxCplt=544 (tot A=1197 B=1182 TxCplt=2394)
+[HOST_SUM] +5.2s A=298 (57.8/s) B=296 (57.4/s) STAT=0 timeouts=0 pipes=0 devTX A=307 B=306 TxCplt=614 (tot A=1504 B=1488 TxCplt=3008)
+[HOST_SUM] +5.0s A=376 (75.2/s) B=376 (75.2/s) STAT=0 timeouts=0 pipes=0 devTX A=298 B=294 TxCplt=594 (tot A=1802 B=1782 TxCplt=3602)
+[HOST_SUM] +5.0s A=369 (73.8/s) B=369 (73.8/s) STAT=0 timeouts=0 pipes=0 devTX A=376 B=372 TxCplt=752 (tot A=2178 B=2154 TxCplt=4354)
+[HOST_SUM] +5.0s A=320 (64.0/s) B=320 (64.0/s) STAT=0 timeouts=0 pipes=0 devTX A=369 B=368 TxCplt=738 (tot A=2547 B=2522 TxCplt=5092)
+[HOST_SUM] +5.0s A=284 (56.8/s) B=278 (55.6/s) STAT=0 timeouts=0 pipes=0 devTX A=320 B=313 TxCplt=640 (tot A=2867 B=2835 TxCplt=5732)
+[HOST_SUM] +5.1s A=413 (80.7/s) B=413 (80.7/s) STAT=0 timeouts=0 pipes=0 devTX A=284 B=263 TxCplt=562 (tot A=3151 B=3098 TxCplt=6294)
+[HOST_SUM] +5.0s A=392 (78.2/s) B=392 (78.2/s) STAT=0 timeouts=0 pipes=0 devTX A=413 B=408 TxCplt=826 (tot A=3564 B=3506 TxCplt=7120)
+[HOST_SUM] +5.0s A=353 (70.5/s) B=352 (70.3/s) STAT=0 timeouts=0 pipes=0 devTX A=392 B=391 TxCplt=784 (tot A=3956 B=3897 TxCplt=7904)
+[HOST_SUM] +5.0s A=451 (90.2/s) B=451 (90.2/s) STAT=0 timeouts=0 pipes=0 devTX A=353 B=326 TxCplt=705 (tot A=4309 B=4223 TxCplt=8609)
+[HOST_SUM] +5.0s A=374 (74.7/s) B=374 (74.7/s) STAT=0 timeouts=0 pipes=0 devTX A=451 B=450 TxCplt=902 (tot A=4760 B=4673 TxCplt=9511)
+[HOST_SUM] +5.0s A=420 (83.9/s) B=420 (83.9/s) STAT=0 timeouts=0 pipes=0 devTX A=374 B=368 TxCplt=748 (tot A=5134 B=5041 TxCplt=10259)
+[HOST_SUM] +5.0s A=289 (57.7/s) B=289 (57.7/s) STAT=0 timeouts=0 pipes=0 devTX A=420 B=416 TxCplt=840 (tot A=5554 B=5457 TxCplt=11099)
+[HOST_SUM] +5.0s A=389 (77.8/s) B=389 (77.8/s) STAT=0 timeouts=0 pipes=0 devTX A=289 B=281 TxCplt=578 (tot A=5843 B=5738 TxCplt=11677)
+[HOST_SUM] +5.0s A=368 (73.5/s) B=368 (73.5/s) STAT=0 timeouts=0 pipes=0 devTX A=389 B=388 TxCplt=778 (tot A=6232 B=6126 TxCplt=12455)
+[HOST_SUM] +5.0s A=355 (70.8/s) B=355 (70.8/s) STAT=0 timeouts=0 pipes=0 devTX A=368 B=365 TxCplt=736 (tot A=6600 B=6491 TxCplt=13191)
+[HOST_SUM] +5.0s A=386 (76.6/s) B=383 (76.0/s) STAT=0 timeouts=0 pipes=0 devTX A=355 B=355 TxCplt=710 (tot A=6955 B=6846 TxCplt=13901)
+[HOST_SUM] +5.1s A=266 (52.4/s) B=262 (51.7/s) STAT=0 timeouts=0 pipes=0 devTX A=386 B=380 TxCplt=769 (tot A=7341 B=7226 TxCplt=14670)
+[HOST_SUM] +5.0s A=362 (72.4/s) B=362 (72.4/s) STAT=0 timeouts=0 pipes=0 devTX A=266 B=250 TxCplt=528 (tot A=7607 B=7476 TxCplt=15198)
+[HOST_SUM] +5.0s A=383 (76.6/s) B=383 (76.6/s) STAT=0 timeouts=0 pipes=0 devTX A=362 B=358 TxCplt=724 (tot A=7969 B=7834 TxCplt=15922)
+[HOST_SUM] +5.0s A=338 (67.6/s) B=338 (67.6/s) STAT=0 timeouts=0 pipes=0 devTX A=383 B=380 TxCplt=766 (tot A=8352 B=8214 TxCplt=16688)
+[HOST_SUM] +5.0s A=305 (61.0/s) B=305 (61.0/s) STAT=0 timeouts=0 pipes=0 devTX A=338 B=338 TxCplt=676 (tot A=8690 B=8552 TxCplt=17364)
+[HOST_SUM] +5.0s A=348 (69.6/s) B=348 (69.6/s) STAT=0 timeouts=0 pipes=0 devTX A=305 B=303 TxCplt=610 (tot A=8995 B=8855 TxCplt=17974)
+[HOST_SUM] +5.0s A=349 (69.8/s) B=348 (69.6/s) STAT=0 timeouts=0 pipes=0 devTX A=348 B=346 TxCplt=696 (tot A=9343 B=9201 TxCplt=18670)
+[HOST_SUM] +5.0s A=334 (66.8/s) B=334 (66.8/s) STAT=0 timeouts=0 pipes=0 devTX A=349 B=346 TxCplt=697 (tot A=9692 B=9547 TxCplt=19367)
+[HOST_SUM] +5.0s A=359 (71.8/s) B=360 (72.0/s) STAT=0 timeouts=0 pipes=0 devTX A=334 B=327 TxCplt=668 (tot A=10026 B=9874 TxCplt=20035)
+[HOST_SUM] +5.0s A=381 (76.2/s) B=381 (76.2/s) STAT=0 timeouts=0 pipes=0 devTX A=359 B=358 TxCplt=719 (tot A=10385 B=10232 TxCplt=20754)
+[HOST_SUM] +5.0s A=389 (77.7/s) B=389 (77.7/s) STAT=0 timeouts=0 pipes=0 devTX A=381 B=381 TxCplt=762 (tot A=10766 B=10613 TxCplt=21516)
+[HOST_SUM] +5.0s A=430 (85.9/s) B=429 (85.7/s) STAT=0 timeouts=0 pipes=0 devTX A=389 B=388 TxCplt=778 (tot A=11155 B=11001 TxCplt=22294)
+[HOST_SUM] +5.0s A=315 (62.9/s) B=311 (62.1/s) STAT=0 timeouts=0 pipes=0 devTX A=430 B=422 TxCplt=859 (tot A=11585 B=11423 TxCplt=23153)
+[HOST_SUM] +5.0s A=358 (71.6/s) B=357 (71.4/s) STAT=0 timeouts=0 pipes=0 devTX A=315 B=297 TxCplt=626 (tot A=11900 B=11720 TxCplt=23779)
+[HOST_SUM] +5.0s A=516 (102.9/s) B=516 (102.9/s) STAT=0 timeouts=0 pipes=0 devTX A=358 B=353 TxCplt=715 (tot A=12258 B=12073 TxCplt=24494)
+[HOST_SUM] +5.0s A=384 (76.7/s) B=384 (76.7/s) STAT=0 timeouts=0 pipes=0 devTX A=516 B=516 TxCplt=1032 (tot A=12774 B=12589 TxCplt=25526)
+[HOST_SUM] +5.0s A=405 (80.8/s) B=405 (80.8/s) STAT=0 timeouts=0 pipes=0 devTX A=384 B=382 TxCplt=768 (tot A=13158 B=12971 TxCplt=26294)
+[HOST_SUM] +5.0s A=437 (87.4/s) B=437 (87.4/s) STAT=0 timeouts=0 pipes=0 devTX A=405 B=403 TxCplt=810 (tot A=13563 B=13374 TxCplt=27104)
+[HOST_SUM] +5.0s A=382 (76.3/s) B=382 (76.3/s) STAT=0 timeouts=0 pipes=0 devTX A=437 B=436 TxCplt=874 (tot A=14000 B=13810 TxCplt=27978)
+[HOST_SUM] +5.0s A=331 (66.2/s) B=331 (66.2/s) STAT=0 timeouts=0 pipes=0 devTX A=382 B=380 TxCplt=764 (tot A=14382 B=14190 TxCplt=28742)
+[HOST_SUM] +5.0s A=462 (92.2/s) B=462 (92.2/s) STAT=0 timeouts=0 pipes=0 devTX A=331 B=330 TxCplt=662 (tot A=14713 B=14520 TxCplt=29404)
+[HOST_SUM] +5.0s A=368 (73.6/s) B=368 (73.6/s) STAT=0 timeouts=0 pipes=0 devTX A=462 B=458 TxCplt=924 (tot A=15175 B=14978 TxCplt=30328)
+[HOST_SUM] +5.0s A=424 (84.7/s) B=424 (84.7/s) STAT=0 timeouts=0 pipes=0 devTX A=368 B=366 TxCplt=736 (tot A=15543 B=15344 TxCplt=31064)
+[HOST_SUM] +5.0s A=322 (64.4/s) B=322 (64.4/s) STAT=0 timeouts=0 pipes=0 devTX A=424 B=421 TxCplt=848 (tot A=15967 B=15765 TxCplt=31912)
+[HOST_SUM] +5.0s A=332 (66.2/s) B=329 (65.6/s) STAT=0 timeouts=0 pipes=0 devTX A=322 B=318 TxCplt=644 (tot A=16289 B=16083 TxCplt=32556)
+[HOST_SUM] +5.0s A=313 (62.5/s) B=310 (61.9/s) STAT=0 timeouts=0 pipes=0 devTX A=332 B=314 TxCplt=661 (tot A=16621 B=16397 TxCplt=33217)
+[HOST_SUM] +5.0s A=406 (80.9/s) B=406 (80.9/s) STAT=0 timeouts=0 pipes=0 devTX A=313 B=290 TxCplt=623 (tot A=16934 B=16687 TxCplt=33840)
+[HOST_SUM] +5.0s A=390 (77.6/s) B=390 (77.6/s) STAT=0 timeouts=0 pipes=0 devTX A=406 B=406 TxCplt=812 (tot A=17340 B=17093 TxCplt=34652)
+[HOST_SUM] +5.0s A=373 (74.6/s) B=373 (74.6/s) STAT=0 timeouts=0 pipes=0 devTX A=390 B=384 TxCplt=780 (tot A=17730 B=17477 TxCplt=35432)
+[HOST_SUM] +5.0s A=338 (67.6/s) B=338 (67.6/s) STAT=0 timeouts=0 pipes=0 devTX A=373 B=373 TxCplt=746 (tot A=18103 B=17850 TxCplt=36178)
+[HOST_SUM] +5.0s A=319 (63.7/s) B=319 (63.7/s) STAT=0 timeouts=0 pipes=0 devTX A=338 B=335 TxCplt=676 (tot A=18441 B=18185 TxCplt=36854)
+[HOST_SUM] +5.0s A=369 (73.7/s) B=369 (73.7/s) STAT=0 timeouts=0 pipes=0 devTX A=319 B=314 TxCplt=638 (tot A=18760 B=18499 TxCplt=37492)
+[HOST_SUM] +5.0s A=337 (67.4/s) B=337 (67.4/s) STAT=0 timeouts=0 pipes=0 devTX A=369 B=366 TxCplt=738 (tot A=19129 B=18865 TxCplt=38230)
+[HOST_SUM] +5.0s A=429 (85.8/s) B=428 (85.6/s) STAT=0 timeouts=0 pipes=0 devTX A=337 B=336 TxCplt=674 (tot A=19466 B=19201 TxCplt=38904)
+[HOST_SUM] +5.0s A=292 (58.2/s) B=292 (58.2/s) STAT=0 timeouts=0 pipes=0 devTX A=429 B=420 TxCplt=857 (tot A=19895 B=19621 TxCplt=39761)
+[HOST_SUM] +5.0s A=301 (60.0/s) B=301 (60.0/s) STAT=0 timeouts=0 pipes=0 devTX A=292 B=287 TxCplt=584 (tot A=20187 B=19908 TxCplt=40345)
+[HOST_SUM] +5.1s A=302 (59.6/s) B=302 (59.6/s) STAT=0 timeouts=0 pipes=0 devTX A=301 B=300 TxCplt=602 (tot A=20488 B=20208 TxCplt=40947)
+[HOST_SUM] +5.0s A=322 (64.1/s) B=321 (63.9/s) STAT=0 timeouts=0 pipes=0 devTX A=302 B=283 TxCplt=604 (tot A=20790 B=20491 TxCplt=41551)
+[HOST][SUMMARY] elapsed=300.0s A=21381 B=21352 STAT=0 timeouts=0 pipe_errors=0 dev_tot A=21112 B=20807 TxCplt=42194 seq=20807
+[HOST][LOSS] dev_sent A=21112 B=20807 host_rx A=21381 B=21352 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][OK] stream activity detected
+[HOST_STAT0] ver=1 flags=0x0000 test=0 seq=0 sentA/B=0/0 dma=102776/102785 cur_samples=0
+[HOST_SUM] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=2 pipes=0 devTX A=0 B=0 TxCplt=0 (tot A=0 B=0 TxCplt=42735)
+[HOST_SUM] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=2 pipes=0 devTX A=0 B=0 TxCplt=0 (tot A=0 B=0 TxCplt=42735)
+[HOST_SUM] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=2 pipes=0 devTX A=0 B=0 TxCplt=0 (tot A=0 B=0 TxCplt=42735)
+[HOST][ABORT] no RX for 20.0s (mode=data)
+[HOST][SUMMARY] elapsed=21.1s A=0 B=0 STAT=0 timeouts=7 pipe_errors=0 dev_tot A=0 B=0 TxCplt=42735 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=0 B=0 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+[HOST][FAIL] no RX for 20.0s (mode=data)
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/2
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=2 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +6.6s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=2 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +6.6s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=2 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][ABORT] no RX for 20.0s (mode=data)
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][SUMMARY] elapsed=23.0s A=0 B=0 STAT=0 timeouts=7 pipe_errors=0 dev_tot A=0 B=0 TxCplt=42736 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=0 B=0 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+[HOST][FAIL] no RX for 20.0s (mode=data)
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][OK] stream activity detected
+[HOST_SUM] +5.0s A=425 (85.0/s) B=425 (85.0/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=371 (74.1/s) B=372 (74.3/s) STAT=0 timeouts=0 pipes=0 devTX A=0 B=0 TxCplt=0 (tot A=426 B=422 TxCplt=851)
+[HOST_SUM] +5.0s A=311 (62.0/s) B=311 (62.0/s) STAT=0 timeouts=0 pipes=0 devTX A=371 B=371 TxCplt=743 (tot A=797 B=793 TxCplt=1594)
+[HOST_SUM] +5.0s A=330 (65.9/s) B=330 (65.9/s) STAT=0 timeouts=0 pipes=0 devTX A=311 B=307 TxCplt=622 (tot A=1108 B=1100 TxCplt=2216)
+[HOST_SUM] +5.0s A=386 (77.2/s) B=386 (77.2/s) STAT=0 timeouts=0 pipes=0 devTX A=330 B=327 TxCplt=660 (tot A=1438 B=1427 TxCplt=2876)
+[HOST_SUM] +5.0s A=398 (79.6/s) B=398 (79.6/s) STAT=0 timeouts=0 pipes=0 devTX A=386 B=383 TxCplt=772 (tot A=1824 B=1810 TxCplt=3648)
+[HOST_SUM] +5.1s A=343 (66.7/s) B=343 (66.7/s) STAT=0 timeouts=0 pipes=0 devTX A=398 B=396 TxCplt=796 (tot A=2222 B=2206 TxCplt=4444)
+[HOST_SUM] +5.0s A=263 (52.5/s) B=262 (52.3/s) STAT=0 timeouts=0 pipes=0 devTX A=343 B=343 TxCplt=686 (tot A=2565 B=2549 TxCplt=5130)
+[HOST_SUM] +5.0s A=247 (49.4/s) B=245 (49.0/s) STAT=0 timeouts=0 pipes=0 devTX A=263 B=246 TxCplt=525 (tot A=2828 B=2795 TxCplt=5655)
+[HOST_SUM] +5.0s A=352 (70.4/s) B=352 (70.4/s) STAT=0 timeouts=0 pipes=0 devTX A=247 B=235 TxCplt=492 (tot A=3075 B=3030 TxCplt=6147)
+[HOST_SUM] +5.0s A=286 (57.2/s) B=286 (57.2/s) STAT=0 timeouts=0 pipes=0 devTX A=352 B=350 TxCplt=704 (tot A=3427 B=3380 TxCplt=6851)
+[HOST][SUMMARY] elapsed=60.0s A=4028 B=4026 STAT=0 timeouts=0 pipe_errors=0 dev_tot A=3713 B=3665 TxCplt=7423 seq=3665
+[HOST][LOSS] dev_sent A=3713 B=3665 host_rx A=4028 B=4026 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][OK] stream activity detected
+[HOST_STAT0] ver=1 flags=0x0000 test=0 seq=0 sentA/B=0/0 dma=47998/48006 cur_samples=0
+[HOST_SUM] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=2 pipes=0 devTX A=0 B=0 TxCplt=0 (tot A=0 B=0 TxCplt=8056)
+[HOST_SUM] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=2 pipes=0 devTX A=0 B=0 TxCplt=0 (tot A=0 B=0 TxCplt=8056)
+[HOST_SUM] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=2 pipes=0 devTX A=0 B=0 TxCplt=0 (tot A=0 B=0 TxCplt=8056)
+[HOST][ABORT] no RX for 20.0s (mode=data)
+[HOST][SUMMARY] elapsed=21.1s A=0 B=0 STAT=0 timeouts=7 pipe_errors=0 dev_tot A=0 B=0 TxCplt=8056 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=0 B=0 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+[HOST][FAIL] no RX for 20.0s (mode=data)
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/2
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.2s A=351 (67.9/s) B=350 (67.8/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=347 (69.2/s) B=346 (69.0/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=249 (49.8/s) B=248 (49.6/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=236 (47.2/s) B=236 (47.2/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=368 (73.6/s) B=364 (72.8/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.1s A=243 (47.6/s) B=231 (45.2/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=302 (60.3/s) B=302 (60.3/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=267 (53.4/s) B=265 (53.0/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=315 (62.7/s) B=315 (62.7/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=328 (65.5/s) B=328 (65.5/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=312 (62.3/s) B=312 (62.3/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][SUMMARY] elapsed=60.0s A=3571 B=3550 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/2
+[HOST][START][KICK] retry 2/2
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=303 (60.2/s) B=304 (60.4/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=326 (64.9/s) B=326 (64.9/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=346 (69.1/s) B=344 (68.7/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=308 (61.6/s) B=305 (61.0/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=320 (63.8/s) B=320 (63.8/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.1s A=300 (59.1/s) B=300 (59.1/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=300 (60.0/s) B=299 (59.8/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=299 (59.8/s) B=292 (58.4/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=246 (49.1/s) B=242 (48.3/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=191 (38.2/s) B=185 (37.0/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST_SUM] +5.0s A=293 (58.6/s) B=290 (58.0/s) STAT=0 timeouts=0 pipes=0
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][SUMMARY] elapsed=60.0s A=3490 B=3464 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST_SUM] +5.1s A=324 (63.3/s) B=325 (63.5/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=286 (57.2/s) B=284 (56.8/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=355 (70.9/s) B=355 (70.9/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=344 (68.7/s) B=336 (67.1/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=323 (64.5/s) B=322 (64.3/s) STAT=0 timeouts=0 pipes=0
+[HOST][SUMMARY] elapsed=30.0s A=2020 B=2009 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST_SUM] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=2 pipes=0
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST_SUM] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 timeouts=2 pipes=0
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][ABORT] no RX for 15.0s (mode=data)
+[HOST][SUMMARY] elapsed=15.1s A=0 B=0 STAT=0 timeouts=5 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST][FAIL] no RX for 15.0s (mode=data)
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/2
+[HOST][START][KICK] retry 2/2
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST_SUM] +5.0s A=315 (62.7/s) B=316 (62.9/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.1s A=383 (74.4/s) B=382 (74.2/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=370 (73.9/s) B=370 (73.9/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=338 (67.4/s) B=336 (67.0/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=352 (70.4/s) B=352 (70.4/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=398 (79.5/s) B=398 (79.5/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.1s A=309 (60.6/s) B=308 (60.4/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=274 (54.7/s) B=272 (54.3/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=313 (62.6/s) B=313 (62.6/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=348 (69.5/s) B=348 (69.5/s) STAT=0 timeouts=0 pipes=0
+[HOST_SUM] +5.0s A=317 (63.3/s) B=317 (63.3/s) STAT=0 timeouts=0 pipes=0
+[HOST][SUMMARY] elapsed=60.0s A=4013 B=4007 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/2
+[HOST][START][TIME] 2.600s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[STAT] +5.0s A=339 (67.2/s) B=340 (67.4/s) STAT=0 bytes=429128 mbps=0.681 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=320 (64.0/s) B=318 (63.6/s) STAT=0 bytes=403216 mbps=0.645 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=316 (63.1/s) B=316 (63.1/s) STAT=0 bytes=399424 mbps=0.638 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=302 (60.4/s) B=301 (60.2/s) STAT=0 bytes=381608 mbps=0.611 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=322 (64.3/s) B=320 (63.9/s) STAT=0 bytes=405744 mbps=0.649 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=270 (53.9/s) B=270 (53.9/s) STAT=0 bytes=340768 mbps=0.544 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=270 (54.0/s) B=270 (54.0/s) STAT=0 bytes=341280 mbps=0.546 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=280 (55.4/s) B=280 (55.4/s) STAT=0 bytes=353920 mbps=0.560 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=302 (60.4/s) B=302 (60.4/s) STAT=0 bytes=381728 mbps=0.611 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=307 (61.4/s) B=307 (61.4/s) STAT=0 bytes=388048 mbps=0.621 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=324 (64.7/s) B=324 (64.7/s) STAT=0 bytes=409536 mbps=0.655 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.1s A=3592 B=3588 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.001s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=96 mbps=0.000 timeouts=2 pipes=0 idle~99.4%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=96 mbps=0.000 timeouts=2 pipes=0 idle~99.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][ABORT] no RX for 15.0s (mode=data)
+[HOST][SUMMARY] elapsed=15.1s A=0 B=0 STAT=0 timeouts=5 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST][FAIL] no RX for 15.0s (mode=data)
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/2
+[HOST][START][TIME] 2.475s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[STAT] +5.0s A=327 (65.4/s) B=328 (65.6/s) STAT=0 bytes=414528 mbps=0.663 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=288 (57.6/s) B=287 (57.4/s) STAT=0 bytes=363400 mbps=0.581 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=329 (65.8/s) B=329 (65.8/s) STAT=0 bytes=415856 mbps=0.665 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=348 (69.4/s) B=348 (69.4/s) STAT=0 bytes=439872 mbps=0.702 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=316 (63.1/s) B=316 (63.1/s) STAT=0 bytes=399424 mbps=0.639 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=314 (62.2/s) B=314 (62.2/s) STAT=0 bytes=396896 mbps=0.629 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=365 (73.0/s) B=358 (71.6/s) STAT=0 bytes=456936 mbps=0.731 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=262 (52.2/s) B=261 (52.0/s) STAT=0 bytes=330536 mbps=0.527 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=353 (70.5/s) B=353 (70.5/s) STAT=0 bytes=446192 mbps=0.713 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=377 (75.3/s) B=377 (75.3/s) STAT=0 bytes=476528 mbps=0.762 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.2s A=405 (78.3/s) B=405 (78.3/s) STAT=0 bytes=511920 mbps=0.791 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.0s A=3961 B=3953 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.007s (HDR)
+[HOST][START][OK] stream activity detected
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.010s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST_STAT0] ver=1 flags=0x0001 test=1 seq=0 sentA/B=0/0 dma=6521/6529 cur_samples=0
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.165s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[STAT] +5.1s A=324 (63.9/s) B=325 (64.1/s) STAT=0 bytes=410680 mbps=0.648 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=300 (59.8/s) B=300 (59.8/s) STAT=0 bytes=379200 mbps=0.605 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=317 (63.3/s) B=316 (63.1/s) STAT=0 bytes=400056 mbps=0.639 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=392 (78.4/s) B=392 (78.4/s) STAT=0 bytes=495488 mbps=0.793 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=327 (65.4/s) B=327 (65.4/s) STAT=0 bytes=413328 mbps=0.661 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=316 (63.2/s) B=316 (63.2/s) STAT=0 bytes=399424 mbps=0.639 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=331 (66.0/s) B=331 (66.0/s) STAT=0 bytes=418384 mbps=0.667 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=372 (74.4/s) B=372 (74.4/s) STAT=0 bytes=470208 mbps=0.752 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=376 (74.4/s) B=376 (74.4/s) STAT=0 bytes=475264 mbps=0.752 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=341 (68.2/s) B=341 (68.2/s) STAT=0 bytes=431024 mbps=0.689 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=392 (78.1/s) B=392 (78.1/s) STAT=0 bytes=495488 mbps=0.790 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.0s A=4105 B=4105 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/2
+[HOST][START][TIME] 2.638s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[STAT] +5.0s A=268 (53.6/s) B=269 (53.8/s) STAT=0 bytes=339384 mbps=0.543 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=323 (64.4/s) B=323 (64.4/s) STAT=0 bytes=408272 mbps=0.651 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=278 (54.5/s) B=278 (54.5/s) STAT=0 bytes=351392 mbps=0.551 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=284 (56.7/s) B=284 (56.7/s) STAT=0 bytes=358976 mbps=0.573 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=280 (55.9/s) B=280 (55.9/s) STAT=0 bytes=353920 mbps=0.565 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=304 (60.7/s) B=304 (60.7/s) STAT=0 bytes=384256 mbps=0.614 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=303 (60.1/s) B=303 (60.1/s) STAT=0 bytes=382992 mbps=0.607 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=319 (63.6/s) B=316 (63.0/s) STAT=0 bytes=401320 mbps=0.640 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=295 (59.0/s) B=295 (59.0/s) STAT=0 bytes=372880 mbps=0.596 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=280 (56.0/s) B=278 (55.6/s) STAT=0 bytes=353168 mbps=0.565 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=370 (73.2/s) B=371 (73.4/s) STAT=0 bytes=467800 mbps=0.741 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.0s A=3612 B=3609 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.014s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[STAT] +5.0s A=266 (53.2/s) B=263 (52.6/s) STAT=0 bytes=334448 mbps=0.535 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=361 (72.1/s) B=361 (72.1/s) STAT=0 bytes=456816 mbps=0.730 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=372 (73.8/s) B=372 (73.8/s) STAT=0 bytes=470208 mbps=0.746 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=332 (66.4/s) B=332 (66.4/s) STAT=0 bytes=419648 mbps=0.671 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=259 (51.6/s) B=256 (51.0/s) STAT=0 bytes=324968 mbps=0.518 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=231 (46.0/s) B=229 (45.6/s) STAT=0 bytes=291232 mbps=0.464 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=293 (58.5/s) B=293 (58.5/s) STAT=0 bytes=370352 mbps=0.592 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=350 (70.0/s) B=344 (68.8/s) STAT=0 bytes=438608 mbps=0.702 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=285 (56.9/s) B=285 (56.9/s) STAT=0 bytes=360240 mbps=0.576 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=343 (68.6/s) B=343 (68.6/s) STAT=0 bytes=433552 mbps=0.693 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=333 (66.5/s) B=327 (65.3/s) STAT=0 bytes=417120 mbps=0.666 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.0s A=3732 B=3708 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.013s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[STAT] +5.0s A=312 (62.3/s) B=313 (62.5/s) STAT=0 bytes=395632 mbps=0.632 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=310 (61.8/s) B=310 (61.8/s) STAT=0 bytes=391840 mbps=0.625 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=298 (59.6/s) B=297 (59.4/s) STAT=0 bytes=375528 mbps=0.601 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=292 (58.3/s) B=293 (58.5/s) STAT=0 bytes=370232 mbps=0.592 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=299 (59.7/s) B=299 (59.7/s) STAT=0 bytes=377936 mbps=0.603 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=320 (63.6/s) B=320 (63.6/s) STAT=0 bytes=404480 mbps=0.643 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=326 (65.2/s) B=326 (65.2/s) STAT=0 bytes=412064 mbps=0.659 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=349 (69.8/s) B=349 (69.8/s) STAT=0 bytes=441136 mbps=0.706 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=297 (59.2/s) B=297 (59.2/s) STAT=0 bytes=375408 mbps=0.599 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=254 (50.7/s) B=253 (50.5/s) STAT=0 bytes=320424 mbps=0.512 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=281 (56.0/s) B=281 (56.0/s) STAT=0 bytes=355184 mbps=0.567 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.0s A=3640 B=3639 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.001s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[STAT] +5.0s A=316 (63.0/s) B=317 (63.2/s) STAT=0 bytes=400688 mbps=0.639 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=257 (51.2/s) B=257 (51.2/s) STAT=0 bytes=324848 mbps=0.518 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=224 (44.8/s) B=224 (44.8/s) STAT=0 bytes=283136 mbps=0.453 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=285 (56.9/s) B=285 (56.9/s) STAT=0 bytes=360240 mbps=0.576 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=334 (66.2/s) B=334 (66.2/s) STAT=0 bytes=422176 mbps=0.669 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=313 (62.4/s) B=313 (62.4/s) STAT=0 bytes=395632 mbps=0.631 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=255 (51.0/s) B=255 (51.0/s) STAT=0 bytes=322320 mbps=0.515 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=376 (75.0/s) B=376 (75.0/s) STAT=0 bytes=475264 mbps=0.759 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=302 (59.9/s) B=302 (59.9/s) STAT=0 bytes=381728 mbps=0.606 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=301 (60.2/s) B=301 (60.2/s) STAT=0 bytes=380464 mbps=0.608 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=280 (55.9/s) B=279 (55.7/s) STAT=0 bytes=353288 mbps=0.565 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.0s A=3524 B=3520 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.236s (CTRL)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=88 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=128 mbps=0.000 timeouts=2 pipes=0 idle~99.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=128 mbps=0.000 timeouts=2 pipes=0 idle~99.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][STAT] sentA/B=0/0 txcplt=7046 flags=0x0004
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +5.0s A=86 (17.1/s) B=86 (17.1/s) STAT=1 bytes=109280 mbps=0.174 timeouts=1 pipes=0 idle~59.8%
+[STAT] +5.0s A=293 (58.6/s) B=293 (58.6/s) STAT=0 bytes=370352 mbps=0.592 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=382 (74.6/s) B=382 (74.6/s) STAT=0 bytes=482848 mbps=0.755 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=413 (82.3/s) B=413 (82.3/s) STAT=0 bytes=522032 mbps=0.832 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=279 (55.8/s) B=276 (55.2/s) STAT=0 bytes=350760 mbps=0.561 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=341 (68.0/s) B=341 (68.0/s) STAT=0 bytes=431024 mbps=0.687 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=330 (65.5/s) B=330 (65.5/s) STAT=0 bytes=417120 mbps=0.663 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=319 (63.7/s) B=319 (63.7/s) STAT=0 bytes=403216 mbps=0.644 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=356 (71.0/s) B=356 (71.0/s) STAT=0 bytes=449984 mbps=0.718 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=341 (67.8/s) B=341 (67.8/s) STAT=0 bytes=431024 mbps=0.686 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=300 (58.9/s) B=300 (58.9/s) STAT=0 bytes=379200 mbps=0.595 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=396 (79.2/s) B=394 (78.8/s) STAT=0 bytes=499280 mbps=0.799 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.0s A=3961 B=3957 STAT=5 timeouts=7 pipe_errors=0 dev_tot A=0 B=0 TxCplt=7050 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=3961 B=3957 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.013s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.001s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[STAT] +5.0s A=243 (48.5/s) B=243 (48.5/s) STAT=0 bytes=307784 mbps=0.491 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=260 (51.6/s) B=260 (51.6/s) STAT=0 bytes=328640 mbps=0.522 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=278 (55.6/s) B=278 (55.6/s) STAT=0 bytes=351392 mbps=0.562 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=296 (58.8/s) B=296 (58.8/s) STAT=0 bytes=374144 mbps=0.594 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=294 (58.8/s) B=291 (58.2/s) STAT=0 bytes=369720 mbps=0.591 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=348 (68.0/s) B=348 (68.0/s) STAT=0 bytes=439872 mbps=0.688 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=374 (74.6/s) B=374 (74.6/s) STAT=0 bytes=472736 mbps=0.754 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=305 (60.9/s) B=305 (60.9/s) STAT=0 bytes=385520 mbps=0.615 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=329 (65.7/s) B=329 (65.7/s) STAT=0 bytes=415856 mbps=0.664 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=339 (67.5/s) B=338 (67.3/s) STAT=0 bytes=427864 mbps=0.682 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=324 (64.8/s) B=324 (64.8/s) STAT=0 bytes=409536 mbps=0.655 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.0s A=3697 B=3693 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.221s (CTRL)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=88 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=128 mbps=0.000 timeouts=2 pipes=0 idle~99.3%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=128 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][STAT] sentA/B=0/0 txcplt=7393 flags=0x0004
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=25 bytes=1600 mbps=0.002 timeouts=2 pipes=0 idle~96.3%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.8%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.9%
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][STAT] sentA/B=0/0 txcplt=7400 flags=0x0004
+[HOST][NRX][RETRY] kick #2/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +5.0s A=386 (77.2/s) B=386 (77.2/s) STAT=0 bytes=487904 mbps=0.781 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=376 (75.1/s) B=376 (75.1/s) STAT=0 bytes=475776 mbps=0.760 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=351 (69.9/s) B=351 (69.9/s) STAT=0 bytes=443664 mbps=0.707 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=304 (60.7/s) B=300 (59.9/s) STAT=0 bytes=381728 mbps=0.609 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=340 (67.9/s) B=339 (67.7/s) STAT=0 bytes=429128 mbps=0.686 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=361 (72.2/s) B=361 (72.2/s) STAT=0 bytes=456304 mbps=0.730 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=422 (84.4/s) B=422 (84.4/s) STAT=0 bytes=533408 mbps=0.853 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=326 (65.1/s) B=326 (65.1/s) STAT=0 bytes=412064 mbps=0.659 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=321 (64.2/s) B=316 (63.2/s) STAT=0 bytes=402584 mbps=0.644 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=297 (59.3/s) B=296 (59.1/s) STAT=0 bytes=374776 mbps=0.598 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=361 (72.1/s) B=361 (72.1/s) STAT=0 bytes=456304 mbps=0.729 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=285 (57.0/s) B=285 (57.0/s) STAT=0 bytes=360240 mbps=0.576 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.0s A=4134 B=4123 STAT=29 timeouts=14 pipe_errors=0 dev_tot A=0 B=0 TxCplt=7423 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=4134 B=4123 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.222s (CTRL)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.040s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=15.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.162s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER] START re-sent: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=none verbose=0 interval=1.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/2
+[HOST][START][TIME] 2.237s (STAT)
+[HOST][START][OK] stream activity detected
+[STAT] +3.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=1 pipes=0 idle~99.7%
+[STAT] +3.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=1 pipes=0 idle~99.3%
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[HOST][SUMMARY] elapsed=0.1s A=0 B=0 STAT=8 timeouts=2 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=15.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=10.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=5.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.001s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[STAT] +5.0s A=295 (58.8/s) B=295 (58.8/s) STAT=0 bytes=373000 mbps=0.595 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=5.0s A=295 B=295 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=96 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=96 mbps=0.000 timeouts=2 pipes=0 idle~99.3%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=96 mbps=0.000 timeouts=2 pipes=0 idle~99.3%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +6.3s A=0 (0.0/s) B=0 (0.0/s) STAT=40 bytes=2624 mbps=0.003 timeouts=2 pipes=0 idle~95.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.8%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][NRX][RETRY] kick #2/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +5.2s A=281 (54.3/s) B=281 (54.3/s) STAT=0 bytes=355696 mbps=0.550 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=288 (57.6/s) B=288 (57.6/s) STAT=0 bytes=364032 mbps=0.582 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=355 (70.9/s) B=355 (70.9/s) STAT=0 bytes=448720 mbps=0.717 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=305 (61.0/s) B=305 (61.0/s) STAT=0 bytes=385520 mbps=0.617 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=366 (73.2/s) B=366 (73.2/s) STAT=0 bytes=462624 mbps=0.740 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=349 (69.7/s) B=349 (69.7/s) STAT=0 bytes=441136 mbps=0.705 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=355 (70.9/s) B=355 (70.9/s) STAT=0 bytes=448720 mbps=0.717 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=390 (77.6/s) B=390 (77.6/s) STAT=0 bytes=492960 mbps=0.785 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=391 (78.1/s) B=391 (78.1/s) STAT=0 bytes=494224 mbps=0.790 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=316 (63.1/s) B=313 (62.5/s) STAT=0 bytes=397528 mbps=0.635 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=337 (67.3/s) B=337 (67.3/s) STAT=0 bytes=425968 mbps=0.681 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=321 (64.2/s) B=321 (64.2/s) STAT=0 bytes=405232 mbps=0.648 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=360 (72.0/s) B=359 (71.8/s) STAT=0 bytes=454920 mbps=0.728 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=334 (66.7/s) B=335 (66.9/s) STAT=0 bytes=422808 mbps=0.676 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=316 (63.1/s) B=316 (63.1/s) STAT=0 bytes=399424 mbps=0.639 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=331 (66.1/s) B=330 (65.9/s) STAT=0 bytes=417752 mbps=0.668 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=329 (65.6/s) B=329 (65.6/s) STAT=0 bytes=415856 mbps=0.663 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=300 (59.7/s) B=300 (59.7/s) STAT=0 bytes=379200 mbps=0.604 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=347 (69.2/s) B=347 (69.2/s) STAT=0 bytes=438608 mbps=0.699 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=275 (55.0/s) B=273 (54.6/s) STAT=0 bytes=346336 mbps=0.554 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=326 (65.0/s) B=326 (65.0/s) STAT=0 bytes=412064 mbps=0.657 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=298 (59.4/s) B=298 (59.4/s) STAT=0 bytes=376672 mbps=0.600 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=367 (73.4/s) B=367 (73.4/s) STAT=0 bytes=463376 mbps=0.741 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=311 (62.1/s) B=311 (62.1/s) STAT=0 bytes=393616 mbps=0.629 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=347 (69.4/s) B=347 (69.4/s) STAT=0 bytes=438608 mbps=0.701 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=317 (63.3/s) B=317 (63.3/s) STAT=0 bytes=400688 mbps=0.640 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=408 (81.3/s) B=408 (81.3/s) STAT=0 bytes=515712 mbps=0.822 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=305 (60.9/s) B=305 (60.9/s) STAT=0 bytes=385520 mbps=0.616 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=312 (62.4/s) B=311 (62.2/s) STAT=0 bytes=393736 mbps=0.630 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=278 (55.5/s) B=279 (55.7/s) STAT=0 bytes=352024 mbps=0.562 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=328 (65.5/s) B=328 (65.5/s) STAT=0 bytes=414592 mbps=0.663 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=278 (55.6/s) B=278 (55.6/s) STAT=0 bytes=351392 mbps=0.562 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=336 (67.1/s) B=336 (67.1/s) STAT=0 bytes=424704 mbps=0.679 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=312 (62.1/s) B=312 (62.1/s) STAT=0 bytes=393856 mbps=0.628 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=266 (53.1/s) B=260 (51.9/s) STAT=0 bytes=332944 mbps=0.532 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=339 (67.7/s) B=339 (67.7/s) STAT=0 bytes=428496 mbps=0.685 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=373 (73.3/s) B=373 (73.3/s) STAT=0 bytes=471472 mbps=0.741 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=348 (69.6/s) B=347 (69.4/s) STAT=0 bytes=438728 mbps=0.702 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=384 (76.5/s) B=385 (76.7/s) STAT=0 bytes=486520 mbps=0.775 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=366 (72.9/s) B=366 (72.9/s) STAT=0 bytes=462624 mbps=0.737 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=430 (85.7/s) B=430 (85.7/s) STAT=0 bytes=543520 mbps=0.866 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=337 (67.2/s) B=337 (67.2/s) STAT=0 bytes=425968 mbps=0.680 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=377 (75.3/s) B=377 (75.3/s) STAT=0 bytes=476528 mbps=0.762 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=364 (72.7/s) B=364 (72.7/s) STAT=0 bytes=460096 mbps=0.736 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=356 (71.2/s) B=356 (71.2/s) STAT=0 bytes=449984 mbps=0.720 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=330 (66.0/s) B=329 (65.8/s) STAT=0 bytes=415976 mbps=0.666 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=319 (63.7/s) B=318 (63.5/s) STAT=0 bytes=403096 mbps=0.644 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=334 (66.8/s) B=334 (66.8/s) STAT=0 bytes=422176 mbps=0.675 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=358 (71.6/s) B=358 (71.6/s) STAT=0 bytes=452512 mbps=0.724 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=322 (64.4/s) B=322 (64.4/s) STAT=0 bytes=407008 mbps=0.651 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=284 (56.5/s) B=281 (55.9/s) STAT=0 bytes=357080 mbps=0.568 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=285 (57.0/s) B=282 (56.4/s) STAT=0 bytes=358344 mbps=0.573 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=312 (62.3/s) B=313 (62.5/s) STAT=0 bytes=395000 mbps=0.631 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=288 (57.5/s) B=288 (57.5/s) STAT=0 bytes=364032 mbps=0.582 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=295 (59.0/s) B=295 (59.0/s) STAT=0 bytes=372880 mbps=0.596 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=254 (50.8/s) B=254 (50.8/s) STAT=0 bytes=321056 mbps=0.514 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=366 (73.1/s) B=366 (73.1/s) STAT=0 bytes=462624 mbps=0.740 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=253 (50.5/s) B=253 (50.5/s) STAT=0 bytes=319792 mbps=0.511 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=278 (55.4/s) B=275 (54.8/s) STAT=0 bytes=349496 mbps=0.557 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=300.0s A=19646 B=19624 STAT=40 timeouts=14 pipe_errors=0 dev_tot A=0 B=0 TxCplt=18517 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=19646 B=19624 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/2
+[HOST][START][TIME] 2.568s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER] START re-sent: 1 bytes
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.1s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=1 idle~99.0%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +5.0s A=114 (22.7/s) B=114 (22.7/s) STAT=0 bytes=144608 mbps=0.231 timeouts=1 pipes=0 idle~59.8%
+[STAT] +5.0s A=298 (59.5/s) B=298 (59.5/s) STAT=0 bytes=376672 mbps=0.602 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=326 (65.1/s) B=326 (65.1/s) STAT=0 bytes=412064 mbps=0.659 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=360 (71.9/s) B=356 (71.1/s) STAT=0 bytes=452512 mbps=0.723 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=272 (54.3/s) B=272 (54.3/s) STAT=0 bytes=343808 mbps=0.549 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=341 (67.4/s) B=339 (67.1/s) STAT=0 bytes=429760 mbps=0.680 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=323 (64.6/s) B=322 (64.4/s) STAT=0 bytes=407640 mbps=0.652 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=343 (68.4/s) B=343 (68.4/s) STAT=0 bytes=433552 mbps=0.691 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=283 (56.6/s) B=283 (56.6/s) STAT=0 bytes=357200 mbps=0.572 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=325 (64.3/s) B=324 (64.1/s) STAT=0 bytes=410680 mbps=0.650 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=323 (64.4/s) B=323 (64.4/s) STAT=0 bytes=408272 mbps=0.652 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=331 (66.1/s) B=331 (66.1/s) STAT=0 bytes=418384 mbps=0.668 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=334 (66.6/s) B=334 (66.6/s) STAT=0 bytes=422176 mbps=0.673 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=257 (50.1/s) B=254 (49.5/s) STAT=0 bytes=322952 mbps=0.503 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.2s A=325 (62.8/s) B=321 (62.0/s) STAT=0 bytes=408272 mbps=0.631 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=313 (62.3/s) B=312 (62.1/s) STAT=0 bytes=395000 mbps=0.629 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=282 (56.2/s) B=282 (56.2/s) STAT=0 bytes=356448 mbps=0.568 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=278 (55.4/s) B=278 (55.4/s) STAT=0 bytes=351392 mbps=0.560 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=282 (56.3/s) B=282 (56.3/s) STAT=0 bytes=356448 mbps=0.569 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=313 (62.6/s) B=313 (62.6/s) STAT=0 bytes=395632 mbps=0.633 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=317 (63.2/s) B=317 (63.2/s) STAT=0 bytes=400688 mbps=0.639 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=333 (66.6/s) B=333 (66.6/s) STAT=0 bytes=420912 mbps=0.673 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=233 (46.2/s) B=233 (46.2/s) STAT=0 bytes=294512 mbps=0.467 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=330 (65.9/s) B=325 (64.9/s) STAT=0 bytes=413960 mbps=0.662 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=336 (67.0/s) B=336 (67.0/s) STAT=0 bytes=424704 mbps=0.677 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=287 (57.4/s) B=287 (57.4/s) STAT=0 bytes=362768 mbps=0.580 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=264 (52.3/s) B=264 (52.3/s) STAT=0 bytes=333696 mbps=0.529 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=230 (46.0/s) B=229 (45.8/s) STAT=0 bytes=290088 mbps=0.464 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=303 (60.4/s) B=303 (60.4/s) STAT=0 bytes=382992 mbps=0.611 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=311 (62.1/s) B=311 (62.1/s) STAT=0 bytes=393104 mbps=0.628 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=277 (54.1/s) B=277 (54.1/s) STAT=0 bytes=350128 mbps=0.547 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=302 (60.4/s) B=302 (60.4/s) STAT=0 bytes=381728 mbps=0.611 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=252 (50.2/s) B=252 (50.2/s) STAT=0 bytes=318528 mbps=0.508 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=340 (67.8/s) B=340 (67.8/s) STAT=0 bytes=429760 mbps=0.686 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=331 (65.7/s) B=330 (65.5/s) STAT=0 bytes=417752 mbps=0.663 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=301 (59.9/s) B=301 (59.9/s) STAT=0 bytes=380464 mbps=0.606 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=360 (72.0/s) B=360 (72.0/s) STAT=0 bytes=454528 mbps=0.727 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=309 (61.4/s) B=307 (61.1/s) STAT=0 bytes=389824 mbps=0.620 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=309 (61.7/s) B=309 (61.7/s) STAT=0 bytes=390576 mbps=0.624 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=312 (62.3/s) B=311 (62.1/s) STAT=0 bytes=393224 mbps=0.629 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=251 (49.2/s) B=250 (49.0/s) STAT=0 bytes=317144 mbps=0.497 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=326 (65.2/s) B=326 (65.2/s) STAT=0 bytes=412064 mbps=0.659 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=273 (54.1/s) B=273 (54.1/s) STAT=0 bytes=345072 mbps=0.547 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=345 (68.9/s) B=344 (68.7/s) STAT=0 bytes=435448 mbps=0.696 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=316 (63.2/s) B=316 (63.2/s) STAT=0 bytes=399424 mbps=0.639 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=285 (56.9/s) B=285 (56.9/s) STAT=0 bytes=360240 mbps=0.576 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=325 (64.5/s) B=325 (64.5/s) STAT=0 bytes=410800 mbps=0.652 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=303 (60.4/s) B=303 (60.4/s) STAT=0 bytes=382992 mbps=0.611 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=309 (61.6/s) B=309 (61.6/s) STAT=0 bytes=390576 mbps=0.623 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=303 (60.5/s) B=303 (60.5/s) STAT=0 bytes=382992 mbps=0.612 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=296 (57.9/s) B=296 (57.9/s) STAT=0 bytes=374144 mbps=0.585 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=279 (55.7/s) B=279 (55.7/s) STAT=0 bytes=352656 mbps=0.563 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=289 (57.8/s) B=289 (57.8/s) STAT=0 bytes=365296 mbps=0.584 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=262 (52.3/s) B=260 (51.9/s) STAT=0 bytes=329904 mbps=0.527 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=281 (55.7/s) B=281 (55.7/s) STAT=0 bytes=355184 mbps=0.564 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=263 (52.5/s) B=263 (52.5/s) STAT=0 bytes=332432 mbps=0.531 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=208 (41.4/s) B=208 (41.4/s) STAT=0 bytes=262912 mbps=0.419 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=251 (50.1/s) B=249 (49.7/s) STAT=0 bytes=316000 mbps=0.505 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=245 (47.9/s) B=243 (47.5/s) STAT=0 bytes=308416 mbps=0.483 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=268 (53.6/s) B=268 (53.6/s) STAT=0 bytes=338752 mbps=0.542 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=300.0s A=17827 B=17793 STAT=0 timeouts=7 pipe_errors=1
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/2
+[HOST][START][TIME] 2.584s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[STAT] +5.0s A=362 (72.4/s) B=363 (72.6/s) STAT=0 bytes=458200 mbps=0.733 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.2s A=325 (62.7/s) B=325 (62.7/s) STAT=0 bytes=410800 mbps=0.634 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=311 (61.9/s) B=309 (61.5/s) STAT=0 bytes=391840 mbps=0.624 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=285 (56.9/s) B=285 (56.9/s) STAT=0 bytes=360240 mbps=0.575 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=331 (65.9/s) B=330 (65.7/s) STAT=0 bytes=417752 mbps=0.665 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=333 (65.6/s) B=333 (65.6/s) STAT=0 bytes=420912 mbps=0.664 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=369 (73.7/s) B=369 (73.7/s) STAT=0 bytes=466416 mbps=0.745 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=354 (69.7/s) B=354 (69.7/s) STAT=0 bytes=447456 mbps=0.704 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=291 (58.2/s) B=291 (58.2/s) STAT=0 bytes=367824 mbps=0.588 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=361 (72.2/s) B=361 (72.2/s) STAT=0 bytes=456304 mbps=0.730 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=347 (69.4/s) B=347 (69.4/s) STAT=0 bytes=438608 mbps=0.702 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=371 (74.1/s) B=371 (74.1/s) STAT=0 bytes=468944 mbps=0.749 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=286 (57.1/s) B=286 (57.1/s) STAT=0 bytes=361504 mbps=0.577 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=313 (62.3/s) B=313 (62.3/s) STAT=0 bytes=395632 mbps=0.630 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=340 (68.0/s) B=332 (66.4/s) STAT=0 bytes=424704 mbps=0.679 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=374 (74.7/s) B=374 (74.7/s) STAT=0 bytes=472736 mbps=0.755 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=390 (76.7/s) B=390 (76.7/s) STAT=0 bytes=492960 mbps=0.776 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=369 (73.1/s) B=369 (73.1/s) STAT=0 bytes=466416 mbps=0.739 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=363 (72.6/s) B=363 (72.6/s) STAT=0 bytes=459344 mbps=0.735 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=363 (72.6/s) B=362 (72.4/s) STAT=0 bytes=457688 mbps=0.732 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=345 (68.8/s) B=346 (69.0/s) STAT=0 bytes=436712 mbps=0.697 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=379 (75.4/s) B=379 (75.4/s) STAT=0 bytes=479056 mbps=0.763 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=338 (67.4/s) B=338 (67.4/s) STAT=0 bytes=427232 mbps=0.682 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=413 (82.1/s) B=410 (81.6/s) STAT=0 bytes=520136 mbps=0.828 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=349 (69.5/s) B=349 (69.5/s) STAT=0 bytes=441136 mbps=0.702 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=289 (57.7/s) B=289 (57.7/s) STAT=0 bytes=365296 mbps=0.584 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=345 (69.0/s) B=345 (69.0/s) STAT=0 bytes=436080 mbps=0.698 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=411 (82.1/s) B=411 (82.1/s) STAT=0 bytes=519504 mbps=0.830 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=336 (67.2/s) B=336 (67.2/s) STAT=0 bytes=424704 mbps=0.679 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=355 (71.0/s) B=354 (70.8/s) STAT=0 bytes=448088 mbps=0.717 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=258 (51.4/s) B=255 (50.8/s) STAT=0 bytes=324216 mbps=0.517 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=291 (58.2/s) B=289 (57.8/s) STAT=0 bytes=367072 mbps=0.587 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=329 (65.8/s) B=330 (66.0/s) STAT=0 bytes=416488 mbps=0.666 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=313 (62.2/s) B=313 (62.2/s) STAT=0 bytes=395120 mbps=0.628 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=303 (60.5/s) B=303 (60.5/s) STAT=0 bytes=382992 mbps=0.612 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=251 (50.2/s) B=249 (49.8/s) STAT=0 bytes=316000 mbps=0.506 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=375 (74.7/s) B=376 (74.9/s) STAT=0 bytes=474632 mbps=0.756 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=336 (67.2/s) B=336 (67.2/s) STAT=0 bytes=424704 mbps=0.679 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=318 (63.5/s) B=317 (63.3/s) STAT=0 bytes=401320 mbps=0.641 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=324 (64.7/s) B=324 (64.7/s) STAT=0 bytes=409536 mbps=0.654 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=369 (73.7/s) B=369 (73.7/s) STAT=0 bytes=466416 mbps=0.746 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=386 (76.8/s) B=386 (76.8/s) STAT=0 bytes=487904 mbps=0.777 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=361 (72.1/s) B=361 (72.1/s) STAT=0 bytes=456304 mbps=0.729 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=413 (82.6/s) B=413 (82.6/s) STAT=0 bytes=522032 mbps=0.835 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=380 (75.9/s) B=380 (75.9/s) STAT=0 bytes=480320 mbps=0.767 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=319 (63.7/s) B=319 (63.7/s) STAT=0 bytes=403216 mbps=0.644 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=350 (70.0/s) B=350 (70.0/s) STAT=0 bytes=442400 mbps=0.708 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=374 (74.8/s) B=373 (74.6/s) STAT=0 bytes=472616 mbps=0.756 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=362 (72.3/s) B=363 (72.5/s) STAT=0 bytes=457688 mbps=0.732 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=317 (63.4/s) B=311 (62.2/s) STAT=0 bytes=396896 mbps=0.635 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=305 (60.9/s) B=303 (60.5/s) STAT=0 bytes=384256 mbps=0.614 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=219 (43.8/s) B=216 (43.2/s) STAT=0 bytes=275432 mbps=0.440 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=294 (58.8/s) B=291 (58.2/s) STAT=0 bytes=369208 mbps=0.590 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=285 (57.0/s) B=284 (56.8/s) STAT=0 bytes=359608 mbps=0.575 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=312 (62.4/s) B=311 (62.2/s) STAT=0 bytes=393736 mbps=0.630 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=306 (61.2/s) B=304 (60.8/s) STAT=0 bytes=385520 mbps=0.617 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=288 (57.4/s) B=288 (57.4/s) STAT=0 bytes=364032 mbps=0.581 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=155 (30.9/s) B=144 (28.8/s) STAT=0 bytes=188968 mbps=0.302 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=191 (38.1/s) B=183 (36.5/s) STAT=0 bytes=236368 mbps=0.377 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=300.1s A=19684 B=19626 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=10.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=96 mbps=0.000 timeouts=2 pipes=0 idle~99.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.3s A=0 (0.0/s) B=0 (0.0/s) STAT=37 bytes=2368 mbps=0.003 timeouts=2 pipes=0 idle~95.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][NRX][RETRY] kick #2/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +5.0s A=325 (65.0/s) B=325 (65.0/s) STAT=0 bytes=411312 mbps=0.658 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=348 (69.0/s) B=346 (68.6/s) STAT=0 bytes=438608 mbps=0.695 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=10.0s A=702 B=700 STAT=37 timeouts=4 pipe_errors=0 dev_tot A=0 B=0 TxCplt=132761 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=702 B=700 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/2
+[HOST][START][KICK] retry 2/2
+[HOST][START][FAIL] did not observe frames/counters after START probes
+[HOST][GET_STATUS] queued via BULK
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER] START re-sent: 1 bytes
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.1s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=1 idle~98.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER] START re-sent: 1 bytes
+[STAT] +6.4s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=1 idle~93.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.8%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.1s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.1%
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][RETRY] kick #2/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +5.0s A=287 (57.2/s) B=287 (57.2/s) STAT=0 bytes=363280 mbps=0.580 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=408 (81.6/s) B=408 (81.6/s) STAT=0 bytes=515712 mbps=0.825 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=322 (64.2/s) B=322 (64.2/s) STAT=0 bytes=407008 mbps=0.649 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=370 (73.7/s) B=370 (73.7/s) STAT=0 bytes=467680 mbps=0.745 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=299 (59.8/s) B=299 (59.8/s) STAT=0 bytes=377936 mbps=0.605 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=350 (69.9/s) B=350 (69.9/s) STAT=0 bytes=442400 mbps=0.707 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=322 (64.3/s) B=322 (64.3/s) STAT=0 bytes=407008 mbps=0.650 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=359 (71.8/s) B=359 (71.8/s) STAT=0 bytes=453776 mbps=0.726 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=300 (59.4/s) B=300 (59.4/s) STAT=0 bytes=379200 mbps=0.601 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=313 (62.4/s) B=313 (62.4/s) STAT=0 bytes=395632 mbps=0.631 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=292 (58.2/s) B=291 (58.0/s) STAT=0 bytes=368456 mbps=0.588 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=282 (56.4/s) B=282 (56.4/s) STAT=0 bytes=356448 mbps=0.570 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=302 (59.0/s) B=302 (59.0/s) STAT=0 bytes=381728 mbps=0.597 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=296 (59.2/s) B=291 (58.2/s) STAT=0 bytes=370472 mbps=0.593 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=297 (59.4/s) B=298 (59.6/s) STAT=0 bytes=376040 mbps=0.602 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=256 (51.1/s) B=256 (51.1/s) STAT=0 bytes=324096 mbps=0.517 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=342 (68.3/s) B=338 (67.5/s) STAT=0 bytes=429760 mbps=0.686 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=254 (50.7/s) B=254 (50.7/s) STAT=0 bytes=321056 mbps=0.513 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=337 (67.4/s) B=337 (67.4/s) STAT=0 bytes=425968 mbps=0.681 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=330 (66.0/s) B=330 (66.0/s) STAT=0 bytes=416608 mbps=0.667 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=284 (56.3/s) B=284 (56.3/s) STAT=0 bytes=359488 mbps=0.570 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=292 (58.2/s) B=292 (58.2/s) STAT=0 bytes=369088 mbps=0.589 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=227 (45.4/s) B=225 (45.0/s) STAT=0 bytes=285664 mbps=0.457 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=248 (49.5/s) B=247 (49.3/s) STAT=0 bytes=312840 mbps=0.499 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=281 (56.1/s) B=281 (56.1/s) STAT=0 bytes=355184 mbps=0.568 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=319 (63.5/s) B=319 (63.5/s) STAT=0 bytes=403216 mbps=0.642 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=329 (65.8/s) B=329 (65.8/s) STAT=0 bytes=415344 mbps=0.664 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=261 (52.1/s) B=261 (52.1/s) STAT=0 bytes=330416 mbps=0.528 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=281 (56.1/s) B=281 (56.1/s) STAT=0 bytes=355184 mbps=0.567 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=248 (49.4/s) B=248 (49.4/s) STAT=0 bytes=313472 mbps=0.499 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=271 (54.2/s) B=268 (53.6/s) STAT=0 bytes=340136 mbps=0.544 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=267 (53.3/s) B=268 (53.5/s) STAT=0 bytes=338632 mbps=0.541 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=259 (51.8/s) B=257 (51.4/s) STAT=0 bytes=326112 mbps=0.521 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=382 (76.3/s) B=382 (76.3/s) STAT=0 bytes=482848 mbps=0.771 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=311 (62.2/s) B=311 (62.2/s) STAT=0 bytes=393104 mbps=0.629 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=276 (55.2/s) B=273 (54.6/s) STAT=0 bytes=346968 mbps=0.555 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=389 (77.8/s) B=389 (77.8/s) STAT=0 bytes=491696 mbps=0.787 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=360 (72.0/s) B=360 (72.0/s) STAT=0 bytes=454528 mbps=0.727 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=378 (75.5/s) B=378 (75.5/s) STAT=0 bytes=478304 mbps=0.765 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=286 (56.4/s) B=285 (56.2/s) STAT=0 bytes=360872 mbps=0.569 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=268 (53.4/s) B=268 (53.4/s) STAT=0 bytes=338752 mbps=0.540 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=296 (59.1/s) B=296 (59.1/s) STAT=0 bytes=374144 mbps=0.597 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=343 (68.3/s) B=343 (68.3/s) STAT=0 bytes=433552 mbps=0.691 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=297 (59.4/s) B=297 (59.4/s) STAT=0 bytes=375408 mbps=0.601 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=310 (61.8/s) B=310 (61.8/s) STAT=0 bytes=391840 mbps=0.625 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=288 (57.6/s) B=288 (57.6/s) STAT=0 bytes=364032 mbps=0.582 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=263 (52.3/s) B=262 (52.1/s) STAT=0 bytes=331800 mbps=0.527 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=274 (54.7/s) B=270 (53.9/s) STAT=0 bytes=343808 mbps=0.549 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=233 (46.5/s) B=230 (45.9/s) STAT=0 bytes=292616 mbps=0.468 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=303 (60.4/s) B=301 (60.0/s) STAT=0 bytes=381728 mbps=0.609 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=384 (76.8/s) B=383 (76.6/s) STAT=0 bytes=484744 mbps=0.775 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=415 (82.9/s) B=415 (82.9/s) STAT=0 bytes=524560 mbps=0.838 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=343 (68.3/s) B=343 (68.3/s) STAT=0 bytes=433552 mbps=0.690 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=291 (58.2/s) B=291 (58.2/s) STAT=0 bytes=367824 mbps=0.588 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=398 (79.1/s) B=398 (79.1/s) STAT=0 bytes=503072 mbps=0.800 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=339 (67.8/s) B=339 (67.8/s) STAT=0 bytes=428496 mbps=0.685 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=372 (74.2/s) B=372 (74.2/s) STAT=0 bytes=470208 mbps=0.751 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=258 (51.6/s) B=258 (51.6/s) STAT=0 bytes=326112 mbps=0.521 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=301 (60.2/s) B=299 (59.8/s) STAT=0 bytes=379200 mbps=0.607 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=300.0s A=18462 B=18429 STAT=0 timeouts=14 pipe_errors=2
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +6.3s A=0 (0.0/s) B=0 (0.0/s) STAT=40 bytes=2560 mbps=0.003 timeouts=2 pipes=0 idle~95.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.8%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.4%
+[HOST][GET_STATUS] queued via BULK
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][NRX][RETRY] kick #2/2
+[HOST][NRX][RETRY] START re-sent
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.5s A=0 (0.0/s) B=0 (0.0/s) STAT=40 bytes=2560 mbps=0.003 timeouts=2 pipes=0 idle~92.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.8%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][ABORT] no RX for 20.0s (mode=data)
+[HOST][SUMMARY] elapsed=21.4s A=0 B=0 STAT=80 timeouts=21 pipe_errors=0 dev_tot A=0 B=0 TxCplt=171138 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=0 B=0 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+[HOST][FAIL] no RX for 20.0s (mode=data)
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=128 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=128 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=128 mbps=0.000 timeouts=2 pipes=0 idle~99.2%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +6.3s A=0 (0.0/s) B=0 (0.0/s) STAT=41 bytes=2624 mbps=0.003 timeouts=2 pipes=0 idle~94.9%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][NRX][RETRY] kick #2/2
+[HOST][NRX][RETRY] START re-sent
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.5s A=0 (0.0/s) B=0 (0.0/s) STAT=40 bytes=2560 mbps=0.003 timeouts=2 pipes=0 idle~92.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][ABORT] no RX for 20.0s (mode=data)
+[HOST][SUMMARY] elapsed=21.4s A=0 B=0 STAT=87 timeouts=21 pipe_errors=0 dev_tot A=0 B=0 TxCplt=171226 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=0 B=0 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+[HOST][FAIL] no RX for 20.0s (mode=data)
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=1 bytes=112 mbps=0.000 timeouts=2 pipes=0 idle~99.4%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=128 mbps=0.000 timeouts=2 pipes=0 idle~99.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=128 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +5.0s A=93 (18.6/s) B=91 (18.2/s) STAT=1 bytes=116864 mbps=0.187 timeouts=1 pipes=0 idle~59.9%
+[STAT] +5.0s A=283 (56.6/s) B=283 (56.6/s) STAT=0 bytes=357712 mbps=0.572 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=275 (54.4/s) B=275 (54.4/s) STAT=0 bytes=347600 mbps=0.550 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=238 (47.6/s) B=236 (47.2/s) STAT=0 bytes=299568 mbps=0.479 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=317 (63.1/s) B=317 (63.1/s) STAT=0 bytes=400688 mbps=0.638 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=282 (56.2/s) B=282 (56.2/s) STAT=0 bytes=356448 mbps=0.569 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=247 (49.1/s) B=247 (49.1/s) STAT=0 bytes=312208 mbps=0.497 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=300 (59.9/s) B=300 (59.9/s) STAT=0 bytes=379200 mbps=0.606 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=281 (56.0/s) B=277 (55.2/s) STAT=0 bytes=352656 mbps=0.562 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=391 (78.1/s) B=391 (78.1/s) STAT=0 bytes=494224 mbps=0.790 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=291 (57.8/s) B=291 (57.8/s) STAT=0 bytes=367824 mbps=0.584 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=360 (72.0/s) B=359 (71.8/s) STAT=0 bytes=454408 mbps=0.727 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=291 (57.9/s) B=292 (58.1/s) STAT=0 bytes=368456 mbps=0.586 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=392 (78.3/s) B=392 (78.3/s) STAT=0 bytes=495488 mbps=0.792 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=350 (70.0/s) B=349 (69.8/s) STAT=0 bytes=441256 mbps=0.706 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=268 (53.6/s) B=268 (53.6/s) STAT=0 bytes=339264 mbps=0.543 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=325 (64.9/s) B=324 (64.7/s) STAT=0 bytes=410168 mbps=0.656 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=313 (62.6/s) B=313 (62.6/s) STAT=0 bytes=395632 mbps=0.633 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=389 (77.7/s) B=389 (77.7/s) STAT=0 bytes=491696 mbps=0.786 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=333 (66.5/s) B=333 (66.5/s) STAT=0 bytes=420912 mbps=0.673 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=299 (59.8/s) B=299 (59.8/s) STAT=0 bytes=377936 mbps=0.605 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=322 (64.4/s) B=322 (64.4/s) STAT=0 bytes=407008 mbps=0.651 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=305 (60.9/s) B=305 (60.9/s) STAT=0 bytes=385520 mbps=0.616 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=288 (57.6/s) B=288 (57.6/s) STAT=0 bytes=364032 mbps=0.582 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=374 (74.7/s) B=374 (74.7/s) STAT=0 bytes=472736 mbps=0.756 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=219 (43.7/s) B=214 (42.7/s) STAT=0 bytes=273656 mbps=0.437 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=294 (58.7/s) B=293 (58.5/s) STAT=0 bytes=370984 mbps=0.593 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=325 (65.0/s) B=324 (64.8/s) STAT=0 bytes=410168 mbps=0.656 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=220 (43.9/s) B=218 (43.5/s) STAT=0 bytes=276816 mbps=0.442 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=317 (63.1/s) B=317 (63.1/s) STAT=0 bytes=400688 mbps=0.638 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=258 (51.3/s) B=256 (50.9/s) STAT=0 bytes=324848 mbps=0.517 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=192 (38.4/s) B=188 (37.6/s) STAT=0 bytes=240160 mbps=0.384 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=380 (75.9/s) B=379 (75.7/s) STAT=0 bytes=479688 mbps=0.767 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=344 (68.6/s) B=344 (68.6/s) STAT=0 bytes=434816 mbps=0.694 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=310 (61.9/s) B=309 (61.7/s) STAT=0 bytes=391208 mbps=0.625 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=217 (43.4/s) B=210 (42.0/s) STAT=0 bytes=269864 mbps=0.431 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=293 (58.6/s) B=292 (58.4/s) STAT=0 bytes=369208 mbps=0.591 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=277 (55.3/s) B=278 (55.5/s) STAT=0 bytes=351272 mbps=0.561 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=258 (51.4/s) B=258 (51.4/s) STAT=0 bytes=326112 mbps=0.519 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=283 (56.5/s) B=283 (56.5/s) STAT=0 bytes=357712 mbps=0.572 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=266 (53.0/s) B=262 (52.3/s) STAT=0 bytes=333184 mbps=0.532 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=284 (56.7/s) B=280 (55.9/s) STAT=0 bytes=356960 mbps=0.571 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=274 (54.8/s) B=268 (53.6/s) STAT=0 bytes=342544 mbps=0.548 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=303 (60.5/s) B=303 (60.5/s) STAT=0 bytes=382992 mbps=0.611 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=344 (68.7/s) B=344 (68.7/s) STAT=0 bytes=434816 mbps=0.695 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=357 (71.3/s) B=357 (71.3/s) STAT=0 bytes=451248 mbps=0.721 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=331 (66.1/s) B=331 (66.1/s) STAT=0 bytes=418384 mbps=0.669 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=323 (64.6/s) B=323 (64.6/s) STAT=0 bytes=408272 mbps=0.653 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=335 (67.0/s) B=335 (67.0/s) STAT=0 bytes=423440 mbps=0.677 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=251 (50.2/s) B=242 (48.4/s) STAT=0 bytes=311576 mbps=0.498 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=453 (90.4/s) B=454 (90.6/s) STAT=0 bytes=573224 mbps=0.915 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=332 (66.4/s) B=330 (66.0/s) STAT=0 bytes=418384 mbps=0.669 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=338 (67.5/s) B=335 (66.9/s) STAT=0 bytes=425336 mbps=0.679 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=286 (57.1/s) B=283 (56.5/s) STAT=0 bytes=359608 mbps=0.575 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=380 (76.0/s) B=380 (76.0/s) STAT=0 bytes=480320 mbps=0.768 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=351 (70.1/s) B=351 (70.1/s) STAT=0 bytes=443664 mbps=0.709 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=403 (80.6/s) B=403 (80.6/s) STAT=0 bytes=509392 mbps=0.815 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=363 (72.4/s) B=363 (72.4/s) STAT=0 bytes=458832 mbps=0.732 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=291 (58.2/s) B=291 (58.2/s) STAT=0 bytes=367824 mbps=0.588 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=314 (62.8/s) B=313 (62.6/s) STAT=0 bytes=396264 mbps=0.634 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=300.1s A=18519 B=18454 STAT=6 timeouts=7 pipe_errors=0 dev_tot A=0 B=0 TxCplt=171233 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=18519 B=18454 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FRAME_SAMPLES written: 3 bytes (Ns=10)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.1s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~97.8%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.1s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.0%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +6.3s A=0 (0.0/s) B=0 (0.0/s) STAT=40 bytes=2560 mbps=0.003 timeouts=2 pipes=0 idle~95.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.8%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.4%
+[HOST][GET_STATUS] queued via BULK
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER][WARN] START re-send failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER][WARN] SetInterface alt=1 failed: [Errno 5] Input/Output Error
+[HOST][RECOVER][WARN] START re-send failed: [Errno 2] Entity not found
+[HOST_RX][ERR] [Errno 2] Entity not found
+[HOST][SUMMARY] elapsed=15.4s A=0 B=0 STAT=40 timeouts=12 pipe_errors=2 dev_tot A=0 B=0 TxCplt=208248 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=0 B=0 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP write failed: [Errno 2] Entity not found
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=none verbose=0 interval=1.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][SUMMARY] elapsed=0.1s A=4 B=4 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[STAT] +5.1s A=284 (55.9/s) B=284 (55.9/s) STAT=0 bytes=359488 mbps=0.566 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=355 (71.0/s) B=353 (70.6/s) STAT=0 bytes=446944 mbps=0.715 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=320 (63.5/s) B=320 (63.5/s) STAT=0 bytes=404992 mbps=0.643 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=292 (58.3/s) B=292 (58.3/s) STAT=0 bytes=369088 mbps=0.589 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=303 (60.3/s) B=301 (59.9/s) STAT=0 bytes=381728 mbps=0.608 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=260 (51.9/s) B=260 (51.9/s) STAT=0 bytes=328640 mbps=0.524 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=290 (57.5/s) B=289 (57.4/s) STAT=0 bytes=365928 mbps=0.581 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=274 (54.6/s) B=274 (54.6/s) STAT=0 bytes=346336 mbps=0.552 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=258 (51.6/s) B=258 (51.6/s) STAT=0 bytes=326112 mbps=0.522 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=236 (47.1/s) B=232 (46.3/s) STAT=0 bytes=295776 mbps=0.472 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=291 (57.0/s) B=291 (57.0/s) STAT=0 bytes=367824 mbps=0.576 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.0s A=3430 B=3418 STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.8%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.8%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~99.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +5.0s A=112 (22.4/s) B=112 (22.4/s) STAT=1 bytes=141644 mbps=0.227 timeouts=1 pipes=0 idle~60.0%
+[STAT] +5.0s A=209 (41.7/s) B=204 (40.7/s) STAT=0 bytes=261528 mbps=0.418 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=289 (57.8/s) B=287 (57.4/s) STAT=0 bytes=364032 mbps=0.582 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.2s A=428 (82.9/s) B=428 (82.9/s) STAT=0 bytes=540992 mbps=0.838 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=327 (65.4/s) B=327 (65.4/s) STAT=0 bytes=413328 mbps=0.661 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=333 (66.5/s) B=333 (66.5/s) STAT=0 bytes=420912 mbps=0.673 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=365 (72.9/s) B=365 (72.9/s) STAT=0 bytes=461360 mbps=0.738 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=310 (61.9/s) B=310 (61.9/s) STAT=0 bytes=391840 mbps=0.626 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=305 (60.9/s) B=305 (60.9/s) STAT=0 bytes=385520 mbps=0.616 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=333 (66.6/s) B=333 (66.6/s) STAT=0 bytes=420912 mbps=0.673 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=379 (75.8/s) B=379 (75.8/s) STAT=0 bytes=479056 mbps=0.766 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=319 (62.4/s) B=315 (61.6/s) STAT=0 bytes=400688 mbps=0.627 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.0s A=3888 B=3874 STAT=1 timeouts=7 pipe_errors=0 dev_tot A=0 B=0 TxCplt=1 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=3888 B=3874 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.157s (CTRL)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=152 mbps=0.000 timeouts=2 pipes=0 idle~99.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=152 mbps=0.000 timeouts=2 pipes=0 idle~99.6%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=152 mbps=0.000 timeouts=2 pipes=0 idle~99.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][NRX][STAT] sentA/B=0/0 txcplt=7766 flags=0x0004
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +5.0s A=158 (31.5/s) B=158 (31.5/s) STAT=1 bytes=200300 mbps=0.320 timeouts=1 pipes=0 idle~59.9%
+[STAT] +5.2s A=325 (63.1/s) B=323 (62.7/s) STAT=0 bytes=409536 mbps=0.636 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=323 (64.3/s) B=323 (64.3/s) STAT=0 bytes=408272 mbps=0.650 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=218 (43.6/s) B=218 (43.6/s) STAT=0 bytes=275040 mbps=0.440 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=270 (53.9/s) B=270 (53.9/s) STAT=0 bytes=341280 mbps=0.545 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=181 (35.9/s) B=162 (32.1/s) STAT=0 bytes=217288 mbps=0.345 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=299 (59.8/s) B=298 (59.6/s) STAT=0 bytes=377304 mbps=0.604 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=232 (46.2/s) B=233 (46.4/s) STAT=0 bytes=293880 mbps=0.468 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=340 (67.9/s) B=336 (67.1/s) STAT=0 bytes=427232 mbps=0.682 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=320 (62.6/s) B=320 (62.6/s) STAT=0 bytes=404480 mbps=0.633 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=318 (63.3/s) B=318 (63.3/s) STAT=0 bytes=401952 mbps=0.640 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=337 (67.4/s) B=337 (67.4/s) STAT=0 bytes=425968 mbps=0.681 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.0s A=3501 B=3476 STAT=7 timeouts=7 pipe_errors=0 dev_tot A=0 B=0 TxCplt=7771 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=3501 B=3476 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=bulk verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.923s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=152 mbps=0.000 timeouts=2 pipes=0 idle~99.5%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=152 mbps=0.000 timeouts=2 pipes=0 idle~99.7%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[STAT] +6.0s A=0 (0.0/s) B=0 (0.0/s) STAT=2 bytes=152 mbps=0.000 timeouts=2 pipes=0 idle~99.8%
+[HOST][GET_STATUS] queued via BULK
+[HOST][GET_STATUS] queued via BULK
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[STAT] +5.0s A=87 (17.4/s) B=87 (17.4/s) STAT=1 bytes=110556 mbps=0.177 timeouts=1 pipes=0 idle~59.9%
+[STAT] +5.0s A=367 (73.4/s) B=365 (73.0/s) STAT=0 bytes=462624 mbps=0.740 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=376 (75.1/s) B=376 (75.1/s) STAT=0 bytes=475264 mbps=0.760 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=280 (55.6/s) B=280 (55.6/s) STAT=0 bytes=353920 mbps=0.563 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=290 (57.7/s) B=290 (57.7/s) STAT=0 bytes=366560 mbps=0.584 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=314 (62.4/s) B=310 (61.6/s) STAT=0 bytes=394368 mbps=0.627 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=372 (74.4/s) B=372 (74.4/s) STAT=0 bytes=470208 mbps=0.752 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=358 (71.4/s) B=358 (71.4/s) STAT=0 bytes=452512 mbps=0.722 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=351 (70.0/s) B=351 (70.0/s) STAT=0 bytes=443664 mbps=0.708 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.1s A=325 (63.6/s) B=320 (62.7/s) STAT=0 bytes=407640 mbps=0.639 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=363 (72.5/s) B=361 (72.1/s) STAT=0 bytes=457568 mbps=0.731 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=309 (61.6/s) B=309 (61.6/s) STAT=0 bytes=390576 mbps=0.623 timeouts=0 pipes=0 idle~0.0%
+[HOST][SUMMARY] elapsed=60.1s A=3997 B=3984 STAT=7 timeouts=7 pipe_errors=0 dev_tot A=0 B=0 TxCplt=14758 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=3997 B=3984 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/6
+[HOST][START][KICK] retry 2/6
+[HOST][START][TIME] 8.720s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.3%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.6s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~91.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.6s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~91.1%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.6s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~91.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.6s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~91.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=263 (52.2/s) B=263 (52.2/s) STAT=0 bytes=332944 mbps=0.529 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=295 (59.0/s) B=294 (58.8/s) STAT=0 bytes=371736 mbps=0.595 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=264 (52.8/s) B=264 (52.8/s) STAT=0 bytes=334208 mbps=0.534 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=245 (49.0/s) B=245 (49.0/s) STAT=0 bytes=309680 mbps=0.495 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=271 (54.2/s) B=271 (54.2/s) STAT=0 bytes=342544 mbps=0.548 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=303 (60.6/s) B=302 (60.4/s) STAT=0 bytes=382360 mbps=0.612 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=313 (62.6/s) B=312 (62.4/s) STAT=0 bytes=395000 mbps=0.632 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.1s A=251 (49.6/s) B=251 (49.6/s) STAT=0 bytes=317264 mbps=0.502 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=283 (56.4/s) B=283 (56.4/s) STAT=0 bytes=357712 mbps=0.570 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=330 (66.0/s) B=329 (65.8/s) STAT=0 bytes=416488 mbps=0.666 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=251 (49.8/s) B=251 (49.8/s) STAT=0 bytes=317264 mbps=0.504 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.1s A=362 (71.2/s) B=362 (71.2/s) STAT=0 bytes=457568 mbps=0.720 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=297 (59.2/s) B=297 (59.2/s) STAT=0 bytes=375408 mbps=0.599 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=382 (76.3/s) B=382 (76.3/s) STAT=0 bytes=482848 mbps=0.771 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=316 (63.2/s) B=316 (63.2/s) STAT=0 bytes=399424 mbps=0.639 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.1s A=284 (56.2/s) B=283 (56.0/s) STAT=0 bytes=358344 mbps=0.568 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=361 (72.1/s) B=361 (72.1/s) STAT=0 bytes=456304 mbps=0.729 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=327 (65.2/s) B=326 (65.0/s) STAT=0 bytes=412696 mbps=0.659 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=323 (64.6/s) B=319 (63.8/s) STAT=0 bytes=405744 mbps=0.649 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.1s A=289 (57.2/s) B=283 (56.0/s) STAT=0 bytes=361504 mbps=0.572 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=311 (62.2/s) B=310 (62.0/s) STAT=0 bytes=392472 mbps=0.628 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.1s A=345 (67.8/s) B=344 (67.6/s) STAT=0 bytes=435448 mbps=0.684 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=302 (60.3/s) B=302 (60.3/s) STAT=0 bytes=381728 mbps=0.610 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.1s A=205 (40.1/s) B=195 (38.1/s) STAT=0 bytes=252800 mbps=0.395 timeouts=0 pipes=0 idle~0.0%
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER] START re-sent: 1 bytes
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=1 idle~96.4%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.5%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.5%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.3%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.5%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.3s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~95.9%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.3%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.7%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.5%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.4%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.3%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.4s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~93.7%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.6%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.6%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.5%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.5%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.6%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.4%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.5%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.3%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.2%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.5%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.6%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.3%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.3%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.4%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.3s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~94.7%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.3%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.3s A=0 (0.0/s) B=0 (0.0/s) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~95.9%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][SUMMARY] elapsed=301.2s A=7173 B=7145 STAT=0 timeouts=68 pipe_errors=1
+[HOST] STOP written: 1 bytes
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/5
+[HOST][START][TIME] 3.756s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s,z0=0,z%=0.00) B=0 (0.0/s,z0=0,z%=0.00) STAT=1 bytes=196 mbps=0.000 timeouts=2 pipes=0 idle~96.6%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.6s A=0 (0.0/s,z0=0,z%=0.00) B=0 (0.0/s,z0=0,z%=0.00) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~91.3%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (STAT)
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +7.9s A=6 (0.8/s,z0=6,z%=100.00) B=6 (0.8/s,z0=6,z%=100.00) STAT=42 bytes=10776 mbps=0.011 timeouts=2 pipes=0 idle~76.4%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s,z0=0,z%=0.00) B=0 (0.0/s,z0=0,z%=0.00) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.3%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.6s A=0 (0.0/s,z0=0,z%=0.00) B=0 (0.0/s,z0=0,z%=0.00) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~91.3%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.6s A=0 (0.0/s,z0=0,z%=0.00) B=0 (0.0/s,z0=0,z%=0.00) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~91.3%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][NRX][RETRY] kick #1/2
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.6s A=0 (0.0/s,z0=0,z%=0.00) B=0 (0.0/s,z0=0,z%=0.00) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~91.2%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER][WARN] START re-send failed: [Errno 5] Input/Output Error
+[HOST][NRX][RETRY][WARN] START failed: [Errno 5] Input/Output Error
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER][WARN] START re-send failed: [Errno 5] Input/Output Error
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER][WARN] START re-send failed: [Errno 5] Input/Output Error
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER][WARN] START re-send failed: [Errno 5] Input/Output Error
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER][WARN] START re-send failed: [Errno 5] Input/Output Error
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER][WARN] START re-send failed: [Errno 5] Input/Output Error
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER][WARN] START re-send failed: [Errno 5] Input/Output Error
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER][WARN] START re-send failed: [Errno 5] Input/Output Error
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER][WARN] START re-send failed: [Errno 5] Input/Output Error
+[HOST_RX][PIPE] unrecoverable, stopping
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][SUMMARY] elapsed=21.0s A=6 (z0=6,z%=100.00) B=6 (z0=6,z%=100.00) STAT=43 timeouts=10 pipe_errors=5
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST] STOP write failed: [Errno 5] Input/Output Error
+[HOST][RECOVER][WARN] START re-send failed: [Errno 5] Input/Output Error
+[HOST_RX][PIPE] unrecoverable, stopping
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][SUMMARY] elapsed=0.8s A=0 (z0=0,z%=0.00) B=0 (z0=0,z%=0.00) STAT=0 timeouts=4 pipe_errors=5
+[HOST] STOP write failed: [Errno 5] Input/Output Error
+[HOST][FAIL] no frames received
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST][WARN] SET_WINDOWS failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_BLOCK_RATE failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_FULL_MODE failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_PROFILE failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_ASYNC_MODE failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_CHMODE failed: [Errno 5] Input/Output Error
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST][WARN] SET_WINDOWS failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_BLOCK_RATE failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_FULL_MODE failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_PROFILE failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_ASYNC_MODE failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_CHMODE failed: [Errno 5] Input/Output Error
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST][WARN] SET_WINDOWS failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_BLOCK_RATE failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_FULL_MODE failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_PROFILE failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_ASYNC_MODE failed: [Errno 5] Input/Output Error
+[HOST][WARN] SET_CHMODE failed: [Errno 5] Input/Output Error
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[STAT] +5.0s A=252 (50.2/s,z0=186,z%=73.81) B=253 (50.4/s,z0=186,z%=73.52) STAT=0 bytes=319792 mbps=0.510 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=420 (83.9/s,z0=391,z%=93.10) B=420 (83.9/s,z0=391,z%=93.10) STAT=0 bytes=530880 mbps=0.849 timeouts=0 pipes=0 idle~0.0% devTX A=0 B=0 TxCplt=0 (tot A=253 B=243 TxCplt=506)
+[STAT] +5.0s A=321 (64.1/s,z0=249,z%=77.57) B=321 (64.1/s,z0=249,z%=77.57) STAT=0 bytes=405744 mbps=0.649 timeouts=0 pipes=0 idle~0.0% devTX A=420 B=411 TxCplt=840 (tot A=673 B=654 TxCplt=1346)
+[STAT] +5.0s A=291 (58.2/s,z0=254,z%=87.29) B=291 (58.2/s,z0=254,z%=87.29) STAT=0 bytes=367824 mbps=0.588 timeouts=0 pipes=0 idle~0.0% devTX A=321 B=316 TxCplt=642 (tot A=994 B=970 TxCplt=1988)
+[STAT] +5.0s A=286 (57.2/s,z0=253,z%=88.46) B=286 (57.2/s,z0=253,z%=88.46) STAT=0 bytes=361504 mbps=0.578 timeouts=0 pipes=0 idle~0.0% devTX A=291 B=286 TxCplt=582 (tot A=1285 B=1256 TxCplt=2570)
+[HOST][SUMMARY] elapsed=30.0s A=1884 (z0=1617,z%=85.83) B=1884 (z0=1616,z%=85.77) STAT=0 timeouts=0 pipe_errors=0 dev_tot A=1571 B=1539 TxCplt=3142 seq=1536
+[HOST][LOSS] dev_sent A=1571 B=1539 host_rx A=1884 B=1884 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=none verbose=0 interval=1.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][SUMMARY] elapsed=0.0s A=4 (z0=3,z%=75.00) B=4 (z0=4,z%=100.00) STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=none verbose=0 interval=1.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][SUMMARY] elapsed=0.0s A=4 (z0=3,z%=75.00) B=4 (z0=2,z%=50.00) STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=none verbose=0 interval=1.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][SUMMARY] elapsed=0.0s A=4 (z0=3,z%=75.00) B=4 (z0=3,z%=75.00) STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=none verbose=0 interval=1.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][SUMMARY] elapsed=0.0s A=4 (z0=4,z%=100.00) B=4 (z0=3,z%=75.00) STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=none verbose=0 interval=1.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/5
+[HOST][START][TIME] 6.886s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][SUMMARY] elapsed=0.0s A=4 (z0=4,z%=100.00) B=4 (z0=3,z%=75.00) STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=300.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[STAT] +5.0s A=1167 (232.7/s,z0=1022,z%=87.57) B=1167 (232.7/s,z0=1023,z%=87.66) STAT=0 bytes=1475720 mbps=2.354 timeouts=0 pipes=0 idle~0.0%
+[HOST][RECOVER][WARN] clear_halt IN failed: [Errno 19] No such device (it may have been disconnected)
+[HOST][RECOVER] SetInterface(IF#2, alt=1) OK
+[HOST][RECOVER] START re-sent: 1 bytes
+[STAT] +6.1s A=0 (0.0/s,z0=0,z%=0.00) B=0 (0.0/s,z0=0,z%=0.00) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=1 idle~98.8%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +6.2s A=0 (0.0/s,z0=0,z%=0.00) B=0 (0.0/s,z0=0,z%=0.00) STAT=0 bytes=0 mbps=0.000 timeouts=2 pipes=0 idle~96.2%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][KICK] retry 1/5
+[HOST][START][TIME] 3.762s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=1234 (246.8/s,z0=1079,z%=87.44) B=1235 (247.0/s,z0=1080,z%=87.45) STAT=0 bytes=1561040 mbps=2.497 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=1144 (228.8/s,z0=1002,z%=87.59) B=1145 (229.0/s,z0=1001,z%=87.42) STAT=0 bytes=1446648 mbps=2.314 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.2s A=837 (162.3/s,z0=729,z%=87.10) B=838 (162.5/s,z0=728,z%=86.87) STAT=0 bytes=1058600 mbps=1.642 timeouts=0 pipes=0 idle~0.0%
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[STAT] +5.0s A=1116 (223.2/s,z0=976,z%=87.46) B=1118 (223.6/s,z0=980,z%=87.66) STAT=0 bytes=1411888 mbps=2.259 timeouts=0 pipes=0 idle~0.0%
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=0 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[STAT] +5.0s A=1220 (244.0/s,z0=1066,z%=87.38) B=1221 (244.2/s,z0=1069,z%=87.55) STAT=0 bytes=1542832 mbps=2.468 timeouts=0 pipes=0 idle~0.0%
+[STAT] +5.0s A=1246 (249.2/s,z0=1089,z%=87.40) B=1248 (249.6/s,z0=1089,z%=87.26) STAT=0 bytes=1576208 mbps=2.521 timeouts=0 pipes=0 idle~0.0% devTX A=0 B=0 TxCplt=0 (tot A=2442 B=2443 TxCplt=2442)
+[STAT] +5.0s A=1296 (259.2/s,z0=1136,z%=87.65) B=1295 (259.0/s,z0=1133,z%=87.49) STAT=0 bytes=1638024 mbps=2.621 timeouts=0 pipes=0 idle~0.0% devTX A=2493 B=2495 TxCplt=2494 (tot A=4935 B=4938 TxCplt=4936)
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=15.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=1.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.043s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST_STAT0] ver=1 flags=0x0005 test=1 seq=1 sentA/B=1/0 dma=112711/112719 cur_samples=0
+[HOST][SUMMARY] elapsed=0.0s A=4 (z0=2,z%=50.00) B=4 (z0=3,z%=75.00) STAT=0 timeouts=0 pipe_errors=0 dev_tot A=2 B=1 TxCplt=8506 seq=1
+[HOST][LOSS] dev_sent A=2 B=1 host_rx A=4 B=4 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=60.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][SUMMARY] elapsed=0.0s A=4 (z0=3,z%=75.00) B=4 (z0=3,z%=75.00) STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=15.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=3.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][SUMMARY] elapsed=0.0s A=4 (z0=3,z%=75.00) B=4 (z0=4,z%=100.00) STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=10.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=2.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][SUMMARY] elapsed=0.0s A=4 (z0=4,z%=100.00) B=4 (z0=3,z%=75.00) STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=10.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=2.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][SUMMARY] elapsed=0.0s A=4 (z0=3,z%=75.00) B=4 (z0=4,z%=100.00) STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=5.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.174s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][SUMMARY] elapsed=0.1s A=4 (z0=3,z%=75.00) B=4 (z0=4,z%=100.00) STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=8 tmo=3000ms window=10.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=0 interval=2.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][STAT-CTRL][ERR] [Errno 10060] Operation timed out
+[HOST][SUMMARY] elapsed=0.0s A=4 (z0=4,z%=100.00) B=4 (z0=2,z%=50.00) STAT=0 timeouts=0 pipe_errors=0
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done

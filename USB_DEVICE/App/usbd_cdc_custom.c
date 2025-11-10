@@ -561,6 +561,8 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
                 (void)USBD_LL_PrepareReceive(pdev, VND_OUT_EP, vnd_rx_buf, VND_DATA_FS_MAX_PACKET_SIZE);
               }
               g_alt_if2 = 1;
+              extern volatile uint32_t vnd_stage_alt1_ms; /* объявлено в usb_vendor_app.c */
+              if(vnd_stage_alt1_ms == 0){ vnd_stage_alt1_ms = HAL_GetTick(); }
               printf("[USB_IF2] EP#3 and EP#83 opened, receiving enabled\r\n");
             }
             USBD_CtlSendStatus(pdev);

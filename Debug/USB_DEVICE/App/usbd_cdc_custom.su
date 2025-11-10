@@ -14,10 +14,10 @@
 ../USB_DEVICE/App/usbd_cdc_custom.c:373:16:USBD_CDCVND_Init	24	static
 ../USB_DEVICE/App/usbd_cdc_custom.c:426:16:USBD_CDCVND_DeInit	16	static
 ../USB_DEVICE/App/usbd_cdc_custom.c:442:16:USBD_CDCVND_Setup	104	static
-../USB_DEVICE/App/usbd_cdc_custom.c:582:16:USBD_CDCVND_DataIn	32	static
-../USB_DEVICE/App/usbd_cdc_custom.c:621:16:USBD_CDCVND_DataOut	24	static
-../USB_DEVICE/App/usbd_cdc_custom.c:658:16:USBD_CDCVND_EP0_RxReady	32	static
-../USB_DEVICE/App/usbd_cdc_custom.c:689:17:USBD_CDCVND_GetFSCfgDesc	16	static
-../USB_DEVICE/App/usbd_cdc_custom.c:690:17:USBD_CDCVND_GetHSCfgDesc	16	static
-../USB_DEVICE/App/usbd_cdc_custom.c:691:17:USBD_CDCVND_GetOtherSpeedCfgDesc	16	static
-../USB_DEVICE/App/usbd_cdc_custom.c:692:17:USBD_CDCVND_GetDeviceQualifierDescriptor	16	static
+../USB_DEVICE/App/usbd_cdc_custom.c:584:16:USBD_CDCVND_DataIn	32	static
+../USB_DEVICE/App/usbd_cdc_custom.c:623:16:USBD_CDCVND_DataOut	24	static
+../USB_DEVICE/App/usbd_cdc_custom.c:660:16:USBD_CDCVND_EP0_RxReady	32	static
+../USB_DEVICE/App/usbd_cdc_custom.c:691:17:USBD_CDCVND_GetFSCfgDesc	16	static
+../USB_DEVICE/App/usbd_cdc_custom.c:692:17:USBD_CDCVND_GetHSCfgDesc	16	static
+../USB_DEVICE/App/usbd_cdc_custom.c:693:17:USBD_CDCVND_GetOtherSpeedCfgDesc	16	static
+../USB_DEVICE/App/usbd_cdc_custom.c:694:17:USBD_CDCVND_GetDeviceQualifierDescriptor	16	static

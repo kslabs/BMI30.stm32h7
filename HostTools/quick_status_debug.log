@@ -1,0 +1,39 @@
+[DBG] Logging to C:\Users\TEST\Documents\Work\BMI20\STM32\BMI30.stm32h7\HostTools\quick_status_debug.log
+[INFO] Running quick status for 3.0s...
+==== vendor_quick_status: debug start ====
+[DBG] Python: 3.12.3 (tags/v3.12.3:f6650f9, Apr  9 2024, 14:05:25) [MSC v.1938 64 bit (AMD64)]
+[DBG] Enumerating USB devices (PyUSB)...
+  - 8086:a12f bus=1 addr=0
+     IF#0 alt=0 eps=['0x81']
+  - 0483:3752 bus=1 addr=28
+     IF#0 alt=0 eps=['0x81', '0x01', '0x82']
+     IF#1 alt=0 eps=['0x84']
+     IF#2 alt=0 eps=['0x05', '0x85']
+  - 1a86:8072 bus=1 addr=9
+     IF#0 alt=0 eps=['0x81']
+  - 0b38:0010 bus=1 addr=6
+     IF#0 alt=0 eps=['0x81']
+     IF#1 alt=0 eps=['0x82']
+  - 2109:8817 bus=1 addr=35
+     IF#0 alt=0 eps=[]
+  - 05e3:0610 bus=1 addr=2
+     IF#0 alt=0 eps=['0x81']
+     IF#0 alt=1 eps=['0x81']
+  - cafe:4001 bus=1 addr=24
+     IF#0 alt=0 eps=['0x82']
+     IF#1 alt=0 eps=['0x01', '0x81']
+     IF#2 alt=0 eps=[]
+     IF#2 alt=1 eps=['0x03', '0x83']
+  - 1a40:0101 bus=1 addr=10
+     IF#0 alt=0 eps=['0x81']
+  - 2109:2817 bus=1 addr=11
+     IF#0 alt=0 eps=['0x81']
+  - 0458:003a bus=1 addr=5
+     IF#0 alt=0 eps=['0x81']
+[OK] IF#2 alt=1 set (Vendor endpoints active)
+[WARN] Vendor endpoints not found on IF#2, retrying set_configuration+alt=1 …
+[OK] IF#2 alt=1 set after retry
+[OK] START sent
+[WARN] Read failed ([Errno 32] Pipe error); retry IF#2 alt=1 …
+[OK] STOP sent
+==== vendor_quick_status: debug end ====

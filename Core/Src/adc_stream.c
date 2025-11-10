@@ -7,7 +7,7 @@
 
 /* Управление логированием этого модуля: по умолчанию выключено, чтобы не спамить из ISR */
 #ifndef ADC_LOG_ENABLE
-#define ADC_LOG_ENABLE 0
+#define ADC_LOG_ENABLE 1
 #endif
 #if ADC_LOG_ENABLE
 #define ADC_LOGF(...)    printf(__VA_ARGS__)
@@ -83,7 +83,7 @@ void adc_stream_stop(void) {
     1 = выключить IRQ ADC2, 0 = оставить как есть.
    ВАЖНО: для корректной синхронизации пар A/B оставляем IRQ ВКЛЮЧЕННЫМИ (0). */
 #ifndef ADC2_DISABLE_DMA_IRQS
-#define ADC2_DISABLE_DMA_IRQS 0
+#define ADC2_DISABLE_DMA_IRQS 1  /* Полностью отключаем IRQ ADC2: обработка обоих каналов идёт по ADC1 */
 #endif
 
 static volatile uint32_t dbg_dma1_half_count = 0, dbg_dma1_full_count = 0;
@@ -92,13 +92,13 @@ extern DMA_HandleTypeDef hdma_adc2;
 
 // --- Профили ---
 static const adc_stream_profile_t g_profiles[ADC_PROFILE_COUNT] = {
-    { .samples_per_buf = 1360, .buf_rate_hz = 200, .fs_hz = 1360u * 200u }, // A: 200 Hz, 1360 samples
-    { .samples_per_buf = 912, .buf_rate_hz = 300, .fs_hz = 912u * 300u },  // B default
+    { .samples_per_buf = 1360, .buf_rate_hz = 200, .fs_hz = 1360u * 200u }, // A: 200 Hz, 1360 samples (DEFAULT!)
+    { .samples_per_buf = 912, .buf_rate_hz = 300, .fs_hz = 912u * 300u },  // B
     { .samples_per_buf = 944, .buf_rate_hz = 300, .fs_hz = 944u * 300u },  // C high
     { .samples_per_buf = 976, .buf_rate_hz = 300, .fs_hz = 976u * 300u },  // D max
 };
-static uint8_t g_active_profile = ADC_PROFILE_B_DEFAULT;
-static uint16_t g_active_samples = 912; // runtime N
+static uint8_t g_active_profile = 0;  // Профиль A (200 Hz) по умолчанию
+static uint16_t g_active_samples = 1360; // runtime N для 200 Hz
 
 // Выравнивание по линии кэша для снижения побочных эффектов DCache (32 байт)
 __attribute__((aligned(32))) uint16_t adc1_buffers[FIFO_FRAMES][MAX_FRAME_SAMPLES];
@@ -111,6 +111,14 @@ volatile uint32_t frame_sent_seq = 0;    // успешно отправлено 
 volatile uint32_t frame_backlog_max = 0; // максимальный (wr-rd)
 volatile uint32_t adc_last_full0_ms = 0; // время последнего полного DMA ADC1
 volatile uint32_t adc_last_full1_ms = 0; // время последнего полного DMA ADC2
+
+// Новые независимые счётчики по каналам (A=0, B=1)
+volatile uint32_t adc_ch_wr_seq[2] = {0,0};     // записано буферов (ISR) по каждому каналу
+volatile uint32_t adc_ch_rd_seq[2] = {0,0};     // выдано потребителю по каналу
+volatile uint32_t adc_ch_overflow_drops[2] = {0,0}; // переполнения по каналу
+
+// ДИАГНОСТИКА: счётчики нулевых буферов (детектируем проблемы с ADC/триггером)
+volatile uint32_t adc_ch_zero_buffers[2] = {0,0}; // количество буферов с нулевым содержимым (по каналу A/B)
 
 // Debug: DMA event counters
 static volatile uint32_t dma_half0 = 0, dma_full0 = 0, dma_half1 = 0, dma_full1 = 0;
@@ -179,10 +187,15 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
     frame_wr_seq = frame_rd_seq = 0;
     frame_overflow_drops = 0;
     frame_backlog_max = 0;
+    /* Сброс независимых счётчиков по каналам */
+    adc_ch_wr_seq[0] = adc_ch_wr_seq[1] = 0;
+    adc_ch_rd_seq[0] = adc_ch_rd_seq[1] = 0;
+    adc_ch_overflow_drops[0] = adc_ch_overflow_drops[1] = 0;
+    adc_ch_zero_buffers[0] = adc_ch_zero_buffers[1] = 0; // ДИАГНОСТИКА: сброс счётчиков нулевых буферов
     /* Сброс новой синхронизации пар */
     for (unsigned i = 0; i < FIFO_FRAMES; ++i) s_pair_ready_mask[i] = 0;
     s_pair_ready_idx = 0;
-    s_next_ring_index = 2 % FIFO_FRAMES; // M0->buf0, M1->buf1 уже заняты при старте; начнём с 2
+    s_next_ring_index = 0;  // Начинаем с buf[0], после TC перейдём на buf[1], потом buf[2]... buf[31]→buf[0]
     #if DIAG_DISABLE_ADC_DMA
         ADC_LOGF("[ADC][DIAG] DMA start suppressed (DIAG_DISABLE_ADC_DMA=1) total_samples=%lu\r\n", (unsigned long)total_samples);
         return HAL_OK;
@@ -211,20 +224,15 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
             HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
         #endif
         #endif
-        /* Включаем Double-Buffer Mode (DBM) и задаём второй банк M1 на buf[1] */
+        /* DBM НЕ используется - DMA перезапускается вручную в callback на новый буфер.
+           Отключаем Half Transfer IRQ (оставляем только Transfer Complete) */
         {
             DMA_Stream_TypeDef *st = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
-            st->M1AR = (uint32_t)adc1_buffers[1];
-            st->CR  |= (uint32_t)(1u<<18); /* DBM */
-            /* Отключаем HTIE (half) — оставляем только TC */
-            st->CR &= ~((uint32_t)(1u<<3));
+            st->CR &= ~((uint32_t)(1u<<3));  /* Отключаем HTIE */
         }
         #if !DIAG_SINGLE_ADC1
         {
-            DMA_Stream_TypeDef *st = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
-            st->M1AR = (uint32_t)adc2_buffers[1];
-            st->CR  |= (uint32_t)(1u<<18); /* DBM */
-            /* Для ADC2 все IRQ уже выключены выше */
+            /* Для ADC2 все IRQ уже выключены выше при ADC2_DISABLE_DMA_IRQS=1 */
         }
         #endif
         /* Одноразовый вывод регистров DMA для ADC1 */
@@ -261,6 +269,22 @@ void adc_stream_init(void) {
 
 HAL_StatusTypeDef adc_stream_start(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a2) {
     s_adc1 = a1; s_adc2 = a2;
+    
+    // КРИТИЧЕСКИ ВАЖНО: Калибровка ADC перед запуском DMA для точности данных
+    ADC_LOGF("[ADC][CALIB] Starting ADC1 calibration...\r\n");
+    if (HAL_ADCEx_Calibration_Start(a1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) {
+        ADC_LOGF("[ADC][CALIB] ADC1 calibration FAILED!\r\n");
+        return HAL_ERROR;
+    }
+    ADC_LOGF("[ADC][CALIB] ADC1 calibration OK\r\n");
+    
+    ADC_LOGF("[ADC][CALIB] Starting ADC2 calibration...\r\n");
+    if (HAL_ADCEx_Calibration_Start(a2, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) {
+        ADC_LOGF("[ADC][CALIB] ADC2 calibration FAILED!\r\n");
+        return HAL_ERROR;
+    }
+    ADC_LOGF("[ADC][CALIB] ADC2 calibration OK\r\n");
+    
     /* Не переустанавливаем профиль по умолчанию здесь.
        Используем текущий g_active_profile (может быть задан хостом через SET_PROFILE до START).
        При инициализации по умолчанию он уже установлен в ADC_PROFILE_B_DEFAULT. */
@@ -276,6 +300,38 @@ HAL_StatusTypeDef adc_stream_restart(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a
     if (a1) s_adc1 = a1;
     if (a2) s_adc2 = a2;
     return adc_stream_apply_profile();
+}
+
+// Проверка буфера на нулевое содержимое (для диагностики проблем ADC)
+static inline uint8_t is_buffer_all_zeros(uint16_t *buf, uint16_t samples) {
+    for (uint16_t i = 0; i < samples; i++) {
+        if (buf[i] != 0) return 0; // найден ненулевой элемент
+    }
+    return 1; // все нули
+}
+
+// Получить один кадр конкретного канала (независимая модель). Возвращает 1 если кадр получен.
+uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples) {
+    if (ch > 1 || !buf || !samples) return 0;
+    __disable_irq();
+    if (adc_ch_rd_seq[ch] == adc_ch_wr_seq[ch]) {
+        __enable_irq();
+        return 0; // нет новых
+    }
+    uint32_t seq = adc_ch_rd_seq[ch]++;
+    __enable_irq();
+    uint32_t index = seq & (FIFO_FRAMES - 1u);
+    *buf = (ch==0) ? adc1_buffers[index] : adc2_buffers[index];
+    *samples = g_active_samples;
+    
+    // ДИАГНОСТИКА: проверяем буфер на нулевое содержимое
+    if (is_buffer_all_zeros(*buf, *samples)) {
+        adc_ch_zero_buffers[ch]++;
+        ADC_LOGF("[ADC][DIAG] CH%u: zero buffer detected! seq=%lu idx=%lu zeros_total=%lu\r\n", 
+                 ch, (unsigned long)seq, (unsigned long)index, (unsigned long)adc_ch_zero_buffers[ch]);
+    }
+    
+    return 1;
 }
 
 uint8_t adc_get_frame(uint16_t **ch1, uint16_t **ch2, uint16_t *samples) {
@@ -307,6 +363,14 @@ void adc_stream_get_debug(adc_stream_debug_t *out) {
     out->frame_backlog_max = frame_backlog_max;
     out->dma_half0 = dma_half0; out->dma_full0 = dma_full0;
     out->dma_half1 = dma_half1; out->dma_full1 = dma_full1;
+    out->ch_wr_seq[0] = adc_ch_wr_seq[0];
+    out->ch_wr_seq[1] = adc_ch_wr_seq[1];
+    out->ch_rd_seq[0] = adc_ch_rd_seq[0];
+    out->ch_rd_seq[1] = adc_ch_rd_seq[1];
+    out->ch_overflow_drops[0] = adc_ch_overflow_drops[0];
+    out->ch_overflow_drops[1] = adc_ch_overflow_drops[1];
+    out->ch_zero_buffers[0] = adc_ch_zero_buffers[0];
+    out->ch_zero_buffers[1] = adc_ch_zero_buffers[1];
     out->active_samples = g_active_samples;
     out->reserved = 0;
 }
@@ -316,6 +380,12 @@ void __attribute__((weak)) adc_stream_on_new_frames(uint32_t frames_added) { (vo
 
 // --- HAL callbacks ---
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
+    /* В режиме DMA_NORMAL с ручным перезапуском Half Transfer не используется.
+       Игнорируем этот callback полностью. */
+    (void)hadc;
+    return;
+    
+    #if 0  // Старый код с обработкой Half Transfer (не нужен в NORMAL mode)
     if (hadc->Instance == (s_adc1 ? s_adc1->Instance : NULL)) {
     dma_half0++; dbg_dma1_half_count++;
 #if DIAG_DMA_CALLBACK_LIMIT
@@ -332,9 +402,18 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
     } else if (hadc->Instance == (s_adc2 ? s_adc2->Instance : NULL)) {
         dma_half1++; // используем только для диагностики
     }
+    #endif  // #if 0
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+    static uint32_t callback_entry_count = 0;  // ДИАГНОСТИКА: счётчик входов в callback
+    callback_entry_count++;
+    
+    /* В CIRCULAR mode HAL может снова включить HTIE при перезапуске - отключаем его.
+       В CIRCULAR DMA автоматически перезапускается, но мы хотим только TC IRQ, не HT. */
+    DMA_Stream_TypeDef *st_adc1 = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
+    st_adc1->CR &= ~((uint32_t)(1u<<3));  /* Отключаем HTIE каждый раз */
+    
     if (hadc->Instance == (s_adc1 ? s_adc1->Instance : NULL)) {
     dma_full0++; dbg_dma1_full_count++;
 #if DIAG_DMA_CALLBACK_LIMIT
@@ -357,40 +436,86 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
             uint32_t done_idx1 = adc_addr_to_index(done_addr1, adc1_buffers);
             if (done_idx1 < FIFO_FRAMES) { s_pair_ready_mask[done_idx1] |= 0x01u; }
 
-            /* Продвинем адрес свободного банка DMA на следующий слот кольца — для ADC1 и ADC2.
-               В DBM разрешено писать в неактивный банк: определяем по биту CT (CR[19]). */
-            uint32_t idx = s_next_ring_index; // выбрать следующий буфер для назначения в свободный банк
-            if (idx >= FIFO_FRAMES) idx &= (FIFO_FRAMES-1u);
-            if (cr1 & (1u<<19)) {
-                /* CT=1 => сейчас активен M1, значит завершился M0 -> переадресуем M0 на следующий */
-                st1->M0AR = (uint32_t)adc1_buffers[idx];
-            } else {
-                /* CT=0 => активен M0, завершился M1 */
-                st1->M1AR = (uint32_t)adc1_buffers[idx];
+            // СИНХРОННАЯ публикация обоих каналов A и B (триггер TIM2 200Hz запускает оба ADC одновременно)
+            if (done_idx1 < FIFO_FRAMES) {
+                // Канал A
+                adc_ch_wr_seq[0]++;
+                uint32_t backlogA = adc_ch_wr_seq[0] - adc_ch_rd_seq[0];
+                if (backlogA > FIFO_FRAMES) {
+                    uint32_t excess = backlogA - FIFO_FRAMES;
+                    adc_ch_overflow_drops[0] += excess;
+                    adc_ch_rd_seq[0] += excess; // drop oldest
+                }
+                
+                #if !DIAG_SINGLE_ADC1
+                // Канал B обрабатываем СИНХРОННО с A (оба ADC от TIM2 200Hz)
+                // Определяем индекс буфера для ADC2 (синхронен с ADC1)
+                DMA_Stream_TypeDef *st2 = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
+                uint32_t cr2 = st2->CR;
+                uint32_t ct2 = (cr2 >> 19) & 1u;
+                uint32_t done_addr2 = ct2 ? st2->M0AR : st2->M1AR;
+                uint32_t done_idx2 = adc_addr_to_index(done_addr2, adc2_buffers);
+                
+                if (done_idx2 < FIFO_FRAMES) {
+                    adc_ch_wr_seq[1]++;
+                    uint32_t backlogB = adc_ch_wr_seq[1] - adc_ch_rd_seq[1];
+                    if (backlogB > FIFO_FRAMES) {
+                        uint32_t excess = backlogB - FIFO_FRAMES;
+                        adc_ch_overflow_drops[1] += excess;
+                        adc_ch_rd_seq[1] += excess;
+                    }
+                    s_pair_ready_mask[done_idx2] |= 0x02u;  // Помечаем канал B готовым
+                    dma_full1++;  // Увеличиваем счётчик B синхронно с A
+                }
+                #endif
             }
+
+            /* После TC прерывания перезапускаем DMA на следующий буфер в кольце.
+               В DMA_NORMAL mode DMA останавливается после TC.
+               Напрямую переназначаем адрес и перезапускаем DMA stream. */
+            
+            uint32_t next_idx = (s_next_ring_index + 1u) & (FIFO_FRAMES - 1u);
+            uint32_t total_samples = (uint32_t)g_active_samples;
+            
+            /* Прямое управление DMA без HAL (быстрее и безопаснее в ISR) */
+            DMA_Stream_TypeDef *dma1_stream = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
+            
+            // Отключаем DMA stream
+            dma1_stream->CR &= ~DMA_SxCR_EN;
+            // Ждём пока DMA остановится
+            while(dma1_stream->CR & DMA_SxCR_EN);
+            
+            // Переназначаем адрес памяти на новый буфер
+            dma1_stream->M0AR = (uint32_t)adc1_buffers[next_idx];
+            // Перезагружаем счётчик
+            dma1_stream->NDTR = total_samples;
+            // Очищаем флаги прерываний для STM32H7
+            __HAL_DMA_CLEAR_FLAG(&hdma_adc1, __HAL_DMA_GET_TC_FLAG_INDEX(&hdma_adc1));
+            __HAL_DMA_CLEAR_FLAG(&hdma_adc1, __HAL_DMA_GET_HT_FLAG_INDEX(&hdma_adc1));
+            __HAL_DMA_CLEAR_FLAG(&hdma_adc1, __HAL_DMA_GET_TE_FLAG_INDEX(&hdma_adc1));
+            // Включаем DMA stream заново
+            dma1_stream->CR |= DMA_SxCR_EN;
+            
             #if !DIAG_SINGLE_ADC1
-            DMA_Stream_TypeDef *st2 = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
-            uint32_t cr2 = st2->CR;
-            if (cr2 & (1u<<19)) {
-                st2->M0AR = (uint32_t)adc2_buffers[idx];
-            } else {
-                st2->M1AR = (uint32_t)adc2_buffers[idx];
-            }
+            /* Аналогично для ADC2 */
+            DMA_Stream_TypeDef *dma2_stream = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
+            dma2_stream->CR &= ~DMA_SxCR_EN;
+            while(dma2_stream->CR & DMA_SxCR_EN);
+            dma2_stream->M0AR = (uint32_t)adc2_buffers[next_idx];
+            dma2_stream->NDTR = total_samples;
+            __HAL_DMA_CLEAR_FLAG(&hdma_adc2, __HAL_DMA_GET_TC_FLAG_INDEX(&hdma_adc2));
+            __HAL_DMA_CLEAR_FLAG(&hdma_adc2, __HAL_DMA_GET_HT_FLAG_INDEX(&hdma_adc2));
+            __HAL_DMA_CLEAR_FLAG(&hdma_adc2, __HAL_DMA_GET_TE_FLAG_INDEX(&hdma_adc2));
+            dma2_stream->CR |= DMA_SxCR_EN;
             #endif
-            s_next_ring_index = (idx + 1u) & (FIFO_FRAMES - 1u);
+            
+            s_next_ring_index = next_idx;
         } while(0);
-        /* Попробуем опубликовать готовые подряд пары */
-        adc_mark_ready_and_publish(0x01);
+        /* Попробуем опубликовать готовые подряд пары (0x03 = оба канала A|B готовы синхронно) */
+        adc_mark_ready_and_publish(0x03);
     } else if (hadc->Instance == (s_adc2 ? s_adc2->Instance : NULL)) {
-        dma_full1++;
-        adc_last_full1_ms = HAL_GetTick();
-        /* Определим, какой банк у ADC2 завершился, отметим готовность для CH1, и попробуем опубликовать пару */
-        DMA_Stream_TypeDef *st2 = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
-        uint32_t cr2 = st2->CR;
-        uint32_t ct2 = (cr2 >> 19) & 1u;
-        uint32_t done_addr2 = ct2 ? st2->M0AR : st2->M1AR;
-        uint32_t done_idx2 = adc_addr_to_index(done_addr2, adc2_buffers);
-        if (done_idx2 < FIFO_FRAMES) { s_pair_ready_mask[done_idx2] |= 0x02u; }
-        adc_mark_ready_and_publish(0x02);
+        /* ADC2 callback НЕ ДОЛЖЕН вызываться при ADC2_DISABLE_DMA_IRQS=1
+           Если всё же вызвался - это ошибка конфигурации */
+        ADC_LOGF("[ADC][ERR] ADC2 callback unexpected! IRQ should be disabled\r\n");
     }
 }

@@ -140,7 +140,7 @@ enum {
 };
 
 #define MAX_FRAME_SAMPLES 1360u   // Максимум из поддерживаемых профилей (для статических буферов)
-#define FIFO_FRAMES       8u      // Глубина FIFO (кратно 4: half/full DMA = 4 кадра)
+#define FIFO_FRAMES       32u     // Глубина FIFO: увеличена с 8 до 32 для диагностики и предобработки (16 бит ADC)
 
 // Компиляционный дефолт (будет заменён рантайм профилем)
 #define FRAME_SAMPLES_DEFAULT 912u

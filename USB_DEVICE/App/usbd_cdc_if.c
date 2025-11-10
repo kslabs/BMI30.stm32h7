@@ -299,34 +299,36 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
     printf("=====================\r\n");
   }
   
-  // VER/VERSION - версия firmware
+  // VER/VERSION - версия firmware (унифицированный формат с UART1)
   if ((*Len >= 3 && Buf[0] == 'V' && Buf[1] == 'E' && Buf[2] == 'R') ||
       (*Len >= 7 && Buf[0] == 'V' && Buf[1] == 'E' && Buf[2] == 'R' && 
                     Buf[3] == 'S' && Buf[4] == 'I' && Buf[5] == 'O' && Buf[6] == 'N')) {
-    printf("\r\n=== FIRMWARE VERSION ===\r\n");
+    printf("\r\n=== FIRMWARE VERSION (CDC) ===\r\n");
     printf("Version: %s\r\n", FW_VERSION_STR);
     printf("Git:     %s\r\n", fw_git_hash);
     printf("Built:   %s %s\r\n", fw_build_date, fw_build_time);
     printf("VND_PAIR_BUFFERS: %d\r\n", 8);
-    printf("========================\r\n");
+    printf("================================\r\n");
   }
   
-  // STATUS - текущее состояние устройства  
+  // STATUS - текущее состояние устройства (унифицированный формат)
   if (*Len >= 6 && Buf[0] == 'S' && Buf[1] == 'T' && Buf[2] == 'A' && 
                    Buf[3] == 'T' && Buf[4] == 'U' && Buf[5] == 'S') {
-    printf("\r\n=== DEVICE STATUS ===\r\n");
+    printf("\r\n=== DEVICE STATUS (CDC) ===\r\n");
     printf("Uptime: %lu ms\r\n", HAL_GetTick());
     printf("Use 'PERF' or 'FPS' for detailed statistics\r\n");
-    printf("=====================\r\n");
+    printf("==============================\r\n");
   }
   
   // FPS - только FPS статистика (легковесная версия PERF)
   if (*Len >= 3 && Buf[0] == 'F' && Buf[1] == 'P' && Buf[2] == 'S') {
+    // Re-enabled FPS stats reporting
     vnd_report_fps_stats();
   }
   
   // PERF - полная статистика производительности
   if (*Len >= 4 && Buf[0] == 'P' && Buf[1] == 'E' && Buf[2] == 'R' && Buf[3] == 'F') {
+    // Re-enabled detailed performance stats reporting
     vnd_print_perf_stats();
   }
   

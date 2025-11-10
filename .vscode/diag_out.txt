@@ -1,0 +1,32 @@
+﻿[DIAG] Port=COM4 Baud=115200
+[DIAG] >>> HELP
+HELP
+
+
+=== DEBUG COMMANDS (UART1) ===
+VER     - firmware version (git commit, build date)
+STATUS  - current state (streaming, counters, fps)
+PERF    - performance stats (prepare/tx/interval timings)
+FPS     - FPS statistics only
+RESET   - software reset (reboot device)
+HELP    - this help message
+===============================
+[DIAG] >>> VER
+VER
+
+
+=== FIRMWARE VERSION (UART1) ===
+Version: 1.2.3
+Git:     nogit
+Built:   2025-11-08 13:51:09
+VND_PAIR_BUFFERS: 8
+================================
+[DIAG] >>> STATUS
+STATU
+
+[UART] Unknown command: 'STATU'
+[DIAG] >>> FPS
+FPS
+[DIAG] >>> PERF
+
+PERF

@@ -23,8 +23,10 @@ extern "C" {
 #endif
 
 /* Флаги статуса времени выполнения */
-#define VND_STFLAG_STREAMING    0x0001u
-#define VND_STFLAG_DIAG_ACTIVE  0x0002u
+#define VND_STFLAG_STREAMING      0x0001u  /* streaming включён (после START) */
+#define VND_STFLAG_DIAG_ACTIVE    0x0002u  /* активен диагностический режим */
+#define VND_STFLAG_PENDING_INIT   0x0004u  /* после START ещё нет ни одного кадра A/B (ожидание инициализации) */
+#define VND_STFLAG_STREAM_ACTIVE  0x0008u  /* поток действительно активен (есть переданные A/B) */
 
 /* Общие константы формата кадров/параметров (централизовано) */
 #ifndef VND_MAX_SAMPLES
@@ -92,10 +94,17 @@ typedef struct {
     uint16_t pair_idx;          /* pair_fill_idx (hi8) <<8 | pair_send_idx (lo8) */
     uint16_t last_tx_len;       /* длина последней передачи */
     uint32_t cur_stream_seq;    /* текущее значение stream_seq */
-    uint16_t reserved3;         /* паддинг до 64 байт */
-} vnd_status_v1_t; /* 64 байта */
+    uint16_t reserved3;         /* паддинг до 64 байт (v1 legacy конец) */
+    /* === Расширение v2 (добавлено после 64B, хосты, ожидающие 64B, работают как прежде) === */
+    uint32_t stage_alt1_ms;     /* метка HAL_GetTick() при последнем SET_INTERFACE alt=1 */
+    uint32_t stage_start_ms;    /* метка START_STREAM (start_cmd_ms) */
+    uint32_t stage_first_frame_ms; /* метка первого успешного TXCPLT рабочего кадра (A или B) */
+    /* === Расширение v3 (ДИАГНОСТИКА: счётчики нулевых буферов для выявления проблем ADC) === */
+    uint32_t ch_zero_buffers_A; /* количество буферов ADC1 с полностью нулевым содержимым */
+    uint32_t ch_zero_buffers_B; /* количество буферов ADC2 с полностью нулевым содержимым */
+} vnd_status_v1_t; /* 64B (v1) + 12B (v2 ext) + 8B (v3 ext) = 84 байта */
 #pragma pack(pop)
-_Static_assert(sizeof(vnd_status_v1_t) == 64, "vnd_status_v1_t must be 64 bytes");
+_Static_assert(sizeof(vnd_status_v1_t) == 84, "vnd_status_v1_t must be 84 bytes (v3 extended)");
 
 /* Публичные переменные */
 extern volatile uint8_t vnd_tx_kick; /* Флаг пробуждения таска после события */
