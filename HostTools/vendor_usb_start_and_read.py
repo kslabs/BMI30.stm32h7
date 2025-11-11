@@ -462,6 +462,14 @@ def main():
     except Exception as e:
         log_line(f"[HOST][WARN] SetInterface alt=1 failed: {e}")
 
+    # Stop any ongoing stream first (in case device was already streaming)
+    try:
+        dev.write(OUT_EP, bytes([0x21]), timeout=500)  # CMD_STOP
+        log_line("[HOST] Sent STOP command (cleanup before config)")
+        time.sleep(0.2)  # дадим устройству время остановиться
+    except Exception:
+        pass  # игнорируем ошибки, если устройство уже остановлено
+
     # Configure windows and block rate before START
     try:
         payload = struct.pack('<BHHHH', 0x10, WIN0_START, WIN0_LEN, WIN1_START, WIN1_LEN)

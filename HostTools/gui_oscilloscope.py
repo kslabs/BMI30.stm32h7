@@ -257,6 +257,13 @@ def main():
 
     dev = find_dev()
 
+    # Stop any ongoing stream first
+    try:
+        send_cmd(dev, bytes([CMD_STOP]))
+        time.sleep(0.2)  # дадим устройству время остановиться
+    except Exception:
+        pass  # игнорируем ошибки, если устройство уже остановлено
+
     # Configure stream
     win_payload = [CMD_SET_WINDOWS] + le16(100) + le16(args.ns) + le16(700) + le16(args.ns)
     send_cmd(dev, bytes(win_payload))
