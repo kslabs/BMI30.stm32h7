@@ -918,7 +918,7 @@ static void vnd_prepare_pair(void)
             return; /* нет новых данных */
         }
         ch1 = tb0; ch2 = tb1;
-        samples = (avail != 0) ? avail : VND_FULL_DEFAULT_SAMPLES;
+        samples = (avail != 0) ? avail : 302;  /* МАРКЕР #2 - fallback если avail=0 */
     }
 #else
     /* last-buffer-wins: берём последний доступный кадр; если накопилась очередь >1, пропускаем старые */
@@ -950,20 +950,27 @@ static void vnd_prepare_pair(void)
         /* Нет новых данных от АЦП — ничего не отправляем */
         return;
     }
-    /* Применяем усечение до блокировки формата */
-    uint16_t effective = samples;
-    /* Применим явный лимит от хоста (samples_per_frame) если задан */
-    if(vnd_frame_samples_req && vnd_frame_samples_req < effective) effective = vnd_frame_samples_req;
-    if(vnd_trunc_samples && vnd_trunc_samples < effective) effective = vnd_trunc_samples;
+    /* Выбор целевого размера кадра: профиль ADC с учётом ограничений от хоста */
+    uint16_t profile_ns = adc_stream_get_active_samples();
+    uint16_t target_ns = profile_ns;
+    if(vnd_frame_samples_req && vnd_frame_samples_req < target_ns) target_ns = vnd_frame_samples_req;
+    if(vnd_trunc_samples && vnd_trunc_samples < target_ns) target_ns = vnd_trunc_samples;
+    if(target_ns > VND_MAX_SAMPLES) target_ns = VND_MAX_SAMPLES;
+    /* Фиксируем формат только на target_ns. Никогда не локаемся на меньшем значении. */
     if(cur_samples_per_frame == 0){
-        if(effective > VND_MAX_SAMPLES) effective = VND_MAX_SAMPLES;
-        cur_samples_per_frame = effective;
+        /* Если данных текущего кадра меньше чем target_ns, подождём следующую итерацию. */
+        if(samples < target_ns){
+            VND_LOG("WAIT_FULL: have=%u need=%u (profile=%u)", samples, target_ns, profile_ns);
+            return;
+        }
+        cur_samples_per_frame = target_ns;
         cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)cur_samples_per_frame * 2u);
-    VND_LOG("SIZE_LOCK %u (raw=%u trunc=%u)", cur_samples_per_frame, samples, vnd_trunc_samples);
-    /* Не меняем stream_seq здесь: seq инкрементируется только после завершения кадра B (TxCplt) */
+        VND_LOG("SIZE_LOCK %u (raw=%u req=%u trunc=%u)", cur_samples_per_frame, samples, vnd_frame_samples_req, vnd_trunc_samples);
+        cdc_logf("SIZE_LOCK raw=%u req=%u trunc=%u -> lock=%u", samples, vnd_frame_samples_req, vnd_trunc_samples, cur_samples_per_frame);
     }
-    if(effective != cur_samples_per_frame){
-        VND_LOG("SIZE_MISMATCH: eff=%u cur=%u raw=%u", effective, cur_samples_per_frame, samples);
+    /* После фиксации не отправляем неполные кадры */
+    if(samples < cur_samples_per_frame){
+        VND_LOG("SKIP_PARTIAL: have=%u locked=%u", samples, cur_samples_per_frame);
         dbg_partial_frame_abort++;
         return;
     }
@@ -1065,6 +1072,8 @@ static int vnd_async_try_tx(void)
                     if(eff > VND_MAX_SAMPLES) eff = VND_MAX_SAMPLES;
                     cur_samples_per_frame = eff;
                     cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)eff*2u);
+                    /* ДИАГНОСТИКА: выводим параметры lock */
+                    cdc_logf("FRAME_LOCK ch=%u adc_samp=%u req=%u trunc=%u -> eff=%u", ch, samples, vnd_frame_samples_req, vnd_trunc_samples, eff);
                 }
                 uint16_t eff = cur_samples_per_frame;
                 if(eff > samples) eff = samples; /* защита, если размер профиля уменьшился внезапно */
@@ -2041,7 +2050,16 @@ void USBD_VND_TxCplt(void)
             if(vnd_pending_init){ vnd_pending_init = 0; }
             vnd_stream_active = 1;
             /* Учёт статистики по каналам (оценка сэмплов по текущему размеру кадра) */
-            uint16_t ns = cur_samples_per_frame ? cur_samples_per_frame : VND_FULL_DEFAULT_SAMPLES;
+            /* Статистика: если размер ещё не зафиксирован, используем активный профиль с учётом ограничений */
+            uint16_t ns = cur_samples_per_frame;
+            if(ns == 0){
+                uint16_t eff = adc_stream_get_active_samples();
+                if(eff == 0) eff = 1;
+                if(vnd_frame_samples_req && vnd_frame_samples_req < eff) eff = vnd_frame_samples_req;
+                if(vnd_trunc_samples && vnd_trunc_samples < eff) eff = vnd_trunc_samples;
+                if(eff > VND_MAX_SAMPLES) eff = VND_MAX_SAMPLES;
+                ns = eff;
+            }
             if(ch==0){ dbg_tx_sent++; dbg_sent_ch0_total++; dbg_sent_seq_adc0++; vnd_total_tx_samples += (uint64_t)ns; fps_frame_a_count++; }
             else      { dbg_tx_sent++; dbg_sent_ch1_total++; dbg_sent_seq_adc1++; vnd_total_tx_samples += (uint64_t)ns; fps_frame_b_count++; }
             /* Отпускаем канал и продолжаем передачу */
@@ -2249,9 +2267,18 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 /* Снимем DMA снапшот для контроля таймаута */
                 adc_stream_debug_t dbg; adc_stream_get_debug(&dbg);
                 dma_snapshot_full0 = dbg.dma_full0; dma_snapshot_full1 = dbg.dma_full1;
-                /* Зафиксировать размер кадра по умолчанию для полного режима (300 семплов) */
+                /* Зафиксировать размер кадра для полного режима из vnd_frame_samples_req (если не задан хостом, используем дефолт) */
                 if (full_mode) {
-                    vnd_frame_samples_req = VND_FULL_DEFAULT_SAMPLES;
+                    uint16_t before = vnd_frame_samples_req;
+                    /* Если хост не задал vnd_frame_samples_req через SET_FRAME_SAMPLES, используем дефолт */
+                    if(vnd_frame_samples_req == 0) {
+                        /* Если хост не задал размер кадра, используем активный размер профиля ADC */
+                        uint16_t prof_ns = adc_stream_get_active_samples();
+                        if(prof_ns == 0) prof_ns = 1; /* защита от нуля */
+                        vnd_frame_samples_req = prof_ns;
+                    }
+                    VND_LOG("START_CFG req=%u trunc=%u", vnd_frame_samples_req, vnd_trunc_samples);
+                    cdc_logf("START_CFG full_mode req_before=%u req_after=%u trunc=%u", before, vnd_frame_samples_req, vnd_trunc_samples);
                     vnd_recompute_pair_timing(vnd_frame_samples_req);
                     cur_samples_per_frame = 0; /* снять lock, чтобы применилось немедленно */
                     cur_expected_frame_size = 0;
@@ -2354,7 +2381,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             if(len >= 3){
                 uint16_t ns = (uint16_t)(data[1] | (data[2] << 8));
                 if(ns > VND_MAX_SAMPLES) ns = VND_MAX_SAMPLES;
-                vnd_frame_samples_req = ns;
+                vnd_frame_samples_req = ns; /* Использовать значение хоста напрямую */
                 /* Применим к диагностике сразу, чтобы DIAG шёл с нужным размером */
                 diag_samples = (ns != 0) ? ns : diag_samples;
                 vnd_recompute_pair_timing(vnd_frame_samples_req);
@@ -2567,8 +2594,8 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 if(full_mode){
                     /* Возврат к нормальному режиму ADC */
                     diag_mode_active = 0; diag_prepared_seq = 0xFFFFFFFFu;
-                    /* При входе в полный режим – задать дефолт 300 сэмплов, снять lock и пересчитать период */
-                    vnd_frame_samples_req = VND_FULL_DEFAULT_SAMPLES;
+                    /* При входе в полный режим – использовать фактический размер профиля ADC, снять lock и пересчитать период */
+                    vnd_frame_samples_req = 0; /* 0 = использовать g_active_samples из профиля */
                     cur_samples_per_frame = 0;
                     cur_expected_frame_size = 0;
                     vnd_recompute_pair_timing(vnd_frame_samples_req);
@@ -2601,8 +2628,15 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             {
                 uint8_t profile = data[1];
                 uint8_t prof_id = ADC_PROFILE_B_DEFAULT;
-                if(profile == 1) prof_id = ADC_PROFILE_A_200HZ;
-                else if(profile == 2) prof_id = ADC_PROFILE_B_DEFAULT;
+                // Маппинг host profile -> firmware profile ID:
+                // 0 -> ADC_PROFILE_A_200HZ (1360 samples @ 200Hz)
+                // 1 -> ADC_PROFILE_B_DEFAULT (912 samples @ 300Hz)
+                // 2 -> ADC_PROFILE_C_HIGH (944 samples @ 300Hz)
+                // 3 -> ADC_PROFILE_D_MAX (976 samples @ 300Hz)
+                if(profile == 0) prof_id = ADC_PROFILE_A_200HZ;
+                else if(profile == 1) prof_id = ADC_PROFILE_B_DEFAULT;
+                else if(profile == 2) prof_id = ADC_PROFILE_C_HIGH;
+                else if(profile == 3) prof_id = ADC_PROFILE_D_MAX;
                 int rc = adc_stream_set_profile(prof_id);
                 VND_LOG("SET_PROFILE %u -> prof_id=%u rc=%d", profile, prof_id, rc);
                 /* ДИАГНОСТИКА: вывести текущее состояние после смены профиля */

@@ -787,10 +787,12 @@
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope.py\" --ns 300 --profile 1 --single"
+				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope.py\" --ns 0 --profile 0" 
 			],
 			"isBackground": false,
-			"group": "none"
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"},
+			"detail": "Dual-channel auto ns (profile 0 full buffer); remove --single to show оба канала"
 		},
 		{
 			"label": "Locate GUI oscilloscope (path)",

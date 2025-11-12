@@ -32,6 +32,7 @@ CMD_SET_FRAME_SAMPLES=0x17
 CMD_SET_FULL_MODE=0x13
 CMD_SET_PROFILE=0x14
 CMD_SET_CHMODE=0x19  # 0=A-only, 1=B-only, 2=both
+CMD_SET_ASYNC_MODE=0x18
 
 HDR_SIZE=32
 
@@ -79,18 +80,27 @@ def parse_hdr(b: bytes):
     }
 
 def reader_thread(dev, out_q: queue.Queue, stop_ev: threading.Event):
-    # Перенесём логику блоков в статус
+    """
+    Надёжный ридер: собираем полные кадры из 512-байтных кусочков (WinUSB/libusb).
+    Выдаём в очередь только полностью собранные кадры A/B (h, payload_full).
+    """
     global g_status
-    last_seq = None
+    rx = bytearray()
+    last_pkt_len = None
+    pkt_count = 0
     while not stop_ev.is_set():
         try:
-            data = dev.read(EP_IN, 4096, timeout=1000)
-            # Успешное чтение — сбросим счётчик подряд идущих таймаутов
+            # Чтение «сырых» кусков, обычно 512B; размер 512 даёт предсказуемое поведение на WinUSB
+            chunk = dev.read(EP_IN, 512, timeout=1000)
+            pkt_count += 1
+            if pkt_count % 10 == 0 or len(chunk) != last_pkt_len:
+                print(f"[PKT] #{pkt_count} len={len(chunk)} bytes (frame: 32+ns*2; ns=1360 => 2752)")
+            last_pkt_len = len(chunk)
+            rx += bytes(chunk)
             if g_status is not None:
                 g_status.on_read_ok()
         except usb.core.USBError as e:
-            # errno 110 = timeout
-            if getattr(e, 'errno', None) == 110:
+            if getattr(e, 'errno', None) in (110, 10060) or 'timed out' in str(e).lower():
                 if g_status is not None:
                     g_status.on_timeout()
                 continue
@@ -102,15 +112,49 @@ def reader_thread(dev, out_q: queue.Queue, stop_ev: threading.Event):
             if g_status is not None:
                 g_status.on_error(repr(e))
             continue
-        b = bytes(data)
-        h = parse_hdr(b)
-        if not h or h['magic'] != 0xA55A:
-            continue
-        payload = b[HDR_SIZE:HDR_SIZE + h['ns']*2]
-        # Обновим статус и поставим в очередь
-        if g_status is not None:
-            g_status.on_frame_header(h)
-        out_q.put((h, payload))
+
+        # Пытаемся извлечь из буфера одно или несколько полных кадров
+        while True:
+            if len(rx) < 4:
+                break
+            # Пропускаем STAT-кадры (64B или 52B), они GUI не нужны
+            if rx[0:4] == b'STAT':
+                if len(rx) >= 64:
+                    rx = rx[64:]
+                    continue
+                elif len(rx) >= 52:
+                    rx = rx[52:]
+                    continue
+                else:
+                    break  # ждём добор байтов
+            # Заголовок кадра?
+            if rx[0] == 0x5A and rx[1] == 0xA5 and rx[2] == 0x01 and len(rx) >= 16:
+                total_samples = rx[12] | (rx[13] << 8)
+                frame_len = 32 + total_samples * 2
+                if len(rx) < frame_len:
+                    break  # ждём остаток кадра
+                frame = bytes(rx[:frame_len])
+                rx = rx[frame_len:]
+                # Распарсим заголовок и положим полный payload
+                h = parse_hdr(frame)
+                if h and h.get('magic') == 0xA55A:
+                    payload = frame[HDR_SIZE:HDR_SIZE + h['ns']*2]
+                    if g_status is not None:
+                        g_status.on_frame_header(h)
+                    out_q.put((h, payload))
+                continue
+            # Ресинхронизация — ищем ближайший STAT или хедер
+            idx_stat = rx.find(b'STAT')
+            idx_hdr = rx.find(b"\x5A\xA5\x01")
+            idx = -1
+            if idx_stat != -1 and (idx_hdr == -1 or idx_stat < idx_hdr):
+                idx = idx_stat
+            elif idx_hdr != -1:
+                idx = idx_hdr
+            if idx > 0:
+                rx = rx[idx:]
+                continue
+            break
 
 class GuiStatus:
     def __init__(self, q: queue.Queue, ns: int):
@@ -206,9 +250,10 @@ def status_logger_thread(stop_ev: threading.Event):
         print(st)
 
 class LivePlot:
-    def __init__(self, ns, single_channel: bool):
+    def __init__(self, ns, single_channel: bool, ns_auto: bool = False):
         self.ns = ns
         self.single = single_channel
+        self.ns_auto = ns_auto
         if self.single:
             self.fig, ax = plt.subplots(1, 1, figsize=(9,4))
             self.ax0 = ax
@@ -233,6 +278,7 @@ class LivePlot:
         self.last_pairs = 0
         self.last_ts = None
         self.rate_text = self.fig.text(0.02, 0.95, '', fontsize=10)
+        self.ns_text = self.fig.text(0.70, 0.95, '', fontsize=10)
 
     def update(self, frame):
         # frame contains (rate_med, seq, a_vals, b_vals or None)
@@ -241,15 +287,26 @@ class LivePlot:
         self.line0.set_data(xs, a_vals)
         if self.line1 is not None and b_vals is not None:
             self.line1.set_data(xs, b_vals)
-        self.rate_text.set_text(f"seq={seq} | block rate≈{rate_med:.2f} Hz (median)")
+        n = len(a_vals)
+        # Авто-ось X по фактическому числу сэмплов, если включён авто-режим
+        if self.ns_auto and n > 0:
+            for ax in (self.ax0,) if self.ax1 is None else (self.ax0, self.ax1):
+                xmin, xmax = ax.get_xlim()
+                if int(xmax) != n:
+                    ax.set_xlim(0, n)
+        # Оверлей с ns и каналами
+        ch = 'A' if self.single else ('A+B' if b_vals is not None else 'A+…')
+        self.rate_text.set_text(f"seq={seq} | rate≈{rate_med:.2f} Hz")
+        self.ns_text.set_text(f"ns={n} ({'auto' if self.ns_auto else 'fixed'}) | ch={ch}")
         if self.line1 is not None:
-            return self.line0, self.line1, self.rate_text
+            return self.line0, self.line1, self.rate_text, self.ns_text
         else:
-            return self.line0, self.rate_text
+            return self.line0, self.rate_text, self.ns_text
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--ns', type=int, default=300)
+    # ns=0 => не ограничивать и не отправлять CMD_SET_FRAME_SAMPLES (использовать размер кадра устройства)
+    ap.add_argument('--ns', type=int, default=0)
     ap.add_argument('--profile', type=int, default=1)
     ap.add_argument('--pairs', type=int, default=400, help='pairs for rate median window')
     ap.add_argument('--single', action='store_true', help='Single-channel mode (A-only)')
@@ -257,22 +314,32 @@ def main():
 
     dev = find_dev()
 
-    # Stop any ongoing stream first
+    # CRITICAL: STOP first to clear any locked cur_samples_per_frame
     try:
         send_cmd(dev, bytes([CMD_STOP]))
-        time.sleep(0.2)  # дадим устройству время остановиться
+        time.sleep(0.2)
     except Exception:
-        pass  # игнорируем ошибки, если устройство уже остановлено
-
-    # Configure stream
-    win_payload = [CMD_SET_WINDOWS] + le16(100) + le16(args.ns) + le16(700) + le16(args.ns)
-    send_cmd(dev, bytes(win_payload))
-    send_cmd(dev, bytes([CMD_SET_FRAME_SAMPLES] + le16(args.ns)))
+        pass
+    
+    # Configure stream settings AFTER STOP to ensure clean state
+    # NOTE: In FULL mode, SET_WINDOWS is NOT used - ADC profile determines size
+    # Отправляем SET_FRAME_SAMPLES только если явно задано ns>0; иначе не ограничиваем устройство
+    if args.ns and args.ns > 0:
+        send_cmd(dev, bytes([CMD_SET_FRAME_SAMPLES] + le16(args.ns)))
     send_cmd(dev, bytes([CMD_SET_FULL_MODE, 1]))
     send_cmd(dev, bytes([CMD_SET_PROFILE, args.profile]))
-    # Выбор режимов каналов: по умолчанию — один канал A для стабилизации
+    
+    # CRITICAL: Wait for profile switch to complete and ADC to reconfigure
+    time.sleep(0.3)
+    
+    # Выбор режимов каналов: A-only при --single, иначе оба канала
     try:
         send_cmd(dev, bytes([CMD_SET_CHMODE, 0x00 if args.single else 0x02]))
+    except Exception:
+        pass
+    # Включим асинхронный режим A/B (независимые потоки) — устойчивее для визуализации
+    try:
+        send_cmd(dev, bytes([CMD_SET_ASYNC_MODE, 0x01]))
     except Exception:
         pass
     # Подскажем устройству целевую частоту блоков (для LCD/диагностики), фактическая задаётся профилем
@@ -280,6 +347,9 @@ def main():
         send_cmd(dev, bytes([CMD_SET_BLOCK_HZ] + le16(200 if args.profile == 1 else 300)))
     except Exception:
         pass
+    
+    # Small delay before START to ensure config is applied
+    time.sleep(0.1)
     send_cmd(dev, bytes([CMD_START]))
 
     q = queue.Queue(maxsize=1000)
@@ -292,13 +362,14 @@ def main():
     tlog = threading.Thread(target=status_logger_thread, args=(stop_ev,), daemon=True)
     tlog.start()
 
-    plot = LivePlot(args.ns, args.single)
+    plot = LivePlot(args.ns if args.ns>0 else 1360, args.single, ns_auto=(args.ns<=0))
 
     # generator of frames for animation
     def gen():
         ts_list = []
         last_seq = None
         a_buf = None
+        a_seq = None
         last_a_ts = None
         while True:
             # collect until we get A then B of same seq
@@ -321,7 +392,10 @@ def main():
                                 rate_med = 1000.0/md if md>0 else 0.0
                             else:
                                 rate_med = 0.0
-                            ns = min(args.ns, len(p)//2)
+                            # Показываем min(запрошенный ns, hdr ns); если ns<=0 — используем hdr ns
+                            hdr_ns = h['ns']
+                            ns_limit = args.ns if args.ns and args.ns>0 else hdr_ns
+                            ns = min(ns_limit, len(p)//2)
                             a_vals = [p[2*i] | (p[2*i+1]<<8) for i in range(ns)]
                             if g_status is not None:
                                 g_status.on_pair_done(rate_med, h['seq'])
@@ -329,9 +403,10 @@ def main():
                             break
                         else:
                             last_seq = h['seq']
+                            a_seq = h['seq']
                             a_buf = p
-                    elif not args.single and h['flags'] == 0x02 and last_seq is not None and h['seq'] == last_seq:
-                        # got B for same seq
+                    elif not args.single and h['flags'] == 0x02 and a_buf is not None:
+                        # got B (pair with the latest A regardless of exact seq; device seq often alternates A/B)
                         # rate measurement by device timestamp (A-only)
                         ts_list.append(h['ts'])
                         if len(ts_list) > args.pairs:
@@ -345,14 +420,17 @@ def main():
                         else:
                             rate_med = 0.0
                         # unpack a,b as u16 LE
-                        ns = min(args.ns, len(a_buf)//2, len(p)//2)
-                        a_vals = [a_buf[2*i] | (a_buf[2*i+1]<<8) for i in range(ns)]
+                        hdr_ns = h['ns']
+                        ns_limit = args.ns if args.ns and args.ns>0 else hdr_ns
+                        ns = min(ns_limit, (len(a_buf)//2) if a_buf is not None else 0, len(p)//2)
+                        a_vals = [a_buf[2*i] | (a_buf[2*i+1]<<8) for i in range(ns)] if a_buf is not None else []
                         b_vals = [p[2*i] | (p[2*i+1]<<8) for i in range(ns)]
                         # обновим статус по завершённой паре
                         if g_status is not None:
-                            g_status.on_pair_done(rate_med, last_seq)
-                        yield (rate_med, last_seq, a_vals, b_vals)
+                            g_status.on_pair_done(rate_med, a_seq if a_seq is not None else h['seq'])
+                        yield (rate_med, a_seq if a_seq is not None else h['seq'], a_vals, b_vals)
                         a_buf = None
+                        a_seq = None
                         break
             except queue.Empty:
                 continue
@@ -366,10 +444,7 @@ def main():
         except Exception:
             pass
         usb.util.release_interface(dev, INTERFACE)
-        try:
-            dev.attach_kernel_driver(INTERFACE)
-        except Exception:
-            pass
+        # Удалён вызов attach_kernel_driver: на целевой Windows среде WinUSB не поддерживает повторное прикрепление.
 
     plot.fig.canvas.mpl_connect('close_event', on_close)
     plt.tight_layout()
