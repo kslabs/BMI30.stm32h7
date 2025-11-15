@@ -779,6 +779,30 @@
 			"group": "none"
 		},
 		{
+			"label": "USB: Reset sequence (soft→deep→bulk→port)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"py -3 \"${workspaceFolder}/HostTools/device_reset_sequence.py\" --methods soft,deep,bulk,port --wait-gone 3.0 --wait-present 10.0 --retry 2 --verbose"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": { "reveal": "always", "panel": "shared" }
+		},
+		{
+			"label": "USB: Reset + Run GUI",
+			"dependsOn": [
+				"USB: Reset sequence (soft→deep→bulk→port)",
+				"Run GUI oscilloscope"
+			],
+			"dependsOrder": "sequence",
+			"group": "none"
+		},
+		{
 			"label": "Run GUI oscilloscope",
 			"type": "shell",
 			"command": "powershell",
@@ -787,7 +811,7 @@
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope.py\" --ns 0 --profile 0" 
+				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope.py\" --ns 0 --profile 0 --watchdog" 
 			],
 			"isBackground": false,
 			"group": "none",

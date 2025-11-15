@@ -716,3 +716,21 @@ USBD_StatusTypeDef USBD_Get_USB_Status(HAL_StatusTypeDef hal_status)
   }
   return usb_status;
 }
+
+/* USER CODE BEGIN SOFT_DISC */
+/* Программное (мягкое) отключение/подключение устройства на шине USB.
+   Используется для "мягкого" восстановления без полного MCU reset.
+   На STM32H7 HS (встроенный FS PHY) надёжнее всего остановить/запустить PCD. */
+void USB_LL_SetSoftDisconnect(uint8_t enable)
+{
+  if (enable) {
+    /* Остановка USB-периферии: хост воспринимает как временное отключение */
+    HAL_PCD_Stop(&hpcd_USB_OTG_HS);
+    g_usb_softdisc_active = 1;
+  } else {
+    /* Повторный старт USB-периферии */
+    HAL_PCD_Start(&hpcd_USB_OTG_HS);
+    g_usb_softdisc_active = 0;
+  }
+}
+/* USER CODE END SOFT_DISC */

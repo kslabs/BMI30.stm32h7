@@ -31,8 +31,8 @@
 #define VND_DATA_HS_MAX_PACKET_SIZE    512U
 #define VND_DATA_FS_MAX_PACKET_SIZE    64U
 
-/* Максимальный размер одного кадра Vendor (32 байта заголовок + до 1024 выборок *2) */
-#define VND_MAX_FRAME_SIZE             (32u + 1024u*2u) /* =2080 */
+/* Максимальный размер одного кадра Vendor (32 байта заголовок + до 1360 выборок *2) */
+#define VND_MAX_FRAME_SIZE             (32u + 1360u*2u) /* =2752 */
 
 /*
  * Конфигурационный дескриптор: добавляем Vendor IF#2 с двумя alt-setting:

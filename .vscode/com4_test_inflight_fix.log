@@ -1,0 +1,23 @@
+[CMD] 0x20 len=1
+[VND_RCV] #13 CMD 0x20 len=1
+[VND] CMD 0x20 len=1
+[CMD_IND] START received #1 (at t=704919 ms, 0 sec ago)
+[VND] START_STREAM(light) reinit_needed=1 tx_kick=1
+[VND] START_STREAM(light)
+[VND] START_DEFERRED_INIT begin
+[VND] START_DEFERRED_INIT
+[VND] PAIR_TIMING(info): samples=1360 buf_rate=200 -> period???1000 ms
+[VND] START_STREAM (deferred init done)
+[VND] META_PUSH fl=0x01 seq=0 depth=1
+[VND] SEND tag=ADC0-ASY2 hdr.seq=0 flags=0x01 cur_stream_seq=0 len=2752
+[VND] PREPARE_PAIR slot=0 backlog=32
+[VND] BUILD_FRAME cf_seq=2 flags=0x01 samples=1360
+[VND] BUILD_FRAME cf_seq=2 flags=0x02 samples=1360
+[VND] EP_UNSTUCK after 201ms (len=2752) vbusy=0
+[VND] TX_SKIP busy/inflight tag=ADC0-ASY2
+[VND] TX_SKIP busy/inflight tag=ADC0-ASY2
+[VND] TX_SKIP busy/inflight tag=ADC0-ASY2
+[VND] TX_SKIP busy/inflight tag=ADC0-ASY2
+[VND] TX_SKIP busy/inflight tag=ADC0-ASY2
+[VND] TX_SKIP busy/inflight tag=ADC0-ASY2
+[VND] TX_SKIP busy/inflight tag=ADC0-ASY2

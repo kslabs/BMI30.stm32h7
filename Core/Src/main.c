@@ -63,6 +63,8 @@ volatile uint32_t loop_cycle_last_report_ms = 0;
 volatile uint32_t loop_cycle_last_avg = 0;
 volatile uint8_t  need_recovery = 0;
 volatile uint8_t  need_usb_status_refresh = 0;
+/* Новый флаг: запрос на ПОЛНЫЙ аппаратный сброс по команде 0x22 */
+volatile uint8_t  need_hard_reset = 0;
 volatile uint32_t systick_heartbeat = 0; /* глобальный счётчик SysTick для stm32h7xx_it.c */
 uint8_t star_visible = 0;
 uint8_t auto_stream_started = 0;
@@ -95,7 +97,7 @@ static void FlushStageLog(void) { /* no-op в безопасном режиме 
 #define MINIMAL_BRINGUP 0
 #endif
 #ifndef ENABLE_SOFT_USB_RECOVERY
-#define ENABLE_SOFT_USB_RECOVERY 0
+#define ENABLE_SOFT_USB_RECOVERY 1
 #endif
 
 /* Диагностика: бесконечный блинк LED (PE3) для локализации места зависания */
@@ -1039,6 +1041,11 @@ int main(void)
     extern void Vendor_Stream_Task(void);
     Vendor_Stream_Task();
   }
+  /* Вотчдог ADC/DMA: если давно нет DMA событий, мягко перезапустить цепочку выборки. */
+  {
+  extern void adc_stream_watchdog(void);
+  adc_stream_watchdog();
+  }
   // Проверка и выключение LED по таймауту (UART RX индикация)
   extern void CDC_LED_Process(void);
   CDC_LED_Process();
@@ -1061,14 +1068,31 @@ int main(void)
     }
   }
 
-    if (need_recovery) {
+  if (need_recovery || need_hard_reset) {
 #if ENABLE_SOFT_USB_RECOVERY
-        need_recovery = 0;
-        extern void USB_LL_SetSoftDisconnect(uint8_t enable);
-        USB_LL_SetSoftDisconnect(1);
-        HAL_Delay(50);
-        USB_LL_SetSoftDisconnect(0);
-        HAL_Delay(10);
+    if (need_hard_reset) {
+      /* Полный аппаратный reset: корректно отключиться от USB и выполнить NVIC_SystemReset */
+      need_hard_reset = 0; /* гасим флаг, чтобы не войти повторно */
+      printf("[RST] HARD: USB disconnect + NVIC_SystemReset\r\n");
+      /* Программное отключение D+ (soft disconnect) + останов USB устройства */
+      extern void USB_LL_SetSoftDisconnect(uint8_t enable);
+      USB_LL_SetSoftDisconnect(1);
+      HAL_Delay(60);
+#ifdef HAL_PCD_MODULE_ENABLED
+      USBD_Stop(&hUsbDeviceHS);
+      USBD_DeInit(&hUsbDeviceHS);
+#endif
+      HAL_Delay(20);
+      boot_diag_finalize_before_reset(HAL_GetTick());
+      NVIC_SystemReset();
+    }
+    /* Иначе — мягкое восстановление USB стека (без MCU reset) */
+    need_recovery = 0;
+    extern void USB_LL_SetSoftDisconnect(uint8_t enable);
+    USB_LL_SetSoftDisconnect(1);
+    HAL_Delay(50);
+    USB_LL_SetSoftDisconnect(0);
+    HAL_Delay(10);
 #ifdef HAL_PCD_MODULE_ENABLED
         USBD_Stop(&hUsbDeviceHS);
         USBD_DeInit(&hUsbDeviceHS);
@@ -1355,7 +1379,9 @@ static void MX_ADC2_Init(void)
   hadc2.Init.DiscontinuousConvMode = DISABLE;
   hadc2.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T15_TRGO;
   hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
-  hadc2.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_ONESHOT;  /* ИЗМЕНЕНО: oneshot т.к. перезапускаем вручную */
+  /* Переводим ADC2 на DMA_CIRCULAR для стабильного потока с внешним триггером;
+    кольцевой режим исключает автостоп после EOS в ONESHOT и снижает риск стагнаций. */
+  hadc2.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_CIRCULAR;
   hadc2.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc2.Init.LeftBitShift = ADC_LEFTBITSHIFT_NONE;
   hadc2.Init.OversamplingMode = DISABLE;
@@ -1940,8 +1966,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 6, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
-  /* DMA1_Stream1_IRQn disabled intentionally (ADC2 DMA runs without IRQ) */
-  HAL_NVIC_DisableIRQ(DMA1_Stream1_IRQn);
+  /* Enable DMA1_Stream1 IRQ for ADC2 DMA completion (used to re-arm oneshot) */
+  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 6, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
 
 }
 

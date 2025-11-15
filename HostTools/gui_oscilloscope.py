@@ -2,22 +2,63 @@
 # Simple USB oscilloscope for BMI30 vendor stream
 # Dependencies: pyusb, matplotlib (tkinter backend)
 
-import sys, time, struct, threading, queue, argparse
+import sys, time, struct, threading, queue, argparse, os
 from typing import Optional
 import usb.core, usb.util
+from usb.core import Device  # type hint
 
-try:
-    import matplotlib
-    matplotlib.use('TkAgg')  # safest default on Windows
-    import matplotlib.pyplot as plt
-    import matplotlib.animation as animation
-except Exception as e:
-    print("[ERROR] matplotlib not available:", e)
-    sys.exit(1)
+def _mk_logger(log_path: str):
+    state = {'f': None, 'path': log_path}
+    if log_path:
+        try:
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            state['f'] = open(log_path, 'a', encoding='utf-8')
+        except Exception:
+            state['f'] = None
+    def _log(*args):
+        msg = ' '.join(str(a) for a in args)
+        ts = time.strftime('%Y-%m-%d %H:%M:%S')
+        line = f"[{ts}] {msg}"
+        print(line)
+        f = state.get('f')
+        if f:
+            try:
+                f.write(line + "\n")
+                f.flush()
+            except Exception:
+                pass
+    def _close():
+        f = state.get('f')
+        if f:
+            try:
+                f.close()
+            except Exception:
+                pass
+    return _log, _close
+
+_log = None  # type: ignore
+_log_close = None  # type: ignore
+
+def _init_matplotlib():
+    global plt, animation
+    try:
+        import matplotlib  # type: ignore
+        matplotlib.use('TkAgg')  # safest default on Windows
+        import matplotlib.pyplot as plt_mod  # type: ignore
+        import matplotlib.animation as animation_mod  # type: ignore
+        plt = plt_mod
+        animation = animation_mod
+        return True
+    except Exception as e:
+        if _log:
+            _log("[ERROR] matplotlib not available:", e)
+        else:
+            print("[ERROR] matplotlib not available:", e)
+        return False
 
 VENDOR=0xCAFE
 PRODUCT=0x4001
-INTERFACE=2
+INTERFACE=2  # vendor интерфейс (ожидается 3-й, нумерация с 0)
 EP_OUT=0x03
 EP_IN=0x83
 g_status = None  # глобальный статус GUI для логгера/ридера
@@ -33,38 +74,180 @@ CMD_SET_FULL_MODE=0x13
 CMD_SET_PROFILE=0x14
 CMD_SET_CHMODE=0x19  # 0=A-only, 1=B-only, 2=both
 CMD_SET_ASYNC_MODE=0x18
+CMD_DEVICE_RESET=0x22
+CMD_SOFT_RESET = 0x7E  # control OUT (no data)
+CMD_DEEP_RESET = 0x7F  # control OUT (no data)
+CMD_GET_STATUS=0x30
+CMD_GET_STATUS_IMM=0x31
 
 HDR_SIZE=32
 
 def le16(x:int):
     return [x & 0xFF, (x >> 8) & 0xFF]
 
-def find_dev():
-    dev = usb.core.find(idVendor=VENDOR, idProduct=PRODUCT)
+def _has_vendor_endpoints(dev: Device, alt: int) -> bool:
+    """Проверка наличия EP_IN/EP_OUT в конкретном altsetting (cfg[(iface, alt)])."""
+    try:
+        cfg = dev.get_active_configuration()  # type: ignore[attr-defined]
+        try:
+            intf = cfg[(INTERFACE, alt)]  # type: ignore[index]
+        except KeyError:
+            return False
+        eps = [ep.bEndpointAddress for ep in intf]  # type: ignore
+        return (EP_IN in eps) and (EP_OUT in eps)
+    except Exception:
+        return False
+
+def find_dev() -> Device:
+    dev: Device = usb.core.find(idVendor=VENDOR, idProduct=PRODUCT)  # type: ignore
     if dev is None:
         raise SystemExit("Device not found")
-    # Windows safe guards
+    # WinUSB: безопасно вызвать set_configuration; драйвер ядра обычно уже отсоединён
     try:
-        if hasattr(dev, 'is_kernel_driver_active') and dev.is_kernel_driver_active(INTERFACE):
-            try:
-                dev.detach_kernel_driver(INTERFACE)
-            except Exception:
-                pass
+        dev.set_configuration()  # type: ignore[attr-defined]
     except Exception:
         pass
-    dev.set_configuration()
+    # Интерфейс может быть уже занят — игнорируем ошибки claim
     try:
         usb.util.claim_interface(dev, INTERFACE)
     except Exception:
         pass
-    try:
-        dev.set_interface_altsetting(interface=INTERFACE, alternate_setting=1)
-    except Exception:
-        pass
+
+    # Некоторые прошивки активируют поток в alt=0, другие в alt=1. Раньше был жёсткий alt=1.
+    # Сделаем адаптивно: сначала пытаемся alt=1, проверяем endpoints; если отсутствуют — пробуем alt=0.
+    alt_tried = []
+    for alt in (1, 0):  # ожидаем stream в alt=1, fallback alt=0
+        try:
+            dev.set_interface_altsetting(interface=INTERFACE, alternate_setting=alt)  # type: ignore[attr-defined]
+            alt_tried.append(alt)
+            time.sleep(0.05)
+            if _has_vendor_endpoints(dev, alt):
+                if _log:
+                    _log(f"[USB] Using altsetting={alt} (endpoints OK)")
+                return dev
+            else:
+                if _log:
+                    _log(f"[USB] altsetting={alt} has no vendor endpoints -> fallback")
+        except Exception as e:
+            if _log:
+                _log(f"[USB] set_interface_altsetting({alt}) failed: {e}")
+            continue
+
+    # Если оба не дали endpoints, всё равно возвращаем dev (ридер будет получать таймауты) и сообщаем.
+    if _log:
+        _log(f"[USB] Vendor endpoints not found after trying alt={alt_tried}; continuing with current configuration")
     return dev
 
-def send_cmd(dev, data: bytes):
-    dev.write(EP_OUT, data, timeout=1000)
+class DevHandle:
+    """Простой контейнер для совместного владения дескриптором устройства между потоками.
+    Позволяет вотчдогу переоткрывать устройство, а ридеру — использовать актуальный handle.
+    """
+    def __init__(self, dev: Device):
+        self.dev: Device = dev
+
+def send_cmd(dev: Device, data: bytes):
+    try:
+        dev.write(EP_OUT, data, timeout=1000)  # type: ignore[attr-defined]
+    except Exception as e:
+        print(f"[WARN] send_cmd failed: {e}")
+
+def _wait_until_gone(timeout: float = 3.0, poll: float = 0.2) -> bool:
+    """Ждём, пока устройство исчезнет с шины (реальный reset/reenum)."""
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        if usb.core.find(idVendor=VENDOR, idProduct=PRODUCT) is None:
+            return True
+        time.sleep(poll)
+    return False
+
+def _wait_until_present(timeout: float = 8.0, poll: float = 0.3) -> bool:
+    """Ждём, пока устройство появится на шине после reset."""
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        if usb.core.find(idVendor=VENDOR, idProduct=PRODUCT) is not None:
+            return True
+        time.sleep(poll)
+    return False
+
+def reset_device_and_reopen(no_reset: bool=False, retry_s: float=6.0) -> Device:
+    """Отправляет DEVICE_RESET и переоткрывает устройство после подтверждённой ре-энумерации.
+
+    Эскалация:
+      1) SOFT (EP0, 0x7E) ➜ ждём исчезновения ➜ ждём появления
+      2) DEEP (EP0, 0x7F) при отсутствии исчезновения
+      3) Bulk DEVICE_RESET (0x22) как запасной вариант
+      4) USB port reset (libusb dev.reset())
+    """
+    if no_reset:
+        return find_dev()
+    try:
+        dev = find_dev()
+        # 1) SOFT reset через EP0
+        print("[RESET] Sending SOFT_RESET (0x7E) via control OUT…")
+        soft_ok = False
+        try:
+            dev.ctrl_transfer(0x40, CMD_SOFT_RESET, 0, 0, None, timeout=300)  # type: ignore[attr-defined]
+            soft_ok = True
+        except Exception as e:
+            print(f"[RESET] SOFT_RESET failed: {e}")
+        time.sleep(0.1)
+        if soft_ok and _wait_until_gone(timeout=2.5):
+            print("[RESET] Device disappeared (SOFT); waiting to reappear…")
+            if not _wait_until_present(timeout=8.0):
+                raise SystemExit("Device did not re-appear after SOFT reset")
+            print("[RESET] Device re-appeared")
+            return find_dev()
+
+        # 2) DEEP reset через EP0
+        print("[RESET] Escalate to DEEP_RESET (0x7F) via control OUT…")
+        deep_ok = False
+        try:
+            dev.ctrl_transfer(0x40, CMD_DEEP_RESET, 0, 0, None, timeout=400)  # type: ignore[attr-defined]
+            deep_ok = True
+        except Exception as e:
+            print(f"[RESET] DEEP_RESET failed: {e}")
+        time.sleep(0.15)
+        if deep_ok and _wait_until_gone(timeout=3.0):
+            print("[RESET] Device disappeared (DEEP); waiting to reappear…")
+            if not _wait_until_present(timeout=10.0):
+                raise SystemExit("Device did not re-appear after DEEP reset")
+            print("[RESET] Device re-appeared")
+            return find_dev()
+
+        # 3) Bulk DEVICE_RESET (если EP0 не сработал и устройство 'не пропало')
+        print("[RESET] Try Bulk DEVICE_RESET (0x22)…")
+        try:
+            dev.write(EP_OUT, bytes([CMD_DEVICE_RESET]), timeout=600)  # type: ignore[attr-defined]
+        except Exception as e:
+            print(f"[RESET] Bulk DEVICE_RESET failed: {e}")
+        time.sleep(0.2)
+        if _wait_until_gone(timeout=2.5):
+            print("[RESET] Device disappeared (BULK); waiting to reappear…")
+            if not _wait_until_present(timeout=8.0):
+                raise SystemExit("Device did not re-appear after BULK reset")
+            print("[RESET] Device re-appeared")
+            return find_dev()
+
+        # 4) Последняя мера — USB port reset (libusb)
+        print("[RESET] Escalate to USB port reset (libusb dev.reset)…")
+        try:
+            usb.util.release_interface(dev, INTERFACE)
+        except Exception:
+            pass
+        try:
+            dev.reset()  # type: ignore[attr-defined]
+        except Exception as e:
+            print(f"[RESET] Port reset failed: {e}")
+        # После порт-ресета тоже ожидаем исчезновение/появление, но некоторые драйверы не отдают устройство как 'gone'
+        # Поэтому просто ждём появления до retry_s
+        if not _wait_until_present(timeout=retry_s):
+            raise SystemExit("Device did not re-appear after USB port reset")
+        print("[RESET] Device present after port reset")
+        return find_dev()
+    except Exception as e:
+        print(f"[WARN] reset_device_and_reopen failed: {e}")
+        # Попробуем хотя бы работать с текущим состоянием
+        return find_dev()
 
 def parse_hdr(b: bytes):
     if len(b) < HDR_SIZE:
@@ -79,7 +262,7 @@ def parse_hdr(b: bytes):
         'ns': ns,
     }
 
-def reader_thread(dev, out_q: queue.Queue, stop_ev: threading.Event):
+def reader_thread(handle: 'DevHandle', out_q: queue.Queue, stop_ev: threading.Event, pkt_log_interval_sec: float = 5.0):
     """
     Надёжный ридер: собираем полные кадры из 512-байтных кусочков (WinUSB/libusb).
     Выдаём в очередь только полностью собранные кадры A/B (h, payload_full).
@@ -88,13 +271,20 @@ def reader_thread(dev, out_q: queue.Queue, stop_ev: threading.Event):
     rx = bytearray()
     last_pkt_len = None
     pkt_count = 0
+    last_pkt_log_ts = 0.0
     while not stop_ev.is_set():
         try:
             # Чтение «сырых» кусков, обычно 512B; размер 512 даёт предсказуемое поведение на WinUSB
-            chunk = dev.read(EP_IN, 512, timeout=1000)
+            chunk = handle.dev.read(EP_IN, 512, timeout=1000)
             pkt_count += 1
-            if pkt_count % 10 == 0 or len(chunk) != last_pkt_len:
-                print(f"[PKT] #{pkt_count} len={len(chunk)} bytes (frame: 32+ns*2; ns=1360 => 2752)")
+            now = time.time()
+            # Лог пакетов:
+            #  - pkt_log_interval_sec <= 0: отключено
+            #  - >0: печатать не чаще заданного интервала (изменение длины не форсирует вывод)
+            if pkt_log_interval_sec and pkt_log_interval_sec > 0:
+                if (now - last_pkt_log_ts) >= pkt_log_interval_sec:
+                    print(f"[PKT] #{pkt_count} len={len(chunk)} bytes")
+                    last_pkt_log_ts = now
             last_pkt_len = len(chunk)
             rx += bytes(chunk)
             if g_status is not None:
@@ -119,7 +309,11 @@ def reader_thread(dev, out_q: queue.Queue, stop_ev: threading.Event):
                 break
             # Пропускаем STAT-кадры (64B или 52B), они GUI не нужны
             if rx[0:4] == b'STAT':
-                if len(rx) >= 64:
+                # некоторые прошивки шлют STAT как 84/64/52 байта
+                if len(rx) >= 84:
+                    rx = rx[84:]
+                    continue
+                elif len(rx) >= 64:
                     rx = rx[64:]
                     continue
                 elif len(rx) >= 52:
@@ -224,11 +418,11 @@ class GuiStatus:
                 'ns': self.ns,
             }
 
-def status_logger_thread(stop_ev: threading.Event):
-    # Печатаем состояние раз в 1 секунду
+def status_logger_thread(stop_ev: threading.Event, interval_sec: float = 10.0):
+    # Печатаем состояние раз в interval_sec секунд (уменьшаем нагрузку на терминал)
     global g_status
     while not stop_ev.is_set():
-        time.sleep(1.0)
+        time.sleep(max(0.2, interval_sec))
         if g_status is None:
             continue
         snap = g_status.snapshot()
@@ -248,6 +442,142 @@ def status_logger_thread(stop_ev: threading.Event):
         if err:
             st += f" last_err={err}"
         print(st)
+
+def _reconfigure_and_start(handle: 'DevHandle', args):
+    """Отправить минимальную конфигурацию и START после (пере)открытия."""
+    # Базовый STOP для чистого состояния
+    try:
+        handle.dev.write(EP_OUT, bytes([CMD_STOP]), timeout=800)  # type: ignore[attr-defined]
+        time.sleep(0.2)
+    except Exception as e:
+        if _log: _log("[WDG] STOP before reconfig failed:", e)
+    # Полная конфигурация как при старте
+    try:
+        handle.dev.write(EP_OUT, bytes([CMD_SET_FULL_MODE, 1]), timeout=600)  # type: ignore[attr-defined]
+    except Exception as e:
+        if _log: _log("[WDG] SET_FULL_MODE failed:", e)
+    try:
+        handle.dev.write(EP_OUT, bytes([CMD_SET_PROFILE, args.profile]), timeout=600)  # type: ignore[attr-defined]
+        time.sleep(0.3)
+    except Exception as e:
+        if _log: _log("[WDG] SET_PROFILE failed:", e)
+    try:
+        chmode = 0x00 if getattr(args, 'single', False) else 0x02
+        handle.dev.write(EP_OUT, bytes([CMD_SET_CHMODE, chmode]), timeout=600)  # type: ignore[attr-defined]
+    except Exception as e:
+        if _log: _log("[WDG] SET_CHMODE failed:", e)
+    try:
+        handle.dev.write(EP_OUT, bytes([CMD_SET_ASYNC_MODE, 0x01]), timeout=600)  # type: ignore[attr-defined]
+    except Exception as e:
+        if _log: _log("[WDG] SET_ASYNC_MODE failed:", e)
+    try:
+        bhz = (200 if args.profile == 1 else 300)
+        handle.dev.write(EP_OUT, bytes([CMD_SET_BLOCK_HZ] + le16(bhz)), timeout=600)  # type: ignore[attr-defined]
+    except Exception as e:
+        if _log: _log("[WDG] SET_BLOCK_HZ failed:", e)
+    # ТОЛЬКО если пользователь явно указал ns>0
+    try:
+        if getattr(args, 'ns', 0) and args.ns > 0:
+            handle.dev.write(EP_OUT, bytes([CMD_SET_FRAME_SAMPLES] + le16(args.ns)), timeout=600)  # type: ignore[attr-defined]
+    except Exception as e:
+        if _log: _log("[WDG] SET_FRAME_SAMPLES failed:", e)
+    time.sleep(0.1)
+    handle.dev.write(EP_OUT, bytes([CMD_START]), timeout=800)  # type: ignore[attr-defined]
+
+
+def status_watchdog_thread(handle: 'DevHandle', stop_ev: threading.Event, idle_sec: float = 2.5, max_consec_timeouts: int = 8, args=None):
+    """Простой вотчдог: если нет пар > idle_sec или подряд таймаутов слишком много —
+    пробуем мягкий рестарт (STOP+START). При повторных срывах эскалируем до мягкого
+    ресета по bulk (DEVICE_RESET 0x22) с последующим START.
+    """
+    last_restart = 0.0
+    restart_count = 0
+    hard_reset_cycles = 0
+    while not stop_ev.is_set():
+        time.sleep(0.5)
+        if g_status is None:
+            continue
+        snap = g_status.snapshot()
+        now = time.time()
+        since_pair = snap.get('since_last_pair')
+        consec = snap.get('timeouts_consec', 0)
+        # Гистерезис: не чаще одного рестарта в 5 секунд
+        if (since_pair is not None and since_pair > idle_sec) or (consec is not None and consec >= max_consec_timeouts):
+            if (now - last_restart) < 5.0:
+                continue
+            try:
+                restart_count += 1
+                msg = f"[WDG] Restart stream: idle_pair={since_pair} consec_timeouts={consec}"
+                if _log:
+                    _log(msg)
+                else:
+                    print(msg)
+                # Базовый перезапуск
+                handle.dev.write(EP_OUT, bytes([CMD_STOP]), timeout=800)  # type: ignore[attr-defined]
+                time.sleep(0.25)
+                # Эскалация: раз в два срыва попробуем мягкий ресет прошивки (bulk 0x22)
+                if restart_count >= 2:
+                    if _log: _log("[WDG] Escalate: send DEVICE_RESET (0x22) before START…")
+                    else: print("[WDG] Escalate: send DEVICE_RESET (0x22) before START…")
+                    try:
+                        handle.dev.write(EP_OUT, bytes([CMD_DEVICE_RESET]), timeout=800)  # type: ignore[attr-defined]
+                        # дать прошивке восстановить USB стек
+                        time.sleep(0.6)
+                        # попытаться переоткрыть устройство после мягкого ресета
+                        try:
+                            try:
+                                usb.util.release_interface(handle.dev, INTERFACE)
+                            except Exception:
+                                pass
+                            if not _wait_until_present(timeout=8.0):
+                                if _log: _log("[WDG] Wait present timeout after DEVICE_RESET")
+                            handle.dev = find_dev()
+                            if _log: _log("[WDG] Reopened after DEVICE_RESET")
+                        except Exception as e:
+                            if _log: _log(f"[WDG] Reopen after DEVICE_RESET failed: {e}")
+                    except Exception as e:
+                        if _log: _log(f"[WDG] DEVICE_RESET failed: {e}")
+                    # сбросить счётчик, чтобы не спамить ресетами
+                    restart_count = 0
+                # После любой перезапуск-конфигурируем и стартуем
+                try:
+                    _reconfigure_and_start(handle, args)
+                except Exception as e:
+                    if _log: _log("[WDG] reconfigure/start failed:", e)
+                last_restart = now
+            except Exception as e:
+                if _log: _log(f"[WDG] Restart failed: {e}")
+                last_restart = now
+
+def status_probe_thread(handle: 'DevHandle', stop_ev: threading.Event, base_interval: float = 1.0):
+    """Пробник статуса: бережно дёргаем GET_STATUS (EP0), чтобы прошивка печатала STALL_WARN
+    и мы могли классифицировать зависание. Усиливаем частоту опроса, когда видим простои.
+    """
+    while not stop_ev.is_set():
+        time.sleep(base_interval)
+        if g_status is None:
+            continue
+        snap = g_status.snapshot()
+        slp = snap.get('since_last_pair') or 0.0
+        consec = snap.get('timeouts_consec') or 0
+        try:
+            # Условия для запроса статуса: явный простой >0.5с или хотя бы один таймаут подряд
+            if (slp and slp > 0.5) or (consec and consec >= 1):
+                # Сначала пробуем через bulk OUT — это активирует классификацию STALL в прошивке
+                try:
+                    handle.dev.write(EP_OUT, bytes([CMD_GET_STATUS]), timeout=200)  # type: ignore[attr-defined]
+                    if _log:
+                        _log("[DIAG] GET_STATUS queued via BULK (idle/timeout)")
+                except Exception:
+                    # Fallback на EP0 (ctrl IN), если bulk недоступен
+                    try:
+                        handle.dev.ctrl_transfer(0xC0, CMD_GET_STATUS, 0, 0, 64, timeout=300)  # type: ignore[attr-defined]
+                        if _log:
+                            _log("[DIAG] GET_STATUS requested via CTRL (bulk failed)")
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
 class LivePlot:
     def __init__(self, ns, single_channel: bool, ns_auto: bool = False):
@@ -310,57 +640,119 @@ def main():
     ap.add_argument('--profile', type=int, default=1)
     ap.add_argument('--pairs', type=int, default=400, help='pairs for rate median window')
     ap.add_argument('--single', action='store_true', help='Single-channel mode (A-only)')
+    ap.add_argument('--no-reset-first', action='store_true', help='Skip initial device reset')
+    ap.add_argument('--watchdog', action='store_true', help='Enable simple stream watchdog (STOP+START on idle)')
+    ap.add_argument('--wdg-idle-sec', type=float, default=2.5, help='Watchdog idle seconds before restart')
+    ap.add_argument('--wdg-timeouts', type=int, default=8, help='Consecutive timeouts threshold for restart')
+    ap.add_argument('--log', type=str, default=os.path.join(os.path.dirname(__file__), 'gui_oscilloscope.log'), help='Path to log file')
+    ap.add_argument('--status-log-interval', type=float, default=10.0, help='Seconds between GUI status lines')
+    ap.add_argument('--pkt-log-interval', type=float, default=0.0, help='Seconds between [PKT] log lines (<=0 to disable)')
+    ap.add_argument('--fps', type=int, default=60, help='Target GUI refresh FPS (display only)')
     args = ap.parse_args()
 
-    dev = find_dev()
+    # init logger early
+    global _log, _log_close
+    _log, _log_close = _mk_logger(args.log)
+    _log("[START] gui_oscilloscope.py", sys.executable, sys.version.split()[0], "args:", vars(args))
+
+    # init matplotlib backend
+    if not _init_matplotlib():
+        if _log_close:
+            _log_close()
+        sys.exit(1)
+
+    # Начальный сброс устройства для повышения стабильности
+    _log("[INIT] reset_device_and_reopen(no_reset=", args.no_reset_first, ")")
+    dev = reset_device_and_reopen(no_reset=args.no_reset_first)
+    _log("[INIT] device opened")
+    handle = DevHandle(dev)
 
     # CRITICAL: STOP first to clear any locked cur_samples_per_frame
     try:
-        send_cmd(dev, bytes([CMD_STOP]))
+        send_cmd(handle.dev, bytes([CMD_STOP]))
         time.sleep(0.2)
-    except Exception:
-        pass
+    except Exception as e:
+        _log("[WARN] initial STOP failed:", e)
     
     # Configure stream settings AFTER STOP to ensure clean state
     # NOTE: In FULL mode, SET_WINDOWS is NOT used - ADC profile determines size
     # Отправляем SET_FRAME_SAMPLES только если явно задано ns>0; иначе не ограничиваем устройство
     if args.ns and args.ns > 0:
-        send_cmd(dev, bytes([CMD_SET_FRAME_SAMPLES] + le16(args.ns)))
-    send_cmd(dev, bytes([CMD_SET_FULL_MODE, 1]))
-    send_cmd(dev, bytes([CMD_SET_PROFILE, args.profile]))
+        _log("[CFG] SET_FRAME_SAMPLES:", args.ns)
+        send_cmd(handle.dev, bytes([CMD_SET_FRAME_SAMPLES] + le16(args.ns)))
+    _log("[CFG] SET_FULL_MODE=1")
+    send_cmd(handle.dev, bytes([CMD_SET_FULL_MODE, 1]))
+    # Безопасное сопоставление profile: 0 трактуем как 1 (A @200 Гц)
+    prof = args.profile
+    if prof == 0:
+        _log("[CFG] profile 0 mapped to 1 (A @200Hz)")
+        prof = 1
+    _log("[CFG] SET_PROFILE=", prof)
+    send_cmd(handle.dev, bytes([CMD_SET_PROFILE, prof]))
     
     # CRITICAL: Wait for profile switch to complete and ADC to reconfigure
     time.sleep(0.3)
     
     # Выбор режимов каналов: A-only при --single, иначе оба канала
     try:
-        send_cmd(dev, bytes([CMD_SET_CHMODE, 0x00 if args.single else 0x02]))
-    except Exception:
-        pass
+        _log("[CFG] SET_CHMODE=", (0x00 if args.single else 0x02))
+        send_cmd(handle.dev, bytes([CMD_SET_CHMODE, 0x00 if args.single else 0x02]))
+    except Exception as e:
+        _log("[WARN] SET_CHMODE failed:", e)
     # Включим асинхронный режим A/B (независимые потоки) — устойчивее для визуализации
     try:
-        send_cmd(dev, bytes([CMD_SET_ASYNC_MODE, 0x01]))
-    except Exception:
-        pass
+        _log("[CFG] SET_ASYNC_MODE=1")
+        send_cmd(handle.dev, bytes([CMD_SET_ASYNC_MODE, 0x01]))
+    except Exception as e:
+        _log("[WARN] SET_ASYNC_MODE failed:", e)
     # Подскажем устройству целевую частоту блоков (для LCD/диагностики), фактическая задаётся профилем
     try:
-        send_cmd(dev, bytes([CMD_SET_BLOCK_HZ] + le16(200 if args.profile == 1 else 300)))
-    except Exception:
-        pass
+        # Поддержим ожидаемое 200 Гц, если профиль A (1) или пользователь указал 0
+        bhz = 200 if prof == 1 else (300 if prof in (2,3) else 400)
+        _log("[CFG] SET_BLOCK_HZ=", bhz)
+        send_cmd(handle.dev, bytes([CMD_SET_BLOCK_HZ] + le16(bhz)))
+    except Exception as e:
+        _log("[WARN] SET_BLOCK_HZ failed:", e)
     
     # Small delay before START to ensure config is applied
     time.sleep(0.1)
-    send_cmd(dev, bytes([CMD_START]))
+    _log("[RUN] START stream (bulk + ctrl fallback + GET_STATUS)")
+    send_cmd(handle.dev, bytes([CMD_START]))  # bulk попытка
+    # Дадим прошивке время поднять стрим до первого TX перед контролем статуса
+    time.sleep(0.15)
+    # Первым делом аккуратно поставим запрос STAT через bulk (это только ставит флаг на устройстве)
+    try:
+        handle.dev.write(EP_OUT, bytes([CMD_GET_STATUS]), timeout=300)  # type: ignore[attr-defined]
+        _log("[DIAG] GET_STATUS queued via BULK after START")
+    except Exception as e:
+        _log("[WARN] BULK GET_STATUS after START failed:", e)
+    # Затем ctrl GET_STATUS с бэкоффом: одна повторная попытка при ошибке канала
+    def _try_ctrl_status_once(timeout_ms: int = 400) -> bool:
+        try:
+            handle.dev.ctrl_transfer(0xC0, CMD_GET_STATUS, 0, 0, 64, timeout=timeout_ms)  # type: ignore[attr-defined]
+            _log("[DIAG] GET_STATUS after START (CTRL) OK")
+            return True
+        except Exception as e:
+            _log("[WARN] GET_STATUS after START (CTRL) failed:", e)
+            return False
+    if not _try_ctrl_status_once(400):
+        time.sleep(0.30)
+        _try_ctrl_status_once(600)
 
     q = queue.Queue(maxsize=1000)
     stop_ev = threading.Event()
     # Глобальный статус и логгер
     global g_status
     g_status = GuiStatus(q, args.ns)
-    t = threading.Thread(target=reader_thread, args=(dev,q,stop_ev), daemon=True)
+    t = threading.Thread(target=reader_thread, args=(handle,q,stop_ev, args.pkt_log_interval), daemon=True)
     t.start()
-    tlog = threading.Thread(target=status_logger_thread, args=(stop_ev,), daemon=True)
-    tlog.start()
+    tlog = threading.Thread(target=status_logger_thread, args=(stop_ev, args.status_log_interval), daemon=True); tlog.start()
+    if args.watchdog:
+        twdg = threading.Thread(target=status_watchdog_thread, args=(handle, stop_ev, args.wdg_idle_sec, args.wdg_timeouts, args), daemon=True)
+        twdg.start()
+    # Лёгкий пробник статуса — безопасно дёргает GET_STATUS при видимых простоях
+    tprobe = threading.Thread(target=status_probe_thread, args=(handle, stop_ev, 1.5), daemon=True)
+    tprobe.start()
 
     plot = LivePlot(args.ns if args.ns>0 else 1360, args.single, ns_auto=(args.ns<=0))
 
@@ -371,11 +763,17 @@ def main():
         a_buf = None
         a_seq = None
         last_a_ts = None
+        a_buf_t0 = 0.0
+        # Сильно уменьшаем ожидание пары, чтобы отрисовывать "по буферу" без пауз
+        # Привязываем к целевому FPS: ~1.5 кадра ожидания
+        target_fps = getattr(args, 'fps', 60)
+        pair_timeout = max(0.005, 1.5/float(target_fps))
         while True:
             # collect until we get A then B of same seq
             try:
                 while True:
-                    h, p = q.get(timeout=1.0)
+                    # Короче таймаут очереди, чтобы не стопорить анимацию
+                    h, p = q.get(timeout=0.05)
                     if h['flags'] == 0x01:  # A
                         if args.single:
                             # Оцениваем частоту по разнице меток времени A→A
@@ -405,6 +803,7 @@ def main():
                             last_seq = h['seq']
                             a_seq = h['seq']
                             a_buf = p
+                            a_buf_t0 = time.time()
                     elif not args.single and h['flags'] == 0x02 and a_buf is not None:
                         # got B (pair with the latest A regardless of exact seq; device seq often alternates A/B)
                         # rate measurement by device timestamp (A-only)
@@ -432,18 +831,59 @@ def main():
                         a_buf = None
                         a_seq = None
                         break
+                    # Фолбэк: если получили A, но B не пришёл быстро — выводим A-кадр одиночно
+                    if not args.single and a_buf is not None and (time.time() - a_buf_t0) > pair_timeout:
+                        # оценка частоты по A-меткам, если доступно
+                        if last_a_ts is not None:
+                            ts_list.append(last_a_ts)
+                            if len(ts_list) > args.pairs:
+                                ts_list.pop(0)
+                        dts = [ts_list[i+1]-ts_list[i] for i in range(len(ts_list)-1)]
+                        dts = [(dt + (1<<32)) if dt < 0 else dt for dt in dts]
+                        rate_med = 0.0
+                        if dts:
+                            md = sorted(dts)[len(dts)//2]
+                            rate_med = 1000.0/md if md>0 else 0.0
+                        hdr_ns = h['ns'] if 'ns' in h else (len(a_buf)//2)
+                        ns_limit = args.ns if args.ns and args.ns>0 else hdr_ns
+                        ns = min(ns_limit, len(a_buf)//2)
+                        a_vals = [a_buf[2*i] | (a_buf[2*i+1]<<8) for i in range(ns)]
+                        if g_status is not None:
+                            g_status.on_pair_done(rate_med, a_seq if a_seq is not None else (h['seq'] if 'seq' in h else 0))
+                        yield (rate_med, a_seq if a_seq is not None else (h['seq'] if 'seq' in h else 0), a_vals, None)
+                        a_buf = None
+                        a_seq = None
+                        break
             except queue.Empty:
+                # Нет новых кадров – всё равно yield последний пустой апдейт, чтобы не блокировать GUI
+                # Передадим пустые данные: update() просто ничего не перерисует кроме оверлея
+                yield (g_status.rate_med if g_status else 0.0, g_status.last_seq if g_status else 0, [], None)
                 continue
-
-    ani = animation.FuncAnimation(plot.fig, plot.update, gen(), interval=50, blit=False)
+    # Управляем целевой частотой отрисовки через аргумент --fps (по умолчанию 60)
+    fps = getattr(args, 'fps', 60)
+    try:
+        fps = int(fps)
+    except Exception:
+        fps = 60
+    interval_ms = max(5, int(1000/max(1, fps)))
+    # В TkAgg + fig.text объекты (rate/ns) не поддерживают blit корректно (axes=None) → отключаем blit
+    ani = animation.FuncAnimation(plot.fig, plot.update, gen(), interval=interval_ms, blit=False, cache_frame_data=False)
 
     def on_close(evt):
         stop_ev.set()
         try:
-            send_cmd(dev, bytes([CMD_STOP]))
+            send_cmd(handle.dev, bytes([CMD_STOP]))
         except Exception:
             pass
-        usb.util.release_interface(dev, INTERFACE)
+        try:
+            usb.util.release_interface(handle.dev, INTERFACE)
+        except Exception as e:
+            if _log:
+                _log("[WARN] release_interface failed:", e)
+            else:
+                print("[WARN] release_interface failed:", e)
+        if _log_close:
+            _log_close()
         # Удалён вызов attach_kernel_driver: на целевой Windows среде WinUSB не поддерживает повторное прикрепление.
 
     plot.fig.canvas.mpl_connect('close_event', on_close)

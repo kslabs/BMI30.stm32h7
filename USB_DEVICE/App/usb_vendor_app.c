@@ -16,6 +16,9 @@
 #include "usbd_cdc_custom.h" /* для USBD_VND_RequestSoftReset/DeepReset (объявления находятся в .c) */
 #include "vnd_testgen.h"
 
+/* Forward declaration (реализация ниже) для предотвращения implicit-function-warning при раннем вызове */
+void vnd_diag_log_possible_stall(void);
+
 /* Управление дублированием данных кадров в CDC (COM-порт):
  *  0 — отключено (оставляем только события START/STOP и 1 Гц статистику)
  *  1 — включено (превью первых 64 сэмплов раз в ≤10 Гц)
@@ -119,6 +122,17 @@ static volatile uint32_t vnd_last_txcplt_ms = 0;      /* время послед
 /* Счётчик переданных семплов (оба канала суммарно) */
 static volatile uint64_t vnd_total_tx_samples = 0ULL;
 /* Новые маркеры состояния запуска потока */
+
+/* Режим смягчения команды DEVICE_RESET: вместо NVIC_SystemReset выполнить мягкое USB восстановление
+    через флаг need_recovery, если включено. Это предотвращает полное исчезновение устройства с шины
+    при частых запросах 0x22 и снижает влияние на отладку. */
+#ifndef VND_DEVICE_RESET_SOFT_ONLY
+/* ВРЕМЕННО: разрешаем полный аппаратный reset по команде 0x22 (через флаг need_hard_reset в main) */
+#define VND_DEVICE_RESET_SOFT_ONLY 0
+#endif
+
+/* Флаг восстановления (определён в main.c) */
+extern volatile uint8_t need_recovery;
 static volatile uint8_t  vnd_pending_init = 0;  /* 1 после START пока нет ни одного кадра A/B */
 static volatile uint8_t  vnd_stream_active = 0; /* 1 после первой успешной передачи A или B */
 /* Init-pump диагностика */
@@ -211,7 +225,7 @@ static uint32_t __attribute__((unused)) last_sent_seq_adc0 = 0xFFFFFFFFu;
 static uint32_t __attribute__((unused)) last_sent_seq_adc1 = 0xFFFFFFFFu;
 
 /* Буфер статуса */
-#define VND_STATUS_MAX 84 /* v1=64B, v2=76B, v3=84B (с диагностикой) */
+#define VND_STATUS_MAX 96 /* v1=64B, v2=76B, v3=84B, v4=96B (добавлены ADC тайминги) */
 static uint8_t status_buf[VND_STATUS_MAX];
 static vnd_status_v1_t g_status;
 static volatile uint8_t pending_status = 0; /* требуется отправить STAT при освобождении EP */
@@ -796,7 +810,7 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
     g_status.sig[1] = 'T';
     g_status.sig[2] = 'A';
     g_status.sig[3] = 'T';
-    g_status.version = 3; /* v3: добавлены счётчики нулевых буферов ADC для диагностики */
+    g_status.version = 4; /* v4: добавлены now_ms и last_full[0/1]_ms для диагностики ADC тайминга */
     g_status.cur_samples = cur_samples_per_frame;
     g_status.frame_bytes = (uint16_t)(VND_FRAME_HDR_SIZE + cur_samples_per_frame*2u);
     g_status.test_frames = test_sent ? 1u : 0u;
@@ -882,6 +896,15 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
     /* v3 расширение: ДИАГНОСТИКА счётчиков нулевых буферов ADC */
     g_status.ch_zero_buffers_A = d.ch_zero_buffers[0];
     g_status.ch_zero_buffers_B = d.ch_zero_buffers[1];
+    /* v4 расширение: текущий tick и метки последнего полного DMA кадра по каналам */
+    do {
+        uint32_t now_ms = HAL_GetTick();
+        extern volatile uint32_t adc_last_full0_ms;
+        extern volatile uint32_t adc_last_full1_ms;
+        g_status.now_ms = now_ms;
+        g_status.last_full0_ms = adc_last_full0_ms;
+        g_status.last_full1_ms = adc_last_full1_ms;
+    } while(0);
      /* Хак: инкремент dbg_skipped_frames отображаем в sent0/sent1 дельтах, но здесь добавим только
         косвенную диагностику: если skips растут, host увидит разницу produced_seq - sent*. Дополнительно
         можно временно печатать в CDC при отладке (сейчас лог выключен для скорости). */
@@ -904,10 +927,15 @@ static void vnd_prepare_pair(void)
     uint32_t t_start = get_us_approx(); /* Начало измерения */
     
     dbg_prepare_calls++;
-    /* УПРОЩЁННАЯ ЛОГИКА: всегда готовим в slot 0, один активный буфер */
-    static const uint8_t active_slot = 0;
+    /* РАСШИРЕНИЕ: используем кольцо пар (multi-slot) для минимизации потерь.
+       Перебираем следующий свободный slot, если текущий уже READY/SENDING. */
+    uint8_t active_slot = pair_fill_idx;
+    for(uint8_t i=0;i<VND_PAIR_BUFFERS;i++){
+        uint8_t s = (uint8_t)((pair_fill_idx + i) % VND_PAIR_BUFFERS);
+        if(g_frames[s][0].st == FB_FILL && g_frames[s][1].st == FB_FILL){ active_slot = s; break; }
+    }
     
-    VND_LOG("PREPARE_PAIR slot=%u", active_slot);
+    /* Убран подробный лог PREPARE_PAIR — счётчики агрегируются в периодическую статистику */
     uint16_t *ch1 = NULL, *ch2 = NULL; uint16_t samples = 0;
     
 #if USE_TEST_SAWTOOTH
@@ -921,28 +949,23 @@ static void vnd_prepare_pair(void)
         samples = (avail != 0) ? avail : 302;  /* МАРКЕР #2 - fallback если avail=0 */
     }
 #else
-    /* last-buffer-wins: берём последний доступный кадр; если накопилась очередь >1, пропускаем старые */
-    /* Локальная логика: забрать последний кадр из ADC FIFO, безопасно по отношению к ISR */
+     /* ПОЛИТИКА last-buffer-wins: выбираем САМЫЙ ПОСЛЕДНИЙ полный кадр и пропускаем старые.
+         Это повышает визуальную частоту при ограниченной пропускной способности USB. */
     {
         uint32_t wr, rd, backlog, seq;
         __disable_irq();
         wr = frame_wr_seq; rd = frame_rd_seq;
         if (wr == rd) { __enable_irq(); return; }
         backlog = wr - rd;
-        if (backlog > 1u) {
-            /* Перескочить на последний полный кадр и пометить все промежуточные как пропущенные */
-            seq = wr - 1u;
-            dbg_skipped_frames += (backlog - 1u);
-            frame_rd_seq = wr; /* потребили все до последнего */
-        } else {
-            seq = rd; frame_rd_seq = rd + 1u;
-        }
+        /* Берём самый свежий кадр: wr-1; перескакиваем чтение на wr (отбрасывая backlog-1 старых) */
+        seq = wr - 1u;
+        if(backlog > 1u){ dbg_skipped_frames += (backlog - 1u); }
+        frame_rd_seq = wr;
         __enable_irq();
         uint32_t index = (uint32_t)(seq & (FIFO_FRAMES - 1u));
         ch1 = adc1_buffers[index];
         ch2 = adc2_buffers[index];
-        /* ИСПРАВЛЕНИЕ: использовать глобальный getter вместо внутреннего debug поля,
-           чтобы получить актуальное значение samples после смены профиля */
+        /* Используем актуальное значение семплов активного профиля */
         samples = adc_stream_get_active_samples();
     }
 #endif
@@ -1005,7 +1028,8 @@ static void vnd_prepare_pair(void)
     vnd_frame_hdr_t *h1 = (vnd_frame_hdr_t*)f1->buf; h1->timestamp = pair_timestamp;
     vnd_build_frame(f0); vnd_build_frame(f1);
     if(f0->st == FB_FILL || f1->st == FB_FILL){ dbg_partial_frame_abort++; VND_LOG("build failed"); return; }
-    /* В режиме single-slot не двигаем индексы */
+    /* Продвигаем индекс заполнения, если кадр успешно подготовлен */
+    pair_fill_idx = (uint8_t)((active_slot + 1u) % VND_PAIR_BUFFERS);
     dbg_prepare_ok++;
     /* FPS: счётчик подготовленных пар */
     fps_prepare_count++;
@@ -1043,6 +1067,9 @@ static int vnd_find_pair_by_seq(uint32_t seq)
 }
 
 /* Асинхронный выбор и отправка одного готового кадра (A или B) */
+/* Режим строгой парности по желанию: 0 — независимые каналы (дефолт), 1 — строгая пара A&B на один seq */
+static uint8_t vnd_strict_pairing = 0;
+
 static int vnd_async_try_tx(void)
 {
     /* Новый вариант async: не полагается на заранее собранную пару.
@@ -1051,6 +1078,11 @@ static int vnd_async_try_tx(void)
     if(vnd_ep_busy) return 0;
     if(!full_mode) return 0;
     static uint8_t last_sent_ch = 1; /* чередование при наличии обоих */
+
+    /* Глобальные счетчики текущей пары (для async строгой парности): бит0=A, бит1=B */
+    static uint8_t seq_mask = 0;            /* какие каналы уже отправлены для текущего stream_seq */
+    static uint32_t seq_mask_first_ms = 0;  /* время первого кадра неполной пары */
+    static uint8_t seq_partial_cnt = 0;     /* сколько кадров отправлено без полной пары */
 
     /* Локальные статические рабочие буферы кадров для независимого построения */
     typedef struct { uint8_t valid; uint8_t ch; uint16_t samples; uint32_t seq; uint16_t frame_len; uint8_t buf[VND_FRAME_MAX_SIZE]; } tmp_frame_t;
@@ -1099,10 +1131,19 @@ static int vnd_async_try_tx(void)
     int haveA = tf[0].valid ? 1:0;
     int haveB = tf[1].valid ? 1:0;
     int pick = -1;
-    if(haveA && !haveB) pick = 0;
-    else if(haveB && !haveA) pick = 1;
-    else if(haveA && haveB){ pick = (last_sent_ch==0)?1:0; }
-    else return 0;
+    if(vnd_ch_mode == 2 && vnd_strict_pairing){
+        /* Строгая парность: если оба готовы — чередуем, если готов только один и уже отправляли его для текущего seq — ждём второй */
+        if(haveA && haveB){ pick = (last_sent_ch==0)?1:0; }
+        else if(haveA && !haveB){ if(seq_mask == 0x01) return 0; pick = 0; }
+        else if(haveB && !haveA){ if(seq_mask == 0x02) return 0; pick = 1; }
+        else return 0;
+    } else {
+        /* Независимые каналы (дефолт): отправляем что есть, при наличии обоих — чередуем */
+        if(haveA && !haveB) pick = 0;
+        else if(haveB && !haveA) pick = 1;
+        else if(haveA && haveB){ pick = (last_sent_ch==0)?1:0; }
+        else return 0;
+    }
 
     tmp_frame_t *sel = &tf[pick];
     if(!sel->valid) return 0;
@@ -1110,15 +1151,34 @@ static int vnd_async_try_tx(void)
         /* Учёт статистики предварительно (окончательная фиксация в TxCplt) */
         if(pick==0) dbg_sent_ch0_total++; else dbg_sent_ch1_total++;
         sending_channel = (uint8_t)pick; sel->valid = 0; last_sent_ch = (uint8_t)pick;
-        /* Если оба канала уже отправили хотя бы по одному кадру с текущим seq — увеличим seq раньше
-           (ранний инкремент даёт независимые потоки, но сохраняет общий seq монотонным). */
-        static uint8_t seq_mask = 0; seq_mask |= (uint8_t)(1u<<pick);
-        if(vnd_ch_mode==2){
-            if(seq_mask == 0x3){ seq_mask = 0; stream_seq++; dbg_produced_seq++; }
+        /* Логика продвижения общего seq в async режиме.
+           Базово: ждём кадры A и B (seq_mask==0x3) -> инкремент.
+           Проблема: если один канал (например B) долго не приходит, мы зацикливаемся на одном seq.
+           Решение: fallback по таймауту или числу односторонних кадров. */
+        uint32_t now_ms_local = HAL_GetTick();
+        if(vnd_ch_mode==2 && vnd_strict_pairing){
+            seq_mask |= (uint8_t)(1u<<pick);
+            if(seq_mask_first_ms == 0) seq_mask_first_ms = now_ms_local;
+            if(seq_mask == 0x3){
+                /* Оба канала отправили по кадру текущего seq — продвигаем */
+                seq_mask = 0; seq_mask_first_ms = 0; seq_partial_cnt = 0;
+                stream_seq++; dbg_produced_seq++;
+            } else {
+                /* Строгая парность: не продвигаем seq, пока не отправлены оба канала. */
+                seq_partial_cnt++;
+                uint32_t dt_ms = (now_ms_local >= seq_mask_first_ms) ? (now_ms_local - seq_mask_first_ms) : (0xFFFFFFFFu - seq_mask_first_ms + 1u + now_ms_local);
+                if(dt_ms > 1000 && (seq_partial_cnt % 8) == 0){
+                    VND_LOG("ASYNC_WAIT_PAIR seq=%lu mask=0x%02X cnt=%u dt=%lums", (unsigned long)stream_seq, (unsigned)seq_mask, (unsigned)seq_partial_cnt, (unsigned long)dt_ms);
+                }
+            }
+        } else if (vnd_ch_mode==2 && !vnd_strict_pairing){
+            /* Независимые каналы: продвигаем seq каждый кадр, сохраняя общую временную шкалу */
+            stream_seq++; dbg_produced_seq++;
+            seq_mask = 0; seq_mask_first_ms = 0; seq_partial_cnt = 0; /* сброс */
         } else {
             /* В режиме single-channel seq просто инкрементируется каждый кадр */
             stream_seq++; dbg_produced_seq++;
-            seq_mask = 0; /* сброс */
+            seq_mask = 0; seq_mask_first_ms = 0; seq_partial_cnt = 0; /* сброс */
         }
         return 1;
     }
@@ -1615,15 +1675,18 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
     /* CRITICAL WATCHDOG: Если TxCplt не пришёл > 500ms, принудительно сбрасываем inflight.
        Причина: на Windows хост может "забыть" забрать данные или ZLP не отправился.
        Без этого устройство зависает с vnd_inflight=1 навсегда. */
-    if(vnd_inflight && (now - vnd_last_tx_start_ms) > 500){
-        VND_LOG("WATCHDOG: vnd_inflight stuck for %lums, force reset", (unsigned long)(now - vnd_last_tx_start_ms));
-        cdc_logf("!!! WATCHDOG: TX stuck, force reset (dt=%lu ms)", (unsigned long)(now - vnd_last_tx_start_ms));
+    if(vnd_inflight){
+        uint32_t dt_ms = (now >= vnd_last_tx_start_ms) ? (now - vnd_last_tx_start_ms) : (0xFFFFFFFFu - vnd_last_tx_start_ms + 1u + now);
+        if(dt_ms > 500){
+            VND_LOG("WATCHDOG: vnd_inflight stuck for %lums, force reset", (unsigned long)dt_ms);
+        cdc_logf("!!! WATCHDOG: TX stuck, force reset (dt=%lu ms)", (unsigned long)dt_ms);
         vnd_inflight = 0;
         vnd_ep_busy = 0;
         vnd_tx_ready = 1;
         sending_channel = 0xFF;
         /* Пытаемся восстановить передачу */
         vnd_tx_kick = 1;
+        }
     }
     
     if(test_in_flight && (now - vnd_last_tx_start_ms) > 100){
@@ -1990,9 +2053,7 @@ void USBD_VND_TxCplt(void)
     vnd_ep_busy = 0;
     vnd_inflight = 0;
     vnd_last_txcplt_ms = HAL_GetTick();
-    VND_LOG("TXCPLT len=%u dt=%lums depth=%u push=%lu pop=%lu empty=%lu ovf=%lu", (unsigned)vnd_last_tx_len,
-        (unsigned long)(HAL_GetTick() - vnd_last_tx_start_ms), (unsigned)vnd_tx_meta_depth(),
-        (unsigned long)meta_push_total, (unsigned long)meta_pop_total, (unsigned long)meta_empty_events, (unsigned long)meta_overflow_events);
+    /* Убран подробный лог TXCPLT — используется агрегированная статистика раз в 10 сек */
     vnd_total_tx_bytes += vnd_last_tx_len; /* учитывать и тестовые, и статусные, и рабочие */
     /* Зафиксировать завершение стартового ACK (если был) */
     if(start_stat_inflight){ start_stat_inflight = 0; start_ack_done = 1; }
@@ -2005,7 +2066,7 @@ void USBD_VND_TxCplt(void)
     else if(have_meta){ eff_is_frame = 0; }
     else { eff_is_frame = last_tx_is_frame; eff_flags = last_tx_flags; eff_seq = last_tx_seq; }
     inflight_is_frame = 0; inflight_flags = 0; inflight_seq = 0;
-    VND_LOG("TXCPLT_CLASS is_frame=%u fl=0x%02X seq=%lu depth_now=%u (meta_have=%d)", (unsigned)eff_is_frame, (unsigned)eff_flags, (unsigned long)eff_seq, (unsigned)vnd_tx_meta_depth(), have_meta);
+    /* Убран подробный лог TXCPLT_CLASS — используется агрегированная статистика */
 
     /* Если это был ACK на STOP — после него переводим систему в остановленное состояние */
     if(stop_stat_inflight){
@@ -2296,6 +2357,9 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 streaming = 1;
                 /* Включаем async декуплинг по умолчанию в полном режиме */
                 async_mode = 1;
+                         /* Ранее мы временно отключали async ради диагностики. Возвращаем по умолчанию async=1
+                             для максимальной скорости. Для отладки можно принудительно выключить через команду
+                             SET_ASYNC_MODE(0) с хоста. */
                 dbg_last_forced_stat_ms = start_cmd_ms;
                 vnd_tx_ready = 1; vnd_ep_busy = 0; vnd_inflight = 0;
                 vnd_last_txcplt_ms = HAL_GetTick();
@@ -2469,24 +2533,41 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
         
         case VND_CMD_DEVICE_RESET:
         {
-            /* ЭКСТРЕННЫЙ ПОЛНЫЙ RESET MCU - для отладки проблем с многократными START/STOP */
             VND_LOG("DEVICE_RESET commanded!");
-            cdc_logf("!!! MCU RESET by host command 0x22 at t=%lu ms", (unsigned long)HAL_GetTick());
-            HAL_Delay(50); /* Дать время на отправку логов через CDC и USB */
-            
-            /* КРИТИЧНО: Полностью деинициализируем USB перед reset для чистого состояния */
-            USBD_Stop(&hUsbDeviceHS);
-            HAL_Delay(20);
-            
-            /* ПОЛНЫЙ MCU RESET - максимально жёсткий способ через NVIC */
-            NVIC_SystemReset();
-            /* После SystemReset управление не вернётся */
+#if VND_DEVICE_RESET_SOFT_ONLY
+            /* Мягкий путь: просим main выполнить soft USB recovery без полного MCU reset */
+            cdc_logf("[VND] soft USB recovery requested by 0x22 at t=%lu ms", (unsigned long)HAL_GetTick());
+            need_recovery = 1;
+#else
+            /* Жёсткий путь: ставим флаг для main-loop (выполнит корректный disconnect+NVIC_SystemReset) */
+            extern volatile uint8_t need_hard_reset;
+            cdc_logf("!!! HARD_RESET scheduled by host 0x22 at t=%lu ms", (unsigned long)HAL_GetTick());
+            need_hard_reset = 1;
+#endif
         }
         break;
         
         case VND_CMD_GET_STATUS:
         {
             /* GET_STATUS всегда допускается: во время стрима — только между парами */
+            /* Диагностическая вставка: классификация паузы при запросе статуса (редкая, чтобы не тормозить) */
+            vnd_diag_log_possible_stall();
+
+            /* Автокик: если во время стрима ничего не летит (EP свободен, нет inflight и пустая meta-очередь),
+               попробуем мягко сдвинуть пайплайн. Это лечит зависания вида ADC_IDLE/A_READY_NOT_TX. */
+            if(streaming && !vnd_ep_busy && !vnd_inflight && (vnd_tx_meta_depth() == 0))
+            {
+                int kicked = 0;
+                if(async_mode){
+                    kicked = vnd_async_try_tx();
+                } else {
+                    if(pending_B){ kicked = vnd_try_send_B_immediate(); }
+                    if(!kicked){ kicked = vnd_try_send_A_nextpair_immediate(); }
+                    if(!kicked){ vnd_prepare_pair(); kicked = vnd_try_send_A_nextpair_immediate(); }
+                }
+                if(kicked){ VND_LOG("KICK_TX by GET_STATUS"); }
+            }
+
             if(streaming){
                 /* В DIAG-режиме исключаем любые STAT в bulk-потоке: используйте EP0 (ctrl) */
                 if(diag_mode_active){ VND_LOG("GET_STATUS bulk ignored in DIAG (use EP0)"); break; }
@@ -2505,28 +2586,6 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 }
             } else {
                 pending_status = 1; VND_LOG("STAT_PENDING on GET_STATUS");
-            }
-        }
-        break;
-        case VND_CMD_GET_STATUS_IMM:
-        {
-            /* Диагностический запрос: попытаться отправить STAT немедленно даже при pending_B.
-               Использовать экономно, чтобы не нарушать A->B поток. Не выполняем в DIAG-режиме. */
-            if(diag_mode_active){ VND_LOG("GET_STATUS_IMM ignored in DIAG"); break; }
-            if(!vnd_ep_busy){
-                uint16_t l = vnd_build_status((uint8_t*)status_buf, sizeof(status_buf));
-                if(l){
-                    vnd_status_permit_once = 1;
-                    vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = l; vnd_last_tx_start_ms = HAL_GetTick();
-                    if(USBD_VND_Transmit(&hUsbDeviceHS, (uint8_t*)status_buf, l) == USBD_OK){
-                        vnd_tx_meta_after((uint8_t*)status_buf, l);
-                        VND_LOG("STAT_TX IMM len=%u", l);
-                    } else {
-                        VND_LOG("STAT_IMM busy/fail"); vnd_tx_ready = 1; vnd_ep_busy = 0;
-                    }
-                }
-            } else {
-                VND_LOG("STAT_IMM skipped: EP busy");
             }
         }
         break;
@@ -2553,16 +2612,39 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 diag_period_ms = 1000 / diag_hz;
                 VND_LOG("SET_BLOCK_HZ %u", diag_hz);
                 cdc_logf("EVT SET_BLOCK_HZ %u", (unsigned)diag_hz);
+                /* NEW: авто-подбор профиля под желаемую частоту блоков, если мы в полном режиме (full_mode) */
+                if(full_mode){
+                    /* Целевые buf_rate_hz профилей: 200(A), 300(B/C/D), 400(E) */
+                    uint16_t target = hz; /* запрос хоста: кадров в секунду */
+                    uint8_t new_prof = adc_stream_get_profile();
+                    if(target >= 380){ new_prof = ADC_PROFILE_E_400HZ; }
+                    else if(target >= 250){ new_prof = ADC_PROFILE_B_DEFAULT; }
+                    else { new_prof = ADC_PROFILE_A_200HZ; }
+                    if(new_prof != adc_stream_get_profile()){
+                        int rc = adc_stream_set_profile(new_prof);
+                        VND_LOG("AUTO_PROFILE_BY_BLOCK_HZ hz=%u -> prof=%u rc=%d", target, new_prof, rc);
+                        if(rc == 0){
+                            uint16_t cur_samples = adc_stream_get_active_samples();
+                            uint16_t cur_rate = adc_stream_get_buf_rate();
+                            cdc_logf("EVT AUTO_PROFILE hz=%u prof=%u samples=%u rate=%u", (unsigned)target, (unsigned)new_prof, (unsigned)cur_samples, (unsigned)cur_rate);
+                            /* Сброс lock размера, чтобы новые параметры применились */
+                            cur_samples_per_frame = 0; cur_expected_frame_size = 0;
+                        }
+                    }
+                }
                 vnd_update_lcd_params();
             }
             break;
         case VND_CMD_SET_ASYNC_MODE:
             if(len >= 2){
-                async_mode = data[1] ? 1 : 0;
+                uint8_t mode = data[1];
+                async_mode = (mode & 0x01) ? 1 : 0;
+                /* bit7 включает строгую парность (A&B на один seq); по умолчанию 0 = независимые каналы */
+                vnd_strict_pairing = (mode & 0x80) ? 1 : 0;
                 /* Запретить async при одноканальном режиме (A-only/B-only) для стабильности */
                 if(vnd_ch_mode != 2 && async_mode){ async_mode = 0; }
-                VND_LOG("SET_ASYNC_MODE %u", (unsigned)async_mode);
-                cdc_logf("EVT SET_ASYNC %u", (unsigned)async_mode);
+                VND_LOG("SET_ASYNC_MODE async=%u strict_pair=%u", (unsigned)async_mode, (unsigned)vnd_strict_pairing);
+                cdc_logf("EVT SET_ASYNC async=%u strict=%u", (unsigned)async_mode, (unsigned)vnd_strict_pairing);
                 /* Сбросим ожидания и канал передачи */
                 pending_B = 0; sending_channel = 0xFF;
             }
@@ -2633,10 +2715,12 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 // 1 -> ADC_PROFILE_B_DEFAULT (912 samples @ 300Hz)
                 // 2 -> ADC_PROFILE_C_HIGH (944 samples @ 300Hz)
                 // 3 -> ADC_PROFILE_D_MAX (976 samples @ 300Hz)
+                // 4 -> ADC_PROFILE_E_400HZ (680 samples @ 400Hz HIGH-FPS)
                 if(profile == 0) prof_id = ADC_PROFILE_A_200HZ;
                 else if(profile == 1) prof_id = ADC_PROFILE_B_DEFAULT;
                 else if(profile == 2) prof_id = ADC_PROFILE_C_HIGH;
                 else if(profile == 3) prof_id = ADC_PROFILE_D_MAX;
+                else if(profile == 4) prof_id = ADC_PROFILE_E_400HZ;
                 int rc = adc_stream_set_profile(prof_id);
                 VND_LOG("SET_PROFILE %u -> prof_id=%u rc=%d", profile, prof_id, rc);
                 /* ДИАГНОСТИКА: вывести текущее состояние после смены профиля */
@@ -2679,6 +2763,76 @@ uint64_t vnd_get_total_tx_bytes(void)
 uint64_t vnd_get_total_tx_samples(void)
 {
     return vnd_total_tx_samples;
+}
+
+/* Общая диагностическая функция: при обращении хоста за статусом проверяет признаки паузы
+   и печатает STALL_WARN не чаще чем раз в 2 секунды. Вызывается как из bulk-пути, так и из EP0. */
+/* Беззнаковая разность тиков (обработка переполнения 32-бит HAL_GetTick()). */
+static inline uint32_t tick_diff32(uint32_t now, uint32_t before){
+    return (now >= before) ? (now - before) : (0xFFFFFFFFu - before + 1u + now);
+}
+
+void vnd_diag_log_possible_stall(void)
+{
+    static uint32_t last_stall_warn_ms = 0;
+    if(!streaming) return;
+    uint32_t now_ms = HAL_GetTick();
+    uint32_t dt = tick_diff32(now_ms, vnd_last_txcplt_ms);
+    if(dt <= 600 || dt >= 3000) return;
+    if(last_stall_warn_ms != 0 && (now_ms - last_stall_warn_ms) <= 2000) return;
+    extern uint8_t USBD_VND_TxIsBusy(void);
+    uint8_t ll_busy = USBD_VND_TxIsBusy();
+    const char *stA = (g_frames[0][0].st==FB_READY?"READY":(g_frames[0][0].st==FB_SENDING?"SENDING":"FILL"));
+    const char *stB = (g_frames[0][1].st==FB_READY?"READY":(g_frames[0][1].st==FB_SENDING?"SENDING":"FILL"));
+    adc_stream_debug_t dbg; adc_stream_get_debug(&dbg);
+    const char *stall_class = "UNKNOWN";
+    uint8_t have_meta = (vnd_tx_meta_depth() > 0);
+    uint32_t wr = frame_wr_seq, rd = frame_rd_seq;
+    if(!have_meta && !pending_B && !ll_busy && !vnd_ep_busy){
+        stall_class = "ADC_IDLE";
+    } else if((vnd_ep_busy || ll_busy) && vnd_inflight){
+        stall_class = "USB_BUSY";
+    } else if(pending_B){
+        if(g_frames[0][1].st!=FB_READY && g_frames[0][1].st!=FB_SENDING){ stall_class = "WAIT_B_FILL"; }
+        else if(g_frames[0][1].st==FB_READY && !vnd_ep_busy){ stall_class = "B_READY_NOT_TX"; }
+        else if(g_frames[0][1].st==FB_SENDING && (now_ms - vnd_last_tx_start_ms) > 120){ stall_class = "B_INFLIGHT_LONG"; }
+        else stall_class = "PEND_B";
+    } else if(!pending_B && g_frames[0][0].st==FB_READY && !vnd_ep_busy){
+        stall_class = "A_READY_NOT_TX";
+    } else if(have_meta && !vnd_inflight && !vnd_ep_busy){
+        stall_class = "META_WAIT";
+    }
+    static uint32_t last_wr_seq = 0; static uint32_t last_wr_ms = 0;
+    if(wr != last_wr_seq){ last_wr_seq = wr; last_wr_ms = now_ms; }
+    else if(tick_diff32(now_ms, last_wr_ms) > 300 && strcmp(stall_class,"ADC_IDLE")!=0){ stall_class = "ADC_STALL"; }
+    cdc_logf("STALL_WARN class=%s dt=%lums ep_busy=%u ll_busy=%u inflight=%u pendB=%u ch=%u A=%s B=%s metaD=%u wr=%lu rd=%lu prod=%lu sentA=%lu sentB=%lu dmaF0=%lu dmaF1=%lu",
+        stall_class,
+        (unsigned long)dt,
+        (unsigned)vnd_ep_busy,
+        (unsigned)ll_busy,
+        (unsigned)vnd_inflight,
+        (unsigned)pending_B,
+        (unsigned)sending_channel,
+        stA, stB,
+        (unsigned)vnd_tx_meta_depth(),
+        (unsigned long)wr,
+        (unsigned long)rd,
+        (unsigned long)dbg_produced_seq,
+        (unsigned long)dbg_sent_ch0_total,
+        (unsigned long)dbg_sent_ch1_total,
+        (unsigned long)dbg.dma_full0,
+        (unsigned long)dbg.dma_full1);
+    VND_LOG("STALL_WARN class=%s dt=%lums ep_busy=%u ll_busy=%u pendB=%u A=%s B=%s metaD=%u wr=%lu rd=%lu",
+        stall_class,
+        (unsigned long)dt,
+        (unsigned)vnd_ep_busy,
+        (unsigned)ll_busy,
+        (unsigned)pending_B,
+        stA, stB,
+        (unsigned)vnd_tx_meta_depth(),
+        (unsigned long)wr,
+        (unsigned long)rd);
+    last_stall_warn_ms = now_ms;
 }
 
 /* Хук от цепочки ADC: когда появились новые кадры — пинаем таск */

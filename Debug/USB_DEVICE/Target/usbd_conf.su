@@ -29,3 +29,4 @@
 ../USB_DEVICE/Target/usbd_conf.c:675:6:USBD_static_free	16	static
 ../USB_DEVICE/Target/usbd_conf.c:685:6:USBD_LL_Delay	16	static
 ../USB_DEVICE/Target/usbd_conf.c:695:20:USBD_Get_USB_Status	24	static
+../USB_DEVICE/Target/usbd_conf.c:724:6:USB_LL_SetSoftDisconnect	16	static

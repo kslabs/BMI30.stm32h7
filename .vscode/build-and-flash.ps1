@@ -59,9 +59,9 @@ $buildExit = $LASTEXITCODE
 Pop-Location
 
 if ($buildExit -ne 0) {
-    Write-Host "  [ERROR] Build failed!" -ForegroundColor Red
+    Write-Host "  [ERROR] Build failed (exit code $buildExit)!" -ForegroundColor Red
     Write-Host $buildOutput
-    exit 1
+    exit $buildExit
 }
 
 # Show size

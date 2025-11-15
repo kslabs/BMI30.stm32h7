@@ -80,6 +80,10 @@ void adc_stream_get_debug(adc_stream_debug_t *out);
 // Хук: вызывается из ISR (ADC1 half/full) с количеством добавленных кадров FIFO (frames_added)
 void adc_stream_on_new_frames(uint32_t frames_added);
 
+// Вотчдог: вызывать периодически из main-loop. Если нет DMA Full длительное время — перезапустить ADC/DMA.
+// (now_ms захватывается внутри; параметр удалён для предотвращения рассинхронизации тиков)
+void adc_stream_watchdog(void);
+
 #ifdef __cplusplus
 }
 #endif

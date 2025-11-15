@@ -630,3 +630,64 @@
 [HOST] STOP written: 1 bytes
 === host reader start ===
 [ERR] Device not found VID=0xCAFE PID=0x4001
+=== host reader start ===
+[HOST][CFG] VID=0xCAFE PID=0x4001 intf=2 IN=0x83 OUT=0x03 pairs=20 tmo=3000ms window=30.0s full=1 async=1 chmode=2 rate=200Hz statusMode=ctrl verbose=1 interval=1.0s
+[HOST] Claimed interface #2
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] Sent STOP command (cleanup before config)
+[HOST] SET_WINDOWS written: 9 bytes (100,300) (700,300)
+[HOST] SET_BLOCK_RATE written: 3 bytes (200 Hz)
+[HOST] SET_FULL_MODE(1) written: 2 bytes
+[HOST] SET_PROFILE(0) written: 2 bytes
+[HOST] SET_ASYNC_MODE(1) written: 2 bytes
+[HOST] SET_CHMODE(2) written: 2 bytes
+[HOST] START written: 1 bytes to EP 0x03
+[HOST][START][TIME] 0.000s (HDR)
+[HOST][START][OK] stream activity detected
+[HOST_RX] timeout
+[HOST_RX] timeout
+[HOST_STAT] ver=1 flags=0x0009 test=1 seq=0 sentA/B=1/0 TxCplt=903 dma=10024/10024 cur_samples=304 wr_seq=10024
+[HOST][NRX][RETRY] kick #1/2
+[HOST][NRX][RETRY] START re-sent
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=903 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=640 cur_seq=0 prep 5/66
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=904 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=84 cur_seq=0 prep 8/82
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=905 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=84 cur_seq=0 prep 11/98
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=906 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=84 cur_seq=0 prep 14/114
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=907 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=84 cur_seq=0 prep 1/130
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=908 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=84 cur_seq=0 prep 4/146
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=909 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=84 cur_seq=0 prep 7/162
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=910 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=84 cur_seq=0 prep 10/178
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=911 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=84 cur_seq=0 prep 13/194
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=912 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=84 cur_seq=0 prep 0/210
+[HOST_RX] timeout
+[HOST_STAT] ver=1 flags=0x0009 test=1 seq=0 sentA/B=1/0 TxCplt=903 dma=10024/10024 cur_samples=304 wr_seq=10024
+[HOST_RX] timeout
+[HOST_STAT] ver=1 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=913 dma=10024/10024 cur_samples=1360 wr_seq=10024
+[HOST][NRX][RETRY] kick #2/2
+[HOST][NRX][RETRY] START re-sent
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=913 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=84 cur_seq=0 prep 8/34
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=914 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=84 cur_seq=0 prep 11/50
+[HOST_RX] ep=0x83 len=64 type=STAT head=53 54 41 54
+[HOST_STAT] ver=3 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=915 dma=10024/10024 cur_samples=1360 wr_seq=10024 flags2=0x0192 send_ch=255 pair 0/0 lastTX=84 cur_seq=0 prep 14/66
+[HOST_RX] timeout
+[HOST_STAT] ver=1 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=913 dma=10024/10024 cur_samples=1360 wr_seq=10024
+[HOST_RX] timeout
+[HOST_STAT] ver=1 flags=0x0005 test=1 seq=0 sentA/B=0/0 TxCplt=916 dma=10024/10024 cur_samples=1360 wr_seq=10024
+[HOST][ABORT] no RX for 5.0s (mode=data)
+[HOST][SUMMARY] elapsed=6.2s A=0 (z0=0,z%=0.00) B=0 (z0=0,z%=0.00) STAT=13 timeouts=6 pipe_errors=0 dev_tot A=0 B=0 TxCplt=916 seq=0
+[HOST][LOSS] dev_sent A=0 B=0 host_rx A=0 B=0 lost A=0 (0.0000%) B=0 (0.0000%) A+B lost=0 (0.0000%)
+[HOST] STOP written: 1 bytes
+[HOST] Alt reset 0->1 done
+[HOST][FAIL] no RX for 5.0s (mode=data)
