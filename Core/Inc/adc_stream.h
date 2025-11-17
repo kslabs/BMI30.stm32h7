@@ -84,6 +84,10 @@ void adc_stream_on_new_frames(uint32_t frames_added);
 // (now_ms захватывается внутри; параметр удалён для предотвращения рассинхронизации тиков)
 void adc_stream_watchdog(void);
 
+// Переключение буферов по TIM2 (вызывается из HAL_TIM_PeriodElapsedCallback)
+// Вызов в начале цикла (0→1 TIM2) перед началом заполнения нового буфера
+void adc_stream_tim2_switch_buffers(void);
+
 #ifdef __cplusplus
 }
 #endif

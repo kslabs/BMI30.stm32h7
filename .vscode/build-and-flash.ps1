@@ -54,13 +54,15 @@ if ($CleanBuild) {
 # Step 3: Build
 Write-Host "[3/4] Building..." -ForegroundColor Yellow
 Push-Location $ProjectRoot
-$buildOutput = make -C Debug all 2>&1
+$buildOutput = make -C Debug all 2>&1 | Out-String
 $buildExit = $LASTEXITCODE
 Pop-Location
 
 if ($buildExit -ne 0) {
     Write-Host "  [ERROR] Build failed (exit code $buildExit)!" -ForegroundColor Red
-    Write-Host $buildOutput
+    Write-Host "========== FULL BUILD OUTPUT ==========" -ForegroundColor Red
+    Write-Host $buildOutput -ForegroundColor Red
+    Write-Host "=======================================" -ForegroundColor Red
     exit $buildExit
 }
 
@@ -87,16 +89,21 @@ if (!(Test-Path $CubeProgrammer)) {
     exit 1
 }
 
-$flashOutput = & $CubeProgrammer -c port=SWD freq=4000 -w $ElfFile -v -rst 2>&1
+$flashOutput = & $CubeProgrammer -c port=SWD freq=4000 -w $ElfFile -v -rst 2>&1 | Out-String
 $flashExit = $LASTEXITCODE
 
 if ($flashOutput -match "Download verified successfully") {
     Write-Host "  [OK] Flash verified successfully" -ForegroundColor Green
     Write-Host "  [OK] MCU reset performed" -ForegroundColor Green
+} elseif ($flashExit -ne 0) {
+    Write-Host "  [ERROR] Flash failed (exit code $flashExit)!" -ForegroundColor Red
+    Write-Host "========== FULL FLASH OUTPUT ==========" -ForegroundColor Red
+    Write-Host $flashOutput -ForegroundColor Red
+    Write-Host "=======================================" -ForegroundColor Red
+    exit $flashExit
 } else {
-    Write-Host "  [ERROR] Flash failed!" -ForegroundColor Red
-    Write-Host $flashOutput
-    exit 1
+    Write-Host "  [WARN] Flash completed but verification message not found" -ForegroundColor Yellow
+    Write-Host $flashOutput -ForegroundColor Yellow
 }
 
 Write-Host "" 

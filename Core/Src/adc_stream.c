@@ -116,18 +116,23 @@ static void dump_b_path_regs(uint32_t ndtrA, uint32_t ndtrB)
 
 // --- Профили ---
 static const adc_stream_profile_t g_profiles[ADC_PROFILE_COUNT] = {
-    { .samples_per_buf = 1375, .buf_rate_hz = 200, .fs_hz = 1375u * 200u }, // A: основной профиль 200Hz/1375 samples
+    { .samples_per_buf = 1370, .buf_rate_hz = 200, .fs_hz = 1370u * 200u }, // A: основной профиль 200Hz/1370 samples (1370/274kHz=5ms < 1 period TIM2)
     { .samples_per_buf = 912,  .buf_rate_hz = 300, .fs_hz = 912u  * 300u }, // B: default balanced (higher pair rate)
     { .samples_per_buf = 944,  .buf_rate_hz = 300, .fs_hz = 944u  * 300u }, // C: high Fs
     { .samples_per_buf = 976,  .buf_rate_hz = 300, .fs_hz = 976u  * 300u }, // D: max Fs (near USB limit test)
     { .samples_per_buf = 680,  .buf_rate_hz = 400, .fs_hz = 680u  * 400u }, // E: HIGH-FPS (same Fs≈272kHz, smaller frames faster cadence)
 };
-static uint8_t g_active_profile = 0;  // Дефолт: профиль A (index 0) 200 Hz / 1375 samples
-static uint16_t g_active_samples = 1375; // runtime N для профиля A
+static uint8_t g_active_profile = 0;  // Дефолт: профиль A (index 0) 200 Hz
+static uint16_t g_active_samples = 1100; // runtime N для GATED mode
+                                          // 1100 @ 275kHz = 4.0ms точно
+                                          // TIM2 CH1 HIGH = 4ms (Pulse=4000)
+                                          // TIM15 GATED → ADC останавливается когда CH1 → LOW
 
 // Выравнивание по линии кэша для снижения побочных эффектов DCache (32 байт)
 __attribute__((aligned(32))) uint16_t adc1_buffers[FIFO_FRAMES][MAX_FRAME_SAMPLES];
 __attribute__((aligned(32))) uint16_t adc2_buffers[FIFO_FRAMES][MAX_FRAME_SAMPLES];
+
+// Убраны тестовые переменные - используем только реальный ADC+DMA
 
 volatile uint32_t frame_wr_seq = 0;      // сколько кадров записано (ISR)
 volatile uint32_t frame_rd_seq = 0;      // сколько кадров прочитано потребителем
@@ -218,6 +223,21 @@ static inline void adc_invalidate_cache_for_buffer(void *buf, uint32_t samples)
 #endif
 }
 
+static inline void adc_flush_cache_for_buffer(void *buf, uint32_t samples)
+{
+#if defined (SCB_CleanDCache_by_Addr)
+    uintptr_t addr = (uintptr_t)buf;
+    uintptr_t start = addr & ~(uintptr_t)31u; /* выравнивание вниз до 32 байт */
+    uint32_t bytes = samples * (uint32_t)sizeof(uint16_t);
+    uint32_t extra = (uint32_t)(addr - start);
+    uint32_t total = bytes + extra;
+    uint32_t total_aligned = (total + 31u) & ~31u; /* кратность 32 */
+    SCB_CleanDCache_by_Addr((uint32_t*)start, (int32_t)total_aligned);
+#else
+    (void)buf; (void)samples;
+#endif
+}
+
 // Публичные функции профиля
 uint8_t adc_stream_get_profile(void) { return g_active_profile; }
 uint16_t adc_stream_get_active_samples(void) { return g_active_samples; }
@@ -247,11 +267,12 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
     for (unsigned i = 0; i < FIFO_FRAMES; ++i) s_pair_ready_mask[i] = 0;
     s_pair_ready_idx = 0;
     s_next_ring_index = 0;  // Начинаем с buf[0], после TC перейдём на buf[1], потом buf[2]... buf[31]→buf[0]
+    
     #if DIAG_DISABLE_ADC_DMA
         ADC_LOGF("[ADC][DIAG] DMA start suppressed (DIAG_DISABLE_ADC_DMA=1) total_samples=%lu\r\n", (unsigned long)total_samples);
         return HAL_OK;
     #else
-        // Старт ADC1 DMA на буфер[0] длиной N
+    // Старт ADC1 DMA на буфер[0] длиной N
     HAL_StatusTypeDef rc1 = HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[0], total_samples);
     ADC_LOGF("[ADC][APPLY_PROFILE] HAL_ADC_Start_DMA ADC1 rc=%d\r\n", (int)rc1);
     if (rc1 != HAL_OK) return HAL_ERROR;
@@ -384,6 +405,7 @@ static inline uint8_t is_buffer_all_zeros(uint16_t *buf, uint16_t samples) {
 // Получить один кадр конкретного канала (независимая модель). Возвращает 1 если кадр получен.
 uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples) {
     if (ch > 1 || !buf || !samples) return 0;
+    
     __disable_irq();
     if (adc_ch_rd_seq[ch] == adc_ch_wr_seq[ch]) {
         __enable_irq();
@@ -391,9 +413,31 @@ uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples) {
     }
     uint32_t seq = adc_ch_rd_seq[ch]++;
     __enable_irq();
+    
+    /* НОВАЯ СХЕМА: TIM2 callback пишет маркеры в prev_idx,
+       который соответствует seq (без сдвига). USB читает тот же буфер. */
     uint32_t index = seq & (FIFO_FRAMES - 1u);
     *buf = (ch==0) ? adc1_buffers[index] : adc2_buffers[index];
     *samples = g_active_samples;
+    
+    // DEBUG: Проверка лестницы отключена
+    #if 0  // ОТКЛЮЧЕНО: маркеры убраны
+    static uint32_t last_read_check_ms = 0;
+    static uint32_t read_counter = 0;
+    uint32_t now_read_ms = HAL_GetTick();
+    if (now_read_ms - last_read_check_ms >= 1000 && ch == 0) {  // Только для канала A
+        last_read_check_ms = now_read_ms;
+        read_counter++;
+        uint16_t *pbuf = *buf;
+        uint16_t r0 = (g_active_samples > 0) ? pbuf[0] : 0;
+        uint16_t r100 = (g_active_samples > 100) ? pbuf[100] : 0;
+        uint16_t r200 = (g_active_samples > 200) ? pbuf[200] : 0;
+        uint16_t r300 = (g_active_samples > 300) ? pbuf[300] : 0;
+        uint16_t r400 = (g_active_samples > 400) ? pbuf[400] : 0;
+        printf("[MCU_READ#%lu] CH%u idx=%lu: [0]=%u [100]=%u [200]=%u [300]=%u [400]=%u\r\n",
+               (unsigned long)read_counter, ch, (unsigned long)index, r0, r100, r200, r300, r400);
+    }
+    #endif
     
     // ДИАГНОСТИКА: проверяем буфер на нулевое содержимое
     if (is_buffer_all_zeros(*buf, *samples)) {
@@ -481,6 +525,124 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
     #endif  // #if 0
 }
 
+/* ========================================================================
+   НОВАЯ СХЕМА: Переключение буферов по TIM2 @ 200Hz (вызов в начале периода)
+   ======================================================================== */
+void adc_stream_tim2_switch_buffers(void) {
+    if (!s_adc1 || !s_adc2) return;  // ADC не инициализированы
+    
+    // Проверяем что ADC в состоянии READY или BUSY (работает)
+    if (s_adc1->State == HAL_ADC_STATE_RESET || s_adc1->State == HAL_ADC_STATE_ERROR) {
+        return;  // ADC еще не готов или в ошибке
+    }
+    
+    /* TIM2 @ 200Hz срабатывает в начале периода (0→1 переход).
+       В этот момент TIM15 GATED запустится и начнёт генерировать триггеры для ADC.
+       Переключаем DMA буферы ДО начала заполнения. */
+    
+    uint32_t prev_idx = s_next_ring_index;  // Буфер, который был заполнен в прошлом цикле
+    uint32_t next_idx = (s_next_ring_index + 1u) & (FIFO_FRAMES - 1u);
+    uint32_t total_samples = (uint32_t)g_active_samples;
+    
+    /* Останавливаем DMA (должен быть уже остановлен TIM15 GATED, но гарантируем) */
+    HAL_ADC_Stop_DMA(s_adc1);
+    DMA_Stream_TypeDef *dma1_st = (DMA_Stream_TypeDef*)s_adc1->DMA_Handle->Instance;
+    for (volatile uint32_t timeout = 0; timeout < 100; timeout++) {
+        if (!(dma1_st->CR & DMA_SxCR_EN)) break;
+    }
+    
+    #if !DIAG_SINGLE_ADC1
+    HAL_ADC_Stop_DMA(s_adc2);
+    DMA_Stream_TypeDef *dma2_st = (DMA_Stream_TypeDef*)s_adc2->DMA_Handle->Instance;
+    for (volatile uint32_t timeout = 0; timeout < 100; timeout++) {
+        if (!(dma2_st->CR & DMA_SxCR_EN)) break;
+    }
+    #endif
+    
+    /* Запускаем DMA с новым буфером next_idx */
+    HAL_StatusTypeDef st1 = HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[next_idx], total_samples);
+    if (st1 != HAL_OK) {
+        ADC_LOGF("[ADC][TIM2] ADC1 Start_DMA failed: %d\r\n", st1);
+    }
+    
+    #if !DIAG_SINGLE_ADC1
+    HAL_StatusTypeDef st2 = HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[next_idx], total_samples);
+    if (st2 != HAL_OK) {
+        ADC_LOGF("[ADC][TIM2] ADC2 Start_DMA failed: %d\r\n", st2);
+    }
+    #endif
+    
+    s_next_ring_index = next_idx;
+    
+    /* Обрабатываем prev_idx — буфер, заполненный в прошлом цикле */
+    if (prev_idx < FIFO_FRAMES) {
+        /* Обновляем счётчики по каналу A */
+        adc_ch_wr_seq[0]++;
+        uint32_t backlogA = adc_ch_wr_seq[0] - adc_ch_rd_seq[0];
+        if (backlogA > FIFO_FRAMES) {
+            uint32_t excess = backlogA - FIFO_FRAMES;
+            adc_ch_overflow_drops[0] += excess;
+            adc_ch_rd_seq[0] += excess;
+        }
+        
+        /* Обновляем счётчики по каналу B */
+        adc_ch_wr_seq[1]++;
+        uint32_t backlogB = adc_ch_wr_seq[1] - adc_ch_rd_seq[1];
+        if (backlogB > FIFO_FRAMES) {
+            uint32_t excess = backlogB - FIFO_FRAMES;
+            adc_ch_overflow_drops[1] += excess;
+            adc_ch_rd_seq[1] += excess;
+        }
+        
+        /* Invalidate cache для prev_idx (DMA записал данные) */
+        adc_invalidate_cache_for_buffer(adc1_buffers[prev_idx], g_active_samples);
+        adc_invalidate_cache_for_buffer(adc2_buffers[prev_idx], g_active_samples);
+        
+        /* DEBUG: Маркеры "лестница" отключены — синхронизация подтверждена */
+        #if 0  // ОТКЛЮЧЕНО: маркеры больше не нужны
+        for (uint16_t i = 0; i < g_active_samples; i += 100) {
+            uint16_t value = (i / 100) * 500;
+            if (value > 4095) value = 4095;
+            adc1_buffers[prev_idx][i] = value;
+            adc2_buffers[prev_idx][i] = value;
+        }
+        adc_flush_cache_for_buffer(adc1_buffers[prev_idx], g_active_samples);
+        adc_flush_cache_for_buffer(adc2_buffers[prev_idx], g_active_samples);
+        
+        /* DEBUG: Проверка маркеров каждую секунду */
+        static uint32_t last_check_ms = 0;
+        static uint32_t check_counter = 0;
+        uint32_t now_ms = HAL_GetTick();
+        if (now_ms - last_check_ms >= 1000) {
+            last_check_ms = now_ms;
+            check_counter++;
+            uint16_t s0 = adc1_buffers[prev_idx][0];
+            uint16_t s100 = adc1_buffers[prev_idx][100];
+            uint16_t s200 = adc1_buffers[prev_idx][200];
+            uint16_t s300 = adc1_buffers[prev_idx][300];
+            uint16_t s400 = adc1_buffers[prev_idx][400];
+            printf("[MCU_TIM2#%lu] A prev_idx=%lu: [0]=%u [100]=%u [200]=%u [300]=%u [400]=%u\r\n", 
+                   (unsigned long)check_counter, (unsigned long)prev_idx, s0, s100, s200, s300, s400);
+            
+            uint16_t s0_b = adc2_buffers[prev_idx][0];
+            uint16_t s100_b = adc2_buffers[prev_idx][100];
+            uint16_t s200_b = adc2_buffers[prev_idx][200];
+            uint16_t s300_b = adc2_buffers[prev_idx][300];
+            uint16_t s400_b = adc2_buffers[prev_idx][400];
+            printf("[MCU_TIM2#%lu] B prev_idx=%lu: [0]=%u [100]=%u [200]=%u [300]=%u [400]=%u\r\n", 
+                   (unsigned long)check_counter, (unsigned long)prev_idx, s0_b, s100_b, s200_b, s300_b, s400_b);
+        }
+        #endif  // Маркеры отключены
+        
+        /* Публикуем пару буферов в очередь */
+        s_pair_ready_mask[prev_idx] = 0x03u;
+        adc_mark_ready_and_publish(0x03);
+    }
+}
+
+/* ========================================================================
+   СТАРАЯ СХЕМА: DMA TC callback (теперь не используется для переключения)
+   ======================================================================== */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     static uint32_t callback_entry_count = 0;  // ДИАГНОСТИКА: счётчик входов в callback
     callback_entry_count++;
@@ -502,70 +664,139 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     }
 #endif
     adc_last_full0_ms = HAL_GetTick();
-        /* Один общий callback обслуживает ОБА канала: считаем, что по завершению DMA ADC1
-           готов кадр и по ADC1, и по ADC2 с одним и тем же индексом. Перезапускаем оба DMA
-           и сразу публикуем пару. */
-        uint32_t done_idx = s_next_ring_index;
-        if (done_idx < FIFO_FRAMES) {
-            /* Обновляем счётчики по каналу A */
-            adc_ch_wr_seq[0]++;
-            uint32_t backlogA = adc_ch_wr_seq[0] - adc_ch_rd_seq[0];
-            if (backlogA > FIFO_FRAMES) {
-                uint32_t excess = backlogA - FIFO_FRAMES;
-                adc_ch_overflow_drops[0] += excess;
-                adc_ch_rd_seq[0] += excess; // drop oldest
-            }
-            adc_invalidate_cache_for_buffer(adc1_buffers[done_idx], g_active_samples);
-
-            /* Обновляем счётчики по каналу B */
-            adc_ch_wr_seq[1]++;
-            uint32_t backlogB = adc_ch_wr_seq[1] - adc_ch_rd_seq[1];
-            if (backlogB > FIFO_FRAMES) {
-                uint32_t excess = backlogB - FIFO_FRAMES;
-                adc_ch_overflow_drops[1] += excess;
-                adc_ch_rd_seq[1] += excess; // drop oldest
-            }
-            adc_invalidate_cache_for_buffer(adc2_buffers[done_idx], g_active_samples);
-
-            /* Отмечаем пару как готовую и сразу публикуем */
-            s_pair_ready_mask[done_idx] = 0x03u;
-            adc_mark_ready_and_publish(0x03);
+    
+    /* Один общий callback обслуживает ОБА канала: считаем, что по завершению DMA ADC1
+       готов кадр и по ADC1, и по ADC2 с одним и тем же индексом. 
+       КРИТИЧНО: СНАЧАЛА перезапускаем ADC+DMA, ПОТОМ обрабатываем done_idx! */
+    uint32_t done_idx = s_next_ring_index;
+    uint32_t next_idx = (s_next_ring_index + 1u) & (FIFO_FRAMES - 1u);
+    uint32_t total_samples = (uint32_t)g_active_samples;
+    
+    /* ====== ПРИОРИТЕТ 1: ЯВНАЯ ОСТАНОВКА + RESTART ADC+DMA ====== */
+    /* В ONESHOT+NORMAL режиме ADC должен остановиться после TC, но гарантируем через Stop */
+    
+    /* ADC1: Stop → ждём остановки → Start с новым буфером */
+    HAL_ADC_Stop_DMA(s_adc1);
+    /* Ждём фактической остановки DMA (проверяем NDTR и EN bit) */
+    DMA_Stream_TypeDef *dma1_st = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
+    for (volatile uint32_t timeout = 0; timeout < 1000; timeout++) {
+        if (!(dma1_st->CR & DMA_SxCR_EN)) break;  // DMA остановлен
+    }
+    
+    HAL_StatusTypeDef st1 = HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[next_idx], total_samples);
+    if (st1 != HAL_OK) {
+        ADC_LOGF("[ADC][ERR] ADC1 Start_DMA failed: %d\r\n", st1);
+    }
+    
+    #if !DIAG_SINGLE_ADC1
+    /* ADC2: Stop → ждём остановки → Start с новым буфером */
+    HAL_ADC_Stop_DMA(s_adc2);
+    DMA_Stream_TypeDef *dma2_st = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
+    for (volatile uint32_t timeout = 0; timeout < 1000; timeout++) {
+        if (!(dma2_st->CR & DMA_SxCR_EN)) break;  // DMA остановлен
+    }
+    
+    HAL_StatusTypeDef st2 = HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[next_idx], total_samples);
+    if (st2 != HAL_OK) {
+        ADC_LOGF("[ADC][ERR] ADC2 Start_DMA failed: %d\r\n", st2);
+    }
+    #endif
+    
+    s_next_ring_index = next_idx;
+    
+    /* КРИТИЧНО: Используем ПРЕПОСЛЕДНИЙ буфер для маркеров!
+       done_idx - это буфер, который только что завершился DMA TC.
+       Но пока мы в прерывании, TIM15 @ 275kHz продолжает слать триггеры в ADC,
+       который уже перезапущен на next_idx. Если обработка callback затянется,
+       done_idx может быть частично перезаписан новыми данными АЦП.
+       
+       Поэтому пишем маркеры в (done_idx - 1), который точно не используется! */
+    uint32_t marker_idx = (done_idx + FIFO_FRAMES - 1u) & (FIFO_FRAMES - 1u);  // done_idx - 1 с wrap
+        
+    /* Обрабатываем done_idx — публикуем в очередь USB */
+    if (done_idx < FIFO_FRAMES) {
+        /* Обновляем счётчики по каналу A */
+        adc_ch_wr_seq[0]++;
+        uint32_t backlogA = adc_ch_wr_seq[0] - adc_ch_rd_seq[0];
+        if (backlogA > FIFO_FRAMES) {
+            uint32_t excess = backlogA - FIFO_FRAMES;
+            adc_ch_overflow_drops[0] += excess;
+            adc_ch_rd_seq[0] += excess;
         }
-
-        /* После TC прерывания перезапускаем оба DMA на следующий буфер в кольце.
-           В DMA_NORMAL mode DMA останавливается после TC. */
-        uint32_t next_idx = (s_next_ring_index + 1u) & (FIFO_FRAMES - 1u);
-        uint32_t total_samples = (uint32_t)g_active_samples;
-
-        /* Прямое управление DMA без HAL (быстрее и безопаснее в ISR) для ADC1 */
-        DMA_Stream_TypeDef *dma1_stream = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
-
-        dma1_stream->CR &= ~DMA_SxCR_EN;
-        while(dma1_stream->CR & DMA_SxCR_EN);
-        dma1_stream->M0AR = (uint32_t)adc1_buffers[next_idx];
-        dma1_stream->NDTR = total_samples;
-        __HAL_DMA_CLEAR_FLAG(&hdma_adc1, __HAL_DMA_GET_TC_FLAG_INDEX(&hdma_adc1));
-        __HAL_DMA_CLEAR_FLAG(&hdma_adc1, __HAL_DMA_GET_HT_FLAG_INDEX(&hdma_adc1));
-        __HAL_DMA_CLEAR_FLAG(&hdma_adc1, __HAL_DMA_GET_TE_FLAG_INDEX(&hdma_adc1));
-        dma1_stream->CR |= DMA_SxCR_EN;
-
-        #if !DIAG_SINGLE_ADC1
-        /* Аналогично для ADC2: перезапуск DMA2 на тот же индекс next_idx */
-        {
-            DMA_Stream_TypeDef *dma2_stream = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
-            dma2_stream->CR &= ~DMA_SxCR_EN;
-            while(dma2_stream->CR & DMA_SxCR_EN);
-            dma2_stream->M0AR = (uint32_t)adc2_buffers[next_idx];
-            dma2_stream->NDTR = total_samples;
-            __HAL_DMA_CLEAR_FLAG(&hdma_adc2, __HAL_DMA_GET_TC_FLAG_INDEX(&hdma_adc2));
-            __HAL_DMA_CLEAR_FLAG(&hdma_adc2, __HAL_DMA_GET_HT_FLAG_INDEX(&hdma_adc2));
-            __HAL_DMA_CLEAR_FLAG(&hdma_adc2, __HAL_DMA_GET_TE_FLAG_INDEX(&hdma_adc2));
-            dma2_stream->CR |= DMA_SxCR_EN;
+        
+        /* Invalidate cache перед чтением done_idx (DMA писал туда данные) */
+        adc_invalidate_cache_for_buffer(adc1_buffers[done_idx], g_active_samples);
+        
+#if 0  // MARKERS DISABLED
+        // DEBUG: Создаём "лестницу" маркеров в ПРЕПОСЛЕДНЕМ буфере (marker_idx)
+        // Это безопасно — marker_idx гарантированно не используется ни DMA, ни USB
+        adc_invalidate_cache_for_buffer(adc1_buffers[marker_idx], g_active_samples);
+        for (uint16_t i = 0; i < g_active_samples; i += 100) {
+            uint16_t value = (i / 100) * 500;  // 0, 500, 1000, 1500, 2000, ...
+            if (value > 4095) value = 4095;
+            adc1_buffers[marker_idx][i] = value;
         }
-        #endif
+        adc_flush_cache_for_buffer(adc1_buffers[marker_idx], g_active_samples);
+        
+        // DEBUG: Проверка лестницы сразу после записи (каждую секунду)
+        // ВНИМАНИЕ: Проверяем marker_idx, где реально записали маркеры!
+        static uint32_t last_check_ms = 0;
+        static uint32_t check_counter = 0;
+        uint32_t now_ms = HAL_GetTick();
+        if (now_ms - last_check_ms >= 1000) {
+            last_check_ms = now_ms;
+            check_counter++;
+            // Проверяем marker_idx (препоследний буфер с маркерами)
+            uint16_t s0 = adc1_buffers[marker_idx][0];
+            uint16_t s100 = adc1_buffers[marker_idx][100];
+            uint16_t s200 = adc1_buffers[marker_idx][200];
+            uint16_t s300 = adc1_buffers[marker_idx][300];
+            uint16_t s400 = adc1_buffers[marker_idx][400];
+            printf("[MCU_TX#%lu] A marker_idx=%lu: [0]=%u [100]=%u [200]=%u [300]=%u [400]=%u\r\n", 
+                   (unsigned long)check_counter, (unsigned long)marker_idx, s0, s100, s200, s300, s400);
+            
+            // DEBUG: Проверка лестницы B в том же marker_idx
+            uint16_t s0_b = adc2_buffers[marker_idx][0];
+            uint16_t s100_b = adc2_buffers[marker_idx][100];
+            uint16_t s200_b = adc2_buffers[marker_idx][200];
+            uint16_t s300_b = adc2_buffers[marker_idx][300];
+            uint16_t s400_b = adc2_buffers[marker_idx][400];
+            printf("[MCU_TX#%lu] B marker_idx=%lu: [0]=%u [100]=%u [200]=%u [300]=%u [400]=%u\r\n", 
+                   (unsigned long)check_counter, (unsigned long)marker_idx, s0_b, s100_b, s200_b, s300_b, s400_b);
+        }
+#endif  // MARKERS DISABLED
 
-        s_next_ring_index = next_idx;
-    } else if (hadc->Instance == (s_adc2 ? s_adc2->Instance : NULL)) {
+        /* Обновляем счётчики по каналу B */
+        adc_ch_wr_seq[1]++;
+        uint32_t backlogB = adc_ch_wr_seq[1] - adc_ch_rd_seq[1];
+        if (backlogB > FIFO_FRAMES) {
+            uint32_t excess = backlogB - FIFO_FRAMES;
+            adc_ch_overflow_drops[1] += excess;
+            adc_ch_rd_seq[1] += excess;
+        }
+        
+        adc_invalidate_cache_for_buffer(adc2_buffers[done_idx], g_active_samples);
+        
+#if 0  // MARKERS DISABLED
+        // DEBUG: Аналогичная лестница для канала B в ПРЕПОСЛЕДНЕМ буфере (marker_idx)
+        adc_invalidate_cache_for_buffer(adc2_buffers[marker_idx], g_active_samples);
+        for (uint16_t i = 0; i < g_active_samples; i += 100) {
+            uint16_t value = (i / 100) * 500;
+            if (value > 4095) value = 4095;
+            adc2_buffers[marker_idx][i] = value;
+        }
+        adc_flush_cache_for_buffer(adc2_buffers[marker_idx], g_active_samples);
+        
+        // Flush cache после записи маркеров для текущего done_idx (если нужно)
+        adc_flush_cache_for_buffer(adc1_buffers[done_idx], g_active_samples);
+        adc_flush_cache_for_buffer(adc2_buffers[done_idx], g_active_samples);
+#endif  // MARKERS DISABLED
+
+        /* Отмечаем пару как готовую и сразу публикуем */
+        s_pair_ready_mask[done_idx] = 0x03u;
+        adc_mark_ready_and_publish(0x03);
+    }
+} else if (hadc->Instance == (s_adc2 ? s_adc2->Instance : NULL)) {
         /* ADC2 callback НЕ ДОЛЖЕН вызываться при ADC2_DISABLE_DMA_IRQS=1
            Если всё же вызвался - это ошибка конфигурации */
         ADC_LOGF("[ADC][ERR] ADC2 callback unexpected! IRQ should be disabled\r\n");
@@ -689,3 +920,5 @@ void adc_stream_watchdog(void)
          нестабильный и шумный. Если когда-нибудь понадобится вернуть эксперименты,
          здесь можно восстановить логику dtB/dtA и выборочные рестарты. */
 }
+
+// Тестовые функции удалены - используем только реальный ADC+DMA

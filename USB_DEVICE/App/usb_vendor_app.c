@@ -957,10 +957,12 @@ static void vnd_prepare_pair(void)
         wr = frame_wr_seq; rd = frame_rd_seq;
         if (wr == rd) { __enable_irq(); return; }
         backlog = wr - rd;
-        /* Берём самый свежий кадр: wr-1; перескакиваем чтение на wr (отбрасывая backlog-1 старых) */
+        /* ЖЁСТКАЯ СИНХРОНИЗАЦИЯ: берём последний ГОТОВЫЙ буфер (wr-1), 
+           который DMA УЖЕ НЕ ТРОГАЕТ (DMA сейчас работает с индексом wr % FIFO_FRAMES).
+           Перескакиваем rd на wr-1, отбрасывая старые буферы. */
         seq = wr - 1u;
         if(backlog > 1u){ dbg_skipped_frames += (backlog - 1u); }
-        frame_rd_seq = wr;
+        frame_rd_seq = wr - 1u;  /* ВАЖНО: rd указывает на последний прочитанный, а не на следующий непрочитанный */
         __enable_irq();
         uint32_t index = (uint32_t)(seq & (FIFO_FRAMES - 1u));
         ch1 = adc1_buffers[index];
@@ -1068,7 +1070,7 @@ static int vnd_find_pair_by_seq(uint32_t seq)
 
 /* Асинхронный выбор и отправка одного готового кадра (A или B) */
 /* Режим строгой парности по желанию: 0 — независимые каналы (дефолт), 1 — строгая пара A&B на один seq */
-static uint8_t vnd_strict_pairing = 0;
+static uint8_t vnd_strict_pairing = 0;  /* ВЫКЛЮЧЕНО: каждый канал отправляется независимо */
 
 static int vnd_async_try_tx(void)
 {
@@ -1110,7 +1112,7 @@ static int vnd_async_try_tx(void)
                 uint16_t eff = cur_samples_per_frame;
                 if(eff > samples) eff = samples; /* защита, если размер профиля уменьшился внезапно */
                 if(eff > VND_MAX_SAMPLES) eff = VND_MAX_SAMPLES;
-                /* Построить payload */
+                /* Построить payload: копируем из ADC-буфера в USB-буфер */
                 memset(tf[ch].buf, 0, VND_FRAME_HDR_SIZE + eff*2u);
                 for(uint16_t i=0;i<eff;i++){
                     uint16_t v = abuf[i];

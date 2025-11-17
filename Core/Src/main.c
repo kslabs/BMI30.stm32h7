@@ -666,17 +666,9 @@ int main(void)
 #if defined(DIAG_TRAP_STAGE) && (DIAG_TRAP_STAGE==4)
   diag_trap(4);
 #endif
-  // Запускаем PWM на TIM2 CH1/CH2/CH3 c периодом 200 Гц и скважностью 50%
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 2499);
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 2499);
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 2499);
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);  // Контроль
-
-  // Включить прерывание TIM2 Update для генерации тестовых данных @ 200 Hz и запустить таймер
-  __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
-  HAL_TIM_Base_Start_IT(&htim2);
+  // ВАЖНО: TIM2 запускается ПОСЛЕ инициализации ADC (см. ниже)
+  // чтобы прерывания TIM2 не вызывали adc_stream_tim2_switch_buffers()
+  // до готовности ADC
 
   // Запуск каналов для TIM3
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); // Фаза
@@ -852,19 +844,43 @@ int main(void)
     htim15.State = HAL_TIM_STATE_READY;
   }
   {
+    // CRITICAL: Сбросить счётчик TIM15 в 0 ПЕРЕД стартом для синхронизации с TIM2
+    // Иначе первый буфер ADC начнётся с произвольной фазы
+    __HAL_TIM_SET_COUNTER(&htim15, 0);
+    
     HAL_StatusTypeDef st = HAL_TIM_Base_Start(&htim15);
     if (st != HAL_OK) {
       printf("[TIM15][ERR] HAL_TIM_Base_Start status=%d (state=%d) -> entering Error_Handler\r\n", st, htim15.State);
       err_code = 1002;
       Error_Handler();
     }
+    
+    // Ждём первого UPDATE от TIM2 (TRGO->ITR1->RESET TIM15) для полной синхронизации
+    // TIM2 @ 200 Hz = 5 мс период, максимальное ожидание ~5 мс
+    uint32_t sync_timeout = HAL_GetTick() + 10;
+    while(__HAL_TIM_GET_COUNTER(&htim15) > 100 && HAL_GetTick() < sync_timeout) {
+      // Ждём сброса счётчика TIM15 от TIM2 TRGO
+    }
   }
-  printf("[TIM15] Started: CR1=0x%08lX SR=0x%08lX CNT=%lu\r\n", (unsigned long)TIM15->CR1, (unsigned long)TIM15->SR, (unsigned long)TIM15->CNT);
+  printf("[TIM15] Started & synced: CR1=0x%08lX SR=0x%08lX CNT=%lu\r\n", (unsigned long)TIM15->CR1, (unsigned long)TIM15->SR, (unsigned long)TIM15->CNT);
 
   
   // Запускаем PWM канал TIM15_CH1 (PE5) для наблюдения на осциллографе
   HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
   STAGE(22,"TRGON");
+  
+  // ТЕПЕРЬ запускаем TIM2 CH1 с прерыванием (ПОСЛЕ инициализации ADC!)
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 4000);  // GATED: ADC работает 4ms
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 2499);  // Индикация
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 2499);  // Контроль
+  
+  HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);  // CH1 с прерыванием Compare Match
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
+  
+  __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
+  HAL_TIM_Base_Start_IT(&htim2);
+  printf("[TIM2] Started with CH1 PWM interrupt (Pulse=4000µs)\r\n");
   
   HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_SET);
   UpdateLCDStatus();
@@ -873,7 +889,7 @@ int main(void)
   HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_SET);
   CHECK(adc_stream_start(&hadc1, &hadc2), 1101);
   __HAL_TIM_DISABLE(&htim15);
-  TIM15->SMCR = 0; // убрать SLAVEMODE_RESET
+  // ВАЖНО: Не трогаем SMCR! TIM15 в GATED mode управляется TIM2 CH1
   __HAL_TIM_SET_COUNTER(&htim15,0);
   CHECK(HAL_TIM_Base_Start(&htim15), 1102);
   HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
@@ -1314,7 +1330,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T15_TRGO;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
-  hadc1.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_CIRCULAR;  /* CIRCULAR: DMA автоперезапуск */
+  hadc1.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_ONESHOT;  /* ONESHOT: DMA останавливается после заполнения буфера */
   hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc1.Init.LeftBitShift = ADC_LEFTBITSHIFT_NONE;
   hadc1.Init.OversamplingMode = DISABLE;
@@ -1379,9 +1395,8 @@ static void MX_ADC2_Init(void)
   hadc2.Init.DiscontinuousConvMode = DISABLE;
   hadc2.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T15_TRGO;
   hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
-  /* Переводим ADC2 на DMA_CIRCULAR для стабильного потока с внешним триггером;
-    кольцевой режим исключает автостоп после EOS в ONESHOT и снижает риск стагнаций. */
-  hadc2.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_CIRCULAR;
+  /* ONESHOT: DMA останавливается после заполнения буфера, ручной перезапуск в TC callback */
+  hadc2.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_ONESHOT;
   hadc2.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc2.Init.LeftBitShift = ADC_LEFTBITSHIFT_NONE;
   hadc2.Init.OversamplingMode = DISABLE;
@@ -1685,16 +1700,19 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  /* Emit TRGO on update to reset TIM15/ADCs periodically */
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  /* TRGO = OC1REF: TIM15 (GATED mode) активен только пока TIM2 CH1 = HIGH.
+     Pulse регулирует длительность активной фазы ADC. */
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_OC1REF;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 2499;
- 
+  /* Pulse = 4000 µs (из 5000 µs периода) → ADC работает 4ms, останавливается 1ms.
+     1300 samples @ 275kHz = 4.73ms — укладывается в 4ms активной фазы.
+     Гарантирует остановку ADC до следующего периода TIM2. */
+  sConfigOC.Pulse = 4000;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
@@ -1843,7 +1861,7 @@ static void MX_TIM15_Init(void)
   htim15.Instance = TIM15;
   htim15.Init.Prescaler = 0;
   htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim15.Init.Period = 999;
+  htim15.Init.Period = 999;  // 1000 тиков → 275 kHz / 1000 = 275 Hz * buffers
   htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim15.Init.RepetitionCounter = 0;
   htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -1860,9 +1878,12 @@ static void MX_TIM15_Init(void)
   {
     Error_Handler();
   }
-  /* TIM15 resets on TIM2 TRGO (ITR1) for aligned restart */
-  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_RESET;
-  sSlaveConfig.InputTrigger = TIM_TS_ITR1;
+  /* TIM15 работает только пока TIM2 CH1 = HIGH (GATED mode)
+     Это гарантирует остановку ADC после заполнения буфера.
+     TIM2 @ 200Hz (Period=4999=5ms), CH1.Pulse настраивается для контроля длительности.
+     Если Pulse < 1370/275kHz=4.98ms, ADC гарантированно остановится. */
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_GATED;
+  sSlaveConfig.InputTrigger = TIM_TS_ITR1;  // ITR1 = TIM2_TRGO (используется для синхронизации)
   if (HAL_TIM_SlaveConfigSynchro(&htim15, &sSlaveConfig) != HAL_OK)
   {
     Error_Handler();
@@ -2066,11 +2087,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == TIM2) {
     tim2_irq_counter++; /* счётчик для измерения реальной частоты */
-    /* TIM2 @ 200 Hz: генерация тестового пилообразного сигнала */
-    #if !SAFE_MINIMAL
-      extern void vnd_generate_test_sawtooth(void);
-      vnd_generate_test_sawtooth();
-    #endif
+    /* TIM2 UPDATE: счётчик для диагностики, переключение буферов в PWM callback */
   }
   else if (htim->Instance == TIM6) {
     // Убрано мигание LED - теперь LED индицирует приём команд UART
@@ -2085,6 +2102,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       extern void usb_vendor_periodic_tick(void);
       usb_vendor_periodic_tick();
     #endif
+  }
+}
+
+// TIM2 CH1 Compare Match: срабатывает когда CNT достигает CCR1 (переход HIGH→LOW)
+// В этот момент TIM15 GATED останавливается, ADC прекращает работу, буфер заполнен
+void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+    /* TIM2 CH1: переход 1→0, ADC остановлен, буфер заполнен */
+    extern void adc_stream_tim2_switch_buffers(void);
+    adc_stream_tim2_switch_buffers();
   }
 }
 
