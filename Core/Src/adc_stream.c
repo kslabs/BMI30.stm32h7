@@ -116,7 +116,7 @@ static void dump_b_path_regs(uint32_t ndtrA, uint32_t ndtrB)
 
 // --- Профили ---
 static const adc_stream_profile_t g_profiles[ADC_PROFILE_COUNT] = {
-    { .samples_per_buf = 1370, .buf_rate_hz = 200, .fs_hz = 1370u * 200u }, // A: основной профиль 200Hz/1370 samples (1370/274kHz=5ms < 1 period TIM2)
+    { .samples_per_buf = 1100, .buf_rate_hz = 200, .fs_hz = 1100u * 200u }, // A: GATED mode профиль 200Hz/1100 samples (4ms @ 275kHz)
     { .samples_per_buf = 912,  .buf_rate_hz = 300, .fs_hz = 912u  * 300u }, // B: default balanced (higher pair rate)
     { .samples_per_buf = 944,  .buf_rate_hz = 300, .fs_hz = 944u  * 300u }, // C: high Fs
     { .samples_per_buf = 976,  .buf_rate_hz = 300, .fs_hz = 976u  * 300u }, // D: max Fs (near USB limit test)
@@ -529,6 +529,89 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
    НОВАЯ СХЕМА: Переключение буферов по TIM2 @ 200Hz (вызов в начале периода)
    ======================================================================== */
 void adc_stream_tim2_switch_buffers(void) {
+    /* ОТКЛЮЧЕНО: Переключение буферов теперь происходит в DMA Transfer Complete callback.
+       Эта функция вызывается из TIM2 Pulse Finished для диагностики частоты, но НЕ управляет DMA.
+       
+       EVENT-DRIVEN АРХИТЕКТУРА без задержек и polling:
+       - DMA TC callback переключает буферы точно когда 1100 сэмплов готовы
+       - TIM2 callback используется только для счётчика частоты (LCD) */
+    
+    static volatile uint32_t switch_call_counter = 0;
+    switch_call_counter++;
+    
+    static uint32_t last_diag_print = 0;
+    static uint32_t last_publish_count = 0;
+    static uint32_t last_read_seq = 0;
+    uint32_t now = HAL_GetTick();
+    if (now - last_diag_print >= 1000) {
+        uint32_t published = adc_publish_count - last_publish_count;
+        uint32_t read_frames = frame_rd_seq - last_read_seq;
+        uint32_t backlog = frame_wr_seq - frame_rd_seq;
+        
+        printf("[ADC_STAT] DMA=%lu/s Published=%lu/s USB_read=%lu/s Backlog=%lu\r\n", 
+               (unsigned long)switch_call_counter,
+               (unsigned long)published,
+               (unsigned long)read_frames,
+               (unsigned long)backlog);
+        
+        switch_call_counter = 0;
+        last_publish_count = adc_publish_count;
+        last_read_seq = frame_rd_seq;
+        last_diag_print = now;
+    }
+    
+    /* ====== TIM2-DRIVEN BUFFER SWITCHING (НЕ ПРЕРЫВАТЬ DMA!) ====== */
+    if (!s_adc1 || !s_adc2) return;
+    
+    uint32_t done_idx = s_next_ring_index;
+    uint32_t next_idx = (s_next_ring_index + 1u) & (FIFO_FRAMES - 1u);
+    uint32_t total_samples = (uint32_t)g_active_samples;
+    
+    /* TIM2 Pulse Finished срабатывает когда PWM HIGH→LOW (CNT≈4000).
+       TIM15 GATED остановился, новые триггеры для ADC прекратились.
+       Но DMA ещё может передавать последние сэмплы из FIFO!
+       
+       КРИТИЧНО: НЕ вызывать Stop если DMA ещё активен!
+       Проверяем DMA NDTR (Number of Data to Transfer).
+       Если NDTR=0, DMA завершился. Если NDTR>0, ещё идёт передача. */
+    
+    DMA_Stream_TypeDef *dma1_stream = ((DMA_HandleTypeDef*)(s_adc1->DMA_Handle))->Instance;
+    uint32_t ndtr1 = dma1_stream->NDTR;
+    
+    /* Stop только если завершился, иначе прервём передачу! */
+    if(ndtr1 == 0){
+        HAL_ADC_Stop_DMA(s_adc1);
+    }
+    HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[next_idx], total_samples);
+    
+    #if !DIAG_SINGLE_ADC1
+    DMA_Stream_TypeDef *dma2_stream = ((DMA_HandleTypeDef*)(s_adc2->DMA_Handle))->Instance;
+    uint32_t ndtr2 = dma2_stream->NDTR;
+    
+    if(ndtr2 == 0){
+        HAL_ADC_Stop_DMA(s_adc2);
+    }
+    HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[next_idx], total_samples);
+    #endif
+    
+    s_next_ring_index = next_idx;
+    
+    /* Обработка done_idx буфера */
+    adc_ch_wr_seq[0]++;
+    #if !DIAG_SINGLE_ADC1
+    adc_ch_wr_seq[1]++;
+    #endif
+    
+    adc_invalidate_cache_for_buffer(adc1_buffers[done_idx], total_samples);
+    #if !DIAG_SINGLE_ADC1
+    adc_invalidate_cache_for_buffer(adc2_buffers[done_idx], total_samples);
+    #endif
+    
+    s_pair_ready_mask[done_idx] = 0x03u;
+    adc_mark_ready_and_publish(0x03);
+    return;
+    
+#if 0  /* СТАРАЯ ЛОГИКА C ОЖИДАНИЕМ NDTR - ОТКЛЮЧЕНА */
     if (!s_adc1 || !s_adc2) return;  // ADC не инициализированы
     
     // Проверяем что ADC в состоянии READY или BUSY (работает)
@@ -544,16 +627,34 @@ void adc_stream_tim2_switch_buffers(void) {
     uint32_t next_idx = (s_next_ring_index + 1u) & (FIFO_FRAMES - 1u);
     uint32_t total_samples = (uint32_t)g_active_samples;
     
-    /* Останавливаем DMA (должен быть уже остановлен TIM15 GATED, но гарантируем) */
-    HAL_ADC_Stop_DMA(s_adc1);
+    /* КРИТИЧНО: TIM2 Pulse Finished срабатывает когда TIM15 GATED уже остановился (PWM HIGH→LOW).
+       ADC прекратил конверсию, но DMA всё ещё может передавать последние сэмплы.
+       
+       ВАЖНО: НЕ вызываем HAL_ADC_Stop_DMA()! Это сбросит DMA counter и потеряет данные.
+       Вместо этого ждём естественного завершения DMA (NDTR→0), затем запускаем новый цикл. */
+    
     DMA_Stream_TypeDef *dma1_st = (DMA_Stream_TypeDef*)s_adc1->DMA_Handle->Instance;
+    
+    /* Ждём завершения текущей DMA передачи (NDTR → 0) */
+    for (volatile uint32_t wait = 0; wait < 500; wait++) {
+        if (dma1_st->NDTR == 0) break;
+        __NOP();
+    }
+    
+    /* Останавливаем DMA для смены адреса буфера */
+    HAL_ADC_Stop_DMA(s_adc1);
     for (volatile uint32_t timeout = 0; timeout < 100; timeout++) {
         if (!(dma1_st->CR & DMA_SxCR_EN)) break;
     }
     
     #if !DIAG_SINGLE_ADC1
-    HAL_ADC_Stop_DMA(s_adc2);
     DMA_Stream_TypeDef *dma2_st = (DMA_Stream_TypeDef*)s_adc2->DMA_Handle->Instance;
+    for (volatile uint32_t wait = 0; wait < 500; wait++) {
+        if (dma2_st->NDTR == 0) break;
+        __NOP();
+    }
+    
+    HAL_ADC_Stop_DMA(s_adc2);
     for (volatile uint32_t timeout = 0; timeout < 100; timeout++) {
         if (!(dma2_st->CR & DMA_SxCR_EN)) break;
     }
@@ -638,19 +739,20 @@ void adc_stream_tim2_switch_buffers(void) {
         s_pair_ready_mask[prev_idx] = 0x03u;
         adc_mark_ready_and_publish(0x03);
     }
+#endif  /* СТАРАЯ ЛОГИКА TIM2 ПЕРЕКЛЮЧЕНИЯ - ОТКЛЮЧЕНА */
 }
 
 /* ========================================================================
    СТАРАЯ СХЕМА: DMA TC callback (теперь не используется для переключения)
    ======================================================================== */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-    /* ОТКЛЮЧЕНО: переключение буферов теперь полностью управляется TIM2 Pulse Finished callback
-       (в main.c → HAL_TIM_PWM_PulseFinishedCallback).
-       Этот DMA callback больше не используется для переключения, чтобы избежать race conditions. */
-    (void)hadc;  // unused
+    /* ОТКЛЮЧЕНО: DMA callback создаёт race condition с TIM2 GATED циклом.
+       После Stop→Start ADC ждёт следующего триггера, пропуская циклы.
+       Используем TIM2 Pulse Finished для переключения буферов. */
+    (void)hadc;
     return;
     
-#if 0  /* СТАРЫЙ DMA CALLBACK КОД - ОТКЛЮЧЁН */
+#if 0  /* DMA CALLBACK - ОТКЛЮЧЁН, используем TIM2 */
     static uint32_t callback_entry_count = 0;  // ДИАГНОСТИКА: счётчик входов в callback
     callback_entry_count++;
     
@@ -679,30 +781,21 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     uint32_t next_idx = (s_next_ring_index + 1u) & (FIFO_FRAMES - 1u);
     uint32_t total_samples = (uint32_t)g_active_samples;
     
-    /* ====== ПРИОРИТЕТ 1: ЯВНАЯ ОСТАНОВКА + RESTART ADC+DMA ====== */
-    /* В ONESHOT+NORMAL режиме ADC должен остановиться после TC, но гарантируем через Stop */
+    /* ====== ПРИОРИТЕТ 1: RESTART ADC+DMA БЕЗ ЗАДЕРЖЕК ====== */
+    /* В NORMAL mode после TC нужен Stop → Start цикл, но БЕЗ polling.
+       Stop сбрасывает состояние HAL, Start конфигурирует новый буфер.
+       HAL внутри проверяет флаги и не требует ожидания - это атомарные операции. */
     
-    /* ADC1: Stop → ждём остановки → Start с новым буфером */
+    /* ADC1: Stop (мгновенный сброс HAL state) → Start (новый буфер) */
     HAL_ADC_Stop_DMA(s_adc1);
-    /* Ждём фактической остановки DMA (проверяем NDTR и EN bit) */
-    DMA_Stream_TypeDef *dma1_st = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
-    for (volatile uint32_t timeout = 0; timeout < 1000; timeout++) {
-        if (!(dma1_st->CR & DMA_SxCR_EN)) break;  // DMA остановлен
-    }
-    
     HAL_StatusTypeDef st1 = HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[next_idx], total_samples);
     if (st1 != HAL_OK) {
         ADC_LOGF("[ADC][ERR] ADC1 Start_DMA failed: %d\r\n", st1);
     }
     
     #if !DIAG_SINGLE_ADC1
-    /* ADC2: Stop → ждём остановки → Start с новым буфером */
+    /* ADC2: Stop → Start */
     HAL_ADC_Stop_DMA(s_adc2);
-    DMA_Stream_TypeDef *dma2_st = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
-    for (volatile uint32_t timeout = 0; timeout < 1000; timeout++) {
-        if (!(dma2_st->CR & DMA_SxCR_EN)) break;  // DMA остановлен
-    }
-    
     HAL_StatusTypeDef st2 = HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[next_idx], total_samples);
     if (st2 != HAL_OK) {
         ADC_LOGF("[ADC][ERR] ADC2 Start_DMA failed: %d\r\n", st2);
@@ -808,7 +901,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
            Если всё же вызвался - это ошибка конфигурации */
         ADC_LOGF("[ADC][ERR] ADC2 callback unexpected! IRQ should be disabled\r\n");
     }
-#endif  /* СТАРЫЙ DMA CALLBACK КОД - ОТКЛЮЧЁН */
+#endif  /* ОСНОВНОЙ DMA CALLBACK - ВКЛЮЧЁН */
 }
 
 /* Периодический вотчдог: если давно не было DMA Full от ADC1, считаем поток зависшим и мягко перезапускаем.

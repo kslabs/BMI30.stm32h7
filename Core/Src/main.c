@@ -2109,16 +2109,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
-    /* TIM2 CH1: Compare Match event */
-    tim2_irq_counter++; /* Счётчик для измерения частоты */
+    /* ФИЛЬТР CNT: Обрабатываем ТОЛЬКО спадающий фронт PWM (CNT≈CCR1=4000).
+       TIM2 CH1 PWM Pulse Finished срабатывает на обоих фронтах:
+       - Нарастающий: CNT≈0 (начало HIGH, TIM15 GATED запускается)
+       - Спадающий: CNT≈4000 (конец HIGH, TIM15 GATED остановился)
+       
+       Нам нужен только спадающий фронт - момент когда ADC/DMA закончили работу. */
     
-    /* ДИАГНОСТИКА: Проверяем, на каком фронте срабатывает */
-    static uint32_t pulse_debug_counter = 0;
-    pulse_debug_counter++;
-    if (pulse_debug_counter % 200 == 0) {
-      uint32_t cnt = __HAL_TIM_GET_COUNTER(&htim2);
-      printf("[PULSE_DBG] Counter=%lu (CNT) callback#%lu\r\n", cnt, pulse_debug_counter);
+    uint32_t cnt = __HAL_TIM_GET_COUNTER(&htim2);
+    
+    if (cnt < 3500 || cnt > 4500) {
+      return;  // Отбрасываем callback на нарастающем фронте (CNT≈0)
     }
+    
+    /* Спадающий фронт подтверждён (CNT≈4000) → TIM15 GATED остановился */
+    tim2_irq_counter++;  /* Счётчик для LCD частоты */
     
     extern void adc_stream_tim2_switch_buffers(void);
     adc_stream_tim2_switch_buffers();

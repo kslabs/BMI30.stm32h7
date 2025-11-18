@@ -32,7 +32,7 @@ void vnd_diag_log_possible_stall(void);
 #endif
 
 #ifndef VND_ENABLE_LOG
-#define VND_ENABLE_LOG 1 /* включено для диагностики проблем со стабильностью */
+#define VND_ENABLE_LOG 0 /* ОТКЛЮЧЕНО: логи засоряют терминал */
 #endif
 #if VND_ENABLE_LOG
 #define VND_LOG(...) do { printf("[VND] " __VA_ARGS__); printf("\r\n"); } while(0)
@@ -1074,6 +1074,13 @@ static uint8_t vnd_strict_pairing = 0;  /* ВЫКЛЮЧЕНО: каждый ка
 
 static int vnd_async_try_tx(void)
 {
+    /* ПРОФИЛИРОВАНИЕ: замер времени выполнения */
+    static uint32_t call_count = 0;
+    static uint32_t total_time_us = 0;
+    static uint32_t max_time_us = 0;
+    static uint32_t last_profile_log = 0;
+    uint32_t start_cyc = DWT->CYCCNT;
+    
     /* Новый вариант async: не полагается на заранее собранную пару.
        Используем per-channel API adc_get_frame_ch() и локальные временные буферы построения кадров.
        Сохраняем on-wire формат (общий seq = stream_seq). */
@@ -1112,10 +1119,27 @@ static int vnd_async_try_tx(void)
                 uint16_t eff = cur_samples_per_frame;
                 if(eff > samples) eff = samples; /* защита, если размер профиля уменьшился внезапно */
                 if(eff > VND_MAX_SAMPLES) eff = VND_MAX_SAMPLES;
+                
+                /* ДИАГНОСТИКА: проверяем последние 100 сэмплов DMA буфера на нули */
+                static uint32_t zero_check_count = 0;
+                static uint32_t last_zero_check_ms = 0;
+                uint32_t now_check = HAL_GetTick();
+                if(now_check - last_zero_check_ms >= 5000 && eff >= 100){  /* Каждые 5 сек */
+                    uint16_t zeros_found = 0;
+                    for(uint16_t i = eff - 100; i < eff; i++){
+                        if(abuf[i] == 0) zeros_found++;
+                    }
+                    cdc_logf("[USB_DIAG] CH%u: last 100 samples, %u zeros. [%u..%u]=[%u,%u,%u,%u,%u]",
+                             ch, zeros_found, eff-100, eff-1,
+                             abuf[eff-100], abuf[eff-50], abuf[eff-25], abuf[eff-10], abuf[eff-1]);
+                    last_zero_check_ms = now_check;
+                }
+                
                 /* Построить payload: копируем из ADC-буфера в USB-буфер */
-                memset(tf[ch].buf, 0, VND_FRAME_HDR_SIZE + eff*2u);
+                /* ДИАГНОСТИКА: заполняем значением 1000 вместо нулей для отладки */
                 for(uint16_t i=0;i<eff;i++){
                     uint16_t v = abuf[i];
+                    if(v == 0) v = 1000;  /* Заменяем нули на 1000 для диагностики */
                     uint8_t *p = tf[ch].buf + VND_FRAME_HDR_SIZE + 2u*i; p[0]=(uint8_t)(v & 0xFF); p[1]=(uint8_t)(v>>8);
                 }
                 /* Заголовок */
@@ -1182,8 +1206,33 @@ static int vnd_async_try_tx(void)
             stream_seq++; dbg_produced_seq++;
             seq_mask = 0; seq_mask_first_ms = 0; seq_partial_cnt = 0; /* сброс */
         }
+        /* ПРОФИЛИРОВАНИЕ: успешная отправка */
+        uint32_t end_cyc = DWT->CYCCNT;
+        uint32_t elapsed_cyc = (end_cyc >= start_cyc) ? (end_cyc - start_cyc) : (0xFFFFFFFFu - start_cyc + end_cyc + 1);
+        uint32_t elapsed_us = elapsed_cyc / (SystemCoreClock / 1000000u);
+        call_count++;
+        total_time_us += elapsed_us;
+        if(elapsed_us > max_time_us) max_time_us = elapsed_us;
+        
+        uint32_t now_profile = HAL_GetTick();
+        if(now_profile - last_profile_log >= 5000){
+            uint32_t avg_us = call_count ? (total_time_us / call_count) : 0;
+            printf("[PROF_TX] calls=%lu avg=%lu.%luus max=%lu.%luus\r\n",
+                   call_count, avg_us, (elapsed_us%10), max_time_us, (max_time_us%10));
+            call_count = 0; total_time_us = 0; max_time_us = 0;
+            last_profile_log = now_profile;
+        }
         return 1;
     }
+    
+    /* ПРОФИЛИРОВАНИЕ: не отправлено (нет данных) */
+    uint32_t end_cyc = DWT->CYCCNT;
+    uint32_t elapsed_cyc = (end_cyc >= start_cyc) ? (end_cyc - start_cyc) : (0xFFFFFFFFu - start_cyc + end_cyc + 1);
+    uint32_t elapsed_us = elapsed_cyc / (SystemCoreClock / 1000000u);
+    call_count++;
+    total_time_us += elapsed_us;
+    if(elapsed_us > max_time_us) max_time_us = elapsed_us;
+    
     return 0;
 }
 
@@ -2054,7 +2103,35 @@ void USBD_VND_TxCplt(void)
     vnd_tx_ready = 1;
     vnd_ep_busy = 0;
     vnd_inflight = 0;
-    vnd_last_txcplt_ms = HAL_GetTick();
+    
+    /* ПРОФИЛИРОВАНИЕ: интервал между TxCplt */
+    static uint32_t last_txcplt_time = 0;
+    static uint32_t txcplt_interval_sum = 0;
+    static uint32_t txcplt_interval_count = 0;
+    static uint32_t txcplt_interval_max = 0;
+    static uint32_t last_txcplt_log = 0;
+    
+    uint32_t now_txcplt = HAL_GetTick();
+    if(last_txcplt_time > 0){
+        uint32_t interval = now_txcplt - last_txcplt_time;
+        txcplt_interval_sum += interval;
+        txcplt_interval_count++;
+        if(interval > txcplt_interval_max) txcplt_interval_max = interval;
+        
+        if(now_txcplt - last_txcplt_log >= 5000){
+            uint32_t avg = txcplt_interval_count ? (txcplt_interval_sum / txcplt_interval_count) : 0;
+            printf("[PROF_TxCplt] cnt=%lu avg=%lums max=%lums (rate=%.1fHz)\r\n",
+                   txcplt_interval_count, avg, txcplt_interval_max,
+                   avg > 0 ? (1000.0f / avg) : 0.0f);
+            txcplt_interval_sum = 0;
+            txcplt_interval_count = 0;
+            txcplt_interval_max = 0;
+            last_txcplt_log = now_txcplt;
+        }
+    }
+    last_txcplt_time = now_txcplt;
+    
+    vnd_last_txcplt_ms = now_txcplt;
     /* Убран подробный лог TXCPLT — используется агрегированная статистика раз в 10 сек */
     vnd_total_tx_bytes += vnd_last_tx_len; /* учитывать и тестовые, и статусные, и рабочие */
     /* Зафиксировать завершение стартового ACK (если был) */
@@ -2105,6 +2182,12 @@ void USBD_VND_TxCplt(void)
     if(vnd_stage_first_frame_ms == 0 && eff_is_frame && (eff_flags == 0x01 || eff_flags == 0x02)){
         vnd_stage_first_frame_ms = HAL_GetTick();
     }
+    /* НЕМЕДЛЕННАЯ ПОПЫТКА ОТПРАВКИ: если есть данные и EP свободен — отправить сразу.
+       Это обеспечивает максимальную скорость USB без ожидания periodic task. */
+    if(streaming && !vnd_ep_busy){
+        (void)vnd_async_try_tx();
+    }
+    
     /* Асинхронный режим: считаем канал по eff_flags, закрываем соответствующий подкадр.
        В A-only/B-only режиме закрываем сразу всю пару и сдвигаем seq. */
     if(async_mode && streaming && full_mode){
@@ -2125,13 +2208,9 @@ void USBD_VND_TxCplt(void)
             }
             if(ch==0){ dbg_tx_sent++; dbg_sent_ch0_total++; dbg_sent_seq_adc0++; vnd_total_tx_samples += (uint64_t)ns; fps_frame_a_count++; }
             else      { dbg_tx_sent++; dbg_sent_ch1_total++; dbg_sent_seq_adc1++; vnd_total_tx_samples += (uint64_t)ns; fps_frame_b_count++; }
-            /* Отпускаем канал и продолжаем передачу */
+            /* Отпускаем канал */
             sending_channel = 0xFF;
             if(vnd_stage_first_frame_ms == 0){ vnd_stage_first_frame_ms = HAL_GetTick(); cdc_logf("EVT FIRST_FRAME ch=%c", ch==0?'A':'B'); }
-            if(!vnd_ep_busy){ vnd_tx_kick = 1; (void)vnd_async_try_tx(); }
-        } else {
-            /* STAT/TEST — просто инициируем следующую попытку */
-            if(!vnd_ep_busy){ vnd_tx_kick = 1; (void)vnd_async_try_tx(); }
         }
         return;
     }
