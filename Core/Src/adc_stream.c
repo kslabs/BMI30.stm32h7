@@ -644,6 +644,13 @@ void adc_stream_tim2_switch_buffers(void) {
    СТАРАЯ СХЕМА: DMA TC callback (теперь не используется для переключения)
    ======================================================================== */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
+    /* ОТКЛЮЧЕНО: переключение буферов теперь полностью управляется TIM2 Pulse Finished callback
+       (в main.c → HAL_TIM_PWM_PulseFinishedCallback).
+       Этот DMA callback больше не используется для переключения, чтобы избежать race conditions. */
+    (void)hadc;  // unused
+    return;
+    
+#if 0  /* СТАРЫЙ DMA CALLBACK КОД - ОТКЛЮЧЁН */
     static uint32_t callback_entry_count = 0;  // ДИАГНОСТИКА: счётчик входов в callback
     callback_entry_count++;
     
@@ -801,6 +808,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
            Если всё же вызвался - это ошибка конфигурации */
         ADC_LOGF("[ADC][ERR] ADC2 callback unexpected! IRQ should be disabled\r\n");
     }
+#endif  /* СТАРЫЙ DMA CALLBACK КОД - ОТКЛЮЧЁН */
 }
 
 /* Периодический вотчдог: если давно не было DMA Full от ADC1, считаем поток зависшим и мягко перезапускаем.

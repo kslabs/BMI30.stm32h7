@@ -2086,8 +2086,7 @@ static volatile uint32_t tim2_irq_counter = 0; /* диагностика TIM2 IR
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == TIM2) {
-    tim2_irq_counter++; /* счётчик для измерения реальной частоты */
-    /* TIM2 UPDATE: счётчик для диагностики, переключение буферов в PWM callback */
+    /* TIM2 Period Elapsed: не используется, вся работа в Pulse Finished */
   }
   else if (htim->Instance == TIM6) {
     // Убрано мигание LED - теперь LED индицирует приём команд UART
@@ -2110,7 +2109,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
-    /* TIM2 CH1: переход 1→0, ADC остановлен, буфер заполнен */
+    /* TIM2 CH1: Compare Match event */
+    tim2_irq_counter++; /* Счётчик для измерения частоты */
+    
+    /* ДИАГНОСТИКА: Проверяем, на каком фронте срабатывает */
+    static uint32_t pulse_debug_counter = 0;
+    pulse_debug_counter++;
+    if (pulse_debug_counter % 200 == 0) {
+      uint32_t cnt = __HAL_TIM_GET_COUNTER(&htim2);
+      printf("[PULSE_DBG] Counter=%lu (CNT) callback#%lu\r\n", cnt, pulse_debug_counter);
+    }
+    
     extern void adc_stream_tim2_switch_buffers(void);
     adc_stream_tim2_switch_buffers();
   }
@@ -2257,7 +2266,8 @@ void DrawUSBStatus(void){
   uint32_t dt_tim2 = now - prev_tim2_calc_ms;
   if(dt_tim2 >= 1000) {
     uint32_t tim2_delta = tim2_irq_counter - prev_tim2_count;
-    tim2_hz_display = tim2_delta; /* частота за последнюю секунду */
+    /* Правильный расчёт: нормализуем к 1 секунде */
+    tim2_hz_display = (uint32_t)((tim2_delta * 1000ULL) / dt_tim2);
     prev_tim2_count = tim2_irq_counter;
     prev_tim2_calc_ms = now;
   }
