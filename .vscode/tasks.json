@@ -677,7 +677,7 @@
 			"group": "build"
 		},
 		{
-			"label": "Build+Flash",
+			"label": "Build+Flash (inline)",
 			"type": "shell",
 			"command": "powershell",
 			"args": [
@@ -817,6 +817,22 @@
 			"group": "none",
 			"presentation": {"reveal": "always", "panel": "shared"},
 			"detail": "Dual-channel auto ns (profile 0 full buffer); remove --single to show оба канала"
+		},
+		{
+			"label": "Run GUI oscilloscope (optimized)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope_optimized.py\" --ns 0 --profile 0 --watchdog" 
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"},
+			"detail": "Optimized version - better performance"
 		},
 		{
 			"label": "Locate GUI oscilloscope (path)",

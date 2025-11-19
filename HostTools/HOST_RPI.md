@@ -114,7 +114,39 @@ python3 HostTools/rpi_cdc_client.py /dev/ttyACM0
   - На время замеров не читайте/не логируйте CDC‑порт — лишний вывод снижает пропускную способность.
   - Используйте `--quiet` у скриптов на хосте.
 
-## 8) Быстрые команды для повторного запуска
+## 8) GUI осциллограф (визуализация в реальном времени)
+
+Для визуализации данных в реальном времени используйте GUI‑осциллограф. Доступны две версии:
+
+### Стандартная версия
+```bash
+python3 HostTools/gui_oscilloscope.py --ns 0 --profile 0 --watchdog
+```
+
+### Оптимизированная версия (рекомендуется для RPi)
+```bash
+python3 HostTools/gui_oscilloscope_optimized.py --ns 0 --profile 0 --watchdog
+```
+
+**Параметры:**
+- `--ns 0` — автоматический выбор количества семплов для отображения
+- `--profile 0` — профиль 0 (full buffer mode, 200 Гц)
+- `--watchdog` — включить watchdog для автоматического переподключения при зависании устройства
+- `--single` — показать только канал A (по умолчанию оба канала)
+
+**Требования для GUI на RPi:**
+```bash
+sudo apt install -y python3-pyqt5 python3-numpy
+pip3 install --user pyqtgraph
+```
+
+Оптимизированная версия имеет:
+- Улучшенную производительность отрисовки
+- Сниженную нагрузку на CPU
+- Оптимизированную обработку больших объёмов данных
+- Лучшую стабильность на слабых платформах (RPi 3/4)
+
+## 9) Быстрые команды для повторного запуска
 
 ```bash
 # Список интерфейсов
@@ -125,6 +157,9 @@ python3 HostTools/vendor_stream_read.py --vid 0xCAFE --pid 0x4001 --intf 2 --ep-
 
 # DIAG high‑FPS тест
 python3 HostTools/vendor_stream_read.py --vid 0xCAFE --pid 0x4001 --intf 2 --ep-in 0x83 --ep-out 0x03 --profile 2 --full-mode 0 --frame-samples 64 --frames 1500 --ab-strict --quiet
+
+# GUI осциллограф (оптимизированный)
+python3 HostTools/gui_oscilloscope_optimized.py --ns 0 --profile 0 --watchdog
 ```
 
 ---
