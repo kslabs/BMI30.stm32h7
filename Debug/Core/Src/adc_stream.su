@@ -18,7 +18,7 @@
 ../Core/Src/adc_stream.c:473:6:adc_stream_get_debug	16	static
 ../Core/Src/adc_stream.c:499:28:adc_stream_on_new_frames	16	static
 ../Core/Src/adc_stream.c:502:6:HAL_ADC_ConvHalfCpltCallback	16	static
-../Core/Src/adc_stream.c:531:6:adc_stream_tim2_switch_buffers	56	static
-../Core/Src/adc_stream.c:646:6:HAL_ADC_ConvCpltCallback	16	static
-../Core/Src/adc_stream.c:817:24:tick_diff32	16	static
-../Core/Src/adc_stream.c:834:6:adc_stream_watchdog	136	static
+../Core/Src/adc_stream.c:531:6:adc_stream_tim2_switch_buffers	64	static
+../Core/Src/adc_stream.c:748:6:HAL_ADC_ConvCpltCallback	16	static
+../Core/Src/adc_stream.c:910:24:tick_diff32	16	static
+../Core/Src/adc_stream.c:927:6:adc_stream_watchdog	136	static

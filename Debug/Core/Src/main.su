@@ -34,10 +34,10 @@ C:/Users/TEST/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/CMSIS/Include
 ../Core/Src/main.c:2081:20:usb_state_str	16	static
 ../Core/Src/main.c:2086:6:HAL_TIM_PeriodElapsedCallback	16	static
 ../Core/Src/main.c:2109:6:HAL_TIM_PWM_PulseFinishedCallback	24	static
-../Core/Src/main.c:2129:6:HAL_UART_RxCpltCallback	16	static
-../Core/Src/main.c:2155:13:lcd_print_padded_if_changed	80	static
-../Core/Src/main.c:2173:6:UpdateLCDStatus	4	static
-../Core/Src/main.c:2175:6:DrawStarIndicator	24	static
-../Core/Src/main.c:2224:6:DrawUSBStatus	272	static
-../Core/Src/main.c:2346:6:MPU_Config	24	static
-../Core/Src/main.c:2377:6:Error_Handler	32	static
+../Core/Src/main.c:2134:6:HAL_UART_RxCpltCallback	16	static
+../Core/Src/main.c:2160:13:lcd_print_padded_if_changed	80	static
+../Core/Src/main.c:2178:6:UpdateLCDStatus	4	static
+../Core/Src/main.c:2180:6:DrawStarIndicator	24	static
+../Core/Src/main.c:2229:6:DrawUSBStatus	272	static
+../Core/Src/main.c:2351:6:MPU_Config	24	static
+../Core/Src/main.c:2382:6:Error_Handler	32	static

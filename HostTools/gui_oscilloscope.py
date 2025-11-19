@@ -274,8 +274,10 @@ def reader_thread(handle: 'DevHandle', out_q: queue.Queue, stop_ev: threading.Ev
     last_pkt_log_ts = 0.0
     while not stop_ev.is_set():
         try:
-            # Чтение «сырых» кусков, обычно 512B; размер 512 даёт предсказуемое поведение на WinUSB
-            chunk = handle.dev.read(EP_IN, 512, timeout=1000)
+            # Чтение кусками по 4096B (~1.8 буфера) для ускорения приёма @ 200Hz
+            # Один буфер = 2232 байта (header 32 + 1100 samples × 2)
+            # Уменьшен timeout для быстрой реакции на данные
+            chunk = handle.dev.read(EP_IN, 4096, timeout=100)
             pkt_count += 1
             now = time.time()
             # Лог пакетов:
