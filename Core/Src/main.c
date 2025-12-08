@@ -871,7 +871,7 @@ int main(void)
   
   // ТЕПЕРЬ запускаем TIM2 CH1 с прерыванием (ПОСЛЕ инициализации ADC!)
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 4000);  // GATED: ADC работает 4ms
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 2499);  // Индикация
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 4999);  // Всегда 1 при работе таймера
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 2499);  // Контроль
   
   HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);  // CH1 с прерыванием Compare Match
@@ -1719,10 +1719,18 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
+  /* Инвертируем выход TIM2_CH2 (PA1):
+     - CH2 настроен в принудительном ACTIVE режиме, но с инверсией полярности
+       (OCPolarity = LOW), чтобы PA1 был 0 в периоде меандра CH3 и 1 когда
+       меандра нет. Это даёт аппаратный (независимый от CPU) инверсный индикатор.
+  */
+  sConfigOC.OCMode = TIM_OCMODE_ACTIVE;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
   {
     Error_Handler();
@@ -1731,6 +1739,8 @@ static void MX_TIM2_Init(void)
   // Разрешаем прерывания TIM2
   HAL_NVIC_SetPriority(TIM2_IRQn, 6, 0);
   HAL_NVIC_EnableIRQ(TIM2_IRQn);
+  // Включаем MOE для PWM выходов
+  __HAL_TIM_MOE_ENABLE(&htim2);
   /* USER CODE END TIM2_Init 2 */
   HAL_TIM_MspPostInit(&htim2);
 
@@ -2045,6 +2055,22 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.Alternate = GPIO_AF0_MCO;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PA1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PA2 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
