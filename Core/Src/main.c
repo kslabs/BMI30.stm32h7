@@ -275,6 +275,7 @@ static void MX_TIM15_Init(void);
 static void MX_IWDG1_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
+static uint32_t tim2_apply_profile_window(void);
 void UpdateLCDStatus(void);
 void DrawStarIndicator(void);
 static void __attribute__((unused)) UpdateUSBDebug(void); // теперь будет пустая заглушка
@@ -349,6 +350,9 @@ static inline void LED_OFF(void){ HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test
 #else
 #define PROG(ch) do{}while(0)
 #endif
+// Время запасного «хвоста» окна TIM2 (ADC остановится, когда CH1=LOW)
+// Держим умеренный хвост 400 мкс, чтобы не срезать полезное окно 200 Гц
+#define TIM2_WINDOW_GUARD_US 400u
 // Режим управления подсветкой: 0 = PWM на TIM1_CH2N(PE10), 1 = принудительно GPIO
 #ifndef FORCE_BL_GPIO
 #define FORCE_BL_GPIO 1
@@ -387,6 +391,54 @@ static inline void uart1_rx_led_pulse(void){
   uart1_led_off_tick = HAL_GetTick() + 100; // держим LED включённым 100мс после каждого байта
 }
 /* USER CODE END 0 */
+
+static uint32_t tim2_apply_profile_window(void){
+  uint16_t buf_rate = adc_stream_get_buf_rate();
+  uint16_t samples  = adc_stream_get_active_samples();
+  if (buf_rate == 0u) {
+    printf("[TIM2] skip apply: buf_rate=0\r\n");
+    return 0u;
+  }
+
+  /* Тактирование TIM2: APB1 timer clock удваивается при делителе ≠1 */
+  uint32_t tim_clk = HAL_RCC_GetPCLK1Freq();
+  uint32_t d2ppre1 = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1_Msk) >> RCC_D2CFGR_D2PPRE1_Pos;
+  if (d2ppre1 != 0u) {
+    tim_clk *= 2u;
+  }
+  uint32_t tick_hz = tim_clk / (htim2.Init.Prescaler + 1u);
+  if (tick_hz == 0u) {
+    return 0u;
+  }
+
+  /* ARR = период окна, CCR1 = длительность HIGH (активное окно ADC)
+     buf_rate = частота событий TRGO (400 Hz для even/odd, т.к. OC3REF даёт 2 события/период)
+     → период TIM2 = tick_hz / (buf_rate/2) для получения 200 Гц меандра CH3 */
+  uint32_t period_ticks = (tick_hz * 2u) / buf_rate; // период для 200 Гц меандра (при buf_rate=400)
+  if (period_ticks < 16u) {
+    period_ticks = 16u; // минимальная защита
+  }
+  /* Запас оставляем постоянным (TIM2_WINDOW_GUARD_US) в тиках таймера */
+  uint32_t guard_ticks = (uint32_t)(((uint64_t)tick_hz * (uint64_t)TIM2_WINDOW_GUARD_US + 999999ULL) / 1000000ULL);
+  if (guard_ticks == 0u) {
+    guard_ticks = 1u;
+  }
+  /* Длительность HIGH: всё оставшееся после хвоста. Не растягиваем период, чтобы сохранить f_buf. */
+  uint32_t pulse_ticks = (period_ticks > guard_ticks) ? (period_ticks - guard_ticks) : 1u;
+
+  __HAL_TIM_SET_AUTORELOAD(&htim2, period_ticks - 1u);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, pulse_ticks);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, period_ticks - 1u); // индикатор HIGH весь период
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, period_ticks / 2u); // контрольный меандр 50%
+  __HAL_TIM_SET_COUNTER(&htim2, 0u);
+
+  uint32_t eff_buf_hz = (period_ticks ? (tick_hz / period_ticks) : 0u);
+  printf("[TIM2] apply_profile: N=%u f_buf(req)=%uHz f_buf(eff)=%uHz tick_hz=%lu ARR=%lu CCR1=%lu guard=%luus\r\n",
+         (unsigned)samples, (unsigned)buf_rate, (unsigned)eff_buf_hz,
+         (unsigned long)tick_hz, (unsigned long)(period_ticks - 1u), (unsigned long)pulse_ticks,
+         (unsigned long)TIM2_WINDOW_GUARD_US);
+  return pulse_ticks;
+}
 
 /**
   * @brief  The application entry point.
@@ -645,6 +697,21 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM15_Init();
   MX_USART1_UART_Init();
+  /* USER CODE: Диагностика TIM15/ADC после всех Init */
+  printf("[TIM15][CFG] TIM15->CR2=0x%08lX MMS=%lu (expected 2=UPDATE)\r\n",
+         (unsigned long)TIM15->CR2, (unsigned long)((TIM15->CR2 >> 4) & 0x7));
+  printf("[TIM15][CFG] PSC=%lu ARR=%lu → f_counter=275MHz/(PSC+1)=275MHz, f_UPDATE=275MHz/(ARR+1)=%lu kHz\r\n",
+         (unsigned long)TIM15->PSC, (unsigned long)TIM15->ARR, 
+         (unsigned long)(275000 / (TIM15->ARR + 1)));
+  printf("[TIM15][CFG] CH1 PWM enabled on PE5 for frequency measurement (f_PWM = f_UPDATE)\r\n");
+    {
+      const unsigned long ext_sel = (unsigned long)((ADC1->CFGR >> ADC_CFGR_EXTSEL_Pos) & 0x1FUL);
+      const unsigned long ext_en  = (unsigned long)((ADC1->CFGR >> ADC_CFGR_EXTEN_Pos)  & 0x3UL);
+      const unsigned long exp_sel = (unsigned long)((hadc1.Init.ExternalTrigConv     >> ADC_CFGR_EXTSEL_Pos) & 0x1FUL);
+      const unsigned long exp_en  = (unsigned long)((hadc1.Init.ExternalTrigConvEdge >> ADC_CFGR_EXTEN_Pos)  & 0x3UL);
+      printf("[ADC1][CFG] ADC1->CFGR=0x%08lX EXTSEL=%lu EXTEN=%lu (expected EXTSEL=%lu EXTEN=%lu from HAL)\r\n",
+        (unsigned long)ADC1->CFGR, ext_sel, ext_en, exp_sel, exp_en);
+    }
   printf("[INIT] Before USB_DEVICE_Init\r\n");
   MX_USB_DEVICE_Init();
   /* Полностью исключаем инициализацию IWDG (даже если где-то потерян DIAG_DISABLE_IWDG) */
@@ -862,7 +929,15 @@ int main(void)
       // Ждём сброса счётчика TIM15 от TIM2 TRGO
     }
   }
-  printf("[TIM15] Started & synced: CR1=0x%08lX SR=0x%08lX CNT=%lu\r\n", (unsigned long)TIM15->CR1, (unsigned long)TIM15->SR, (unsigned long)TIM15->CNT);
+  printf("[TIM15] Started & synced: CR1=0x%08lX SR=0x%08lX CNT=%lu SMCR=0x%08lX\r\n",
+         (unsigned long)TIM15->CR1, (unsigned long)TIM15->SR, (unsigned long)TIM15->CNT, (unsigned long)TIM15->SMCR);
+  
+  // Диагностика: проверяем что TIM15 действительно считает
+  uint32_t cnt_before = TIM15->CNT;
+  HAL_Delay(1);  // 1 мс
+  uint32_t cnt_after = TIM15->CNT;
+  printf("[TIM15][TEST] Counter increment test: before=%lu after=%lu delta=%ld (expected ~275)\r\n",
+         (unsigned long)cnt_before, (unsigned long)cnt_after, (long)(cnt_after - cnt_before));
 
   
   // Запускаем PWM канал TIM15_CH1 (PE5) для наблюдения на осциллографе
@@ -870,9 +945,13 @@ int main(void)
   STAGE(22,"TRGON");
   
   // ТЕПЕРЬ запускаем TIM2 CH1 с прерыванием (ПОСЛЕ инициализации ADC!)
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 4000);  // GATED: ADC работает 4ms
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 4999);  // Всегда 1 при работе таймера
-  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, 2499);  // Контроль
+    uint32_t tim2_pulse_ticks = tim2_apply_profile_window();
+  
+  // ДИАГНОСТИКА: проверка NVIC перед запуском TIM2 PWM IRQ
+  uint32_t nvic_iser0 = NVIC->ISER[TIM2_IRQn >> 5];
+  uint32_t tim2_bit = 1UL << (TIM2_IRQn & 0x1F);
+  printf("[TIM2][NVIC] Before Start_IT: TIM2_IRQn=%d enabled=%lu\r\n",
+         TIM2_IRQn, (unsigned long)((nvic_iser0 & tim2_bit) ? 1 : 0));
   
   HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);  // CH1 с прерыванием Compare Match
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
@@ -880,7 +959,14 @@ int main(void)
   
   __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
   HAL_TIM_Base_Start_IT(&htim2);
-  printf("[TIM2] Started with CH1 PWM interrupt (Pulse=4000µs)\r\n");
+  
+  // ДИАГНОСТИКА: проверка после запуска
+  nvic_iser0 = NVIC->ISER[TIM2_IRQn >> 5];
+  printf("[TIM2][NVIC] After Start_IT: enabled=%lu CR1=0x%08lX DIER=0x%08lX SR=0x%08lX\r\n",
+         (unsigned long)((nvic_iser0 & tim2_bit) ? 1 : 0),
+         (unsigned long)TIM2->CR1, (unsigned long)TIM2->DIER, (unsigned long)TIM2->SR);
+    printf("[TIM2] Started with CH1 PWM interrupt (CCR1=%lu ticks, ARR=%lu)\r\n",
+      (unsigned long)tim2_pulse_ticks, (unsigned long)htim2.Instance->ARR);
   
   HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_SET);
   UpdateLCDStatus();
@@ -932,6 +1018,15 @@ int main(void)
     uint32_t now = last_heartbeat_ms;
   static uint8_t first_loop=1; if(first_loop){ PROG('M'); first_loop=0; }
   PROG('A'); // loop start
+
+  // ДИАГНОСТИКА TIM2: периодическая проверка что счётчик работает
+  static uint32_t last_tim2_check_ms = 0;
+  if (now - last_tim2_check_ms >= 5000) {
+    last_tim2_check_ms = now;
+    printf("[TIM2][DIAG] CR1=0x%08lX CNT=%lu ARR=%lu SR=0x%08lX DIER=0x%08lX\r\n",
+           (unsigned long)TIM2->CR1, (unsigned long)TIM2->CNT, 
+           (unsigned long)TIM2->ARR, (unsigned long)TIM2->SR, (unsigned long)TIM2->DIER);
+  }
 
   // Отложенный лог из TIM6 (убран printf из ISR)
   if (tim6_led_toggled_flag) { tim6_led_toggled_flag = 0; PROG('L'); }
@@ -1323,14 +1418,14 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
   hadc1.Init.Resolution = ADC_RESOLUTION_16B;
   hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;  /* EOC после каждой конверсии - правильно для External Trigger */
   hadc1.Init.LowPowerAutoWait = DISABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
-  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.NbrOfConversion = 1;  /* 1 конверсия на External Trigger */
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T15_TRGO;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
-  hadc1.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_ONESHOT;  /* ONESHOT: DMA останавливается после заполнения буфера */
+  hadc1.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_ONESHOT;
   hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc1.Init.LeftBitShift = ADC_LEFTBITSHIFT_NONE;
   hadc1.Init.OversamplingMode = DISABLE;
@@ -1339,6 +1434,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
+  /* USER CODE: External trigger configuration moved to adc_stream.c (before DMA start) */
 
   /** Configure the ADC multi-mode
   */
@@ -1362,6 +1458,14 @@ static void MX_ADC1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN ADC1_Init 2 */
+  /* Диагностика ADC1 external trigger конфигурации */
+  printf("[ADC1][CFG] ADC1->CFGR=0x%08lX EXTSEL=%lu EXTEN=%lu\r\n",
+         (unsigned long)ADC1->CFGR,
+         (unsigned long)((ADC1->CFGR >> 5) & 0x1F),  // EXTSEL[9:5]
+         (unsigned long)((ADC1->CFGR >> 10) & 0x3)); // EXTEN[11:10]
+    printf("[ADC1][CFG] Expected (from HAL init): EXTSEL=%lu EXTEN=%lu\r\n",
+      (unsigned long)((hadc1.Init.ExternalTrigConv     >> ADC_CFGR_EXTSEL_Pos) & 0x1FUL),
+      (unsigned long)((hadc1.Init.ExternalTrigConvEdge >> ADC_CFGR_EXTEN_Pos)  & 0x3UL));
   /* USER CODE END ADC1_Init 2 */
 
 }
@@ -1395,8 +1499,8 @@ static void MX_ADC2_Init(void)
   hadc2.Init.DiscontinuousConvMode = DISABLE;
   hadc2.Init.ExternalTrigConv = ADC_EXTERNALTRIG_T15_TRGO;
   hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
-  /* ONESHOT: DMA останавливается после заполнения буфера, ручной перезапуск в TC callback */
-  hadc2.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_ONESHOT;
+  /* CIRCULAR: для TIM2-DRIVEN режима */
+  hadc2.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DMA_CIRCULAR;
   hadc2.Init.Overrun = ADC_OVR_DATA_PRESERVED;
   hadc2.Init.LeftBitShift = ADC_LEFTBITSHIFT_NONE;
   hadc2.Init.OversamplingMode = DISABLE;
@@ -1700,19 +1804,19 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  /* TRGO = OC1REF: TIM15 (GATED mode) активен только пока TIM2 CH1 = HIGH.
-     Pulse регулирует длительность активной фазы ADC. */
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_OC1REF;
+  /* TRGO = OC3REF: CH3 меандр 50% даёт 2 фронта за период → события для even и odd.
+     При периоде TIM2=10мс (удвоен в tim2_apply_profile_window): CH3=200 Гц, события=400 Гц.
+     Полупериод HIGH = чётные буферы, LOW = нечётные буферы. */
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_OC3REF;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  /* Pulse = 4000 µs (из 5000 µs периода) → ADC работает 4ms, останавливается 1ms.
-     1300 samples @ 275kHz = 4.73ms — укладывается в 4ms активной фазы.
-     Гарантирует остановку ADC до следующего периода TIM2. */
-  sConfigOC.Pulse = 4000;
+    /* Pulse = 4800 µs (из 5000 µs периода) → ADC работает ≈4.8ms, останавливается ~0.2ms.
+      1200 samples @ ~275kHz ≈ 4.36ms — теперь точно помещаются без усечения. */
+    sConfigOC.Pulse = 4800;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
@@ -1737,7 +1841,7 @@ static void MX_TIM2_Init(void)
   }
   /* USER CODE BEGIN TIM2_Init 2 */
   // Разрешаем прерывания TIM2
-  HAL_NVIC_SetPriority(TIM2_IRQn, 6, 0);
+  HAL_NVIC_SetPriority(TIM2_IRQn, 1, 0); // TIM2 gate interrupt just below DMA
   HAL_NVIC_EnableIRQ(TIM2_IRQn);
   // Включаем MOE для PWM выходов
   __HAL_TIM_MOE_ENABLE(&htim2);
@@ -1869,9 +1973,9 @@ static void MX_TIM15_Init(void)
   /* USER CODE BEGIN TIM15_Init 1 */
   /* USER CODE END TIM15_Init 1 */
   htim15.Instance = TIM15;
-  htim15.Init.Prescaler = 0;
+  htim15.Init.Prescaler = 0;     // Без предделителя: 275 MHz тактовая
   htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim15.Init.Period = 999;  // 1000 тиков → 275 kHz / 1000 = 275 Hz * buffers
+  htim15.Init.Period = 1145;     // 275 MHz / (1145+1) = 240.0 kHz UPDATE для 600 samples @ 400 Hz буферов
   htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim15.Init.RepetitionCounter = 0;
   htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -1888,12 +1992,11 @@ static void MX_TIM15_Init(void)
   {
     Error_Handler();
   }
-  /* TIM15 работает только пока TIM2 CH1 = HIGH (GATED mode)
-     Это гарантирует остановку ADC после заполнения буфера.
-     TIM2 @ 200Hz (Period=4999=5ms), CH1.Pulse настраивается для контроля длительности.
-     Если Pulse < 1370/275kHz=4.98ms, ADC гарантированно остановится. */
-  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_GATED;
-  sSlaveConfig.InputTrigger = TIM_TS_ITR1;  // ITR1 = TIM2_TRGO (используется для синхронизации)
+  /* TIM15 работает в свободном режиме (Free-Running), генерируя TRGO UPDATE @ 240kHz.
+     Slave Mode ОТКЛЮЧЁН для максимальной стабильности триггера ADC. 
+     Синхронизация с TIM2 выполняется программно через TIM2 IRQ. */
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_DISABLE;  // Свободный бег, без аппаратной синхронизации
+  sSlaveConfig.InputTrigger = TIM_TS_ITR1;  // Параметр игнорируется когда SlaveMode = DISABLE
   if (HAL_TIM_SlaveConfigSynchro(&htim15, &sSlaveConfig) != HAL_OK)
   {
     Error_Handler();
@@ -1905,7 +2008,7 @@ static void MX_TIM15_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 499;
+  sConfigOC.Pulse = 572;  // 50% duty cycle @ ARR=1145 → для измерения частоты на PE5
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -1995,10 +2098,10 @@ static void MX_DMA_Init(void)
 
   /* DMA interrupt init */
   /* DMA1_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 6, 0);
+  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 0, 0); // ADC1 DMA = highest priority
   HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
   /* Enable DMA1_Stream1 IRQ for ADC2 DMA completion (used to re-arm oneshot) */
-  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 6, 0);
+  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 1); // ADC2 DMA just below ADC1
   HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
 
 }
@@ -2109,20 +2212,34 @@ static const char* usb_state_str(uint8_t s) { (void)s; return ""; }
 // Мигание светодиодом и сторож
 static volatile uint32_t tim2_irq_counter = 0; /* диагностика TIM2 IRQ */
 
+/* TIM Period Elapsed callback - обрабатывает Update события для TIM2 и TIM6 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+  // ДИАГНОСТИКА: логируем ПЕРВЫЙ вызов TIM2 callback
+  static uint8_t first_tim2_logged = 0;
+  if (!first_tim2_logged && htim->Instance == TIM2) {
+    printf("[TIM2][CB] FIRST PeriodElapsed callback! CNT=%lu ARR=%lu\r\n",
+           (unsigned long)__HAL_TIM_GET_COUNTER(htim),
+           (unsigned long)htim->Instance->ARR);
+    first_tim2_logged = 1;
+  }
+  
   if (htim->Instance == TIM2) {
-    /* TIM2 Period Elapsed: не используется, вся работа в Pulse Finished */
+    /* TIM2 Period Elapsed срабатывает когда CNT достигает ARR (конец периода 400Hz).
+       В этот момент ADC/DMA буфер полностью заполнен и готов к переключению. */
+    tim2_irq_counter++;  /* Счётчик для LCD частоты */
+    
+    extern void adc_stream_tim2_switch_buffers(void);
+    adc_stream_tim2_switch_buffers();
   }
   else if (htim->Instance == TIM6) {
-    // Убрано мигание LED - теперь LED индицирует приём команд UART
+    // TIM6: периодический тик для watchdog и USB vendor task
     tim6_irq_count++;
 #ifdef HAL_IWDG_MODULE_ENABLED
     #ifndef DIAG_DISABLE_IWDG
-      HAL_IWDG_Refresh(&hiwdg1); // кормим сторож (пока без унифицированного макроса)
+      HAL_IWDG_Refresh(&hiwdg1);
     #endif
 #endif
-    /* Пинаем USB vendor таск периодическим тиком, чтобы продвигать состояние */
     #if !SAFE_MINIMAL
       extern void usb_vendor_periodic_tick(void);
       usb_vendor_periodic_tick();
@@ -2130,30 +2247,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   }
 }
 
-// TIM2 CH1 Compare Match: срабатывает когда CNT достигает CCR1 (переход HIGH→LOW)
-// В этот момент TIM15 GATED останавливается, ADC прекращает работу, буфер заполнен
+/* Старый PWM Pulse Finished callback - не используется */
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
-  if (htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
-    /* ФИЛЬТР CNT: Обрабатываем ТОЛЬКО спадающий фронт PWM (CNT≈CCR1=4000).
-       TIM2 CH1 PWM Pulse Finished срабатывает на обоих фронтах:
-       - Нарастающий: CNT≈0 (начало HIGH, TIM15 GATED запускается)
-       - Спадающий: CNT≈4000 (конец HIGH, TIM15 GATED остановился)
-       
-       Нам нужен только спадающий фронт - момент когда ADC/DMA закончили работу. */
-    
-    uint32_t cnt = __HAL_TIM_GET_COUNTER(&htim2);
-    
-    if (cnt < 3500 || cnt > 4500) {
-      return;  // Отбрасываем callback на нарастающем фронте (CNT≈0)
-    }
-    
-    /* Спадающий фронт подтверждён (CNT≈4000) → TIM15 GATED остановился */
-    tim2_irq_counter++;  /* Счётчик для LCD частоты */
-    
-    extern void adc_stream_tim2_switch_buffers(void);
-    adc_stream_tim2_switch_buffers();
-  }
+  (void)htim; // Suppress unused warning
 }
 
 // Callback по завершении приёма байта (USART1 RX interrupt)
@@ -2408,6 +2505,21 @@ void MPU_Config(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
+  /* ДИАГНОСТИКА: попытка вывести сообщение об ошибке через UART перед зависанием */
+  static volatile uint8_t error_logged = 0;
+  if (!error_logged) {
+    error_logged = 1;
+    /* Простейший вывод через polling (IRQ могут быть отключены) */
+    const char msg[] = "\r\n[ERROR_HANDLER] CRITICAL ERROR - System halted!\r\n";
+    for (int i = 0; msg[i]; i++) {
+      /* Ждём готовности UART (TXE_TXFNF flag в ISR для STM32H7) */
+      while (!(USART3->ISR & USART_ISR_TXE_TXFNF)) {}
+      USART3->TDR = msg[i];
+    }
+    /* Даём время на передачу последнего байта */
+    for(volatile uint32_t d=0; d<1000000UL; ++d){ __NOP(); }
+  }
+  
   /* Визуальный индикатор ошибки: мигание подсветкой LCD_Led (PE10, active-low) и LED (PE3) */
   __disable_irq();
   /* Включаем тактирование GPIOE на случай ранней ошибки */

@@ -10,6 +10,14 @@ void adc_stream_stop(void);
 #include <stddef.h>
 #include "main.h" // FIFO_FRAMES / profile params
 
+/* Диагностические флаги по умолчанию (могут быть переопределены в compile flags) */
+#ifndef DIAG_SINGLE_ADC1
+#define DIAG_SINGLE_ADC1 0  /* 0 = использовать оба ADC (A и B) */
+#endif
+#ifndef ADC_USB_STAGE_ENABLE
+#define ADC_USB_STAGE_ENABLE 0  // ОТКЛЮЧЕНО: прямое чтение из DMA buffers с cache invalidation
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -19,11 +27,19 @@ extern "C" {
 #define FRAME_SAMPLES FRAME_SAMPLES_DEFAULT
 #endif
 
-// Внешние буферы DMA (максимальный размер строки = MAX_FRAME_SAMPLES)
-extern uint16_t adc1_buffers[FIFO_FRAMES][MAX_FRAME_SAMPLES];
-extern uint16_t adc2_buffers[FIFO_FRAMES][MAX_FRAME_SAMPLES];
+// Внешние буферы DMA (смещены после guard-слов)
+extern uint16_t (*adc1_buffers)[MAX_FRAME_SAMPLES];
+extern uint16_t (*adc2_buffers)[MAX_FRAME_SAMPLES];
+#if ADC_USB_STAGE_ENABLE
+extern uint16_t usb_stage_bufA[MAX_FRAME_SAMPLES];
+extern volatile uint16_t adc_stage_crc_a;
+extern volatile uint32_t adc_stage_crc_seq;
+#endif
 
-// СЧЁТЧИКИ ПАРНОЙ МОДЕЛИ (legacy)
+// RING BUFFER INDEX (for TC-driven mode - читается напрямую из main loop)
+extern volatile uint32_t s_next_ring_index;    // индекс следующего буфера для записи (0-3)
+
+// СЧЁТЧИКИ ПАРНОЙ МОДЕЛИ (legacy - НЕ используются в TC-driven режиме)
 extern volatile uint32_t frame_wr_seq;         // (DEPRECATED) парно записано (ISR)
 extern volatile uint32_t frame_rd_seq;         // (DEPRECATED) парно выдано (main)
 extern volatile uint32_t frame_overflow_drops; // (DEPRECATED) отброшено при переполнении
@@ -72,10 +88,14 @@ void adc_stream_init(void);
 HAL_StatusTypeDef adc_stream_start(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a2);
 HAL_StatusTypeDef adc_stream_restart(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a2);
 // НОВОЕ: получить кадр конкретного канала (0=A/ADC1, 1=B/ADC2). Возвращает 1 при успехе.
-uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples);
+// Вернуть кадр конкретного канала и его порядковый номер DMA (seq_out опционален)
+uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples, uint32_t *seq_out);
 // УСТАРЕВШЕ: парный интерфейс для обратной совместимости
 uint8_t adc_get_frame(uint16_t **ch1, uint16_t **ch2, uint16_t *samples);
 void adc_stream_get_debug(adc_stream_debug_t *out);
+
+// Получить parity (чётность) буфера по seq (0=even, 1=odd) для 400Hz режима
+uint8_t adc_get_buffer_parity(uint32_t seq);
 
 // Хук: вызывается из ISR (ADC1 half/full) с количеством добавленных кадров FIFO (frames_added)
 void adc_stream_on_new_frames(uint32_t frames_added);

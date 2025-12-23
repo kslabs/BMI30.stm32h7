@@ -80,7 +80,7 @@ CMD_DEEP_RESET = 0x7F  # control OUT (no data)
 CMD_GET_STATUS=0x30
 CMD_GET_STATUS_IMM=0x31
 
-HDR_SIZE=32
+HDR_SIZE=16  # Реальный размер заголовка: magic(2) ver(1) flags(1) seq(4) ts(4) ns(2) zc(2)
 
 def le16(x:int):
     return [x & 0xFF, (x >> 8) & 0xFF]
@@ -145,11 +145,17 @@ class DevHandle:
     def __init__(self, dev: Device):
         self.dev: Device = dev
 
-def send_cmd(dev: Device, data: bytes):
+def send_cmd(dev: Device, data: bytes, timeout_ms: int = 500):
+    """Send command with short timeout, ignore Windows USB timeout errors"""
     try:
-        dev.write(EP_OUT, data, timeout=1000)  # type: ignore[attr-defined]
+        dev.write(EP_OUT, data, timeout=timeout_ms)  # type: ignore[attr-defined]
+    except usb.core.USBError as e:
+        # Windows часто даёт timeout на control/bulk commands, но данные работают
+        # Игнорируем timeout - команда может быть обработана даже если ack не пришел
+        pass
     except Exception as e:
-        print(f"[WARN] send_cmd failed: {e}")
+        # Ignore all send errors on Windows - bulk read may still work
+        pass
 
 def _wait_until_gone(timeout: float = 3.0, poll: float = 0.2) -> bool:
     """Ждём, пока устройство исчезнет с шины (реальный reset/reenum)."""
@@ -179,6 +185,7 @@ def reset_device_and_reopen(no_reset: bool=False, retry_s: float=6.0) -> Device:
       4) USB port reset (libusb dev.reset())
     """
     if no_reset:
+        print("[RESET] Skipping reset (--no-reset-first)")
         return find_dev()
     try:
         dev = find_dev()
@@ -188,6 +195,10 @@ def reset_device_and_reopen(no_reset: bool=False, retry_s: float=6.0) -> Device:
         try:
             dev.ctrl_transfer(0x40, CMD_SOFT_RESET, 0, 0, None, timeout=300)  # type: ignore[attr-defined]
             soft_ok = True
+        except usb.core.USBError as e:
+            # Windows: ignore timeout, может не поддерживаться
+            if 'timeout' not in str(e).lower():
+                print(f"[RESET] SOFT_RESET failed: {e}")
         except Exception as e:
             print(f"[RESET] SOFT_RESET failed: {e}")
         time.sleep(0.1)
@@ -204,6 +215,9 @@ def reset_device_and_reopen(no_reset: bool=False, retry_s: float=6.0) -> Device:
         try:
             dev.ctrl_transfer(0x40, CMD_DEEP_RESET, 0, 0, None, timeout=400)  # type: ignore[attr-defined]
             deep_ok = True
+        except usb.core.USBError as e:
+            if 'timeout' not in str(e).lower():
+                print(f"[RESET] DEEP_RESET failed: {e}")
         except Exception as e:
             print(f"[RESET] DEEP_RESET failed: {e}")
         time.sleep(0.15)
@@ -218,6 +232,9 @@ def reset_device_and_reopen(no_reset: bool=False, retry_s: float=6.0) -> Device:
         print("[RESET] Try Bulk DEVICE_RESET (0x22)…")
         try:
             dev.write(EP_OUT, bytes([CMD_DEVICE_RESET]), timeout=600)  # type: ignore[attr-defined]
+        except usb.core.USBError as e:
+            if 'timeout' not in str(e).lower():
+                print(f"[RESET] Bulk DEVICE_RESET failed: {e}")
         except Exception as e:
             print(f"[RESET] Bulk DEVICE_RESET failed: {e}")
         time.sleep(0.2)
@@ -264,33 +281,125 @@ def parse_hdr(b: bytes):
 
 def reader_thread(handle: 'DevHandle', out_q: queue.Queue, stop_ev: threading.Event, pkt_log_interval_sec: float = 5.0):
     """
-    Надёжный ридер: собираем полные кадры из 512-байтных кусочков (WinUSB/libusb).
-    Выдаём в очередь только полностью собранные кадры A/B (h, payload_full).
+    Ридер с многопакетной буферизацией: ADC фрейм может занимать несколько USB пакетов.
+    Собираем в rx буфер, ищем magic number, извлекаем полные фреймы.
     """
     global g_status
-    rx = bytearray()
-    last_pkt_len = None
     pkt_count = 0
     last_pkt_log_ts = 0.0
+    rx = bytearray()  # Накопительный буфер для сборки фреймов
+    
     while not stop_ev.is_set():
         try:
-            # Чтение кусками по 4096B (~1.8 буфера) для ускорения приёма @ 200Hz
-            # Один буфер = 2232 байта (header 32 + 1100 samples × 2)
-            # Уменьшен timeout для быстрой реакции на данные
+            # Читаем большими блоками для производительности
             chunk = handle.dev.read(EP_IN, 4096, timeout=100)
             pkt_count += 1
             now = time.time()
-            # Лог пакетов:
-            #  - pkt_log_interval_sec <= 0: отключено
-            #  - >0: печатать не чаще заданного интервала (изменение длины не форсирует вывод)
+            
             if pkt_log_interval_sec and pkt_log_interval_sec > 0:
                 if (now - last_pkt_log_ts) >= pkt_log_interval_sec:
                     print(f"[PKT] #{pkt_count} len={len(chunk)} bytes")
                     last_pkt_log_ts = now
-            last_pkt_len = len(chunk)
-            rx += bytes(chunk)
+            
             if g_status is not None:
                 g_status.on_read_ok()
+            
+            # Добавляем в буфер
+            rx.extend(chunk)
+            
+            # Парсим все полные фреймы из rx
+            while True:
+                # Пропускаем мусор до magic number
+                idx = -1
+                for i in range(len(rx) - 1):
+                    if rx[i] == 0x5A and rx[i+1] == 0xA5:
+                        idx = i
+                        break
+                
+                if idx > 0:
+                    # Отбрасываем мусор перед magic
+                    rx = rx[idx:]
+                elif idx < 0:
+                    # Нет magic number в буфере - оставляем последние 2 байта на случай разрыва
+                    if len(rx) > 2:
+                        rx = rx[-2:]
+                    break
+                
+                # Пропускаем STAT frames (начинаются с 'STAT')
+                if len(rx) >= 4 and rx[:4] == b'STAT':
+                    # Ищем конец STAT фрейма (обычно фиксированного размера, но пропустим до следующего magic)
+                    next_magic = -1
+                    for i in range(4, len(rx)-1):
+                        if rx[i] == 0x5A and rx[i+1] == 0xA5:
+                            next_magic = i
+                            break
+                    if next_magic > 0:
+                        rx = rx[next_magic:]
+                        continue
+                    else:
+                        # STAT не завершён, ждём ещё данных
+                        break
+                
+                # Проверяем что есть хотя бы заголовок
+                if len(rx) < HDR_SIZE:
+                    break
+                
+                # Парсим заголовок
+                h = parse_hdr(bytes(rx))
+                if not h or h.get('magic') != 0xA55A:
+                    # Неверный magic - отбрасываем первый байт и ищем дальше
+                    rx = rx[1:]
+                    continue
+                
+                # Проверяем флаги TEST (0x80) - пропускаем
+                flags = h.get('flags', 0)
+                if flags & 0x80:
+                    # TEST frame - ищем следующий magic
+                    next_magic = -1
+                    for i in range(2, len(rx)-1):
+                        if rx[i] == 0x5A and rx[i+1] == 0xA5:
+                            next_magic = i
+                            break
+                    if next_magic > 0:
+                        rx = rx[next_magic:]
+                        continue
+                    else:
+                        break
+                
+                # Вычисляем полный размер фрейма
+                ns = h.get('ns', 0)
+                payload_size = ns * 2
+                full_size = HDR_SIZE + payload_size
+                
+                # Ждём пока весь фрейм накопится
+                if len(rx) < full_size:
+                    break
+                
+                # Извлекаем payload
+                payload = bytes(rx[HDR_SIZE:full_size])
+                
+                # Debug: первые 5 фреймов
+                if pkt_count < 2000:
+                    ch = 'A' if (flags & 0x01) else ('B' if (flags & 0x02) else '?')
+                    print(f"[FRAME] {ch} seq={h['seq']} ns={ns} payload_len={len(payload)} full_size={full_size}")
+                
+                # Отправляем в очередь
+                if g_status is not None:
+                    g_status.on_frame_header(h)
+                
+                try:
+                    out_q.put_nowait((h, payload))
+                except queue.Full:
+                    # Queue full → drop oldest
+                    try:
+                        out_q.get_nowait()
+                        out_q.put_nowait((h, payload))
+                    except (queue.Empty, queue.Full):
+                        pass
+                
+                # Удаляем обработанный фрейм из буфера
+                rx = rx[full_size:]
+                            
         except usb.core.USBError as e:
             if getattr(e, 'errno', None) in (110, 10060) or 'timed out' in str(e).lower():
                 if g_status is not None:
@@ -304,62 +413,6 @@ def reader_thread(handle: 'DevHandle', out_q: queue.Queue, stop_ev: threading.Ev
             if g_status is not None:
                 g_status.on_error(repr(e))
             continue
-
-        # Пытаемся извлечь из буфера одно или несколько полных кадров
-        while True:
-            if len(rx) < 4:
-                break
-            # Пропускаем STAT-кадры (64B или 52B), они GUI не нужны
-            if rx[0:4] == b'STAT':
-                # некоторые прошивки шлют STAT как 84/64/52 байта
-                if len(rx) >= 84:
-                    rx = rx[84:]
-                    continue
-                elif len(rx) >= 64:
-                    rx = rx[64:]
-                    continue
-                elif len(rx) >= 52:
-                    rx = rx[52:]
-                    continue
-                else:
-                    break  # ждём добор байтов
-            # Заголовок кадра?
-            if rx[0] == 0x5A and rx[1] == 0xA5 and rx[2] == 0x01 and len(rx) >= 16:
-                total_samples = rx[12] | (rx[13] << 8)
-                frame_len = 32 + total_samples * 2
-                if len(rx) < frame_len:
-                    break  # ждём остаток кадра
-                frame = bytes(rx[:frame_len])
-                rx = rx[frame_len:]
-                # Распарсим заголовок и положим полный payload
-                h = parse_hdr(frame)
-                if h and h.get('magic') == 0xA55A:
-                    payload = frame[HDR_SIZE:HDR_SIZE + h['ns']*2]
-                    if g_status is not None:
-                        g_status.on_frame_header(h)
-                    # Non-blocking put: drop oldest frames if GUI can't keep up (real-time display)
-                    try:
-                        out_q.put_nowait((h, payload))
-                    except queue.Full:
-                        # Queue full → drop oldest frame, add newest
-                        try:
-                            out_q.get_nowait()  # Drop oldest
-                            out_q.put_nowait((h, payload))  # Add newest
-                        except (queue.Empty, queue.Full):
-                            pass  # Race condition, skip frame
-                continue
-            # Ресинхронизация — ищем ближайший STAT или хедер
-            idx_stat = rx.find(b'STAT')
-            idx_hdr = rx.find(b"\x5A\xA5\x01")
-            idx = -1
-            if idx_stat != -1 and (idx_hdr == -1 or idx_stat < idx_hdr):
-                idx = idx_stat
-            elif idx_hdr != -1:
-                idx = idx_hdr
-            if idx > 0:
-                rx = rx[idx:]
-                continue
-            break
 
 class GuiStatus:
     def __init__(self, q: queue.Queue, ns: int):

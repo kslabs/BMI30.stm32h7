@@ -132,7 +132,7 @@ typedef struct {
 } adc_stream_profile_t;
 
 enum {
-  ADC_PROFILE_A_200HZ = 0,       /* 1360 @ 200Hz (Fs≈272kHz) */
+  ADC_PROFILE_A_200HZ = 0,       /* 1200 @ 200Hz (Fs≈240kHz) */
   ADC_PROFILE_B_DEFAULT = 1,     /*  912 @ 300Hz (Fs≈273.6kHz) */
   ADC_PROFILE_C_HIGH    = 2,     /*  944 @ 300Hz (Fs≈283.2kHz) */
   ADC_PROFILE_D_MAX     = 3,     /*  976 @ 300Hz (Fs≈292.8kHz) */
@@ -144,7 +144,7 @@ enum {
 #define FIFO_FRAMES       32u     // Глубина FIFO: увеличена с 8 до 32 для диагностики и предобработки (16 бит ADC)
 
 // Компиляционный дефолт (будет заменён рантайм профилем)
-#define FRAME_SAMPLES_DEFAULT 912u
+#define FRAME_SAMPLES_DEFAULT 1200u
 
 // Текущий активный профиль (обновляется вызовом set)
 uint8_t adc_stream_get_profile(void);

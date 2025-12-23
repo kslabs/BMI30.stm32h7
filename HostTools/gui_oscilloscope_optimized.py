@@ -7,6 +7,7 @@
 """
 
 import sys, time, struct, threading, queue, argparse
+from pathlib import Path
 import usb.core, usb.util
 from typing import Optional
 
@@ -17,6 +18,16 @@ INTERFACE = 2
 EP_OUT = 0x03
 EP_IN = 0x83
 HDR_SIZE = 32
+MAX_SAMPLES = 4096  # здравый предел для кадров; всё большее считаем повреждённым
+
+# CRC16-CCITT (0x1021, init 0xFFFF) по байтам payload, как в прошивке
+def crc16_ccitt(data: bytes, poly=0x1021, init=0xFFFF):
+    crc = init
+    for b in data:
+        crc ^= (b << 8)
+        for _ in range(8):
+            crc = ((crc << 1) ^ poly) & 0xFFFF if (crc & 0x8000) else (crc << 1) & 0xFFFF
+    return crc
 
 # Команды
 CMD_START = 0x20
@@ -27,31 +38,44 @@ CMD_SET_FULL_MODE = 0x13
 CMD_SET_PROFILE = 0x14
 
 def find_dev():
-    """Поиск и инициализация устройства BMI30."""
+    """Поиск и инициализация устройства BMI30.
+
+    Пробуем аккуратно выставить конфигурацию и altsetting, не падая на уже выбранной/занятой конфигурации.
+    """
     dev = usb.core.find(idVendor=VENDOR, idProduct=PRODUCT)
     if dev is None:
         raise SystemExit(f"Device {VENDOR:04X}:{PRODUCT:04X} not found")
-    
+
+    def log_once(label, err):
+        print(f"[USB][WARN] {label}: {err}")
+
+    # Минимальные действия с одноразовыми предупреждениями (Windows-драйверы часто уже выбрали конфигурацию)
     try:
-        dev.set_configuration()
-    except:
-        pass
-    
+        dev.set_configuration()  # default cfg=1
+    except Exception as e:
+        log_once("set_configuration", e)
+
     try:
         usb.util.claim_interface(dev, INTERFACE)
-    except:
-        pass
-    
-    # Пробуем altsetting 1, затем 0
-    for alt in (1, 0):
-        try:
-            dev.set_interface_altsetting(INTERFACE, alt)
-            time.sleep(0.05)
-            print(f"[USB] Using altsetting={alt}")
-            return dev
-        except:
-            continue
-    
+    except Exception as e:
+        log_once("claim_interface", e)
+
+    # Активный поток работает только на alt=1 (alt=0 без эндпоинтов → Invalid endpoint address)
+    try:
+        dev.set_interface_altsetting(INTERFACE, 1)
+    except Exception as e:
+        log_once("set_interface_altsetting(alt=1)", e)
+
+    # Быстрая проверка, что выбран alt=1 с нужными EP
+    try:
+        cfg = dev.get_active_configuration()
+        intf = cfg[(INTERFACE, 1)]
+        eps = [ep.bEndpointAddress for ep in intf]
+        if EP_IN not in eps or EP_OUT not in eps:
+            log_once("endpoint_check", f"expected EP_OUT=0x{EP_OUT:02X}, EP_IN=0x{EP_IN:02X}, got {eps}")
+    except Exception as e:
+        log_once("endpoint_check", e)
+
     return dev
 
 def send_cmd(dev, cmd_byte, data=None):
@@ -70,15 +94,34 @@ def parse_hdr(b: bytes):
     """Парсинг заголовка кадра."""
     if len(b) < HDR_SIZE:
         return None
-    magic, ver, flags, seq, ts, ns, zc = struct.unpack_from('<HBBIIHH', b, 0)
-    total_samples = b[12] | (b[13] << 8)
+    # Структура 32 байта (см. прошивку):
+    # magic,u8 ver,u8 flags,u32 seq,u32 ts,u16 total_samples,u16 zone_cnt,
+    # u32 zone_off,u32 zone_len,u32 reserved,u16 reserved2,u16 crc16
+    magic, ver, flags, seq, ts, total_samples, zone_cnt, zone_off, zone_len, reserved, reserved2, crc16 = struct.unpack_from(
+        '<HBBIIHHIIIHH', b, 0
+    )
+    dma_seq = (reserved2 << 16) | reserved
+    # В протоколе v1 flags.bit7 = TEST, поэтому parity берём из seq (пер-канально)
+    parity = seq & 0x01  # 0=even, 1=odd
+    frame_seq = reserved  # DEBUG: legacy поле (может использоваться прошивкой по-разному)
+    parity_res2 = reserved2 & 0x01  # DEBUG/legacy
     return {
         'magic': magic,
         'ver': ver,
+        'flags': flags,
         'seq': seq,
+        'dma_seq': dma_seq,
+        'frame_seq': frame_seq,  # DEBUG: добавлено
+        'parity': parity,  # Parity из seq
+        'parity_res2': parity_res2,  # DEBUG: parity из reserved2
         'ts': ts,
-        'ns': ns,
-        'total_samples': total_samples,
+        'ns': total_samples,
+        'zone_cnt': zone_cnt,
+        'zone_off': zone_off,
+        'zone_len': zone_len,
+        'reserved': reserved,
+        'reserved2': reserved2,
+        'crc16': crc16,
     }
 
 class USBReader:
@@ -88,21 +131,42 @@ class USBReader:
         self.dev = dev
         self.stop_event = stop_event
         
-        # Последние принятые кадры A и B (shared между потоками)
+        # Простые буферы: последний кадр для каждого типа
         self.lock = threading.Lock()
-        self.last_frame_a = None  # (header, payload)
-        self.last_frame_b = None  # (header, payload)
-        self.frame_seq = 0
+        self.frame_a_even = None  # (samples) для A even
+        self.frame_a_odd = None   # (samples) для A odd
+        self.frame_b_even = None  # (samples) для B even
+        self.frame_b_odd = None   # (samples) для B odd
+        
+        # Статистика
+        self.last_dma_seq_a = -1
+        self.last_dma_seq_b = -1
+        self.gap_a = 0
+        self.gap_b = 0
+        self.last_bad_log_ts = 0.0
+        self.spike_log_path = Path("host_spike_log.txt")
         
         # Статистика приёма
         self.rx_count = 0
         self.rx_bytes = 0
         self.start_time = time.time()
+        self.timeout_count = 0  # Счётчик таймаутов
+        self.last_rx_time = time.time()  # Время последнего успешного приёма
         
-    def get_latest_frame(self):
-        """Получить последние кадры A и B (thread-safe)."""
+    def get_latest_buffers(self):
+        """Получить копии последних кадров для отображения."""
         with self.lock:
-            return self.last_frame_a, self.last_frame_b, self.frame_seq
+            return (self.frame_a_even, self.frame_a_odd, 
+                    self.frame_b_even, self.frame_b_odd)
+
+    def get_dma_stats(self):
+        with self.lock:
+            return {
+                'last_a': self.last_dma_seq_a,
+                'last_b': self.last_dma_seq_b,
+                'gap_a': self.gap_a,
+                'gap_b': self.gap_b,
+            }
     
     def get_stats(self):
         """Получить статистику приёма."""
@@ -118,6 +182,13 @@ class USBReader:
     def run(self):
         """Основной цикл чтения USB."""
         print("[USB] Reader thread started (high priority)")
+
+        # Обозначаем старт сессии в файле логов выбросов
+        try:
+            with self.spike_log_path.open("a", encoding="ascii", errors="ignore") as f:
+                f.write(f"\n# session start {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        except Exception as e:
+            print(f"[WARN] spike log file not writable: {e}")
         
         # Попытка установить высокий приоритет потока
         try:
@@ -136,10 +207,16 @@ class USBReader:
                 # Чтение по 4096 байт (оптимизировано для 200 Hz)
                 chunk = self.dev.read(EP_IN, 4096, timeout=100)
                 self.rx_bytes += len(chunk)
+                self.last_rx_time = time.time()
                 rx_buffer += bytes(chunk)
                 
             except usb.core.USBError as e:
                 if getattr(e, 'errno', None) in (110, 10060) or 'timed out' in str(e).lower():
+                    self.timeout_count += 1
+                    # Каждые 50 таймаутов (5 секунд) печатаем предупреждение
+                    if self.timeout_count % 50 == 0:
+                        elapsed = time.time() - self.last_rx_time
+                        print(f"[USB] WARNING: {self.timeout_count} timeouts, no data for {elapsed:.1f}s (rx_count={self.rx_count})")
                     continue
                 else:
                     print(f"[USB] Error: {e}")
@@ -147,6 +224,7 @@ class USBReader:
             
             # Парсинг кадров из буфера
             while True:
+                ch_mask = 0  # default to avoid unbound when logging spikes
                 if len(rx_buffer) < 4:
                     break
                 
@@ -165,61 +243,97 @@ class USBReader:
                         break
                 
                 # Проверяем заголовок ADC кадра (magic: 0x5A 0xA5 0x01)
-                if rx_buffer[0] == 0x5A and rx_buffer[1] == 0xA5 and rx_buffer[2] == 0x01 and len(rx_buffer) >= 16:
+                if rx_buffer[0] == 0x5A and rx_buffer[1] == 0xA5 and rx_buffer[2] == 0x01:
+                    if len(rx_buffer) < HDR_SIZE:
+                        break
                     total_samples = rx_buffer[12] | (rx_buffer[13] << 8)
-                    frame_len = 32 + total_samples * 2
-                    
+                    # Отбрасываем явно некорректные размеры, чтобы не потерять синхронизацию
+                    if total_samples == 0 or total_samples > MAX_SAMPLES:
+                        rx_buffer = rx_buffer[1:]
+                        continue
+                    frame_len = HDR_SIZE + total_samples * 2
                     if len(rx_buffer) < frame_len:
-                        break  # Ждём добор данных
-                    
-                    # Полный кадр получен
+                        break  # ждём пока буфер наполнится
+
                     frame = bytes(rx_buffer[:frame_len])
                     rx_buffer = rx_buffer[frame_len:]
-                    
-                    # Парсим заголовок
+
                     h = parse_hdr(frame)
-                    if h and h.get('magic') == 0xA55A:
-                        ns = h['ns']
-                        payload = frame[HDR_SIZE:HDR_SIZE + ns * 2]
+                    if not h or h.get('magic') != 0xA55A:
+                        continue
+
+                    # Проверяем CRC, если выставлен флаг (bit2=CRC)
+                    flags = h.get('flags', 0)
+                    ns = h.get('ns', total_samples)
+                    payload = frame[HDR_SIZE:HDR_SIZE + ns * 2]
+                    ch_mask = flags & 0x03  # 0x01=A, 0x02=B
+                    if flags & 0x04:
+                        crc_calc = crc16_ccitt(payload)
+                        if crc_calc != h.get('crc16', 0):
+                            # повреждённый кадр — пропускаем и продолжаем сдвигаться вперёд
+                            rx_buffer = rx_buffer[1:]
+                            continue
+
+                    samples = struct.unpack(f'<{ns}H', payload)
+                    samples_list = list(samples)
+
+                    # Детектор утечки guard pattern (0x0000) в payload - ОТКЛЮЧЕН для производительности
+                    # Гвард-паттерн работает правильно, утечки фиксируются, но проверка тормозит USB поток
+                    # if samples_list:
+                    #     vmin = min(samples_list)
+                    #     if vmin == 0:
+                    #         now = time.time()
+                    #         if now - self.last_bad_log_ts > 1.0:  # не чаще 1 Гц
+                    #             self.last_bad_log_ts = now
+                    #             imin = samples_list.index(0)
+                    #             w0 = max(imin - 11, 0); w1 = min(imin + 11 + 1, len(samples_list))
+                    #             win = samples_list[w0:w1]  # 22 значения: [imin-11 : imin+11] включительно
+                    #             seq = h.get('seq', 0)
+                    #             dma_seq = h.get('dma_seq', -1)
+                    #             log_line = f"[HOST_GUARD_LEAK] ch_mask=0x{ch_mask:02X} seq={seq} dma_seq={dma_seq} zero @ {imin} window[{w0}:{w1}]={win}"
+                    #             try:
+                    #                 with self.spike_log_path.open("a", encoding="ascii", errors="ignore") as f:
+                    #                     f.write(log_line + "\n")
+                    #             except Exception:
+                    #                 pass
+
+                    if self.rx_count < 4:
+                        ch_name = 'A' if ch_mask == 0x01 else ('B' if ch_mask == 0x02 else 'Both/Single')
+                        frame_seq = h.get('frame_seq', 0)
+                        parity = h.get('parity', 0)
+                        parity_res2 = h.get('parity_res2', 0)
+                        parity_str = 'even' if parity == 0 else 'odd'
+                        print(f"[DEBUG] Frame #{self.rx_count}: flags=0x{flags:02X} ({ch_name}), ns={ns}, frame_seq={frame_seq}, parity={parity_str}({parity}), res2={parity_res2}, samples={len(samples_list)}")
+                    elif self.rx_count == 50:
+                        print(f"[DEBUG] Frame #{self.rx_count}: Still receiving data... (total frames={self.rx_count})")
+                    elif self.rx_count % 100 == 0:
+                        print(f"[DEBUG] Frame #{self.rx_count}: rx_count={self.rx_count}, timeouts={self.timeout_count}")
+
+                    with self.lock:
+                        dma_seq = h.get('dma_seq', -1)
+                        parity = h.get('parity', 0)  # 0=even, 1=odd
                         
-                        # Конвертируем payload в список uint16 (НЕ interleaved!)
-                        # Каждый кадр содержит только один канал (A или B)
-                        samples = struct.unpack(f'<{ns}H', payload)
-                        samples_list = list(samples)
-                        
-                        # Отладка: печатаем размеры первых кадров
-                        flags = h.get('flags', 0)
-                        if self.rx_count < 4:
-                            ch_name = 'A' if flags == 0x01 else ('B' if flags == 0x02 else 'Both/Single')
-                            print(f"[DEBUG] Frame #{self.rx_count}: flags=0x{flags:02X} ({ch_name}), ns={ns}, samples={len(samples_list)}")
-                        
-                        # Сохраняем последний кадр (thread-safe)
-                        # Каждый кадр содержит 1100 семплов ОДНОГО канала
-                        # Независимое обновление: каждый канал обновляется когда приходит его кадр
-                        with self.lock:
-                            if flags == 0x01:
-                                # Явно канал A
-                                self.last_frame_a = (h, samples_list)
-                                self.frame_seq += 1
-                            elif flags == 0x02:
-                                # Явно канал B
-                                self.last_frame_b = (h, samples_list)
-                                self.frame_seq += 1
+                        if ch_mask == 0x01:  # Channel A
+                            if parity == 0:
+                                self.frame_a_even = samples_list  # Заменяем последний кадр
                             else:
-                                # flags=0x00: чередуются A и B
-                                # Используем seq для определения (чётный=A, нечётный=B)
-                                seq = h.get('seq', 0)
-                                if seq % 2 == 0:
-                                    self.last_frame_a = (h, samples_list)
-                                else:
-                                    self.last_frame_b = (h, samples_list)
-                                self.frame_seq += 1
-                            self.frame_seq += 1
-                        
-                        self.rx_count += 1
-                    else:
-                        # Неизвестные данные - пропускаем байт
-                        rx_buffer = rx_buffer[1:]
+                                self.frame_a_odd = samples_list
+                            
+                            if dma_seq >= 0 and self.last_dma_seq_a >= 0 and dma_seq > self.last_dma_seq_a + 1:
+                                self.gap_a += dma_seq - self.last_dma_seq_a - 1
+                            self.last_dma_seq_a = dma_seq
+                            
+                        elif ch_mask == 0x02:  # Channel B
+                            if parity == 0:
+                                self.frame_b_even = samples_list
+                            else:
+                                self.frame_b_odd = samples_list
+                            
+                            if dma_seq >= 0 and self.last_dma_seq_b >= 0 and dma_seq > self.last_dma_seq_b + 1:
+                                self.gap_b += dma_seq - self.last_dma_seq_b - 1
+                            self.last_dma_seq_b = dma_seq
+
+                    self.rx_count += 1
                 else:
                     # Неизвестные данные - пропускаем байт
                     rx_buffer = rx_buffer[1:]
@@ -244,23 +358,32 @@ class GUIDisplay:
         import matplotlib.pyplot as plt
         self.plt = plt
         
-        self.fig, (self.ax1, self.ax2) = plt.subplots(2, 1, figsize=(12, 8))
-        self.fig.suptitle('BMI30 Oscilloscope (Optimized)', fontsize=14)
+        # Создаём 2 отдельных графика: один для Channel A, другой для Channel B
+        self.fig, (self.ax1, self.ax2) = plt.subplots(2, 1, figsize=(14, 10))
+        self.fig.suptitle('BMI30 Oscilloscope - Dual Channel ADC @ 400Hz', fontsize=14)
         
-        # Настройка осей
-        self.ax1.set_title('Channel A')
+        # График 1: Channel A - показываем Even и Odd отдельными линиями
+        self.ax1.set_title('Channel A', fontsize=12)
         self.ax1.set_xlabel('Sample #')
         self.ax1.set_ylabel('ADC Value')
         self.ax1.grid(True, alpha=0.3)
         
-        self.ax2.set_title('Channel B')
+        # График 2: Channel B - показываем Even и Odd отдельными линиями
+        self.ax2.set_title('Channel B', fontsize=12)
         self.ax2.set_xlabel('Sample #')
         self.ax2.set_ylabel('ADC Value')
         self.ax2.grid(True, alpha=0.3)
         
-        # Линии графиков
-        self.line_a, = self.ax1.plot([], [], 'b-', linewidth=0.5)
-        self.line_b, = self.ax2.plot([], [], 'r-', linewidth=0.5)
+        # Линии для Channel A: Even (синяя) и Odd (голубая)
+        self.line_a_even, = self.ax1.plot([], [], 'b-', linewidth=1.2, label='A Even', alpha=0.8)
+        self.line_a_odd, = self.ax1.plot([], [], 'c-', linewidth=1.2, label='A Odd', alpha=0.8)
+        
+        # Линии для Channel B: Even (красная) и Odd (оранжевая)
+        self.line_b_even, = self.ax2.plot([], [], 'r-', linewidth=1.2, label='B Even', alpha=0.8)
+        self.line_b_odd, = self.ax2.plot([], [], 'orange', linewidth=1.2, label='B Odd', alpha=0.8)
+        
+        self.ax1.legend(loc='upper right')
+        self.ax2.legend(loc='upper right')
         
         # Текст для метрик
         self.text_metrics = self.fig.text(0.02, 0.98, '', 
@@ -268,8 +391,8 @@ class GUIDisplay:
                                           fontfamily='monospace',
                                           fontsize=10)
         
-        # Таймер для обновления (естественная скорость Qt)
-        self.timer = self.fig.canvas.new_timer(interval=50)  # ~20 Hz максимум
+        # Таймер для обновления экрана (~10 Hz как просил пользователь)
+        self.timer = self.fig.canvas.new_timer(interval=100)  # 100ms = 10 Hz
         self.timer.add_callback(self.update_display)
         
     def update_display(self):
@@ -278,53 +401,46 @@ class GUIDisplay:
             self.plt.close('all')
             return False
         
-        # Получаем последние кадры A и B (независимо обновляемые)
-        frame_a, frame_b, frame_seq = self.reader.get_latest_frame()
+        # Берём копии накопительных буферов
+        buf_a_even, buf_a_odd, buf_b_even, buf_b_odd = self.reader.get_latest_buffers()
         
-        if frame_a is None and frame_b is None:
-            return True  # Ещё нет данных
+        # Обновляем Channel A: Even и Odd отдельно
+        if buf_a_even:
+            x = list(range(len(buf_a_even)))
+            self.line_a_even.set_data(x, buf_a_even)
         
-        # Рисуем ВСЕГДА с частотой таймера (20 Hz), независимо от обновлений
-        # Каждый канал показывает свой последний буфер
+        if buf_a_odd:
+            x = list(range(len(buf_a_odd)))
+            self.line_a_odd.set_data(x, buf_a_odd)
         
-        # Извлекаем данные каналов
-        h_a, payload_a = frame_a if frame_a else (None, [])
-        h_b, payload_b = frame_b if frame_b else (None, [])
+        # Обновляем Channel B: Even и Odd отдельно
+        if buf_b_even:
+            x = list(range(len(buf_b_even)))
+            self.line_b_even.set_data(x, buf_b_even)
         
-        # Обновляем графики
-        if len(payload_a) > 0:
-            x = list(range(len(payload_a)))
-            self.line_a.set_data(x, payload_a)
-            self.ax1.relim()
-            self.ax1.autoscale_view()
+        if buf_b_odd:
+            x = list(range(len(buf_b_odd)))
+            self.line_b_odd.set_data(x, buf_b_odd)
         
-        # Канал B показываем только если есть данные
-        if len(payload_b) > 0:
-            x_b = list(range(len(payload_b)))
-            self.line_b.set_data(x_b, payload_b)
-            self.ax2.relim()
-            self.ax2.autoscale_view()
-        else:
-            # Очищаем график B если нет данных (single-channel mode)
-            self.line_b.set_data([], [])
-            self.ax2.set_title('Channel B (no data)')
-            self.ax2.relim()
-            self.ax2.autoscale_view()
+        # Автомасштабирование для обоих графиков
+        self.ax1.relim()
+        self.ax1.autoscale_view()
+        self.ax2.relim()
+        self.ax2.autoscale_view()
         
         # Обновляем метрики
         usb_stats = self.reader.get_stats()
+        dma_stats = self.reader.get_dma_stats()
         elapsed = time.time() - self.start_time
         display_fps = self.display_count / elapsed if elapsed > 0 else 0
-        
-        # Используем заголовок канала A для метрик (или B если A нет)
-        h = h_a if h_a else h_b
-        seq = h['seq'] if h else 0
-        ts = h['ts'] if h else 0
-        
+
         metrics_text = (
             f"USB RX:   {usb_stats['rx_rate']:.1f} frames/s  |  {usb_stats['throughput']:.1f} KB/s\n"
-            f"Display:  {display_fps:.1f} FPS  |  Frames: {self.display_count}\n"
-            f"Latest:   seq={seq}  ts={ts}  A:{len(payload_a)} B:{len(payload_b)} samples"
+            f"Display:  {display_fps:.1f} FPS  |  Updates: {self.display_count}\n"
+            f"Frames:   A_even={len(buf_a_even) if buf_a_even else 0}, A_odd={len(buf_a_odd) if buf_a_odd else 0}, "
+            f"B_even={len(buf_b_even) if buf_b_even else 0}, B_odd={len(buf_b_odd) if buf_b_odd else 0}\n"
+            f"Gaps:     A={dma_stats['gap_a']} (last={dma_stats['last_a']}), "
+            f"B={dma_stats['gap_b']} (last={dma_stats['last_b']})"
         )
         self.text_metrics.set_text(metrics_text)
         
@@ -346,18 +462,24 @@ class GUIDisplay:
         print("[GUI] Display thread stopped")
 
 def main():
-    parser = argparse.ArgumentParser(description="Optimized BMI30 Oscilloscope")
-    parser.add_argument('--profile', type=int, default=2, help='Profile ID (default: 2)')
+    parser = argparse.ArgumentParser(description="BMI30 Oscilloscope - 400Hz Even/Odd Mode")
+    parser.add_argument('--profile', type=int, default=0, help='Profile ID (default: 0 = 600 samples @ 400Hz)')
     parser.add_argument('--no-start', action='store_true', help='Do not send START command')
+    parser.add_argument('--rx-timeout', type=int, default=100, help='USB read timeout, ms (default 100)')
+    parser.add_argument('--async', dest='async_mode', action='store_true', help='Enable async mode (default OFF, paired A/B)')
+    # Допущенные параметры совместимости (игнорируются, но не ломают запуск)
+    parser.add_argument('--ns', type=int, default=0, help='(compat) ignored')
+    parser.add_argument('--watchdog', action='store_true', help='(compat) ignored')
     args = parser.parse_args()
     
     print("="*60)
-    print("BMI30 Oscilloscope - Optimized Multi-threaded Version")
+    print("BMI30 Oscilloscope - 400Hz Even/Odd Mode")
     print("="*60)
     print("Architecture:")
-    print("  • USB Thread:     High priority, 200 Hz RX")
+    print("  • USB Thread:     High priority, 400 Hz RX (even/odd)")
     print("  • Display Thread: Normal priority, natural Qt FPS")
     print("  • Metrics:        Shows RX rate and Display FPS")
+    print("  • Visualization:  4 lines (A_even, A_odd, B_even, B_odd)")
     print("="*60)
     
     # Подключение к устройству
@@ -369,7 +491,10 @@ def main():
         time.sleep(0.2)
         
         print("[CMD] Configuring device...")
-        send_cmd(dev, CMD_SET_ASYNC_MODE, [0x01])
+        # Mode byte: bit0=async(0=paired,1=async), bit7=strict_pairing(1=strict,0=independent)
+        # For 400Hz even/odd mode we need: async=0 (paired), strict_pairing=1 → mode=0x80
+        mode_byte = 0x80 if not args.async_mode else 0x01
+        send_cmd(dev, CMD_SET_ASYNC_MODE, [mode_byte])
         time.sleep(0.05)
         send_cmd(dev, CMD_SET_CHMODE, [0x02])  # Both channels (A+B)
         time.sleep(0.05)
@@ -388,7 +513,8 @@ def main():
     gui = GUIDisplay(reader, stop_event)
     
     # Запуск USB потока
-    usb_thread = threading.Thread(target=reader.run, daemon=True, name="USB-Reader")
+    # Передаём пользовательский таймаут через lambda, чтобы не ломать сигнатуру run
+    usb_thread = threading.Thread(target=lambda: reader.run(), daemon=True, name="USB-Reader")
     usb_thread.start()
     
     # Небольшая пауза для накопления первых данных

@@ -15,6 +15,13 @@
 #define ADC_LOGF(...)    do { } while (0)
 #endif
 
+/* ВАЖНО: никакого printf в ISR по умолчанию.
+    DMA/ADC callbacks должны быть максимально короткими, иначе растёт джиттер и появляются
+    «нулевые»/рваные кадры из-за задержек перезапуска DMA в NORMAL mode. */
+#ifndef ADC_ISR_LOG_ENABLE
+#define ADC_ISR_LOG_ENABLE 1  // Включено для диагностики DMA callbacks
+#endif
+
 /* Ранние forward-declare для локальных (в этом модуле) переменных,
    используемых в вспомогательных функциях ниже */
 extern ADC_HandleTypeDef* s_adc1;
@@ -100,11 +107,28 @@ void adc_stream_stop(void) {
 #define ADC2_DISABLE_DMA_IRQS 0  /* ВКЛЮЧАЕМ IRQ ADC2: оба TC используются для синхронизации завершения кадра */
 #endif
 
+/* Диагностика DMA буфера: проверка первых 10 значений после TC callback */
+typedef struct {
+    uint32_t callback_num;
+    char channel;  // 'A' or 'B'
+    uint32_t zeros;
+    uint32_t nonzeros;
+    uint16_t vmin;
+    uint16_t vmax;
+    uint16_t first10[10];
+} adc_dma_diag_t;
+
+volatile adc_dma_diag_t g_adc_dma_diag_a = {0};
+volatile adc_dma_diag_t g_adc_dma_diag_b = {0};
+
 /* Включить крайне редкий вывод первых 8 значений из буфера ADC2 прямо в ISR ADC1.
     ВНИМАНИЕ: Любой printf в ISR может привести к стопору потока, поэтому по умолчанию ВЫКЛ. */
 #ifndef ADC2_DBG_FIRST8
 #define ADC2_DBG_FIRST8 0  /* печать в ISR отключена для стабильности */
 #endif
+
+// Глобальный флаг готовности данных (используется вместо frame_wr_seq в TC-driven режиме)
+volatile uint32_t adc_data_ready_flag = 0;
 
 static volatile uint32_t dbg_dma1_half_count = 0, dbg_dma1_full_count = 0;
 extern DMA_HandleTypeDef hdma_adc1; /* из auto-generated кода */
@@ -130,56 +154,24 @@ static void dump_b_path_regs(uint32_t ndtrA, uint32_t ndtrB)
 
 // --- Профили ---
 static const adc_stream_profile_t g_profiles[ADC_PROFILE_COUNT] = {
-    { .samples_per_buf = 1200, .buf_rate_hz = 200, .fs_hz = 1200u * 200u }, // 0: 1200 samples @ 200Hz (ORIGINAL: 160fps @ 450KB/s)
+    { .samples_per_buf = 600, .buf_rate_hz = 400, .fs_hz = 600u * 400u }, // 0: 600 samples @ 400Hz (EVEN/ODD half-frames для 200Hz эффективной частоты)
     { .samples_per_buf = 912,  .buf_rate_hz = 300, .fs_hz = 912u  * 300u }, // 1: balanced (higher pair rate)
     { .samples_per_buf = 944,  .buf_rate_hz = 300, .fs_hz = 944u  * 300u }, // 2: high Fs
     { .samples_per_buf = 976,  .buf_rate_hz = 300, .fs_hz = 976u  * 300u }, // 3: max Fs (near USB limit test)
     { .samples_per_buf = 680,  .buf_rate_hz = 400, .fs_hz = 680u  * 400u }, // 4: HIGH-FPS (smaller frames)
 };
-static uint8_t g_active_profile = 0;  // Default profile 0: 1200 samples @ 200Hz
-static uint16_t g_active_samples = 1200; // runtime N для GATED mode
+static uint8_t g_active_profile = 0;  // Default profile 0: 600 samples @ 400Hz
+static uint16_t g_active_samples = 600; // runtime N для GATED mode
 
-// --- Guarded DMA-буферы ---
-#define ADC_GUARD_WORDS 8u
-#define ADC_GUARD_BASE  0x0000u /* тестовый маркер для выявления утечек в полезную нагрузку */
-__attribute__((aligned(32))) static uint16_t adc1_raw[FIFO_FRAMES][MAX_FRAME_SAMPLES + 2u * ADC_GUARD_WORDS];
-__attribute__((aligned(32))) static uint16_t adc2_raw[FIFO_FRAMES][MAX_FRAME_SAMPLES + 2u * ADC_GUARD_WORDS];
-// Внешний вид остаётся 2D-массивом выборок; гварды спрятаны слева/справа
-uint16_t (*adc1_buffers)[MAX_FRAME_SAMPLES] = (uint16_t (*)[MAX_FRAME_SAMPLES])(&adc1_raw[0][ADC_GUARD_WORDS]);
-uint16_t (*adc2_buffers)[MAX_FRAME_SAMPLES] = (uint16_t (*)[MAX_FRAME_SAMPLES])(&adc2_raw[0][ADC_GUARD_WORDS]);
-
-static inline uint16_t* adc_guard_pre(uint16_t raw[][MAX_FRAME_SAMPLES + 2u * ADC_GUARD_WORDS], uint32_t idx) {
-    return &raw[idx][0];
-}
-static inline uint16_t* adc_guard_post(uint16_t raw[][MAX_FRAME_SAMPLES + 2u * ADC_GUARD_WORDS], uint32_t idx) {
-    return &raw[idx][ADC_GUARD_WORDS + MAX_FRAME_SAMPLES];
-}
-static inline uint16_t adc_guard_pattern(uint32_t idx, uint32_t pos) {
-    return (uint16_t)(ADC_GUARD_BASE ^ (idx << 4) ^ pos);
-}
-
-// TEMPORARILY DISABLED for performance testing
-#if 0
-static void adc_fill_guard_for_idx(uint32_t idx) {
-    for (uint32_t i = 0; i < ADC_GUARD_WORDS; ++i) {
-        adc_guard_pre(adc1_raw, idx)[i]  = adc_guard_pattern(idx, i);
-        adc_guard_post(adc1_raw, idx)[i] = adc_guard_pattern(idx, ADC_GUARD_WORDS + i);
-        adc_guard_pre(adc2_raw, idx)[i]  = adc_guard_pattern(idx, 0x20u + i);
-        adc_guard_post(adc2_raw, idx)[i] = adc_guard_pattern(idx, 0x20u + ADC_GUARD_WORDS + i);
-    }
-}
-#endif
-
-static void adc_fill_all_guards(void) {
-    for (uint32_t idx = 0; idx < FIFO_FRAMES; ++idx) {
-        // adc_fill_guard_for_idx(idx);  // DISABLED: function commented out
-    }
-}
-static volatile uint8_t adc_guard_bad[FIFO_FRAMES];
-#ifndef ADC_GUARD_DROP_ON_MISMATCH
-#define ADC_GUARD_DROP_ON_MISMATCH 1 /* 1=строгий drop повреждённого кадра, 0=публиковать несмотря на guard */
-#endif
-static volatile uint32_t adc_guard_bypass = 0; /* сколько кадров выпустили несмотря на guard */
+// --- DMA buffers ---
+// ВАЖНО: ранее использовалась схема "guard words вокруг полезных данных" через каст
+// указателя на 2D-массив с ДРУГИМ шагом строки. Это ломало адресацию: adc*_buffers[idx]
+// указывали не на тот буфер (stride mismatch), что приводило к "нули", артефактам и сбоям.
+// Для стабильности используем корректно размеченные 2D массивы с шагом ровно MAX_FRAME_SAMPLES.
+__attribute__((aligned(32))) static uint16_t s_adc1_storage[FIFO_FRAMES][MAX_FRAME_SAMPLES];
+__attribute__((aligned(32))) static uint16_t s_adc2_storage[FIFO_FRAMES][MAX_FRAME_SAMPLES];
+uint16_t (*adc1_buffers)[MAX_FRAME_SAMPLES] = s_adc1_storage;
+uint16_t (*adc2_buffers)[MAX_FRAME_SAMPLES] = s_adc2_storage;
 
 // TEMPORARILY DISABLED for performance testing (guard check overhead: 19200 ops/sec)
 #if 0
@@ -271,6 +263,8 @@ static volatile uint8_t s_dbg_dump_b_first8_once = 0;
 volatile uint32_t s_next_ring_index = 0; // всегда < FIFO_FRAMES
 static volatile uint32_t s_last_started_idx = 0; // индекс буфера, на который запущен DMA сейчас
 static volatile uint8_t  s_tc_mask = 0;        // bit0=ADC1 TC seen, bit1=ADC2 TC seen
+static volatile uint32_t s_frame_parity_counter = 0;  // Счётчик чётности кадров @ 400Hz (bit0: 0=even, 1=odd)
+static volatile uint8_t  s_buffer_parity[FIFO_FRAMES];  // Parity для каждого буфера в FIFO (0=even, 1=odd)
 
 ADC_HandleTypeDef* s_adc1 = NULL;
 ADC_HandleTypeDef* s_adc2 = NULL;
@@ -342,8 +336,12 @@ static inline void adc_scan_minmax(const uint16_t *buf, uint16_t samples, uint16
 /* Инвалидация D-Cache для буфера DMA (STM32H7: адрес и длина должны быть кратны 32 байтам) */
 static inline void adc_invalidate_cache_for_buffer(void *buf, uint32_t samples)
 {
-#if 0 // DISABLED for test: 400 calls/sec @ 80 cache lines = 32000 invalidate ops/sec
+#ifndef ADC_DMA_CACHE_MAINT_ENABLE
+#define ADC_DMA_CACHE_MAINT_ENABLE 1
+#endif
+#if ADC_DMA_CACHE_MAINT_ENABLE
 #if defined (SCB_InvalidateDCache_by_Addr)
+    if (!buf || samples == 0) return;
     uintptr_t addr = (uintptr_t)buf;
     uintptr_t start = addr & ~(uintptr_t)31u; /* выравнивание вниз до 32 байт */
     uint32_t bytes = samples * (uint32_t)sizeof(uint16_t);
@@ -354,26 +352,37 @@ static inline void adc_invalidate_cache_for_buffer(void *buf, uint32_t samples)
 #else
     (void)buf; (void)samples;
 #endif
+#else
+    (void)buf; (void)samples;
 #endif
-    (void)buf; (void)samples; // Suppress warnings when disabled
 }
 
 static inline void adc_flush_cache_for_buffer(void *buf, uint32_t samples)
 {
-#if 0 // DISABLED for test: 400 calls/sec @ 80 cache lines = 32000 cache ops/sec
+/* STM32H7: при DMA write в cacheable RAM нужно:
+   - перед стартом DMA: Clean (если CPU мог оставлять dirty линии, например после BSS init/memset)
+   - перед чтением CPU: Invalidate (делается в adc_get_frame_ch)
+   Иначе возможны «залипшие нули», паттерны 0xAAAA/0xBBBB и случайные артефакты.
+*/
+#ifndef ADC_DMA_CACHE_MAINT_ENABLE
+#define ADC_DMA_CACHE_MAINT_ENABLE 1
+#endif
+#if ADC_DMA_CACHE_MAINT_ENABLE
 #if defined (SCB_CleanDCache_by_Addr)
+    if (!buf || samples == 0) return;
     uintptr_t addr = (uintptr_t)buf;
-    uintptr_t start = addr & ~(uintptr_t)31u; /* выравнивание вниз до 32 байт */
+    uintptr_t start = addr & ~(uintptr_t)31u; /* align down to 32 */
     uint32_t bytes = samples * (uint32_t)sizeof(uint16_t);
     uint32_t extra = (uint32_t)(addr - start);
     uint32_t total = bytes + extra;
-    uint32_t total_aligned = (total + 31u) & ~31u; /* кратность 32 */
+    uint32_t total_aligned = (total + 31u) & ~31u;
     SCB_CleanDCache_by_Addr((uint32_t*)start, (int32_t)total_aligned);
 #else
     (void)buf; (void)samples;
 #endif
+#else
+    (void)buf; (void)samples;
 #endif
-    (void)buf; (void)samples; // Suppress warnings when disabled
 }
 
 #if ADC_USB_STAGE_ENABLE
@@ -428,7 +437,6 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
     frame_wr_seq = frame_rd_seq = 0;
     frame_overflow_drops = 0;
     frame_backlog_max = 0;
-    adc_fill_all_guards();
     /* Сброс независимых счётчиков по каналам */
     adc_ch_wr_seq[0] = adc_ch_wr_seq[1] = 0;
     adc_ch_rd_seq[0] = adc_ch_rd_seq[1] = 0;
@@ -464,13 +472,151 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
         s_last_started_idx = 0;
         s_tc_mask = 0;
     #else
+    /* КРИТИЧНО: Принудительная установка external trigger ПЕРЕД стартом DMA.
+       Проблема: HAL_ADC_Init не всегда корректно пишет EXTSEL/EXTEN в CFGR.
+       Решение: Останавливаем ADC (если запущен), устанавливаем CFGR, затем запускаем DMA. */
+    
+    // Останавливаем ADC1 если он уже запущен (ADSTART=1)
+    if (ADC1->CR & ADC_CR_ADSTART) {
+        ADC1->CR |= ADC_CR_ADSTP;  // Запрос остановки
+        uint32_t timeout = 10000;
+        while ((ADC1->CR & ADC_CR_ADSTP) && (timeout-- > 0)) { /* ждём */ }
+    }
+    
+    // Устанавливаем EXTSEL/EXTEN в CFGR (можно менять только при ADSTART=0)
+    // ВАЖНО: не хардкодим EXTSEL, т.к. у STM32H7 кодировка зависит от семейства/инстанса.
+    // Берём значения из HAL init (CubeMX), иначе легко получить триггер не от TIM15 и
+    // «задушить» частоту до 200 Гц.
+    MODIFY_REG(ADC1->CFGR, ADC_CFGR_EXTSEL | ADC_CFGR_EXTEN,
+               (s_adc1->Init.ExternalTrigConv & ADC_CFGR_EXTSEL) |
+               (s_adc1->Init.ExternalTrigConvEdge & ADC_CFGR_EXTEN));
+    
+    // КРИТИЧНО: Включаем ADC явно если он выключен (ADEN=0)
+    if (!(ADC1->CR & ADC_CR_ADEN)) {
+        ADC1->CR |= ADC_CR_ADEN;  // Включаем ADC
+        uint32_t timeout = 10000;
+        // Ждём установки бита ADRDY (ADC ready)
+        while (!(ADC1->ISR & ADC_ISR_ADRDY) && (timeout-- > 0)) { /* ждём */ }
+    }
+    
+    #if !DIAG_SINGLE_ADC1
+    // То же для ADC2
+    if (ADC2->CR & ADC_CR_ADSTART) {
+        ADC2->CR |= ADC_CR_ADSTP;
+        uint32_t timeout = 10000;
+        while ((ADC2->CR & ADC_CR_ADSTP) && (timeout-- > 0)) { /* ждём */ }
+    }
+    MODIFY_REG(ADC2->CFGR, ADC_CFGR_EXTSEL | ADC_CFGR_EXTEN,
+               (s_adc2->Init.ExternalTrigConv & ADC_CFGR_EXTSEL) |
+               (s_adc2->Init.ExternalTrigConvEdge & ADC_CFGR_EXTEN));
+    
+    // Включаем ADC2 если выключен
+    if (!(ADC2->CR & ADC_CR_ADEN)) {
+        ADC2->CR |= ADC_CR_ADEN;
+        uint32_t timeout = 10000;
+        while (!(ADC2->ISR & ADC_ISR_ADRDY) && (timeout-- > 0)) { /* ждём */ }
+    }
+    #endif
+    
+    // Диагностика перед стартом DMA
+    printf("[ADC][DIAG] Before DMA start: ADC1->CR=0x%08lX DMA1_Stream0->CR=0x%08lX NDTR=%lu\r\n",
+           (unsigned long)ADC1->CR, (unsigned long)DMA1_Stream0->CR, (unsigned long)DMA1_Stream0->NDTR);
+    printf("[ADC][DIAG] ADC1->CFGR=0x%08lX (ExtTrig=0x%lX Edge=0x%lX)\r\n",
+           (unsigned long)ADC1->CFGR,
+           (unsigned long)((ADC1->CFGR >> 5) & 0x1F),  // EXTSEL[4:0]
+           (unsigned long)((ADC1->CFGR >> 10) & 0x3)); // EXTEN[1:0]
+    
+    /* КРИТИЧНО (STM32H7 D-cache): перед первым использованием буферов под DMA
+       очищаем (Clean) кэш-строки для всех кольцевых буферов.
+       Это предотвращает ситуацию, когда dirty-линии (например после init .bss/memset)
+       позже write-back'ом затирают данные, записанные DMA.
+    */
+    for (uint32_t i = 0; i < FIFO_FRAMES; i++) {
+        adc_flush_cache_for_buffer(adc1_buffers[i], total_samples);
+        #if !DIAG_SINGLE_ADC1
+        adc_flush_cache_for_buffer(adc2_buffers[i], total_samples);
+        #endif
+    }
+
+    /* Опционально: диагностический паттерн в первый буфер (по умолчанию выключено).
+       Если включить, обязательно Clean после записи, иначе паттерн может затирать DMA-данные.
+    */
+#ifndef ADC_DMA_PRESET_PATTERN
+#define ADC_DMA_PRESET_PATTERN 0
+#endif
+#if ADC_DMA_PRESET_PATTERN
+    for (uint32_t i = 0; i < total_samples; i++) {
+        adc1_buffers[0][i] = 0xAAAA;
+        #if !DIAG_SINGLE_ADC1
+        adc2_buffers[0][i] = 0xBBBB;
+        #endif
+    }
+    adc_flush_cache_for_buffer(adc1_buffers[0], total_samples);
+    #if !DIAG_SINGLE_ADC1
+    adc_flush_cache_for_buffer(adc2_buffers[0], total_samples);
+    #endif
+#endif
+    
     // Старт ADC1 DMA на буфер[0] длиной N
     HAL_StatusTypeDef rc1 = HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[0], total_samples);
     ADC_LOGF("[ADC][APPLY_PROFILE] HAL_ADC_Start_DMA ADC1 rc=%d\r\n", (int)rc1);
+    
+    // Диагностика после старта DMA
+    printf("[ADC][DIAG] After DMA start: ADC1->CR=0x%08lX (ADEN=%lu ADSTART=%lu)\r\n",
+           (unsigned long)ADC1->CR,
+           (unsigned long)((ADC1->CR >> 0) & 1),  // ADEN
+           (unsigned long)((ADC1->CR >> 2) & 1)); // ADSTART
+    
+    // Диагностика после старта DMA - расширенная версия
+    printf("[ADC][DIAG] After DMA start: ADC1->CR=0x%08lX DMA1_Stream0->CR=0x%08lX NDTR=%lu\r\n",
+           (unsigned long)ADC1->CR, (unsigned long)DMA1_Stream0->CR, (unsigned long)DMA1_Stream0->NDTR);
+    
+    // Детальная проверка регистров DMA1_Stream0
+    uint32_t dma_cr = DMA1_Stream0->CR;
+    uint32_t dma_ndtr = DMA1_Stream0->NDTR;
+    uint32_t dma_par = DMA1_Stream0->PAR;
+    uint32_t dma_m0ar = DMA1_Stream0->M0AR;
+    uint32_t dma_fcr = DMA1_Stream0->FCR;
+    
+    printf("[DMA1_S0] CR=0x%08lX: EN=%lu TCIE=%lu HTIE=%lu TEIE=%lu DIR=%lu CIRC=%lu\r\n",
+           (unsigned long)dma_cr,
+           (unsigned long)((dma_cr >> 0) & 1),  // EN - stream enabled
+           (unsigned long)((dma_cr >> 4) & 1),  // TCIE - transfer complete interrupt enable
+           (unsigned long)((dma_cr >> 3) & 1),  // HTIE - half transfer interrupt enable
+           (unsigned long)((dma_cr >> 2) & 1),  // TEIE - transfer error interrupt enable
+           (unsigned long)((dma_cr >> 6) & 3),  // DIR - direction
+           (unsigned long)((dma_cr >> 8) & 1)); // CIRC - circular mode
+    
+    printf("[DMA1_S0] NDTR=%lu PAR=0x%08lX M0AR=0x%08lX FCR=0x%08lX\r\n",
+           (unsigned long)dma_ndtr, (unsigned long)dma_par, (unsigned long)dma_m0ar, (unsigned long)dma_fcr);
+    
+    // Проверка регистров ADC1
+    uint32_t adc_isr = ADC1->ISR;
+    uint32_t adc_ier = ADC1->IER;
+    printf("[ADC1] ISR=0x%08lX (ADRDY=%lu EOC=%lu EOS=%lu OVR=%lu)\r\n",
+           (unsigned long)adc_isr,
+           (unsigned long)((adc_isr >> 0) & 1),  // ADRDY
+           (unsigned long)((adc_isr >> 2) & 1),  // EOC
+           (unsigned long)((adc_isr >> 3) & 1),  // EOS
+           (unsigned long)((adc_isr >> 4) & 1)); // OVR
+    
+    printf("[ADC1] IER=0x%08lX (EOCIE=%lu EOSIE=%lu OVRIE=%lu)\r\n",
+           (unsigned long)adc_ier,
+           (unsigned long)((adc_ier >> 2) & 1),  // EOCIE
+           (unsigned long)((adc_ier >> 3) & 1),  // EOSIE
+           (unsigned long)((adc_ier >> 4) & 1)); // OVRIE
+    
+    // Проверка NVIC для DMA1_Stream0
+    uint32_t nvic_iser = NVIC->ISER[DMA1_Stream0_IRQn >> 5];
+    uint32_t nvic_bit = 1UL << (DMA1_Stream0_IRQn & 0x1F);
+    printf("[NVIC] DMA1_Stream0_IRQn=%d enabled=%lu\r\n",
+           DMA1_Stream0_IRQn, (unsigned long)((nvic_iser & nvic_bit) ? 1 : 0));
+    
     if (rc1 != HAL_OK) return HAL_ERROR;
         #if !DIAG_SINGLE_ADC1
     HAL_StatusTypeDef rc2 = HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[0], total_samples);
     ADC_LOGF("[ADC][APPLY_PROFILE] HAL_ADC_Start_DMA ADC2 rc=%d\r\n", (int)rc2);
+    
     if (rc2 != HAL_OK) return HAL_ERROR;
         #if ADC2_DISABLE_DMA_IRQS
             /* (не используется) */
@@ -492,6 +638,7 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
             st2->CR &= ~((uint32_t)(1u<<3));
         }
         #endif
+        
         /* Одноразовый вывод регистров DMA для ADC1 */
         {
             DMA_Stream_TypeDef *st = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
@@ -542,11 +689,26 @@ void adc_stream_init(void) {
     frame_wr_seq = frame_rd_seq = 0;
     frame_overflow_drops = 0;
     frame_backlog_max = 0;
-    adc_fill_all_guards();
 }
 
 HAL_StatusTypeDef adc_stream_start(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a2) {
     s_adc1 = a1; s_adc2 = a2;
+    
+    // Диагностика начального состояния ADC
+    printf("[ADC][DIAG] adc_stream_start: ADC1->CR=0x%08lX ADC2->CR=0x%08lX\r\n",
+           (unsigned long)ADC1->CR, (unsigned long)ADC2->CR);
+    
+    // КРИТИЧНО: Сброс ADCAL перед новой калибровкой (может остаться после предыдущего старта)
+    if (ADC1->CR & ADC_CR_ADCAL) {
+        ADC1->CR &= ~ADC_CR_ADCAL;  // Очистить бит калибровки
+        printf("[ADC][CALIB] ADC1: Cleared stale ADCAL bit\r\n");
+    }
+    #if !DIAG_SINGLE_ADC1
+    if (ADC2->CR & ADC_CR_ADCAL) {
+        ADC2->CR &= ~ADC_CR_ADCAL;
+        printf("[ADC][CALIB] ADC2: Cleared stale ADCAL bit\r\n");
+    }
+    #endif
     
     // КРИТИЧЕСКИ ВАЖНО: Калибровка ADC перед запуском DMA для точности данных
     ADC_LOGF("[ADC][CALIB] Starting ADC1 calibration...\r\n");
@@ -612,6 +774,11 @@ uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples, uint32_t
     *buf = (ch==0) ? adc1_buffers[index] : adc2_buffers[index];
     #endif
     *samples = g_active_samples;
+
+     /* STM32H7: DMA пишет в RAM, CPU читает через D-cache.
+         Без invalidate можно получить «залипшие» нули/старые данные.
+         Делаем invalidate здесь (в контексте main), а не в ISR. */
+     adc_invalidate_cache_for_buffer(*buf, *samples);
     
     // DEBUG: Проверка лестницы отключена
     #if 0  // ОТКЛЮЧЕНО: маркеры убраны
@@ -632,11 +799,16 @@ uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples, uint32_t
     }
     #endif
     
-    // ДИАГНОСТИКА: проверяем буфер на нулевое содержимое
+    // ДИАГНОСТИКА: проверяем буфер на нулевое содержимое (троттлинг логов)
     if (is_buffer_all_zeros(*buf, *samples)) {
         adc_ch_zero_buffers[ch]++;
-        ADC_LOGF("[ADC][DIAG] CH%u: zero buffer detected! seq=%lu idx=%lu zeros_total=%lu\r\n", 
-                 ch, (unsigned long)seq, (unsigned long)index, (unsigned long)adc_ch_zero_buffers[ch]);
+        static uint32_t last_zero_log_ms[2] = {0,0};
+        uint32_t now_ms = HAL_GetTick();
+        if ((now_ms - last_zero_log_ms[ch]) >= 1000u) {
+            last_zero_log_ms[ch] = now_ms;
+            ADC_LOGF("[ADC][DIAG] CH%u: zero buffer detected! seq=%lu idx=%lu zeros_total=%lu\r\n",
+                     ch, (unsigned long)seq, (unsigned long)index, (unsigned long)adc_ch_zero_buffers[ch]);
+        }
     }
     
     return 1;
@@ -693,16 +865,101 @@ void adc_stream_get_debug(adc_stream_debug_t *out) {
     out->reserved = 0;
 }
 
+// Получить parity (чётность) буфера по seq (0=even, 1=odd)
+// Используем просто seq & 1, так как seq инкрементируется на каждый TC
+uint8_t adc_get_buffer_parity(uint32_t seq) {
+    uint8_t result = (uint8_t)(seq & 0x01u);
+    // DEBUG: print first few calls
+    static uint32_t dbg_call = 0;
+    if (dbg_call < 8) {
+        printf("[PAR][DBG] seq=%lu result=%u\r\n", seq, result);
+        dbg_call++;
+    }
+    return result;  // 0=even, 1=odd
+}
+
 // Weak hook (can be overridden in higher-level module, e.g. USB)
 void __attribute__((weak)) adc_stream_on_new_frames(uint32_t frames_added) { (void)frames_added; }
 
 // --- HAL callbacks ---
-/* Общий обработчик TC: ждём завершения обоих DMA, затем публикуем кадр и стартуем следующий. */
+/* Общий обработчик TC: DMA CIRCULAR автоматически переключил буфер, публикуем кадр @ 400Hz.
+   Чётность кадра (even/odd) записывается в поканальные метаданные для USB передачи. */
+/* TC-DRIVEN MODE function (not used in TIM2-DRIVEN mode) */
+#if 0  // Отключено: используется только в TC-DRIVEN режиме
 static void adc_handle_tc(uint8_t tc_bit) {
-    /* TIM2 выполняет переключение, TC не трогаем */
-    (void)tc_bit;
-    return;
+    /* TC_DRIVEN MODE: DMA NORMAL останавливается после TC, перезапускаем на следующий буфер */
+    
+    /* счётчик TC событий (для статистики/диагностики) */
+    static uint32_t tc_call_count = 0;
+    tc_call_count++;
+
+#if ADC_ISR_LOG_ENABLE
+    // ДИАГНОСТИКА: логируем первые 10 вызовов (только если включено)
+    if (tc_call_count <= 10) {
+        printf("[ADC][TC_HANDLE] #%lu tc_bit=0x%02X\r\n", (unsigned long)(tc_call_count-1u), tc_bit);
+    }
+#endif
+    
+    // Определяем готовый индекс буфера и следующий для перезапуска
+    uint32_t done_idx = s_next_ring_index;
+    uint32_t next_idx = (done_idx + 1u) & (FIFO_FRAMES - 1u);
+    
+    // Чётность определяется индексом буфера: 0/2 = even, 1/3 = odd
+    uint8_t parity = (uint8_t)(done_idx & 0x01u);  // 0=even, 1=odd
+    
+    // Сохраняем parity для этого буфера (одинаковая для A и B в одном цикле)
+    s_buffer_parity[done_idx] = parity;
+    
+    uint32_t total_samples = (uint32_t)g_active_samples;
+    
+    // Публикуем кадры для каждого канала с маркером чётности
+    uint32_t frames_added = 0;
+    if (tc_bit & 0x01u) {  // ADC1 (Channel A)
+        // Перезапуск DMA на следующий буфер (минимум printf в ISR!)
+        HAL_ADC_Stop_DMA(s_adc1);
+        HAL_StatusTypeDef st = HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[next_idx], total_samples);
+        if (st == HAL_OK) {
+            frames_added++;
+            adc_ch_wr_seq[0]++;  // Инкремент ПОСЛЕ успешного перезапуска
+        }
+        // Диагностика только при явном включении (ISR)
+#if ADC_ISR_LOG_ENABLE
+        if (tc_call_count <= 3) {
+            printf("[ADC][TC] ADC1 buf#%lu st=%d\r\n", (unsigned long)next_idx, (int)st);
+        }
+#endif
+    }
+    
+    #if !DIAG_SINGLE_ADC1
+    if (tc_bit & 0x02u) {  // ADC2 (Channel B)
+        // Перезапуск DMA на следующий буфер
+        HAL_ADC_Stop_DMA(s_adc2);
+        HAL_StatusTypeDef st = HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[next_idx], total_samples);
+        if (st == HAL_OK) {
+            frames_added++;
+            adc_ch_wr_seq[1]++;  // Инкремент ПОСЛЕ успешного перезапуска
+        }
+        // Диагностика только при явном включении (ISR)
+#if ADC_ISR_LOG_ENABLE
+        if (tc_call_count <= 3) {
+            printf("[ADC][TC] ADC2 buf#%lu st=%d\r\n", (unsigned long)next_idx, (int)st);
+        }
+#endif
+    }
+    #endif
+    
+    /* 1 Гц диагностика перенесена в adc_stream_watchdog() (main context). */
+    
+    // Переключаем на следующий буфер ПОСЛЕ перезапуска DMA
+    s_next_ring_index = next_idx;
+    
+    // Cache invalidation НЕЛЬЗЯ использовать - вызывает HardFault
+    // TODO: Использовать некэшируемую память или отключить D-cache
+    
+    // Уведомляем USB о новых кадрах
+    adc_stream_on_new_frames(frames_added);
 }
+#endif  // #if 0 (TC-DRIVEN mode function)
 
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
     (void)hadc; // Half не используем
@@ -732,7 +989,31 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc) {
    TIM2 callback: переключение буферов строго по окну TIM2 (CH1 FALL)
    ======================================================================== */
 void adc_stream_tim2_switch_buffers(void) {
-    if (!s_adc1 || (!DIAG_SINGLE_ADC1 && !s_adc2)) return;
+    /* TIM2-DRIVEN MODE: переключение буферов синхронизировано с TIM2 (спадающий фронт CH1).
+       Это обеспечивает что каждый буфер начинается с одной и той же фазы сигнала,
+       устраняя "плывущую" осциллограмму. */
+    
+    /* Счётчик вызовов для диагностики */
+    static uint32_t tim2_switch_count = 0;
+    static uint32_t last_log_ms = 0;
+    static uint8_t first_call_logged = 0;
+    
+    // ДИАГНОСТИКА: логируем ПЕРВЫЙ вызов чтобы убедиться что функция вызывается
+    if (!first_call_logged) {
+        printf("[TIM2] FIRST switch_buffers call!\r\n");
+        first_call_logged = 1;
+    }
+    
+    tim2_switch_count++;
+    uint32_t now_ms = HAL_GetTick();
+    if (now_ms - last_log_ms >= 1000) {
+        last_log_ms = now_ms;
+        ADC_LOGF("[TIM2] switch_buffers calls/sec: %lu\r\n", tim2_switch_count);
+        tim2_switch_count = 0;
+    }
+    
+    /* ЛОГИКА TIM2-DRIVEN (восстановлена для синхронизации осциллограммы) */
+    #if 1
 
     DMA_Stream_TypeDef *dma1 = (DMA_Stream_TypeDef*)s_adc1->DMA_Handle->Instance;
     #if !DIAG_SINGLE_ADC1
@@ -743,7 +1024,7 @@ void adc_stream_tim2_switch_buffers(void) {
     const uint32_t next_idx = (done_idx + 1u) & (FIFO_FRAMES - 1u);
     const uint32_t total_samples = (uint32_t)g_active_samples;
     
-    /* Дожидаемся полного завершения текущей передачи перед переключением */
+    // Only switch when both DMA transfers complete (NDTR reaches 0)
     if (dma1->NDTR != 0) return;
     #if !DIAG_SINGLE_ADC1
     if (dma2->NDTR != 0) return;
@@ -771,6 +1052,8 @@ void adc_stream_tim2_switch_buffers(void) {
     adc_last_full0_ms = HAL_GetTick();
     adc_last_full1_ms = adc_last_full0_ms;
 
+    // ОТКЛЮЧЕНО: guard проверка не критична для работы
+    #if 0
     if (guard_bad_done && ADC_GUARD_DROP_ON_MISMATCH) {
         frame_overflow_drops++;
         // ОТКЛЮЧЕНО: printf тормозит @ 200Hz
@@ -781,6 +1064,8 @@ void adc_stream_tim2_switch_buffers(void) {
         // ОТКЛЮЧЕНО: printf тормозит @ 200Hz
         // printf("[ADC_WARN] guard mismatch idx=%lu -> publish anyway\r\n", (unsigned long)done_idx);
     }
+    #endif
+    (void)guard_bad_done; // suppress unused warning
 
     /* Обновляем поканальные счётчики (для USB таска) с контролем переполнения очереди */
     adc_ch_wr_seq[0]++;
@@ -858,6 +1143,10 @@ void adc_stream_tim2_switch_buffers(void) {
     #endif  // minmax scan disabled
 
 #if ADC_USB_STAGE_ENABLE
+    /* КРИТИЧНО: DMA пишет в adc1/adc2_buffers минуя D-cache. 
+       Перед memcpy (CPU read) ОБЯЗАТЕЛЬНО инвалидируем cache → чтение из RAM */
+    SCB_InvalidateDCache_by_Addr((uint32_t*)adc1_buffers[done_idx], total_samples * sizeof(uint16_t));
+    SCB_InvalidateDCache_by_Addr((uint32_t*)adc2_buffers[done_idx], total_samples * sizeof(uint16_t));
     memcpy(usb_stage_bufA, adc1_buffers[done_idx], total_samples * sizeof(uint16_t));
     memcpy(usb_stage_bufB, adc2_buffers[done_idx], total_samples * sizeof(uint16_t));
     adc_stage_crc_a = adc_crc16_le(usb_stage_bufA, (uint16_t)total_samples);
@@ -873,18 +1162,70 @@ void adc_stream_tim2_switch_buffers(void) {
 
     s_pair_ready_mask[done_idx] = READY_MASK_FULL;
     adc_mark_ready_and_publish(READY_MASK_FULL);
+    #endif  /* #if 0 - конец старой TIM2-driven логики */
 }
 
 /* ========================================================================
    СТАРАЯ СХЕМА: DMA TC callback (теперь не используется для переключения)
    ======================================================================== */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
-    /* TC любого канала: ждём завершения обоих DMA, затем обрабатываем кадр. */
+    /* TC любого канала: В TIM2-DRIVEN режиме переключение буферов происходит в TIM2 IRQ,
+       а не здесь. Этот callback используется только для учёта статистики. */
+    #if ADC_ISR_LOG_ENABLE
+    static uint32_t callback_count = 0;
+    #endif
+    
     if (!hadc) return;
+    
+    /* Диагностика DMA буфера из ISR выключена по умолчанию.
+       Если нужно включить на короткое время — ADC_ISR_LOG_ENABLE=1. */
+#if ADC_ISR_LOG_ENABLE
+    if (callback_count < 5) {
+        uint32_t cnt = TIM15 ? TIM15->CNT : 0;
+        printf("[ADC][CB] #%lu: hadc=0x%08lX TIM15_CNT=%lu\r\n",
+               (unsigned long)callback_count, (unsigned long)hadc->Instance, (unsigned long)cnt);
+        uint16_t *buf = NULL;
+        volatile adc_dma_diag_t *diag = NULL;
+        if (hadc->Instance == ADC1 && adc1_buffers[0]) {
+            buf = adc1_buffers[0];
+            diag = &g_adc_dma_diag_a;
+            diag->channel = 'A';
+        } else if (hadc->Instance == ADC2 && adc2_buffers[0]) {
+            buf = adc2_buffers[0];
+            diag = &g_adc_dma_diag_b;
+            diag->channel = 'B';
+        }
+        if (buf && diag) {
+            diag->callback_num = callback_count;
+            diag->zeros = 0;
+            diag->nonzeros = 0;
+            diag->vmin = 65535;
+            diag->vmax = 0;
+            for (uint32_t i = 0; i < 10; i++) {
+                uint16_t val = buf[i];
+                diag->first10[i] = val;
+                if (val == 0) diag->zeros++;
+                else diag->nonzeros++;
+                if (val < diag->vmin) diag->vmin = val;
+                if (val > diag->vmax) diag->vmax = val;
+            }
+            printf("[ADC][CB_DIAG] CH=%c buf[0..9]: zeros=%lu nonzeros=%lu min=%u max=%u first10=[%u,%u,%u,%u,%u,%u,%u,%u,%u,%u]\r\n",
+                   (char)diag->channel, (unsigned long)diag->zeros, (unsigned long)diag->nonzeros,
+                   (unsigned)diag->vmin, (unsigned)diag->vmax,
+                   (unsigned)diag->first10[0], (unsigned)diag->first10[1], (unsigned)diag->first10[2],
+                   (unsigned)diag->first10[3], (unsigned)diag->first10[4], (unsigned)diag->first10[5],
+                   (unsigned)diag->first10[6], (unsigned)diag->first10[7], (unsigned)diag->first10[8],
+                   (unsigned)diag->first10[9]);
+        }
+        callback_count++;
+    }
+#endif
+    
+    /* В TIM2-DRIVEN режиме обработка данных выполняется в TIM2 IRQ, здесь только счётчик TC */
     if (hadc->Instance == (s_adc1 ? s_adc1->Instance : NULL)) {
-        adc_handle_tc(0x1u);
+        adc_last_full0_ms = HAL_GetTick();
     } else if (hadc->Instance == (s_adc2 ? s_adc2->Instance : NULL)) {
-        adc_handle_tc(0x2u);
+        adc_last_full1_ms = HAL_GetTick();
     }
     return;
 
