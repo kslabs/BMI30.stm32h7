@@ -1,1 +1,0 @@
-secs=120 pkts=0 timeouts=386 errors=0
