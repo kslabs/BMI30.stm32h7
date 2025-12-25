@@ -11,6 +11,7 @@
 #include "adc_stream.h"
 #include "main.h"
 #include <stddef.h> /* offsetof для отладочного вывода */
+#include "stm32h7xx_hal.h" /* для SCB_InvalidateDCache_by_Addr (cache coherency fix) */
 /* Для дублирования фрагментов кадров в CDC (Virtual COM) */
 #include "usbd_cdc_if.h"
 #include "usbd_cdc_custom.h" /* для USBD_VND_RequestSoftReset/DeepReset (объявления находятся в .c) */
@@ -18,6 +19,7 @@
 
 /* Forward declaration (реализация ниже) для предотвращения implicit-function-warning при раннем вызове */
 void vnd_diag_log_possible_stall(void);
+static void cdc_logf(const char *fmt, ...);
 
 /* Управление дублированием данных кадров в CDC (COM-порт):
  *  0 — отключено (оставляем только события START/STOP и 1 Гц статистику)
@@ -62,6 +64,8 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #define VND_CMD_GET_STATUS     0x30u
 /* Диагностический статус: отправить STAT немедленно даже при pending_B (для отладки зависаний) */
 #define VND_CMD_GET_STATUS_IMM 0x31u
+/* Отладка фаз/буферов: инверсия тестового выхода PA2 (TIM2_CH3) */
+#define VND_CMD_TOGGLE_TIM2CH3_INV 0x32u
 /* ДОБАВЛЕНО: управление окнами/частотой */
 #define VND_CMD_SET_WINDOWS    0x10u /* payload: start0,len0,start1,len1 (LE, u16) */
 #define VND_CMD_SET_BLOCK_HZ   0x11u /* payload: u16 hz (20..100) или 0xFFFF=макс (100) */
@@ -90,6 +94,10 @@ volatile uint16_t cur_expected_frame_size = 0;
 /* Служебные отметки старта/ошибок */
 volatile uint32_t start_cmd_ms = 0;
 volatile uint32_t vnd_last_error = 0;
+/* Отложенный (main-loop) перезапуск ADC/DMA по команде START.
+    Важно: USBD_VND_DataReceived может вызываться из USB IRQ, поэтому тяжёлые действия
+    (останов/запуск DMA, cache maintenance) выполняем в Vendor_Stream_Task(). */
+static volatile uint8_t vnd_adc_restart_request = 0;
 /* Флаги канала передачи */
 static volatile uint8_t  vnd_ep_busy = 0;     /* EP IN занят */
 static volatile uint8_t  vnd_inflight = 0;    /* есть незавершённая передача */
@@ -196,7 +204,11 @@ static volatile uint8_t vnd_ch_mode = 2;
 #endif
 
 /* Тестовый режим: генерация пилообразного сигнала вместо реальных данных ADC */
-#define USE_TEST_SAWTOOTH 0
+#define USE_TEST_SAWTOOTH 0 /* Отключаем полную замену пайплайна тестовым источником */
+/* Новый мягкий режим: подменяем полезную нагрузку на пилу, но сохраняем ADC/DMA и async. */
+#ifndef TEST_OVERLAY_SAWTOOTH
+#define TEST_OVERLAY_SAWTOOTH 0  /* DISABLED: Testing real ADC data with forced EXTSEL/EXTEN */
+#endif
 /* реализация генератора тестового сигнала вынесена в vnd_testgen.* */
 /* Разрешение на отправку STAT в стриме: 0=запрещено, 1=разрешён один STAT */
 volatile uint8_t vnd_status_permit_once = 0;
@@ -234,7 +246,7 @@ volatile uint32_t vnd_stage_alt1_ms = 0;      /* фиксируется при S
 volatile uint32_t vnd_stage_first_frame_ms = 0; /* фиксируется при первом успешном TXCPLT A/B */
 
 /* Состояние фейковых кадров */
-static uint8_t fake_inflight = 0;   /* reserved for diag */
+static __attribute__((unused)) uint8_t fake_inflight = 0;   /* reserved for diag */
 static uint8_t diag_mode_active = 0; /* 1 = слать диагностические пары постоянно */
 static uint16_t diag_hz = 60;        /* частота кадров-пар, Гц (20..100) (информативно) */
 static uint32_t diag_period_ms = 0;  /* не используется для темпирования (макс. скорость) */
@@ -284,6 +296,153 @@ static inline uint32_t get_us_approx(void) {
         last_tick = tick;
     }
     return tick * 1000 + us_offset++;
+}
+
+/* Инвалидация D-Cache для DMA-буфера (копия функции из adc_stream.c) */
+static inline void vnd_invalidate_cache_for_buffer(void *buf, uint32_t samples)
+{
+#if defined (SCB_InvalidateDCache_by_Addr)
+    uintptr_t addr = (uintptr_t)buf;
+    uintptr_t start = addr & ~(uintptr_t)31u; /* выравнивание вниз до 32 байт */
+    uint32_t bytes = samples * (uint32_t)sizeof(uint16_t);
+    uint32_t extra = (uint32_t)(addr - start);
+    uint32_t total = bytes + extra;
+    uint32_t total_aligned = (total + 31u) & ~31u; /* кратность 32 */
+    SCB_InvalidateDCache_by_Addr((uint32_t*)start, (int32_t)total_aligned);
+#else
+    (void)buf; (void)samples;
+#endif
+}
+
+/* Быстрый санитайзер: заменяет явно повреждённые (>12 бит) значения последним валидным */
+static __attribute__((unused)) uint32_t vnd_sanitize_samples(uint16_t *buf, uint16_t samples, const char *tag)
+{
+    uint32_t fixed = 0;
+    uint16_t prev = 0;
+    uint8_t have_prev = 0;
+    uint16_t first_bad = 0, first_idx = 0;
+    for(uint16_t i = 0; i < samples; ++i){
+        uint16_t v = buf[i];
+        if(v > 4095u){
+            if(fixed == 0){ first_bad = v; first_idx = i; }
+            buf[i] = have_prev ? prev : 0;
+            fixed++;
+        } else {
+            prev = v; have_prev = 1;
+        }
+    }
+    if(fixed){
+        static uint32_t last_log_ms = 0;
+        uint32_t now = HAL_GetTick();
+        if(now - last_log_ms >= 1000u){
+            last_log_ms = now;
+            printf("[VND_SAN] %s fixed=%lu first_idx=%u first_bad=%u prev=%u\r\n",
+                   tag, (unsigned long)fixed, (unsigned)first_idx, (unsigned)first_bad, (unsigned)(have_prev ? prev : 0));
+        }
+    }
+    return fixed;
+}
+/* Подсчёт выбросов >4095 (опционально, если включить санитайзер) */
+static volatile uint32_t dbg_gt4095_ch[2] = {0,0};
+#ifndef VND_ENABLE_ADC_SANITIZE
+#define VND_ENABLE_ADC_SANITIZE 0 /* по умолчанию не трогаем данные ADC */
+#endif
+
+#ifndef VND_SPIKE_CLIP_ENABLE
+#define VND_SPIKE_CLIP_ENABLE 0 /* теперь не клипуем, только детектируем */
+#endif
+#ifndef VND_SPIKE_THRESHOLD
+#define VND_SPIKE_THRESHOLD 3000u
+#endif
+#ifndef VND_SPIKE_MIN_LEN
+#define VND_SPIKE_MIN_LEN 6u
+#endif
+
+/* Детектор/клиппер блоков высокой амплитуды (короткие пачки ≈10 семплов) */
+static __attribute__((unused)) uint32_t vnd_detect_and_clip_spikes(uint16_t *buf, uint16_t samples, const char *tag)
+{
+    if(!buf || samples == 0) return 0;
+    uint32_t events = 0;
+    uint16_t thr = VND_SPIKE_THRESHOLD;
+    uint16_t last_good = 0;
+    uint8_t have_last = 0;
+    static uint32_t last_log_ms = 0;
+    for(uint16_t i=0; i<samples; ){
+        uint16_t v = buf[i];
+        if(v <= thr){
+            last_good = v; have_last = 1; i++; continue;
+        }
+        /* найден старт блока выше порога */
+        uint16_t start = i;
+        uint16_t maxv = v;
+        while(i < samples && buf[i] > thr){
+            if(buf[i] > maxv) maxv = buf[i];
+            i++;
+        }
+        uint16_t len = (uint16_t)(i - start);
+        if(len >= VND_SPIKE_MIN_LEN){
+            events++;
+            /* опционально клипуем весь блок на последнее валидное значение */
+            if(VND_SPIKE_CLIP_ENABLE){
+                uint16_t fill = have_last ? last_good : 0;
+                for(uint16_t k=start; k<start+len && k<samples; ++k){ buf[k] = fill; }
+            }
+            uint32_t now = HAL_GetTick();
+            if(now - last_log_ms >= 500u){
+                last_log_ms = now;
+                printf("[VND_SPIKE] %s idx=%u len=%u max=%u thr=%u clip=%u\r\n",
+                       tag, (unsigned)start, (unsigned)len, (unsigned)maxv,
+                       (unsigned)thr, (unsigned)VND_SPIKE_CLIP_ENABLE);
+            }
+        }
+    }
+    return events;
+}
+
+typedef struct {
+    uint16_t idx;
+    uint16_t len;
+    uint16_t maxv;
+    uint8_t  ch;
+} spike_info_t;
+
+static __attribute__((unused)) void vnd_log_spike_window(const spike_info_t *si, const uint16_t *buf, uint16_t samples, uint32_t seq)
+{
+    if(!si || !buf) return;
+    uint16_t start = si->idx;
+    uint16_t end = (uint16_t)(start + si->len);
+    uint16_t w0 = (start > 8) ? (uint16_t)(start - 8) : 0;
+    uint16_t w1 = end + 8; if(w1 > samples) w1 = samples;
+    /* Логируем только до 16 значений, чтобы не шуметь CDC */
+    char line[256];
+    int pos = snprintf(line, sizeof(line), "[SPIKE_DUMP] CH=%c seq=%lu idx=%u len=%u max=%u win=%u..%u vals=",
+                       si->ch ? 'B' : 'A', (unsigned long)seq, (unsigned)si->idx, (unsigned)si->len, (unsigned)si->maxv,
+                       (unsigned)w0, (unsigned)w1);
+    uint16_t printed = 0;
+    for(uint16_t i = w0; i < w1 && pos < (int)sizeof(line)-8; ++i){
+        pos += snprintf(line+pos, sizeof(line)-pos, "%u,", (unsigned)buf[i]);
+        if(++printed >= 16) break;
+    }
+    if(pos > 0 && pos < (int)sizeof(line)) line[pos-1] = 0; /* убрать последнюю запятую */
+    cdc_logf("%s", line);
+}
+
+static __attribute__((unused)) uint8_t vnd_detect_spike_info(uint16_t *buf, uint16_t samples, uint16_t thr, uint16_t min_len, uint8_t ch, spike_info_t *out)
+{
+    if(!buf || samples < min_len || !out) return 0;
+    for(uint16_t i=0; i<samples; ){
+        uint16_t v = buf[i];
+        if(v <= thr){ i++; continue; }
+        uint16_t start = i;
+        uint16_t maxv = v;
+        while(i < samples && buf[i] > thr){ if(buf[i] > maxv) maxv = buf[i]; i++; }
+        uint16_t len = i - start;
+        if(len >= min_len){
+            out->idx = start; out->len = len; out->maxv = maxv; out->ch = ch;
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /* Локальная утилита: обновить LCD параметрами, присланными хостом */
@@ -345,10 +504,10 @@ static void vnd_update_lcd_params(void)
 }
 
 /* --- CDC дублирование: отправляем компактную ASCII строку с первыми 64 сэмплами --- */
-static uint32_t cdc_last_send_ms = 0;       /* для троттлинга */
-static char     cdc_line_buf[1024];         /* статический буфер для передачи */
-static uint16_t rd_le16(const uint8_t *p){ return (uint16_t)(p[0] | (p[1] << 8)); }
-static uint32_t rd_le32(const uint8_t *p){ return (uint32_t)(p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)); }
+static __attribute__((unused)) uint32_t cdc_last_send_ms = 0;       /* для троттлинга */
+static __attribute__((unused)) char     cdc_line_buf[1024];         /* статический буфер для передачи */
+static __attribute__((unused)) uint16_t rd_le16(const uint8_t *p){ return (uint16_t)(p[0] | (p[1] << 8)); }
+static __attribute__((unused)) uint32_t rd_le32(const uint8_t *p){ return (uint32_t)(p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)); }
 static void vnd_cdc_duplicate_preview(const uint8_t *buf, uint16_t len, const char *tag)
 {
     /* При отключённом превью не выводим копию потока в CDC */
@@ -358,8 +517,7 @@ static void vnd_cdc_duplicate_preview(const uint8_t *buf, uint16_t len, const ch
 #else
     /* Троттлинг, чтобы не забивать CDC: не чаще 10 Гц */
     uint32_t now = HAL_GetTick();
-    /* Периодический INIT_DBG до первой реальной кадра: каждые ~20мс выводим состояние счётчиков каналов и режимов.
-       Также реализуем fallback на A-only если канал B не даёт прогресса по wr_seq. */
+    /* Периодический INIT_DBG до первой реальной кадра: каждые ~20мс выводим состояние счётчиков каналов и режимов. */
     if(streaming && vnd_stage_first_frame_ms == 0){
         static uint32_t last_init_dbg_ms = 0;
         if(now - last_init_dbg_ms >= 20){
@@ -373,14 +531,7 @@ static void vnd_cdc_duplicate_preview(const uint8_t *buf, uint16_t len, const ch
                      (unsigned long)adc_ch_rd_seq[0], (unsigned long)adc_ch_rd_seq[1],
                      (unsigned)vnd_ch_mode, (unsigned)async_mode, (unsigned)vnd_ep_busy);
         }
-        /* Fallback: если спустя 150мс после START канал B не дал ни одного wr_seq, переключаемся в A-only. */
-        if(vnd_ch_mode == 2 && start_cmd_ms && (now - start_cmd_ms) > 150){
-            extern volatile uint32_t adc_ch_wr_seq[2];
-            if(adc_ch_wr_seq[0] > 4 && adc_ch_wr_seq[1] == 0){
-                vnd_ch_mode = 0; /* A-only */
-                cdc_logf("EVT FALLBACK_A_ONLY age=%lu wrA=%lu wrB=%lu", (unsigned long)(now - start_cmd_ms), (unsigned long)adc_ch_wr_seq[0], (unsigned long)adc_ch_wr_seq[1]);
-            }
-        }
+        /* Fallback отключён: всегда держим два канала, даже если B задерживается. */
     }
     if ((now - cdc_last_send_ms) < 100) return;
     if (!buf || len < VND_FRAME_HDR_SIZE) return;
@@ -462,6 +613,19 @@ static void vnd_cdc_periodic_stats(uint32_t now_ms)
              (unsigned long)frame_abort, (unsigned long)size_mism);
 }
 
+/* CRC16-CCITT (0x1021, init 0xFFFF) по байтам полезной нагрузки */
+static uint16_t vnd_crc16_ccitt(const uint8_t *data, uint32_t len)
+{
+    uint16_t crc = 0xFFFFu;
+    for(uint32_t i = 0; i < len; ++i){
+        crc ^= (uint16_t)data[i] << 8;
+        for(uint8_t b = 0; b < 8; ++b){
+            crc = (crc & 0x8000u) ? (uint16_t)((crc << 1) ^ 0x1021u) : (uint16_t)(crc << 1);
+        }
+    }
+    return crc;
+}
+
 /* Заголовок кадра */
 /*
  * Формат под спецификацию хоста (ровно 32 байта, LE):
@@ -503,6 +667,9 @@ typedef struct {
     uint8_t  flags;
     uint16_t frame_size;
     uint32_t seq;
+    uint32_t dma_seq;
+    uint16_t crc16;
+    uint32_t crc_seq;
     uint8_t  buf[VND_FRAME_MAX_SIZE];
 } ChanFrame;
 
@@ -602,7 +769,7 @@ static void vnd_meta_neutralize(uint8_t flags_mask, uint32_t seq_field)
         t = (uint8_t)((t + 1u) % VND_TX_META_FIFO);
     }
 }
-static void vnd_debug_force_status_tick(void);
+static __attribute__((unused)) void vnd_debug_force_status_tick(void);
 static void vnd_debug_raw_stat_tick(void);
 static void __attribute__((unused)) vnd_send_fake_pair(void); // удалим позже; сейчас заглушка ниже
 static void vnd_log_hdr_layout(void);
@@ -611,6 +778,11 @@ static void vnd_try_send_test_from_task(void);
 /* Быстрый пайплайн: немедленная отправка следующего кадра из TxCplt */
 static int vnd_try_send_B_immediate(void);
 static int vnd_try_send_A_nextpair_immediate(void);
+/* Заглушки для отключённых диагностик в static-mode */
+static __attribute__((unused)) void vnd_debug_raw_stat_tick(void){ }
+static void vnd_send_fake_pair(void){ }
+static __attribute__((unused)) void vnd_debug_force_status_tick(void){ }
+static __attribute__((unused)) void vnd_try_start_tx(void){ }
 /* Аварийный keepalive: если совсем нет успешных завершений передач первые секунды */
 static void vnd_emergency_keepalive(uint32_t now_ms);
 /* Сервис: асинхронная обработка команд управления (EP0 SOFT/DEEP RESET) */
@@ -797,10 +969,19 @@ static void vnd_try_send_pending_status_from_task(void)
 static volatile uint8_t vnd_tick_flag = 0;
 void usb_vendor_periodic_tick(void){ vnd_tick_flag = 1; }
 
+/*
+ * ВАЖНО:
+ * - В on-wire протоколе поле hdr.seq должно отражать логическую последовательность кадра,
+ *   привязанную к данным DMA (а не к счётчику отправок).
+ * - Хостовый GUI использует (seq & 1) как even/odd, поэтому seq НЕ должен быть пер-канальным
+ *   счётчиком передачи.
+ */
+
 /* ---------------- Вспомогательные ---------------- */
 static void vnd_reset_buffers(void){
-    for(uint8_t p=0;p<VND_PAIR_BUFFERS;p++) for(uint8_t c=0;c<2;c++){ g_frames[p][c].st=FB_FILL; g_frames[p][c].samples=0; g_frames[p][c].flags = c?VND_FLAGS_ADC1:VND_FLAGS_ADC0; g_frames[p][c].frame_size=0; g_frames[p][c].seq=0; memset(g_frames[p][c].buf,0xCC,sizeof(g_frames[p][c].buf)); }
-    pair_fill_idx=pair_send_idx=0; sending_channel=0xFF; channel0_sent_curseq=channel1_sent_curseq=0; pending_B = 0; pending_B_since_ms = 0; }
+    for(uint8_t p=0;p<VND_PAIR_BUFFERS;p++) for(uint8_t c=0;c<2;c++){ g_frames[p][c].st=FB_FILL; g_frames[p][c].samples=0; g_frames[p][c].flags = c?VND_FLAGS_ADC1:VND_FLAGS_ADC0; g_frames[p][c].frame_size=0; g_frames[p][c].seq=0; g_frames[p][c].dma_seq=0; g_frames[p][c].crc16=0; g_frames[p][c].crc_seq=0; memset(g_frames[p][c].buf,0xCC,sizeof(g_frames[p][c].buf)); }
+    pair_fill_idx=pair_send_idx=0; sending_channel=0xFF; channel0_sent_curseq=channel1_sent_curseq=0; pending_B = 0; pending_B_since_ms = 0;
+}
 
 uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
     if(max_len < 64) return 0; /* требуется минимум v1 */
@@ -926,6 +1107,7 @@ static void vnd_prepare_pair(void)
 {
     uint32_t t_start = get_us_approx(); /* Начало измерения */
     
+    
     dbg_prepare_calls++;
     /* РАСШИРЕНИЕ: используем кольцо пар (multi-slot) для минимизации потерь.
        Перебираем следующий свободный slot, если текущий уже READY/SENDING. */
@@ -937,36 +1119,75 @@ static void vnd_prepare_pair(void)
     
     /* Убран подробный лог PREPARE_PAIR — счётчики агрегируются в периодическую статистику */
     uint16_t *ch1 = NULL, *ch2 = NULL; uint16_t samples = 0;
+    (void)ch1; (void)ch2; /* могут быть неиспользованы в режиме overlay */
+    uint16_t crc_a = 0; uint32_t crc_seq = 0;
+    uint32_t pair_seq = 0;
+    /* Локальный снапшот staging-буфера, чтобы TC не перезаписал usb_stage_bufA во время копирования */
+    static uint16_t stage_copy[MAX_FRAME_SAMPLES];
+    uint16_t stage_samples = 0;
     
 #if USE_TEST_SAWTOOTH
     /* Тестовый режим: используем последнюю сгенерированную пару буферов */
     {
+        /* Генерируем свежий буфер-пилу (1..N) перед выборкой */
+        vnd_generate_test_sawtooth();
         uint16_t *tb0 = NULL, *tb1 = NULL; uint16_t avail = 0;
         if(!vnd_testgen_try_consume_latest(&tb0, &tb1, &avail)){
             return; /* нет новых данных */
         }
         ch1 = tb0; ch2 = tb1;
         samples = (avail != 0) ? avail : 302;  /* МАРКЕР #2 - fallback если avail=0 */
+        (void)ch1; (void)ch2; /* используем в тестовом режиме, чтобы подавить предупреждения */
+        (void)stage_samples; (void)seq; (void)static_mode; (void)static_seq;
+        static uint32_t test_seq = 0; pair_seq = ++test_seq;
+        /* Зафиксировать размер кадра, если ещё не задан, чтобы отправка не зависела от профиля АЦП */
+        if(cur_samples_per_frame == 0){
+            uint16_t eff = samples;
+            if(eff > VND_MAX_SAMPLES) eff = VND_MAX_SAMPLES;
+            cur_samples_per_frame = eff;
+            cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)eff * 2u);
+        }
     }
 #else
      /* ПОЛИТИКА last-buffer-wins: выбираем САМЫЙ ПОСЛЕДНИЙ полный кадр и пропускаем старые.
          Это повышает визуальную частоту при ограниченной пропускной способности USB. */
     {
-        uint32_t wr, rd, backlog, seq;
+        // Читаем s_next_ring_index и отслеживаем изменения
+        extern volatile uint32_t s_next_ring_index;
+        static uint32_t last_current = 0xFFFFFFFF;
+        static uint32_t local_seq = 0;
+        
         __disable_irq();
-        wr = frame_wr_seq; rd = frame_rd_seq;
-        if (wr == rd) { __enable_irq(); return; }
-        backlog = wr - rd;
-        /* ЖЁСТКАЯ СИНХРОНИЗАЦИЯ: берём последний ГОТОВЫЙ буфер (wr-1), 
-           который DMA УЖЕ НЕ ТРОГАЕТ (DMA сейчас работает с индексом wr % FIFO_FRAMES).
-           Перескакиваем rd на wr-1, отбрасывая старые буферы. */
-        seq = wr - 1u;
-        if(backlog > 1u){ dbg_skipped_frames += (backlog - 1u); }
-        frame_rd_seq = wr - 1u;  /* ВАЖНО: rd указывает на последний прочитанный, а не на следующий непрочитанный */
+        uint32_t current = s_next_ring_index;
         __enable_irq();
-        uint32_t index = (uint32_t)(seq & (FIFO_FRAMES - 1u));
-        ch1 = adc1_buffers[index];
-        ch2 = adc2_buffers[index];
+        
+        // Отправляем данные ТОЛЬКО когда s_next_ring_index изменился
+        if (current != last_current) {
+            last_current = current;
+            local_seq++;  // Инкрементируем счётчик кадров
+        } else {
+            return;  // Нет новых данных - пропускаем
+        }
+        
+        // Вычисляем индекс последнего заполненного буфера
+        uint32_t idx = (current + FIFO_FRAMES - 1) & (FIFO_FRAMES - 1);
+        
+        if (idx >= FIFO_FRAMES) return;
+        
+        pair_seq = local_seq;
+        #if ADC_USB_STAGE_ENABLE
+        __disable_irq();
+        stage_samples = adc_stream_get_active_samples();
+        if(stage_samples > MAX_FRAME_SAMPLES) stage_samples = MAX_FRAME_SAMPLES;
+        memcpy(stage_copy, usb_stage_bufA, stage_samples * sizeof(uint16_t));
+        crc_a = adc_stage_crc_a; crc_seq = adc_stage_crc_seq;
+        __enable_irq();
+        ch1 = stage_copy;
+        #else
+        // D-cache отключен глобально - можем читать напрямую
+        ch1 = adc1_buffers[idx];
+        #endif
+        ch2 = adc2_buffers[idx];
         /* Используем актуальное значение семплов активного профиля */
         samples = adc_stream_get_active_samples();
     }
@@ -1005,30 +1226,53 @@ static void vnd_prepare_pair(void)
     if((f0->st == FB_READY || f0->st == FB_SENDING) && (f1->st == FB_READY || f1->st == FB_SENDING)) return;
     /* Сбросим оба кадра в начальное состояние для заполнения */
     memset(f0->buf, 0, sizeof(f0->buf)); memset(f1->buf, 0, sizeof(f1->buf));
+    f0->crc16 = f1->crc16 = 0; f0->crc_seq = f1->crc_seq = 0;
+    if(crc_a){ f0->crc16 = crc_a; f0->crc_seq = crc_seq; }
     uint32_t pair_timestamp = HAL_GetTick();
     /* подробный лог пары убран для снижения нагрузки */
     /* Применяем усечение, если задано и меньше доступного */
     uint16_t use_samples = cur_samples_per_frame; /* уже определено и проверено */
+    uint16_t stamp_idx = 0, stamp_seq16 = 0; /* диагностические метки в payload */
     for(uint16_t i = 0; i < use_samples; i++){
 #if USE_TEST_SAWTOOTH
-        /* В тестовом режиме гарантируем детерминированный шаблон 1..N
-           независимо от источника буферов, чтобы упростить верификацию хостом. */
+        /* Полный тестовый режим (путь был основной ранее, оставлен для совместимости). */
         uint16_t a = (uint16_t)(i + 1);
         uint16_t b = (uint16_t)(i + 1);
 #else
+    #if TEST_OVERLAY_SAWTOOTH
+        /* Мягкая подмена: сохраняем ADC/DMA и async, но данные делаем детерминированной пилой. */
+        uint16_t a = (uint16_t)(i + 1);
+        uint16_t b = (uint16_t)(i + 1);
+    #else
         uint16_t a = ch1[i];
         uint16_t b = ch2[i];
+    #endif
 #endif
         uint8_t *p0 = f0->buf + VND_FRAME_HDR_SIZE + 2 * i; p0[0] = (uint8_t)(a & 0xFF); p0[1] = (uint8_t)(a >> 8);
         uint8_t *p1 = f1->buf + VND_FRAME_HDR_SIZE + 2 * i; p1[0] = (uint8_t)(b & 0xFF); p1[1] = (uint8_t)(b >> 8);
     }
     f0->samples = f1->samples = use_samples; 
-    /* Incrementing seq counter для каждой пары */
-    static volatile uint32_t real_pair_seq = 1;  /* Начинаем с 1, чтобы избежать путаницы с инициализацией (=0) */
-    f0->seq = f1->seq = real_pair_seq++;
+    /* Сохраняем индекс DMA (seq/rd) для привязки отображения на хосте */
+    f0->dma_seq = f1->dma_seq = pair_seq;
+    /* CRC для контроля целостности (A — из staging, если доступно; B — пересчитываем из копии) */
+    #if !ADC_USB_STAGE_ENABLE
+    f0->crc16 = vnd_crc16_ccitt(f0->buf + VND_FRAME_HDR_SIZE, (uint32_t)use_samples * 2u);
+    f0->crc_seq = frame_rd_seq; /* ближайшее доступное значение */
+    #endif
+    f1->crc16 = vnd_crc16_ccitt(f1->buf + VND_FRAME_HDR_SIZE, (uint32_t)use_samples * 2u);
+    f1->crc_seq = f0->crc_seq;
+    /* seq в заголовке привязан к последовательности DMA (pair_seq), одинаковый для A и B */
+    f0->seq = pair_seq;
+    f1->seq = pair_seq;
     vnd_frame_hdr_t *h0 = (vnd_frame_hdr_t*)f0->buf; h0->timestamp = pair_timestamp;
     vnd_frame_hdr_t *h1 = (vnd_frame_hdr_t*)f1->buf; h1->timestamp = pair_timestamp;
     vnd_build_frame(f0); vnd_build_frame(f1);
+
+     /* ВАЖНО: reserved2 на хосте используется как buffer_index (0-7).
+         stamp_idx оставляем для payload-диагностики, но в заголовок пишем ID буфера. */
+     uint16_t buf_idx = (uint16_t)(adc_get_buffer_parity(pair_seq) & 0x07u);
+     h0->reserved2 = buf_idx;
+     h1->reserved2 = buf_idx;
     if(f0->st == FB_FILL || f1->st == FB_FILL){ dbg_partial_frame_abort++; VND_LOG("build failed"); return; }
     /* Продвигаем индекс заполнения, если кадр успешно подготовлен */
     pair_fill_idx = (uint8_t)((active_slot + 1u) % VND_PAIR_BUFFERS);
@@ -1052,14 +1296,22 @@ static void vnd_build_frame(ChanFrame *cf)
     
     h->magic = 0xA55A; h->ver = 0x01; h->flags = (cf->flags & VND_FLAGS_ADC0) ? 0x01 : 0x02; h->seq = cf->seq; h->total_samples = (uint16_t)cf->samples;
     VND_LOG("BUILD_FRAME cf_seq=%lu flags=0x%02X samples=%u", (unsigned long)cf->seq, (unsigned)h->flags, (unsigned)cf->samples);
-    h->zone_count = 0; h->zone1_offset = 0; h->zone1_length = 0; h->reserved = 0; h->reserved2 = 0; h->crc16 = 0;
+    h->zone_count = 0; h->zone1_offset = 0; h->zone1_length = 0; h->reserved = cf->dma_seq;
+    
+     /* reserved2: buffer_index (0-7) для GUI. Даже/нечёт можно получить как (buffer_index & 1). */
+     h->reserved2 = (uint16_t)(adc_get_buffer_parity(cf->dma_seq) & 0x07u);
+    
+    uint16_t crc = cf->crc16;
+    if(crc == 0 && payload_len){ crc = vnd_crc16_ccitt(cf->buf + VND_FRAME_HDR_SIZE, payload_len); }
+    h->crc16 = crc;
+    if(crc) h->flags |= 0x04; else h->flags &= (uint8_t)~0x04u;
     cf->frame_size = (uint16_t)total;
     if(cur_expected_frame_size && cf->frame_size != cur_expected_frame_size) dbg_size_mismatch++;
     dbg_any_valid_frame = 1; cf->st = FB_READY;
 }
 
 /* Поиск индекса пары по seq (линейный поиск по короткому кольцу) */
-static int vnd_find_pair_by_seq(uint32_t seq)
+static int __attribute__((unused)) vnd_find_pair_by_seq(uint32_t seq)
 {
     for(uint8_t i=0;i<VND_PAIR_BUFFERS;i++){
         if(g_frames[i][0].st != FB_FILL && g_frames[i][0].seq == seq) return (int)i;
@@ -1069,11 +1321,15 @@ static int vnd_find_pair_by_seq(uint32_t seq)
 }
 
 /* Асинхронный выбор и отправка одного готового кадра (A или B) */
-/* Режим строгой парности по желанию: 0 — независимые каналы (дефолт), 1 — строгая пара A&B на один seq */
-static uint8_t vnd_strict_pairing = 0;  /* ВЫКЛЮЧЕНО: каждый канал отправляется независимо */
+/* Режим строгой парности по желанию: 0 — независимые каналы, 1 — строгая пара A&B на один seq */
+static uint8_t vnd_strict_pairing = 0;  /* ОТКЛЮЧЕНО: каналы независимы, отправляем как только готов */
 
 static int vnd_async_try_tx(void)
 {
+#if USE_TEST_SAWTOOTH
+    /* В тестовом режиме не используем async-путь, чтобы не ждать ADC/DMA */
+    return 0;
+#endif
     /* ПРОФИЛИРОВАНИЕ: замер времени выполнения */
     static uint32_t call_count = 0;
     static uint32_t total_time_us = 0;
@@ -1094,7 +1350,7 @@ static int vnd_async_try_tx(void)
     static uint8_t seq_partial_cnt = 0;     /* сколько кадров отправлено без полной пары */
 
     /* Локальные статические рабочие буферы кадров для независимого построения */
-    typedef struct { uint8_t valid; uint8_t ch; uint16_t samples; uint32_t seq; uint16_t frame_len; uint8_t buf[VND_FRAME_MAX_SIZE]; } tmp_frame_t;
+    typedef struct { uint8_t valid; uint8_t ch; uint16_t samples; uint32_t seq; uint32_t dma_seq; uint16_t frame_len; uint8_t buf[VND_FRAME_MAX_SIZE]; } tmp_frame_t;
     static tmp_frame_t tf[2];
 
     /* Обновить / заполнить структуру для канала, если данных ещё нет (valid=0) */
@@ -1102,51 +1358,91 @@ static int vnd_async_try_tx(void)
         if(ch==1 && vnd_ch_mode==0) continue; /* A-only */
         if(ch==0 && vnd_ch_mode==1) continue; /* B-only */
         if(tf[ch].valid) continue; /* уже подготовлен */
-        uint16_t *abuf = NULL; uint16_t samples = 0;
-        if(adc_get_frame_ch((uint8_t)ch, &abuf, &samples)){
-            if(samples){
-                if(cur_samples_per_frame == 0){
-                    /* Лочим текущий формат по первому пришедшему размеру */
-                    uint16_t eff = samples;
-                    if(vnd_frame_samples_req && vnd_frame_samples_req < eff) eff = vnd_frame_samples_req;
-                    if(vnd_trunc_samples && vnd_trunc_samples < eff) eff = vnd_trunc_samples;
-                    if(eff > VND_MAX_SAMPLES) eff = VND_MAX_SAMPLES;
-                    cur_samples_per_frame = eff;
-                    cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)eff*2u);
-                    /* ДИАГНОСТИКА: выводим параметры lock */
-                    cdc_logf("FRAME_LOCK ch=%u adc_samp=%u req=%u trunc=%u -> eff=%u", ch, samples, vnd_frame_samples_req, vnd_trunc_samples, eff);
-                }
-                uint16_t eff = cur_samples_per_frame;
-                if(eff > samples) eff = samples; /* защита, если размер профиля уменьшился внезапно */
+        uint16_t *abuf = NULL; uint16_t samples = 0; uint32_t dma_seq = 0; uint8_t synth = 0;
+        /* Снапшоты для staging, чтобы TC не перезаписал во время копирования */
+        static uint16_t stage_copy_async[MAX_FRAME_SAMPLES];
+        static uint16_t stage_copy_async_b[MAX_FRAME_SAMPLES];
+        if(adc_get_frame_ch((uint8_t)ch, &abuf, &samples, &dma_seq)){
+            synth = 0;
+        } else if(TEST_OVERLAY_SAWTOOTH){
+            /* Если реальный буфер временно не готов, синтезируем кадр, чтобы гарантировать 2 канала. */
+            samples = adc_stream_get_active_samples();
+            if(samples == 0) samples = VND_FULL_DEFAULT_SAMPLES;
+            synth = 1;
+        }
+        if(samples){
+            if(cur_samples_per_frame == 0){
+                /* Лочим текущий формат по первому пришедшему размеру (реальному или синтетическому) */
+                uint16_t eff = samples;
+                if(vnd_frame_samples_req && vnd_frame_samples_req < eff) eff = vnd_frame_samples_req;
+                if(vnd_trunc_samples && vnd_trunc_samples < eff) eff = vnd_trunc_samples;
                 if(eff > VND_MAX_SAMPLES) eff = VND_MAX_SAMPLES;
-                
-                /* ДИАГНОСТИКА: проверяем последние 100 сэмплов DMA буфера на нули */
-                static uint32_t zero_check_count = 0;
-                static uint32_t last_zero_check_ms = 0;
-                uint32_t now_check = HAL_GetTick();
-                if(now_check - last_zero_check_ms >= 5000 && eff >= 100){  /* Каждые 5 сек */
-                    uint16_t zeros_found = 0;
-                    for(uint16_t i = eff - 100; i < eff; i++){
-                        if(abuf[i] == 0) zeros_found++;
-                    }
-                    cdc_logf("[USB_DIAG] CH%u: last 100 samples, %u zeros. [%u..%u]=[%u,%u,%u,%u,%u]",
-                             ch, zeros_found, eff-100, eff-1,
-                             abuf[eff-100], abuf[eff-50], abuf[eff-25], abuf[eff-10], abuf[eff-1]);
-                    last_zero_check_ms = now_check;
-                }
-                
-                /* Построить payload: копируем из ADC-буфера в USB-буфер */
-                /* ДИАГНОСТИКА: заполняем значением 1000 вместо нулей для отладки */
-                for(uint16_t i=0;i<eff;i++){
-                    uint16_t v = abuf[i];
-                    if(v == 0) v = 1000;  /* Заменяем нули на 1000 для диагностики */
-                    uint8_t *p = tf[ch].buf + VND_FRAME_HDR_SIZE + 2u*i; p[0]=(uint8_t)(v & 0xFF); p[1]=(uint8_t)(v>>8);
-                }
-                /* Заголовок */
-                vnd_frame_hdr_t *h = (vnd_frame_hdr_t*)tf[ch].buf;
-                h->magic = 0xA55A; h->ver = 0x01; h->flags = (ch==0)?0x01:0x02; h->seq = stream_seq; h->timestamp = HAL_GetTick(); h->total_samples = eff; h->zone_count=0; h->zone1_offset=0; h->zone1_length=0; h->reserved=0; h->reserved2=0; h->crc16=0;
-                tf[ch].samples = eff; tf[ch].seq = stream_seq; tf[ch].frame_len = (uint16_t)(VND_FRAME_HDR_SIZE + eff*2u); tf[ch].ch = (uint8_t)ch; tf[ch].valid = 1;
+                cur_samples_per_frame = eff;
+                cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)eff*2u);
+                cdc_logf("FRAME_LOCK ch=%u adc_samp=%u req=%u trunc=%u -> eff=%u", ch, samples, vnd_frame_samples_req, vnd_trunc_samples, eff);
             }
+            uint16_t eff = cur_samples_per_frame;
+            if(!synth && eff > samples) eff = samples; /* защита, если размер профиля уменьшился внезапно */
+            if(eff > VND_MAX_SAMPLES) eff = VND_MAX_SAMPLES;
+            
+            /* ДИАГНОСТИКА: проверяем последние 100 сэмплов DMA буфера на нули (только реальный буфер) */
+            static uint32_t zero_check_count = 0; (void)zero_check_count;
+            static uint32_t last_zero_check_ms = 0;
+            uint32_t now_check = HAL_GetTick();
+            if(!synth && now_check - last_zero_check_ms >= 5000 && eff >= 100){  /* Каждые 5 сек */
+                uint16_t zeros_found = 0;
+                for(uint16_t i = eff - 100; i < eff; i++){
+                    if(abuf[i] == 0) zeros_found++;
+                }
+                cdc_logf("[USB_DIAG] CH%u: last 100 samples, %u zeros. [%u..%u]=[%u,%u,%u,%u,%u]",
+                         ch, zeros_found, eff-100, eff-1,
+                         abuf[eff-100], abuf[eff-50], abuf[eff-25], abuf[eff-10], abuf[eff-1]);
+                last_zero_check_ms = now_check;
+            }
+            
+            /* Если это staging A, скопируем под защитой IRQ в локальный снапшот */
+            if(!synth && ADC_USB_STAGE_ENABLE){
+                __disable_irq();
+                uint16_t stage_ns = samples; if(stage_ns > MAX_FRAME_SAMPLES) stage_ns = MAX_FRAME_SAMPLES;
+                if(ch==0){
+                    memcpy(stage_copy_async, abuf, stage_ns * sizeof(uint16_t));
+                    abuf = stage_copy_async;
+                } else {
+                    memcpy(stage_copy_async_b, abuf, stage_ns * sizeof(uint16_t));
+                    abuf = stage_copy_async_b;
+                }
+                __enable_irq();
+            }
+            /* Построить payload: overlay off = реальные ADC; overlay on = детерминированные пилы */
+            for(uint16_t i=0;i<eff;i++){
+#if TEST_OVERLAY_SAWTOOTH
+                uint16_t v = (uint16_t)(i + 1);
+                if(ch == 1){ v = (uint16_t)(((i + 1u) * 2u + 512u) & 0x0FFFu); }
+#else
+                uint16_t v = synth ? (uint16_t)(i + 1) : abuf[i];
+#if VND_ENABLE_ADC_SANITIZE
+                if(!synth){
+                    if(v > 4095u){ dbg_gt4095_ch[ch]++; /* считаем, но не правим */ }
+                }
+#endif
+#endif
+                uint8_t *p = tf[ch].buf + VND_FRAME_HDR_SIZE + 2u*i; p[0]=(uint8_t)(v & 0xFF); p[1]=(uint8_t)(v>>8);
+            }
+            /* Заголовок */
+            vnd_frame_hdr_t *h = (vnd_frame_hdr_t*)tf[ch].buf;
+            h->magic = 0xA55A; h->ver = 0x01; h->flags = (ch==0)?0x01:0x02; 
+            h->seq = dma_seq;  /* seq привязан к DMA-кадру */
+            h->timestamp = HAL_GetTick(); h->total_samples = eff; h->zone_count=0; h->zone1_offset=0; h->zone1_length=0;
+            /* Пробрасываем индекс DMA-буфера канала, чтобы хост мог отрисовывать строго в порядке заполнения DMA */
+            h->reserved  = dma_seq;
+            
+            /* reserved2 несёт buffer_index (0..7) */
+            h->reserved2 = (uint16_t)(adc_get_buffer_parity(dma_seq) & 0x07u);
+            
+            h->crc16=0;
+            uint16_t crc = vnd_crc16_ccitt(tf[ch].buf + VND_FRAME_HDR_SIZE, (uint32_t)eff * 2u);
+            h->crc16 = crc; if(crc) h->flags |= 0x04; else h->flags &= (uint8_t)~0x04u;
+            tf[ch].samples = eff; tf[ch].seq = stream_seq; tf[ch].dma_seq = dma_seq; tf[ch].frame_len = (uint16_t)(VND_FRAME_HDR_SIZE + eff*2u); tf[ch].ch = (uint8_t)ch; tf[ch].valid = 1;
         }
     }
 
@@ -1173,6 +1469,12 @@ static int vnd_async_try_tx(void)
 
     tmp_frame_t *sel = &tf[pick];
     if(!sel->valid) return 0;
+    
+    /* Гарантируем согласованность метаданных заголовка с DMA-кадром */
+    vnd_frame_hdr_t *h = (vnd_frame_hdr_t*)sel->buf;
+    h->seq = h->reserved; /* seq = dma_seq (32-битное значение) */
+    h->reserved2 = (uint16_t)(adc_get_buffer_parity(h->reserved) & 0x07u);
+    
     if(vnd_transmit_frame(sel->buf, sel->frame_len, 0, 0, pick==0?"ADC0-ASY2":"ADC1-ASY2") == USBD_OK){
         /* Учёт статистики предварительно (окончательная фиксация в TxCplt) */
         if(pick==0) dbg_sent_ch0_total++; else dbg_sent_ch1_total++;
@@ -1283,6 +1585,7 @@ static USBD_StatusTypeDef __attribute__((unused)) vnd_transmit_frame(uint8_t *bu
 
     /* Зафиксируем точный тип текущего кадра в полёте */
     if(len >= VND_FRAME_HDR_SIZE){ const vnd_frame_hdr_t *hh = (const vnd_frame_hdr_t*)buf; if(hh->magic==0xA55A){ inflight_is_frame = 1; inflight_flags = hh->flags; inflight_seq = hh->seq; } else { inflight_is_frame = 0; inflight_flags = 0; inflight_seq = 0; } } else { inflight_is_frame = 0; inflight_flags = 0; inflight_seq = 0; }
+    (void)flags; (void)seq_field; /* для сборок с отключёнными логами */
     USBD_StatusTypeDef rc = USBD_VND_Transmit(&hUsbDeviceHS, buf, len);
     if(rc == USBD_BUSY){
         dbg_resend_blocked++; vnd_error_counter++; if(vnd_last_error == 0) vnd_last_error = 4;
@@ -1291,6 +1594,7 @@ static USBD_StatusTypeDef __attribute__((unused)) vnd_transmit_frame(uint8_t *bu
         extern uint8_t USBD_VND_LastTxRC(void);
         extern uint16_t USBD_VND_LastTxLen(void);
         uint8_t ll_busy = USBD_VND_TxIsBusy(); uint8_t ll_rc = USBD_VND_LastTxRC(); uint16_t ll_len = USBD_VND_LastTxLen();
+        (void)ll_busy; (void)ll_rc; (void)ll_len;
         VND_LOG("TX_BUSY tag=%s len=%u ll_busy=%u last_rc=%u last_len=%u", tag?tag:"?", (unsigned)len, (unsigned)ll_busy, (unsigned)ll_rc, (unsigned)ll_len);
         vnd_tx_ready = 1; vnd_ep_busy = 0; vnd_inflight = 0;
     }
@@ -1299,6 +1603,7 @@ static USBD_StatusTypeDef __attribute__((unused)) vnd_transmit_frame(uint8_t *bu
         vnd_tx_meta_after(buf, len);
         if(is_frame){
             const vnd_frame_hdr_t *lh = (const vnd_frame_hdr_t*)buf;
+            (void)lh;
             if(rewrote_seq){
                 VND_LOG("SEND tag=%s hdr.seq=%lu (rewrote) flags=0x%02X cur_stream_seq=%lu len=%u", tag ? tag : "?", (unsigned long)lh->seq, (unsigned)lh->flags, (unsigned long)stream_seq, len);
             } else {
@@ -1422,11 +1727,6 @@ static int vnd_try_send_B_immediate(void)
     /* Полный режим: отправляем B из g_frames[0], если READY */
     ChanFrame *fB = &g_frames[0][1];
     if(fB->st != FB_READY) return 0;
-    /* Корректируем seq при необходимости (безопасно) */
-    if(fB->frame_size >= VND_FRAME_HDR_SIZE){
-        vnd_frame_hdr_t *hb = (vnd_frame_hdr_t*)fB->buf;
-        if(hb->magic == 0xA55A && hb->seq != stream_seq){ hb->seq = stream_seq; fB->seq = stream_seq; }
-    }
     if(vnd_transmit_frame(fB->buf, fB->frame_size, 0, 0, "ADC1-IMM") == USBD_OK){
         fB->st = FB_SENDING; sending_channel = 1;
         return 1;
@@ -1456,11 +1756,6 @@ static int vnd_try_send_A_nextpair_immediate(void)
         fA = &g_frames[0][0];
         if(fA->st != FB_READY) return 0;
     }
-    /* Принудительно синхронизируем seq A с текущим stream_seq для консистентности пары */
-    if(fA->frame_size >= VND_FRAME_HDR_SIZE){
-        vnd_frame_hdr_t *ha = (vnd_frame_hdr_t*)fA->buf;
-        if(ha->magic == 0xA55A && ha->seq != stream_seq){ ha->seq = stream_seq; fA->seq = stream_seq; }
-    }
     if(vnd_transmit_frame(fA->buf, fA->frame_size, 0, 0, "ADC0-IMM") == USBD_OK){
         fA->st = FB_SENDING; sending_channel = 0; pending_B = 1; pending_B_since_ms = HAL_GetTick();
         return 1;
@@ -1479,7 +1774,7 @@ static void vnd_log_hdr_layout(void){
 
 /* Экстренный keepalive: формирует короткий тестовый кадр даже если test_sent уже помечен по FALLTHRU,
    при условии что dbg_tx_cplt==0 (ни одного подтверждённого TX) и EP свободен. */
-static void vnd_emergency_keepalive(uint32_t now_ms)
+static void __attribute__((unused)) vnd_emergency_keepalive(uint32_t now_ms)
 {
     if(vnd_ep_busy) return;
     if(dbg_tx_cplt != 0) return; /* уже что-то передали успешно */
@@ -1576,6 +1871,33 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
         vnd_log_hdr_layout();
         dbg_printed_sizes = 1;
     }
+
+    /* DEBUG: раз в секунду печатаем sample[95] по всем 32 DMA буферам (A и B) */
+    {
+        static uint32_t last_s95_ms = 0;
+        uint32_t now_ms = HAL_GetTick();
+        if (now_ms - last_s95_ms >= 1000u) {
+            last_s95_ms = now_ms;
+            adc_stream_print_sample95_all_buffers();
+        }
+    }
+
+    /* Если по START запросили перезапуск ADC/DMA — делаем это здесь (в main-loop),
+       до любых попыток передачи по USB. */
+    if (vnd_adc_restart_request) {
+        vnd_adc_restart_request = 0;
+        HAL_StatusTypeDef rrc = adc_stream_restart(NULL, NULL);
+        /* Обновим снапшот DMA после перезапуска, чтобы таймауты/диагностика не срабатывали по старым значениям */
+        {
+            adc_stream_debug_t dbg;
+            adc_stream_get_debug(&dbg);
+            dma_snapshot_full0 = dbg.dma_full0;
+            dma_snapshot_full1 = dbg.dma_full1;
+        }
+        cdc_logf("EVT ADC_RESTART on START rc=%d", (int)rrc);
+        /* Попросим немедленный kick TX после реинициализации */
+        vnd_tx_kick = 1;
+    }
     /* СУПЕР-ПРИОРИТЕТ: если пришёл STOP — разрешаем только ACK-STAT, полностью блокируем стрим */
     if (stop_request) {
         if (!vnd_ep_busy) {
@@ -1645,6 +1967,18 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
         start_ack_done = 1;
         VND_LOG("TEST_FALLTHRU after %lums -> proceed to A/B", (unsigned long)(now - start_cmd_ms));
     }
+
+    /* ASYNC MODE: используем только vnd_async_try_tx() (без legacy prepare_pair/pump).
+       Иначе старый парный путь может потреблять/копировать ADC и перегружать CPU/логи,
+       что приводит к остановке/редким кадрам на хосте после первых нескольких фреймов. */
+#if !USE_TEST_SAWTOOTH
+    if(async_mode && full_mode && !diag_mode_active){
+        if(!vnd_ep_busy){ (void)vnd_async_try_tx(); }
+        if(vnd_tick_flag) vnd_tick_flag = 0;
+        vnd_cdc_periodic_stats(now);
+        return;
+    }
+#endif
     /* ВАЖНО: сначала попробуем подготовить пару A/B, чтобы не зациклиться на ранних STAT.
        Подготовка пары не зависит от занятости EP, поэтому убираем лишний гейтинг по vnd_ep_busy. */
     {
@@ -1669,18 +2003,36 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
                      /* Ранний relax: первые 20 мс достаточно одного инкремента wr_seq, далее требуем +2.
                          Доп. послабление: после 100 мс позволяем отправить первую A даже без прироста wr_seq
                          (на случай, если ADC успел подготовить кадр, но счётчик ещё не вырос). */
-                uint32_t age_ms = now - start_cmd_ms;
+                 uint32_t age_ms = now - start_cmd_ms;
+                 #if USE_TEST_SAWTOOTH
+                     uint8_t fresh_ok = 1u; /* в тестовом режиме не ждём рост wr_seq от ADC/DMA */
+                 #else
                      uint8_t fresh_ok = (age_ms < 20) ? (frame_wr_seq > start_wr_seq_snapshot ? 1u : 0u)
-                                                                : (frame_wr_seq > start_wr_seq_snapshot + 1 ? 1u : 0u);
+                                                        : (frame_wr_seq > start_wr_seq_snapshot + 1 ? 1u : 0u);
+                 #endif
                 /* Защитная инициализация размера кадра если ADC уже дал конфигурацию, но SIZE_LOCK не прошёл */
                 if(cur_samples_per_frame == 0 && age_ms > 25){
-                    uint16_t s = adc_stream_get_active_samples();
-                    if(s){ if(s > VND_MAX_SAMPLES) s = VND_MAX_SAMPLES; cur_samples_per_frame = s; cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)cur_samples_per_frame*2u); }
+                    uint16_t prof_s = adc_stream_get_active_samples();
+                    uint16_t eff_s = prof_s;
+                    if(vnd_frame_samples_req && vnd_frame_samples_req < eff_s) eff_s = vnd_frame_samples_req;
+                    if(vnd_trunc_samples && vnd_trunc_samples < eff_s) eff_s = vnd_trunc_samples;
+                    if(eff_s > VND_MAX_SAMPLES) eff_s = VND_MAX_SAMPLES;
+                    if(eff_s){
+                        cur_samples_per_frame = eff_s;
+                        cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)cur_samples_per_frame*2u);
+                    }
                 }
                 /* Ещё один страховочный замок: после 60 мс если размер всё ещё 0 — попробуем взять текущий active_samples и вывести диагностику */
                 if(cur_samples_per_frame == 0 && age_ms == 60){
-                    uint16_t s2 = adc_stream_get_active_samples();
-                    if(s2){ if(s2 > VND_MAX_SAMPLES) s2 = VND_MAX_SAMPLES; cur_samples_per_frame = s2; cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)cur_samples_per_frame*2u); }
+                    uint16_t prof_s2 = adc_stream_get_active_samples();
+                    uint16_t eff_s2 = prof_s2;
+                    if(vnd_frame_samples_req && vnd_frame_samples_req < eff_s2) eff_s2 = vnd_frame_samples_req;
+                    if(vnd_trunc_samples && vnd_trunc_samples < eff_s2) eff_s2 = vnd_trunc_samples;
+                    if(eff_s2 > VND_MAX_SAMPLES) eff_s2 = VND_MAX_SAMPLES;
+                    if(eff_s2){
+                        cur_samples_per_frame = eff_s2;
+                        cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)cur_samples_per_frame*2u);
+                    }
                     cdc_logf("INIT_DBG age=%lu wr=%lu fA_st=%u cur_s=%u ep_busy=%u",
                              (unsigned long)age_ms, (unsigned long)frame_wr_seq, (unsigned)fAfill->st,
                              (unsigned)cur_samples_per_frame, (unsigned)vnd_ep_busy);
@@ -1698,10 +2050,6 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
                 }
                 /* Разрешаем первую A, если кадр готов и либо fresh_ok, либо прошло уже >100 мс (fallback) */
                 if(fAfill->st == FB_READY && (fresh_ok || age_ms > 100) && !vnd_ep_busy){
-                    if(fAfill->frame_size >= VND_FRAME_HDR_SIZE){
-                        vnd_frame_hdr_t *ha = (vnd_frame_hdr_t*)fAfill->buf;
-                        if(ha->magic == 0xA55A && ha->seq != stream_seq){ ha->seq = stream_seq; fAfill->seq = stream_seq; }
-                    }
                     if(vnd_transmit_frame(fAfill->buf, fAfill->frame_size, 0, 0, "ADC0-PUMP") == USBD_OK){
                         fAfill->st = FB_SENDING; sending_channel = 0;
                         pending_B = (vnd_ch_mode == 0)?0:1; if(pending_B) pending_B_since_ms = HAL_GetTick();
@@ -1782,7 +2130,10 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
     
     if(!full_mode){ if(vnd_tick_flag) vnd_tick_flag = 0; return; }
 
-    /* Новый упрощённый путь: асинхронная передача A/B без ожидания пары */
+    /* Новый упрощённый путь: асинхронная передача A/B без ожидания пары.
+       В тестовом режиме (USE_TEST_SAWTOOTH) async отключаем, чтобы не выйти
+       из таска без фактической отправки кадров. */
+#if !USE_TEST_SAWTOOTH
     if(async_mode){
         /* Всегда стараться иметь подготовленные пары */
         ChanFrame *fa0 = &g_frames[pair_fill_idx][0];
@@ -1792,6 +2143,7 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
         vnd_cdc_periodic_stats(now);
         return;
     }
+#endif
 
     /* Упреждающая подготовка пары: когда TEST уже завершён и B не ожидается. */
     if(test_sent && !pending_B){
@@ -1816,7 +2168,7 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
        через ~60 мс превращаем её в служебную, чтобы не блокировать отправку A. */
     vnd_force_complete_test_meta_if_stale();
 
-    static uint8_t first_pair_logged = 0; /* диагностический лог первой пары */
+    static __attribute__((unused)) uint8_t first_pair_logged = 0; /* диагностический лог первой пары */
 
     static uint8_t first_bq_logged = 0; /* однократный лог первой постановки B */
     if(pending_B){
@@ -1842,14 +2194,6 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
         if(fA_pre->st == FB_FILL && !vnd_ep_busy){ vnd_prepare_pair(); }
         ChanFrame *fB = &g_frames[0][1];
         if(fB->st == FB_READY){
-            /* Перед отправкой B корректируем seq, если он отличается от ожидаемого stream_seq */
-            if(fB->frame_size >= VND_FRAME_HDR_SIZE){
-                vnd_frame_hdr_t *hb = (vnd_frame_hdr_t*)fB->buf;
-                if(hb->magic == 0xA55A && hb->seq != stream_seq){
-                    VND_LOG("PATCH_B_SEQ hdr=%lu -> %lu", (unsigned long)hb->seq, (unsigned long)stream_seq);
-                    hb->seq = stream_seq; fB->seq = stream_seq;
-                }
-            }
             USBD_StatusTypeDef rcB = vnd_transmit_frame(fB->buf, fB->frame_size, 0, 0, "ADC1");
             if (rcB == USBD_OK) {
                 if(!first_bq_logged){ first_bq_logged = 1; VND_LOG("FIRST_B queued size=%u", (unsigned)fB->frame_size); }
@@ -1905,11 +2249,6 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
                 ChanFrame *fAchk = &g_frames[0][0];
                 if(fAchk->st != FB_SENDING && fBchk->st != FB_SENDING){
                     if(fBchk->st == FB_READY){
-                        /* Перед отправкой по вотчдогу также поправим seq при необходимости */
-                        if(fBchk->frame_size >= VND_FRAME_HDR_SIZE){
-                            vnd_frame_hdr_t *hb2 = (vnd_frame_hdr_t*)fBchk->buf;
-                            if(hb2->magic == 0xA55A && hb2->seq != stream_seq){ hb2->seq = stream_seq; fBchk->seq = stream_seq; VND_LOG("PATCH_B_SEQ_WDG->%lu", (unsigned long)stream_seq); }
-                        }
                         if (vnd_transmit_frame(fBchk->buf, fBchk->frame_size, 0, 0, "ADC1-WDG") == USBD_OK){
                             fBchk->st = FB_SENDING; sending_channel = 1; VND_LOG("PEND_B_WDG_RETRY len=%u", (unsigned)fBchk->frame_size); return; }
                     }
@@ -1944,11 +2283,6 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
             /* Искусственных задержек между кадрами нет: отправляем A сразу при готовности EP и данных */
             /* Отправляем A: в режиме без TEST не проверяем test_in_flight вовсе */
 #if VND_DISABLE_TEST
-            /* Перед отправкой A — также синхронизируем seq с текущим stream_seq */
-            if(fA->frame_size >= VND_FRAME_HDR_SIZE){
-                vnd_frame_hdr_t *ha = (vnd_frame_hdr_t*)fA->buf;
-                if(ha->magic == 0xA55A && ha->seq != stream_seq){ ha->seq = stream_seq; fA->seq = stream_seq; }
-            }
             VND_LOG("TRY_A len=%u hdr_seq=%lu", (unsigned)fA->frame_size, (unsigned long)((vnd_frame_hdr_t*)fA->buf)->seq);
             if (vnd_transmit_frame(fA->buf, fA->frame_size, 0, 0, "ADC0") == USBD_OK) {
                 static uint8_t first_a_logged = 0;
@@ -1974,11 +2308,6 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
 #else
             /* Отправляем A только если нет теста в полёте и нет необработанного TEST в FIFO */
             if(!test_in_flight){
-                /* Синхронизируем seq A и в ветке с тестом на всякий случай */
-                if(fA->frame_size >= VND_FRAME_HDR_SIZE){
-                    vnd_frame_hdr_t *ha = (vnd_frame_hdr_t*)fA->buf;
-                    if(ha->magic == 0xA55A && ha->seq != stream_seq){ ha->seq = stream_seq; fA->seq = stream_seq; }
-                }
                 if (vnd_transmit_frame(fA->buf, fA->frame_size, 0, 0, "ADC0") == USBD_OK) {
                     static uint8_t first_a_logged = 0;
                     if(!first_a_logged){ first_a_logged = 1; VND_LOG("FIRST_A queued size=%u", (unsigned)fA->frame_size); }
@@ -2077,10 +2406,6 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
             ChanFrame *fA = &g_frames[0][0];
             if(fA->st != FB_READY){ vnd_prepare_pair(); fA = &g_frames[0][0]; }
             if(fA->st == FB_READY && !vnd_ep_busy){
-                if(fA->frame_size >= VND_FRAME_HDR_SIZE){
-                    vnd_frame_hdr_t *ha = (vnd_frame_hdr_t*)fA->buf;
-                    if(ha->magic == 0xA55A && ha->seq != stream_seq){ ha->seq = stream_seq; fA->seq = stream_seq; }
-                }
                 if(vnd_transmit_frame(fA->buf, fA->frame_size, 0, 0, "ADC0-KICK") == USBD_OK){
                     fA->st = FB_SENDING; sending_channel = 0;
                     pending_B = (vnd_ch_mode == 0) ? 0 : 1; if(pending_B) pending_B_since_ms = HAL_GetTick();
@@ -2436,11 +2761,24 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     meta_push_total = meta_pop_total = meta_empty_events = meta_overflow_events = 0;
                 } while(0);
                 streaming = 1;
-                /* Включаем async декуплинг по умолчанию в полном режиме */
+                     /* ГАРАНТИЯ повторного старта:
+                         после STOP/alt-reset хост ожидает «чистый» старт. Перезапускаем ADC/DMA и сбрасываем
+                         внутренние rd/wr seq в adc_stream (иначе возможна деградация FPS на последующих запусках).
+                         ВАЖНО: делаем это отложенно в main-loop (Vendor_Stream_Task), а не из USB RX. */
+                     vnd_adc_restart_request = 1;
+                /* Включаем async декуплинг по умолчанию в полном режиме.
+                   В тестовом режиме принудительно держим async=0, чтобы использовать
+                   парный пайплайн с синтетической пилой. */
+#if USE_TEST_SAWTOOTH
+                async_mode = 0;
+                vnd_strict_pairing = 0;
+                cdc_logf("START: TEST mode forces async=0 (pair pipeline)");
+#else
                 async_mode = 1;
-                         /* Ранее мы временно отключали async ради диагностики. Возвращаем по умолчанию async=1
-                             для максимальной скорости. Для отладки можно принудительно выключить через команду
-                             SET_ASYNC_MODE(0) с хоста. */
+                /* Ранее мы временно отключали async ради диагностики. Возвращаем по умолчанию async=1
+                    для максимальной скорости. Для отладки можно принудительно выключить через команду
+                    SET_ASYNC_MODE(0) с хоста. */
+#endif
                 dbg_last_forced_stat_ms = start_cmd_ms;
                 vnd_tx_ready = 1; vnd_ep_busy = 0; vnd_inflight = 0;
                 vnd_last_txcplt_ms = HAL_GetTick();
@@ -2458,9 +2796,8 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 /* Индикация START */
                 vnd_tx_bytes_at_start = vnd_total_tx_bytes;
                 HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_SET);
-                /* ADC/DMA работают постоянно с момента загрузки в main().
-                   START команда только включает передачу данных по USB, НЕ перезапускает ADC! */
-                VND_LOG("START_STREAM: transmission enabled (ADC already running)");
+                     /* ADC/DMA: для надёжного STOP→START делаем restart на каждый START (отложенно). */
+                     VND_LOG("START_STREAM: transmission enabled (ADC restart pending)");
                 /* ДИАГНОСТИКА: выводим активный профиль и параметры */
                 {
                     uint8_t prof = adc_stream_get_profile();
@@ -2489,17 +2826,9 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
 #if !VND_DISABLE_TEST
                 if(!test_sent && !test_in_flight && !vnd_ep_busy){ vnd_try_send_test_from_task(); }
 #endif
-                /* КРИТИЧНО: инициируем первую передачу данных после START */
-                cdc_logf("START: before TX check: ep_busy=%d async=%d full=%d streaming=%d", 
-                         vnd_ep_busy, async_mode, full_mode, streaming);
-                if(!vnd_ep_busy && async_mode && full_mode){
-                    vnd_tx_kick = 1;
-                    (void)vnd_async_try_tx();
-                    cdc_logf("START: kicked first TX");
-                } else {
-                    cdc_logf("START: SKIP TX (ep_busy=%d||!async=%d||!full=%d)", 
-                             vnd_ep_busy, !async_mode, !full_mode);
-                }
+                /* Важно: не начинаем передачу до выполнения отложенного adc_stream_restart(). */
+                cdc_logf("START: defer initial TX (adc_restart_request=%u)", (unsigned)vnd_adc_restart_request);
+                vnd_tx_kick = 1;
                 /* Диагностический режим: подготовка и первая отправка */
                 if(diag_mode_active){
                     if(cur_samples_per_frame == 0){
@@ -2515,11 +2844,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     diag_prepared_seq = stream_seq; diag_current_pair_seq = stream_seq;
                     if(!vnd_ep_busy){ (void)vnd_diag_try_tx(); }
                 }
-                /* Быстрый стартовый kick: если доступны данные — попытаться сразу выстрелить A */
-                if(!vnd_try_send_A_nextpair_immediate()){
-                    /* мягкий пинок TX, чтобы ускорить первую отправку */
-                    vnd_tx_kick = 1;
-                }
+                /* Передача стартует из Vendor_Stream_Task после ADC restart */
         }
         break;
         case VND_CMD_SET_FRAME_SAMPLES:
@@ -2670,6 +2995,19 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             }
         }
         break;
+
+        case VND_CMD_TOGGLE_TIM2CH3_INV:
+        {
+            /* Переключаем полярность CH3 на лету (PA2 = TIM2_CH3). */
+            uint32_t ccer = TIM2->CCER;
+            ccer ^= TIM_CCER_CC3P;
+            TIM2->CCER = ccer;
+            uint8_t inv = (ccer & TIM_CCER_CC3P) ? 1u : 0u;
+            printf("[VND] TIM2_CH3 invert=%u CCER=0x%08lX\r\n", (unsigned)inv, (unsigned long)ccer);
+            cdc_logf("EVT TIM2_CH3_INV=%u", (unsigned)inv);
+        }
+        break;
+
         case VND_CMD_SET_WINDOWS:
             if(len >= 9)
             {
@@ -2688,7 +3026,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 uint16_t hz = (uint16_t)(data[1] | (data[2] << 8));
                 if(hz == 0xFFFF) hz = 100;
                 if(hz < 20) hz = 20;
-                if(hz > 100) hz = 100;
+                if(hz > 400) hz = 400;
                 diag_hz = hz;
                 diag_period_ms = 1000 / diag_hz;
                 VND_LOG("SET_BLOCK_HZ %u", diag_hz);
@@ -2719,6 +3057,11 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
         case VND_CMD_SET_ASYNC_MODE:
             if(len >= 2){
                 uint8_t mode = data[1];
+#if USE_TEST_SAWTOOTH
+                /* Игнорируем запросы async в тестовом режиме — нужен парный путь */
+                async_mode = 0; vnd_strict_pairing = 0;
+                cdc_logf("EVT SET_ASYNC ignored (test mode)");
+#else
                 async_mode = (mode & 0x01) ? 1 : 0;
                 /* bit7 включает строгую парность (A&B на один seq); по умолчанию 0 = независимые каналы */
                 vnd_strict_pairing = (mode & 0x80) ? 1 : 0;
@@ -2728,17 +3071,24 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 cdc_logf("EVT SET_ASYNC async=%u strict=%u", (unsigned)async_mode, (unsigned)vnd_strict_pairing);
                 /* Сбросим ожидания и канал передачи */
                 pending_B = 0; sending_channel = 0xFF;
+#endif
             }
             break;
         case VND_CMD_SET_CHMODE:
             if(len >= 2){
                 uint8_t m = data[1];
+#if USE_TEST_SAWTOOTH
+                /* В тестовом режиме принудительно оба канала */
+                vnd_ch_mode = 2; async_mode = 0;
+                cdc_logf("EVT SET_CHMODE forced BOTH (test mode)");
+#else
                 if(m > 2) m = 2; /* default both */
                 vnd_ch_mode = m;
                 /* При A-only/B-only принудительно выключаем async */
                 if(vnd_ch_mode != 2 && async_mode){ async_mode = 0; }
                 VND_LOG("SET_CHMODE %u", (unsigned)vnd_ch_mode);
                 cdc_logf("EVT SET_CHMODE %u", (unsigned)vnd_ch_mode);
+#endif
                 /* Переключение режимов на лету: сброс ожиданий B, чтобы не зависать */
                 pending_B = 0; sending_channel = 0xFF;
             }
@@ -2818,6 +3168,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             if(len >= 5)
             {
                 uint32_t us = (uint32_t)(data[1] | (data[2] << 8) | (data[3] << 16) | (data[4] << 24));
+                (void)us;
                 /* TODO: применить ROI к цепочке выборки */
                 VND_LOG("SET_ROI_US %lu", (unsigned long)us);
             }

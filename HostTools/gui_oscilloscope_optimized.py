@@ -100,11 +100,15 @@ def parse_hdr(b: bytes):
     magic, ver, flags, seq, ts, total_samples, zone_cnt, zone_off, zone_len, reserved, reserved2, crc16 = struct.unpack_from(
         '<HBBIIHHIIIHH', b, 0
     )
-    dma_seq = (reserved2 << 16) | reserved
-    # В протоколе v1 flags.bit7 = TEST, поэтому parity берём из seq (пер-канально)
-    parity = seq & 0x01  # 0=even, 1=odd
-    frame_seq = reserved  # DEBUG: legacy поле (может использоваться прошивкой по-разному)
-    parity_res2 = reserved2 & 0x01  # DEBUG/legacy
+    # Прошивка использует:
+    # - reserved (u32) как DMA/frame sequence
+    # - reserved2 (u16) как buffer_index (0..7)
+    dma_seq = reserved
+    buf_idx = reserved2 & 0x07
+    # Чёт/неч должен быть стабильным и привязанным к buffer_index, который даёт устройство
+    parity = buf_idx & 0x01  # 0=even, 1=odd
+    frame_seq = reserved  # DEBUG
+    parity_res2 = parity  # DEBUG/legacy
     return {
         'magic': magic,
         'ver': ver,
@@ -121,6 +125,7 @@ def parse_hdr(b: bytes):
         'zone_len': zone_len,
         'reserved': reserved,
         'reserved2': reserved2,
+        'buf_idx': buf_idx,
         'crc16': crc16,
     }
 

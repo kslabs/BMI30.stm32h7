@@ -92,10 +92,18 @@ HAL_StatusTypeDef adc_stream_restart(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a
 uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples, uint32_t *seq_out);
 // УСТАРЕВШЕ: парный интерфейс для обратной совместимости
 uint8_t adc_get_frame(uint16_t **ch1, uint16_t **ch2, uint16_t *samples);
+// НОВОЕ: парный интерфейс + вернуть seq (pair seq = frame_rd_seq до инкремента)
+uint8_t adc_get_frame_pair(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, uint32_t *seq_out);
 void adc_stream_get_debug(adc_stream_debug_t *out);
 
 // Получить parity (чётность) буфера по seq (0=even, 1=odd) для 400Hz режима
 uint8_t adc_get_buffer_parity(uint32_t seq);
+
+// DEBUG: вывести trace записей в s_buffer_parity[] (вызывать из non-ISR)
+void adc_dump_buffer_trace(void);
+
+// DEBUG: вывести sample[95] для каждого из FIFO_FRAMES буферов (в одну строку)
+void adc_stream_print_sample95_all_buffers(void);
 
 // Хук: вызывается из ISR (ADC1 half/full) с количеством добавленных кадров FIFO (frames_added)
 void adc_stream_on_new_frames(uint32_t frames_added);

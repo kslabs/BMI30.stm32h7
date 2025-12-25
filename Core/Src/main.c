@@ -411,9 +411,9 @@ static uint32_t tim2_apply_profile_window(void){
     return 0u;
   }
 
-  /* ARR = период окна, CCR1 = длительность HIGH (активное окно ADC)
-     buf_rate = частота событий TRGO (400 Hz для even/odd, т.к. OC3REF даёт 2 события/период)
-     → период TIM2 = tick_hz / (buf_rate/2) для получения 200 Гц меандра CH3 */
+    /* TIM2 теперь используется ТОЛЬКО как маркер/делитель на 2 (PA2 = TIM2_CH3).
+      buf_rate = частота готовых DMA-буферов (например 400 Гц при fs=240кГц и N=600)
+      → период TIM2 = tick_hz / (buf_rate/2) для получения 200 Гц меандра CH3 */
   uint32_t period_ticks = (tick_hz * 2u) / buf_rate; // период для 200 Гц меандра (при buf_rate=400)
   if (period_ticks < 16u) {
     period_ticks = 16u; // минимальная защита
@@ -432,9 +432,9 @@ static uint32_t tim2_apply_profile_window(void){
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_3, period_ticks / 2u); // контрольный меандр 50%
   __HAL_TIM_SET_COUNTER(&htim2, 0u);
 
-  uint32_t eff_buf_hz = (period_ticks ? (tick_hz / period_ticks) : 0u);
-  printf("[TIM2] apply_profile: N=%u f_buf(req)=%uHz f_buf(eff)=%uHz tick_hz=%lu ARR=%lu CCR1=%lu guard=%luus\r\n",
-         (unsigned)samples, (unsigned)buf_rate, (unsigned)eff_buf_hz,
+    uint32_t marker_hz = (period_ticks ? (tick_hz / period_ticks) : 0u);
+    printf("[TIM2] marker apply: N=%u f_buf=%uHz f_marker=%uHz tick_hz=%lu ARR=%lu CCR1=%lu guard=%luus\r\n",
+      (unsigned)samples, (unsigned)buf_rate, (unsigned)marker_hz,
          (unsigned long)tick_hz, (unsigned long)(period_ticks - 1u), (unsigned long)pulse_ticks,
          (unsigned long)TIM2_WINDOW_GUARD_US);
   return pulse_ticks;
@@ -953,12 +953,10 @@ int main(void)
   printf("[TIM2][NVIC] Before Start_IT: TIM2_IRQn=%d enabled=%lu\r\n",
          TIM2_IRQn, (unsigned long)((nvic_iser0 & tim2_bit) ? 1 : 0));
   
-  HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);  // CH1 с прерыванием Compare Match
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+  /* TIM2 не управляет DMA: запускаем только генерацию маркера на CH3 (PA2).
+     Прерывания TIM2 отключены для стабильности. */
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
-  
-  __HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);
-  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_Base_Start(&htim2);
   
   // ДИАГНОСТИКА: проверка после запуска
   nvic_iser0 = NVIC->ISER[TIM2_IRQn >> 5];
@@ -1027,6 +1025,8 @@ int main(void)
            (unsigned long)TIM2->CR1, (unsigned long)TIM2->CNT, 
            (unsigned long)TIM2->ARR, (unsigned long)TIM2->SR, (unsigned long)TIM2->DIER);
   }
+
+  /* DEBUG dumps отключены: TIM2 больше не управляет DMA, а вывод s_frame_buffer_idx в COM4 шумит. */
 
   // Отложенный лог из TIM6 (убран printf из ISR)
   if (tim6_led_toggled_flag) { tim6_led_toggled_flag = 0; PROG('L'); }
@@ -1817,7 +1817,8 @@ static void MX_TIM2_Init(void)
     /* Pulse = 4800 µs (из 5000 µs периода) → ADC работает ≈4.8ms, останавливается ~0.2ms.
       1200 samples @ ~275kHz ≈ 4.36ms — теперь точно помещаются без усечения. */
     sConfigOC.Pulse = 4800;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  /* Инверсия TIM2_CH1 (PA0): раньше был инверсный уровень, вернём его через полярность. */
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
@@ -1834,7 +1835,11 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+    /* TIM2_CH3 (PA2): меандр 50% для разделения even/odd.
+      PA2=HIGH → even (parity=0), PA2=LOW → odd (parity=1). */
+    sConfigOC.OCMode = TIM_OCMODE_PWM1;
+    sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+    sConfigOC.Pulse = 2500;  // 50% при Period=4999
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
   {
     Error_Handler();
@@ -1975,7 +1980,7 @@ static void MX_TIM15_Init(void)
   htim15.Instance = TIM15;
   htim15.Init.Prescaler = 0;     // Без предделителя: 275 MHz тактовая
   htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim15.Init.Period = 1145;     // 275 MHz / (1145+1) = 240.0 kHz UPDATE для 600 samples @ 400 Hz буферов
+  htim15.Init.Period = 1145;     // 275 MHz / (1145+1) = 240.0 kHz UPDATE (fs_hz профиля; с небольшим запасом по N)
   htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim15.Init.RepetitionCounter = 0;
   htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -2162,10 +2167,12 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PA1 */
   GPIO_InitStruct.Pin = GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    /* PA1 должен быть принудительно в 0 (логический 0):
+      не используем TIM2_CH2 на PA1, держим как GPIO low. */
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PA2 */
@@ -2177,6 +2184,14 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
+  /* PA3: логический маркер (toggle на каждый опубликованный буфер/кадр) */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = GPIO_PIN_3;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   // Настройка RST дисплея и подсветки как GPIO до старта PWM
   GPIO_InitStruct.Pin = LCD_RST_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -2225,12 +2240,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   }
   
   if (htim->Instance == TIM2) {
-    /* TIM2 Period Elapsed срабатывает когда CNT достигает ARR (конец периода 400Hz).
-       В этот момент ADC/DMA буфер полностью заполнен и готов к переключению. */
-    tim2_irq_counter++;  /* Счётчик для LCD частоты */
-    
-    extern void adc_stream_tim2_switch_buffers(void);
-    adc_stream_tim2_switch_buffers();
+    /* TIM2 больше НЕ управляет DMA/переключением буферов.
+       TIM2 используется как стабильный генератор/маркер (например, TIM2_CH3 на PA2). */
+    tim2_irq_counter++;  /* может использоваться для LCD/диагностики */
   }
   else if (htim->Instance == TIM6) {
     // TIM6: периодический тик для watchdog и USB vendor task
@@ -2250,7 +2262,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 /* Старый PWM Pulse Finished callback - не используется */
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
-  (void)htim; // Suppress unused warning
+  if (!htim) return;
+  /* TIM2 PWM callbacks больше не используются для управления DMA */
 }
 
 // Callback по завершении приёма байта (USART1 RX interrupt)

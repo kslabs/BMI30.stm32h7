@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stddef.h>  // для offsetof
 
 // --- Новая секция: глобальные счётчики по спецификации ---
 static uint32_t g_pair_seq = 0;              // seq стереопары (оба кадра делят одно значение)
@@ -103,6 +104,8 @@ void usb_stream_send_test_frame(void) {
 static uint16_t *s_frame_ch0 = NULL; // ADC1 буфер (логически ADC0)
 static uint16_t *s_frame_ch1 = NULL; // ADC2 буфер (логически ADC1)
 static uint16_t  s_frame_samples = 0; // полное количество выборок
+static uint32_t  s_frame_seq = 0;     // seq текущего кадра (для получения parity)
+static uint32_t  s_frame_ring_seq = 0; // ring buffer seq из adc_stream (для правильного parity из s_buffer_parity[])
 static uint8_t   s_next_channel_to_send = 0; // 0 -> отправим ADC0, 1 -> ADC1
 static uint8_t   s_frame_active = 0;
 
@@ -113,31 +116,51 @@ static uint16_t crc16_buf(const uint8_t* data, size_t len){ uint16_t crc=0xFFFFu
 static uint8_t try_send_one_adc_frame(void){
     if (!s_frame_active) return 0;
     uint8_t ch = s_next_channel_to_send; // 0 или 1
+    
+    // Каждый канал использует СВОЙ seq счётчик для parity
+    static uint32_t s_frame_seq_ch0 = 0;
+    static uint32_t s_frame_seq_ch1 = 0;
+    uint32_t current_seq = (ch == 0) ? s_frame_seq_ch0++ : s_frame_seq_ch1++;
+    
     // Формируем заголовок
     vendor_frame_hdr_t hdr; memset(&hdr,0,sizeof(hdr));
     hdr.magic = 0xA55A; hdr.version = 1; hdr.flags = (ch==0)? VFLAG_ADC0 : VFLAG_ADC1;
-    hdr.seq = g_pair_seq; // общий seq пары
+    // В протоколе v1 seq = отдельный счётчик кадров per ADC (по нему на хосте можно делать even/odd)
+    hdr.seq = current_seq;
     hdr.timestamp = HAL_GetTick();
     hdr.total_samples = s_frame_samples; // уже проверено / зафиксировано
     hdr.zone_count = 0; // пока не используем зоны
-    // Включаем CRC
+    hdr.reserved = 0;
+    // ВАЖНО: записываем parity из adc_stream (PA2 GPIO state) в reserved2
+    // Используем s_frame_ring_seq (ring buffer index), а не current_seq (per-ADC counter)!
+    hdr.reserved2 = (uint16_t)adc_get_buffer_parity(s_frame_ring_seq);
+
+    // CRC присутствует всегда для рабочих кадров
     hdr.flags |= VFLAG_CRC;
     hdr.crc16 = 0;
+    
     size_t payload_bytes = (size_t)s_frame_samples * 2u;
     size_t max_needed = sizeof(hdr) + payload_bytes + 64; // +паддинг
     static uint8_t txbuf[4096]; // с запасом
     if (max_needed > sizeof(txbuf)) return 0; // слишком большой (не должен происходить)
+    
     memcpy(txbuf, &hdr, sizeof(hdr));
+    
     const uint16_t *src = (ch==0)? s_frame_ch0 : s_frame_ch1;
     memcpy(txbuf + sizeof(hdr), src, payload_bytes);
-    // CRC по 30 байтам заголовка + payload
-    uint16_t crc = crc16_buf(txbuf, 30 + payload_bytes);
-    ((vendor_frame_hdr_t*)txbuf)->crc16 = crc;
+    
+    // CRC только по payload (согласно текущему хост-парсеру)
+    uint16_t crc = crc16_buf(txbuf + sizeof(hdr), payload_bytes);
+    
+    // Записываем CRC напрямую в байты (offset 30-31)
+    txbuf[30] = (uint8_t)(crc & 0xFF);
+    txbuf[31] = (uint8_t)((crc >> 8) & 0xFF);
     size_t total = sizeof(hdr) + payload_bytes;
     size_t pad = (64 - (total & 63u)) & 63u; if (pad){ memset(txbuf+total,0,pad); total += pad; }
     if (!usb_cdc_ll_write(txbuf, total)) return 0; // endpoint занят
     // Учёт
     if (ch==0) g_sent_adc0++; else g_sent_adc1++;
+    // s_frame_seq уже увеличен выше (line 119: current_seq = s_frame_seq++)
     // Переключение или завершение пары
     if (s_next_channel_to_send == 0){ s_next_channel_to_send = 1; }
     else { // пара завершена
@@ -162,7 +185,12 @@ uint8_t usb_stream_try_send_frame(void) {
     // Если нет активного кадра — попробуем взять новый из FIFO
     if (!s_frame_active){
         uint16_t *c0=NULL,*c1=NULL; uint16_t samples=0;
-        if (!adc_get_frame(&c0,&c1,&samples)) return 0; // нет данных
+        uint32_t pair_seq = 0;
+        // КРИТИЧНО: используем ПАРНЫЙ API, чтобы seq был в том же домене, что и s_frame_buffer_idx[]
+        if (!adc_get_frame_pair(&c0, &c1, &samples, &pair_seq)) return 0;
+        s_frame_seq = pair_seq;
+        s_frame_ring_seq = pair_seq;
+        
         // Фиксация размера
         if (g_locked_samples == 0){
             g_locked_samples = samples; // фиксируем
@@ -207,6 +235,21 @@ void usb_stream_on_rx_bytes(const uint8_t* data, size_t len) {
                 g_sent_adc0=g_sent_adc1=0; g_locked_samples=0;
                 g_dbg_partial_frame_abort=0; g_dbg_size_mismatch=0; s_frame_active=0; s_next_channel_to_send=0;
                 usb_stream_cfg()->streaming = 1;
+                
+                // ДИАГНОСТИКА: проверяем состояние DMA и ADC В МОМЕНТ START
+                printf("[START_DIAG] ADC1->CR=0x%08lX (ADEN=%lu ADSTART=%lu)\r\n",
+                       (unsigned long)ADC1->CR,
+                       (unsigned long)((ADC1->CR >> 0) & 1),
+                       (unsigned long)((ADC1->CR >> 2) & 1));
+                printf("[START_DIAG] DMA1_Stream0->CR=0x%08lX (EN=%lu TCIE=%lu) NDTR=%lu\r\n",
+                       (unsigned long)DMA1_Stream0->CR,
+                       (unsigned long)((DMA1_Stream0->CR >> 0) & 1),
+                       (unsigned long)((DMA1_Stream0->CR >> 4) & 1),
+                       (unsigned long)DMA1_Stream0->NDTR);
+                printf("[START_DIAG] DMA1_Stream0: M0AR=0x%08lX PAR=0x%08lX\r\n",
+                       (unsigned long)DMA1_Stream0->M0AR,
+                       (unsigned long)DMA1_Stream0->PAR);
+                
                 usb_stream_send_test_frame();
                 stream_send_ack(cmd);
                 // Попытка немедленной передачи если уже есть буферы

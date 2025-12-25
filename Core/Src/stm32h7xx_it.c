@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdint.h>
+#include <stdio.h>  /* для printf в диагностике TIM2 IRQ */
 #include "lcd.h" // добавлено для вывода на экран при HardFault
 extern volatile uint32_t systick_heartbeat; // добавлено: глобальный счётчик из main.c
 /* Прототип низкоуровневого вывода UART1 из main.c */
@@ -273,7 +274,12 @@ void DMA1_Stream1_IRQHandler(void)
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
-
+  static uint8_t first_irq = 1;
+  if (first_irq) {
+    printf("[TIM2][IRQ] FIRST IRQ! SR=0x%08lX CNT=%lu\r\n", 
+           (unsigned long)TIM2->SR, (unsigned long)TIM2->CNT);
+    first_irq = 0;
+  }
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
@@ -356,8 +362,85 @@ void HardFault_Capture(uint32_t *stack_addr)
   hardfault_bfar = SCB->BFAR;
   hardfault_mmfar= SCB->MMFAR;
   hardfault_active = 1;
-  // Пытаемся вывести на LCD (если инициализирован). Даже если нет — SPI просто не даст эффекта.
+  
+  // ========== ВЫВОД ДИАГНОСТИКИ В COM4 (USART1) ==========
+  // Используем printf который перенаправлен на huart1 в syscalls.c
+  printf("\r\n");
+  printf("======================================================================\r\n");
+  printf("                       *** HARDFAULT EXCEPTION ***\r\n");
+  printf("======================================================================\r\n");
+  printf("\r\n");
+  printf("[STACK REGISTERS]\r\n");
+  printf("  R0  = 0x%08lX\r\n", hardfault_r0);
+  printf("  R1  = 0x%08lX\r\n", hardfault_r1);
+  printf("  R2  = 0x%08lX\r\n", hardfault_r2);
+  printf("  R3  = 0x%08lX\r\n", hardfault_r3);
+  printf("  R12 = 0x%08lX\r\n", hardfault_r12);
+  printf("  LR  = 0x%08lX  (return address)\r\n", hardfault_lr);
+  printf("  PC  = 0x%08lX  (fault address)\r\n", hardfault_pc);
+  printf("  PSR = 0x%08lX\r\n", hardfault_psr);
+  printf("\r\n");
+  printf("[FAULT STATUS REGISTERS]\r\n");
+  printf("  CFSR  = 0x%08lX  (Configurable Fault Status Register)\r\n", hardfault_cfsr);
+  printf("  HFSR  = 0x%08lX  (HardFault Status Register)\r\n", hardfault_hfsr);
+  printf("  BFAR  = 0x%08lX  (Bus Fault Address Register)\r\n", hardfault_bfar);
+  printf("  MMFAR = 0x%08lX  (MemManage Fault Address Register)\r\n", hardfault_mmfar);
+  printf("\r\n");
+  
+  // Расшифровка CFSR (объединяет MMFSR, BFSR, UFSR)
+  printf("[FAULT ANALYSIS]\r\n");
+  uint32_t mmfsr = hardfault_cfsr & 0xFF;           // MemManage [7:0]
+  uint32_t bfsr  = (hardfault_cfsr >> 8) & 0xFF;    // BusFault [15:8]
+  uint32_t ufsr  = (hardfault_cfsr >> 16) & 0xFFFF; // UsageFault [31:16]
+  
+  if (mmfsr) {
+    printf("  MemManage Fault (MMFSR=0x%02lX):\r\n", mmfsr);
+    if (mmfsr & 0x01) printf("    - IACCVIOL: Instruction access violation\r\n");
+    if (mmfsr & 0x02) printf("    - DACCVIOL: Data access violation\r\n");
+    if (mmfsr & 0x08) printf("    - MUNSTKERR: Unstacking error\r\n");
+    if (mmfsr & 0x10) printf("    - MSTKERR: Stacking error\r\n");
+    if (mmfsr & 0x20) printf("    - MLSPERR: FP lazy state preservation\r\n");
+    if (mmfsr & 0x80) printf("    - MMARVALID: MMFAR contains valid address (0x%08lX)\r\n", hardfault_mmfar);
+  }
+  
+  if (bfsr) {
+    printf("  Bus Fault (BFSR=0x%02lX):\r\n", bfsr);
+    if (bfsr & 0x01) printf("    - IBUSERR: Instruction bus error\r\n");
+    if (bfsr & 0x02) printf("    - PRECISERR: Precise data bus error\r\n");
+    if (bfsr & 0x04) printf("    - IMPRECISERR: Imprecise data bus error\r\n");
+    if (bfsr & 0x08) printf("    - UNSTKERR: Unstacking error\r\n");
+    if (bfsr & 0x10) printf("    - STKERR: Stacking error\r\n");
+    if (bfsr & 0x20) printf("    - LSPERR: FP lazy state preservation\r\n");
+    if (bfsr & 0x80) printf("    - BFARVALID: BFAR contains valid address (0x%08lX)\r\n", hardfault_bfar);
+  }
+  
+  if (ufsr) {
+    printf("  Usage Fault (UFSR=0x%04lX):\r\n", ufsr);
+    if (ufsr & 0x0001) printf("    - UNDEFINSTR: Undefined instruction\r\n");
+    if (ufsr & 0x0002) printf("    - INVSTATE: Invalid state\r\n");
+    if (ufsr & 0x0004) printf("    - INVPC: Invalid PC load\r\n");
+    if (ufsr & 0x0008) printf("    - NOCP: No coprocessor\r\n");
+    if (ufsr & 0x0010) printf("    - STKOF: Stack overflow\r\n");
+    if (ufsr & 0x0100) printf("    - UNALIGNED: Unaligned access\r\n");
+    if (ufsr & 0x0200) printf("    - DIVBYZERO: Divide by zero\r\n");
+  }
+  
+  if (hardfault_hfsr & 0x40000000) {
+    printf("  FORCED: HardFault escalated from configurable fault\r\n");
+  }
+  if (hardfault_hfsr & 0x80000000) {
+    printf("  DEBUGEVT: Debug event\r\n");
+  }
+  
+  printf("\r\n");
+  printf("======================================================================\r\n");
+  printf("System halted. LED will blink to indicate HardFault state.\r\n");
+  printf("======================================================================\r\n");
+  printf("\r\n");
+  
+  // Пытаемся вывести на LCD (если инициализирован)
   HardFault_Display();
+  
   // Мигание LED для индикации HardFault
   while(1){
     HAL_GPIO_TogglePin(Led_Test_GPIO_Port, Led_Test_Pin);

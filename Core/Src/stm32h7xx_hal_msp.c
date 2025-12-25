@@ -125,7 +125,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
   /* Use 16-bit alignment for ADC DMA transfers */
   hdma_adc1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
   hdma_adc1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-    hdma_adc1.Init.Mode = DMA_NORMAL;  /* NORMAL: останавливается после TC, требует перезапуска */
+    hdma_adc1.Init.Mode = DMA_NORMAL;  /* NORMAL: перезапуск в TC callback для 400Hz */
     hdma_adc1.Init.Priority = DMA_PRIORITY_HIGH;  /* HIGH: приоритет DMA */
     hdma_adc1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
     if (HAL_DMA_Init(&hdma_adc1) != HAL_OK)
@@ -169,7 +169,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
   /* Use 16-bit alignment for ADC DMA transfers */
   hdma_adc2.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
   hdma_adc2.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-    hdma_adc2.Init.Mode = DMA_NORMAL;  /* NORMAL: останавливается после TC, требует перезапуска */
+    hdma_adc2.Init.Mode = DMA_NORMAL;  /* NORMAL: перезапуск в TC callback для 400Hz */
     hdma_adc2.Init.Priority = DMA_PRIORITY_HIGH;  /* HIGH: приоритет DMA */
     hdma_adc2.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
     if (HAL_DMA_Init(&hdma_adc2) != HAL_OK)
@@ -548,10 +548,10 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     __HAL_RCC_GPIOA_CLK_ENABLE();
     /**TIM2 GPIO Configuration
     PA0     ------> TIM2_CH1
-    PA1     ------> TIM2_CH2
     PA2     ------> TIM2_CH3
+    (PA1 не используется как TIM2_CH2: удерживаем PA1 в GPIO low)
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2;
+    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_2;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
