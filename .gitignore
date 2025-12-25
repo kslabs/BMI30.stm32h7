@@ -8,6 +8,8 @@ Debug/**/*.list
 Debug/**/*.bin
 Debug/**/*.hex
 Debug/**/*.log
+Debug/*.txt
+Debug/*.out
 
 # Локальные логи/выводы VS Code
 .vscode/*.log
@@ -32,3 +34,8 @@ __pycache__/
 
 # Локальные картинки (захваты/плоты)
 adc_waveforms.png
+
+# Локальные текстовые логи (не для коммитов)
+boot_log_latest.txt
+gui_debug.txt
+host_spike_log.txt
