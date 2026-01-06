@@ -78,6 +78,11 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 /* Новый режим выбора каналов: 0=A-only, 1=B-only, 2=both */
 #define VND_CMD_SET_CHMODE       0x19u /* payload: u8 mode (0=A-only, 1=B-only, 2=both) */
 
+/* Режимы стриминга (поведение выбора кадров/окна) */
+#define VND_CMD_SET_STREAM_MODE  0x1Au /* payload: u8 mode (0=latest(full, lossy), 1=lossless ROI window) */
+#define VND_STREAM_MODE_LATEST        0u
+#define VND_STREAM_MODE_LOSSLESS_ROI  1u
+
 /* Параметры */
 #define VND_DEFAULT_TEST_SAMPLES   80u
 #define VND_DEBUG_FORCE_STAT_INTERVAL_MS 200u // было 100
@@ -195,6 +200,9 @@ volatile uint8_t vnd_tx_kick = 0;
 
 /* Асинхронный режим передачи: 0 = строгие пары A->B (по умолчанию), 1 = A/B независимы */
 static volatile uint8_t async_mode = 0;
+/* Флаг: хост явно задавал async_mode через SET_ASYNC_MODE.
+    Нужен, чтобы START не перетирал настройку и можно было включать парный/ROI режим. */
+static volatile uint8_t async_mode_host_set = 0;
 /* Режим каналов: 0=A-only, 1=B-only, 2=both (default) */
 static volatile uint8_t vnd_ch_mode = 2;
 
@@ -260,6 +268,11 @@ static uint8_t diag_b_buf[VND_FRAME_MAX_SIZE];
 static uint32_t diag_prepared_seq = 0xFFFFFFFFu;
 static uint32_t diag_current_pair_seq = 0xFFFFFFFFu;
 static uint16_t win_start0 = 0, win_len0 = 0, win_start1 = 0, win_len1 = 0;
+
+/* Текущий режим стриминга (по умолчанию оставляем текущий "последний буфер") */
+static volatile uint8_t vnd_stream_mode = VND_STREAM_MODE_LATEST;
+
+
 
 /* === FPS измерение === */
 static uint32_t fps_pair_count = 0;       /* Кол-во завершённых пар с момента старта измерения */
@@ -1106,8 +1119,7 @@ uint8_t vnd_is_streaming(void){ return streaming; }
 static void vnd_prepare_pair(void)
 {
     uint32_t t_start = get_us_approx(); /* Начало измерения */
-    
-    
+
     dbg_prepare_calls++;
     /* РАСШИРЕНИЕ: используем кольцо пар (multi-slot) для минимизации потерь.
        Перебираем следующий свободный slot, если текущий уже READY/SENDING. */
@@ -1149,9 +1161,61 @@ static void vnd_prepare_pair(void)
         }
     }
 #else
-     /* ПОЛИТИКА last-buffer-wins: выбираем САМЫЙ ПОСЛЕДНИЙ полный кадр и пропускаем старые.
-         Это повышает визуальную частоту при ограниченной пропускной способности USB. */
+    /* Два режима:
+       0) LATEST (как сейчас): "последний заполненный буфер", пропуски допустимы.
+       1) LOSSLESS_ROI: строго по FIFO (без пропусков на стороне прошивки), но отправляем только окно ROI.
+          Окно задаётся win_start0/win_len0; для требуемого режима по умолчанию используем 280..480 (200). */
+    if (vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI)
     {
+        /* Берём следующий кадр строго по очереди (A+B синхронно по DMA seq) */
+        if(!adc_get_frame_pair(&ch1, &ch2, &samples, &pair_seq)){
+            return;
+        }
+        /* ROI окно */
+        uint16_t roi_start = win_start0;
+        uint16_t roi_len   = win_len0;
+        if(roi_len == 0u){ roi_start = 280u; roi_len = 200u; }
+        if(roi_len > VND_MAX_SAMPLES) roi_len = VND_MAX_SAMPLES;
+        if(samples < (uint16_t)(roi_start + roi_len)){
+            /* Профиль/размер кадра не подходит под ROI — ждём корректного кадра */
+            return;
+        }
+        /* Лочим формат кадра на ROI длину (в этом режиме всегда 200) */
+        if(cur_samples_per_frame != roi_len){
+            cur_samples_per_frame = roi_len;
+            cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)cur_samples_per_frame * 2u);
+        }
+
+
+
+        /* Смещаем указатели на начало ROI. Для staging A делаем локальный снапшот ROI, чтобы DMA/TC не перезаписал. */
+        if(roi_start){
+            #if ADC_USB_STAGE_ENABLE
+            __disable_irq();
+            memcpy(stage_copy, usb_stage_bufA + roi_start, (uint32_t)roi_len * sizeof(uint16_t));
+            __enable_irq();
+            ch1 = stage_copy;
+            #else
+            ch1 = ch1 + roi_start;
+            #endif
+            ch2 = ch2 + roi_start;
+        } else {
+            #if ADC_USB_STAGE_ENABLE
+            __disable_irq();
+            memcpy(stage_copy, usb_stage_bufA, (uint32_t)roi_len * sizeof(uint16_t));
+            __enable_irq();
+            ch1 = stage_copy;
+            #endif
+        }
+
+        /* В ROI режиме не используем precomputed CRC из staging (оно было для полного кадра). */
+        crc_a = 0; crc_seq = 0;
+        samples = cur_samples_per_frame;
+    }
+    else
+    {
+        /* ПОЛИТИКА last-buffer-wins: выбираем САМЫЙ ПОСЛЕДНИЙ полный кадр и пропускаем старые.
+            Это повышает визуальную частоту при ограниченной пропускной способности USB. */
         // Читаем s_next_ring_index и отслеживаем изменения
         extern volatile uint32_t s_next_ring_index;
         static uint32_t last_current = 0xFFFFFFFF;
@@ -1254,11 +1318,17 @@ static void vnd_prepare_pair(void)
     f0->samples = f1->samples = use_samples; 
     /* Сохраняем индекс DMA (seq/rd) для привязки отображения на хосте */
     f0->dma_seq = f1->dma_seq = pair_seq;
-    /* CRC для контроля целостности (A — из staging, если доступно; B — пересчитываем из копии) */
-    #if !ADC_USB_STAGE_ENABLE
-    f0->crc16 = vnd_crc16_ccitt(f0->buf + VND_FRAME_HDR_SIZE, (uint32_t)use_samples * 2u);
-    f0->crc_seq = frame_rd_seq; /* ближайшее доступное значение */
-    #endif
+    /* CRC для контроля целостности.
+       В ROI режиме считаем CRC всегда по фактическому payload (staging CRC относится к полному кадру). */
+    if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
+        f0->crc16 = vnd_crc16_ccitt(f0->buf + VND_FRAME_HDR_SIZE, (uint32_t)use_samples * 2u);
+        f0->crc_seq = pair_seq;
+    } else {
+        #if !ADC_USB_STAGE_ENABLE
+        f0->crc16 = vnd_crc16_ccitt(f0->buf + VND_FRAME_HDR_SIZE, (uint32_t)use_samples * 2u);
+        f0->crc_seq = frame_rd_seq; /* ближайшее доступное значение */
+        #endif
+    }
     f1->crc16 = vnd_crc16_ccitt(f1->buf + VND_FRAME_HDR_SIZE, (uint32_t)use_samples * 2u);
     f1->crc_seq = f0->crc_seq;
     /* seq в заголовке привязан к последовательности DMA (pair_seq), одинаковый для A и B */
@@ -1294,9 +1364,27 @@ static void vnd_build_frame(ChanFrame *cf)
     uint32_t total = VND_FRAME_HDR_SIZE + payload_len;
     vnd_frame_hdr_t *h = (vnd_frame_hdr_t*)cf->buf;
     
-    h->magic = 0xA55A; h->ver = 0x01; h->flags = (cf->flags & VND_FLAGS_ADC0) ? 0x01 : 0x02; h->seq = cf->seq; h->total_samples = (uint16_t)cf->samples;
-    VND_LOG("BUILD_FRAME cf_seq=%lu flags=0x%02X samples=%u", (unsigned long)cf->seq, (unsigned)h->flags, (unsigned)cf->samples);
-    h->zone_count = 0; h->zone1_offset = 0; h->zone1_length = 0; h->reserved = cf->dma_seq;
+    h->magic = 0xA55A;
+    h->ver = 0x01;
+    h->flags = (cf->flags & VND_FLAGS_ADC0) ? 0x01 : 0x02;
+    h->seq = cf->seq;
+    h->total_samples = (uint16_t)cf->samples;
+
+    /* Метаданные ROI для хоста:
+       - В режиме LOSSLESS_ROI передаём только окно [win_start0 : win_start0+samples)
+       - total_samples = samples (обычно 200)
+       - zone1_offset/zone1_length позволяют хосту рисовать ось X как 280..479, а не 0..199
+    */
+    if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
+        h->zone_count = 1;
+        h->zone1_offset = (uint32_t)win_start0;
+        h->zone1_length = (uint32_t)cf->samples;
+    } else {
+        h->zone_count = 0;
+        h->zone1_offset = 0;
+        h->zone1_length = 0;
+    }
+    h->reserved = cf->dma_seq;
     
      /* reserved2: buffer_index (0-7) для GUI. Даже/нечёт можно получить как (buffer_index & 1). */
      h->reserved2 = (uint16_t)(adc_get_buffer_parity(cf->dma_seq) & 0x07u);
@@ -1371,19 +1459,47 @@ static int vnd_async_try_tx(void)
             synth = 1;
         }
         if(samples){
-            if(cur_samples_per_frame == 0){
-                /* Лочим текущий формат по первому пришедшему размеру (реальному или синтетическому) */
-                uint16_t eff = samples;
-                if(vnd_frame_samples_req && vnd_frame_samples_req < eff) eff = vnd_frame_samples_req;
-                if(vnd_trunc_samples && vnd_trunc_samples < eff) eff = vnd_trunc_samples;
-                if(eff > VND_MAX_SAMPLES) eff = VND_MAX_SAMPLES;
-                cur_samples_per_frame = eff;
-                cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)eff*2u);
-                cdc_logf("FRAME_LOCK ch=%u adc_samp=%u req=%u trunc=%u -> eff=%u", ch, samples, vnd_frame_samples_req, vnd_trunc_samples, eff);
+            /* ROI: берём строго окно [win_start0 : win_start0+win_len0) из DMA-буфера */
+            uint16_t roi_start = 0;
+            uint16_t roi_len = 0;
+            if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
+                roi_start = win_start0;
+                roi_len   = win_len0;
+                if(roi_len == 0u){ roi_start = 280u; roi_len = 200u; }
+                if(roi_len > VND_MAX_SAMPLES) roi_len = VND_MAX_SAMPLES;
+                if(!synth){
+                    /* Если профиль не подходит под ROI — не шлём «не тот» кусок */
+                    if(samples < (uint16_t)(roi_start + roi_len)){
+                        continue;
+                    }
+                }
+                /* В ROI режиме формат фиксирован длиной окна */
+                cur_samples_per_frame = roi_len;
+                cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)roi_len * 2u);
+            } else {
+                if(cur_samples_per_frame == 0){
+                    /* Лочим текущий формат по первому пришедшему размеру (реальному или синтетическому) */
+                    uint16_t eff = samples;
+                    if(vnd_frame_samples_req && vnd_frame_samples_req < eff) eff = vnd_frame_samples_req;
+                    if(vnd_trunc_samples && vnd_trunc_samples < eff) eff = vnd_trunc_samples;
+                    if(eff > VND_MAX_SAMPLES) eff = VND_MAX_SAMPLES;
+                    cur_samples_per_frame = eff;
+                    cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)eff*2u);
+                    cdc_logf("FRAME_LOCK ch=%u adc_samp=%u req=%u trunc=%u -> eff=%u", ch, samples, vnd_frame_samples_req, vnd_trunc_samples, eff);
+                }
             }
+
             uint16_t eff = cur_samples_per_frame;
-            if(!synth && eff > samples) eff = samples; /* защита, если размер профиля уменьшился внезапно */
+            if(vnd_stream_mode != VND_STREAM_MODE_LOSSLESS_ROI){
+                if(!synth && eff > samples) eff = samples; /* защита, если размер профиля уменьшился внезапно */
+            }
             if(eff > VND_MAX_SAMPLES) eff = VND_MAX_SAMPLES;
+
+            /* Базовый указатель источника (ROI смещает начало) */
+            uint16_t *src = abuf;
+            if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI && !synth){
+                src = abuf + roi_start;
+            }
             
             /* ДИАГНОСТИКА: проверяем последние 100 сэмплов DMA буфера на нули (только реальный буфер) */
             static uint32_t zero_check_count = 0; (void)zero_check_count;
@@ -1400,16 +1516,18 @@ static int vnd_async_try_tx(void)
                 last_zero_check_ms = now_check;
             }
             
-            /* Если это staging A, скопируем под защитой IRQ в локальный снапшот */
+            /* Если это staging, скопируем под защитой IRQ в локальный снапшот.
+               В ROI режиме копируем только окно, чтобы гарантировать корректный срез. */
             if(!synth && ADC_USB_STAGE_ENABLE){
                 __disable_irq();
-                uint16_t stage_ns = samples; if(stage_ns > MAX_FRAME_SAMPLES) stage_ns = MAX_FRAME_SAMPLES;
+                uint16_t stage_ns = eff;
+                if(stage_ns > MAX_FRAME_SAMPLES) stage_ns = MAX_FRAME_SAMPLES;
                 if(ch==0){
-                    memcpy(stage_copy_async, abuf, stage_ns * sizeof(uint16_t));
-                    abuf = stage_copy_async;
+                    memcpy(stage_copy_async, src, stage_ns * sizeof(uint16_t));
+                    src = stage_copy_async;
                 } else {
-                    memcpy(stage_copy_async_b, abuf, stage_ns * sizeof(uint16_t));
-                    abuf = stage_copy_async_b;
+                    memcpy(stage_copy_async_b, src, stage_ns * sizeof(uint16_t));
+                    src = stage_copy_async_b;
                 }
                 __enable_irq();
             }
@@ -1419,7 +1537,7 @@ static int vnd_async_try_tx(void)
                 uint16_t v = (uint16_t)(i + 1);
                 if(ch == 1){ v = (uint16_t)(((i + 1u) * 2u + 512u) & 0x0FFFu); }
 #else
-                uint16_t v = synth ? (uint16_t)(i + 1) : abuf[i];
+                uint16_t v = synth ? (uint16_t)(i + 1) : src[i];
 #if VND_ENABLE_ADC_SANITIZE
                 if(!synth){
                     if(v > 4095u){ dbg_gt4095_ch[ch]++; /* считаем, но не правим */ }
@@ -1432,7 +1550,14 @@ static int vnd_async_try_tx(void)
             vnd_frame_hdr_t *h = (vnd_frame_hdr_t*)tf[ch].buf;
             h->magic = 0xA55A; h->ver = 0x01; h->flags = (ch==0)?0x01:0x02; 
             h->seq = dma_seq;  /* seq привязан к DMA-кадру */
-            h->timestamp = HAL_GetTick(); h->total_samples = eff; h->zone_count=0; h->zone1_offset=0; h->zone1_length=0;
+            h->timestamp = HAL_GetTick(); h->total_samples = eff;
+            if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
+                h->zone_count = 1;
+                h->zone1_offset = (uint32_t)win_start0;
+                h->zone1_length = (uint32_t)eff;
+            } else {
+                h->zone_count=0; h->zone1_offset=0; h->zone1_length=0;
+            }
             /* Пробрасываем индекс DMA-буфера канала, чтобы хост мог отрисовывать строго в порядке заполнения DMA */
             h->reserved  = dma_seq;
             
@@ -2774,10 +2899,13 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 vnd_strict_pairing = 0;
                 cdc_logf("START: TEST mode forces async=0 (pair pipeline)");
 #else
-                async_mode = 1;
-                /* Ранее мы временно отключали async ради диагностики. Возвращаем по умолчанию async=1
-                    для максимальной скорости. Для отладки можно принудительно выключить через команду
-                    SET_ASYNC_MODE(0) с хоста. */
+                /* По умолчанию хотим async=1 для максимальной скорости, но START не должен перетирать
+                   явную настройку хоста (SET_ASYNC_MODE) и режим LOSSLESS_ROI. */
+                if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
+                    async_mode = 0;
+                } else if(!async_mode_host_set){
+                    async_mode = 1;
+                }
 #endif
                 dbg_last_forced_stat_ms = start_cmd_ms;
                 vnd_tx_ready = 1; vnd_ep_busy = 0; vnd_inflight = 0;
@@ -3002,9 +3130,6 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             uint32_t ccer = TIM2->CCER;
             ccer ^= TIM_CCER_CC3P;
             TIM2->CCER = ccer;
-            uint8_t inv = (ccer & TIM_CCER_CC3P) ? 1u : 0u;
-            printf("[VND] TIM2_CH3 invert=%u CCER=0x%08lX\r\n", (unsigned)inv, (unsigned long)ccer);
-            cdc_logf("EVT TIM2_CH3_INV=%u", (unsigned)inv);
         }
         break;
 
@@ -3017,6 +3142,34 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 win_start1 = (uint16_t)(data[5] | (data[6] << 8));
                 win_len1   = (uint16_t)(data[7] | (data[8] << 8));
                 VND_LOG("SET_WINDOWS s0=%u l0=%u s1=%u l1=%u", win_start0, win_len0, win_start1, win_len1);
+                vnd_update_lcd_params();
+            }
+            break;
+
+        case VND_CMD_SET_STREAM_MODE:
+            if(len >= 2)
+            {
+                uint8_t m = data[1];
+                if(m > VND_STREAM_MODE_LOSSLESS_ROI) m = VND_STREAM_MODE_LATEST;
+                vnd_stream_mode = m;
+
+                /* LOSSLESS_ROI требует строгих A->B пар, поэтому принудительно выключаем async.
+                   Это делает переключение режима самодостаточным (GUI не обязан слать SET_ASYNC_MODE). */
+                if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
+                    async_mode = 0;
+                    async_mode_host_set = 1;
+                }
+
+                /* При смене режима сбрасываем lock размера кадра, чтобы избежать рассинхронизации формата. */
+                cur_samples_per_frame = 0;
+                cur_expected_frame_size = 0;
+
+                /* Для требуемого режима "lossless ROI" выставляем дефолтное окно 280..480 (200).
+                   Хост всё равно может переопределить через SET_WINDOWS. */
+                if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
+                    win_start0 = 280u; win_len0 = 200u;
+                    win_start1 = 0u;   win_len1 = 0u;
+                }
                 vnd_update_lcd_params();
             }
             break;
@@ -3063,6 +3216,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 cdc_logf("EVT SET_ASYNC ignored (test mode)");
 #else
                 async_mode = (mode & 0x01) ? 1 : 0;
+                async_mode_host_set = 1;
                 /* bit7 включает строгую парность (A&B на один seq); по умолчанию 0 = независимые каналы */
                 vnd_strict_pairing = (mode & 0x80) ? 1 : 0;
                 /* Запретить async при одноканальном режиме (A-only/B-only) для стабильности */

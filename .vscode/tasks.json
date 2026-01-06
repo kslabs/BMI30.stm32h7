@@ -738,21 +738,29 @@
 		{
 			"label": "Run quick status",
 			"type": "shell",
-			"command": "quick_status.cmd",
+			"command": ".\\quick_status.cmd",
 			"args": [],
+			"options": { "cwd": "${workspaceFolder}" },
 			"isBackground": false,
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true
+			},
 			"group": "none"
 		},
 		{
 			"label": "Run quick status (30s)",
 			"type": "shell",
-			"command": "quick_status.cmd",
+			"command": ".\\quick_status.cmd",
 			"args": ["--secs", "30"],
+			"options": { "cwd": "${workspaceFolder}" },
 			"isBackground": false,
 			"group": "none",
 			"presentation": {
 				"reveal": "always",
-				"panel": "shared"
+				"panel": "dedicated",
+				"clear": true
 			}
 		},
 		{
@@ -811,12 +819,12 @@
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope.py\" --ns 0 --profile 0 --watchdog" 
+				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope_optimized.py\" --ns 0 --profile 0 --watchdog" 
 			],
 			"isBackground": false,
 			"group": "none",
 			"presentation": {"reveal": "always", "panel": "shared"},
-			"detail": "Dual-channel auto ns (profile 0 full buffer); remove --single to show оба канала"
+			"detail": "Optimized oscilloscope (4 lines: A_even/A_odd/B_even/B_odd)"
 		},
 		{
 			"label": "Run GUI oscilloscope (optimized)",

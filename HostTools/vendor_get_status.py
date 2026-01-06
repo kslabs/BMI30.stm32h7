@@ -37,10 +37,28 @@ FLAG2_BITS = [
 def find_dev():
     d=usb.core.find(idVendor=VID,idProduct=PID)
     if d is None: raise SystemExit('device not found')
-    try: d.set_configuration()
-    except Exception: pass
-    try: usb.util.claim_interface(d, IF_NUM)
-    except Exception: pass
+    try:
+        d.set_configuration()
+    except Exception:
+        pass
+
+    # ВАЖНО: bulk-endpoints 0x03/0x83 доступны только на alt=1 для IF#2.
+    try:
+        if d.is_kernel_driver_active(IF_NUM):
+            d.detach_kernel_driver(IF_NUM)
+    except Exception:
+        pass
+
+    try:
+        d.set_interface_altsetting(interface=IF_NUM, alternate_setting=1)
+    except Exception:
+        # На некоторых системах set_interface_altsetting может бросать, если интерфейс уже в alt=1.
+        pass
+
+    try:
+        usb.util.claim_interface(d, IF_NUM)
+    except Exception:
+        pass
     return d
 
 def read_pkt(dev, timeout=300):
@@ -50,6 +68,20 @@ def read_pkt(dev, timeout=300):
         if getattr(e,'errno',None) in (110,10060):
             return None
         raise
+
+def ctrl_get_status(dev, timeout=300):
+    # Vendor IN (device->host). В прошивке GET_STATUS по EP0 разрешён всегда.
+    try:
+        data = dev.ctrl_transfer(0xC0, CMD_GET_STATUS, 0, 0, 64, timeout=timeout)
+        return bytes(data)
+    except usb.core.USBError as e:
+        if getattr(e,'errno',None) in (110,10060):
+            return None
+        raise
+
+def ctrl_send_nodata(dev, bRequest: int, timeout=300):
+    # Vendor OUT (host->device) без data stage.
+    dev.ctrl_transfer(0x40, bRequest, 0, 0, None, timeout=timeout)
 
 def parse_status(buf: bytes):
     if len(buf)<64 or buf[:4]!=b'STAT':
@@ -75,18 +107,37 @@ def main():
     ap.add_argument('--repeat',type=int,default=5)
     ap.add_argument('--interval',type=float,default=0.4)
     ap.add_argument('--start',action='store_true')
+    ap.add_argument('--stop',action='store_true')
+    ap.add_argument('--ctrl',action='store_true', help='Read STAT via EP0 control (reliable; ignores bulk gating)')
+    ap.add_argument('--bulk',action='store_true', help='Force bulk GET_STATUS (requires IF#2 alt=1; may be gated)')
     args=ap.parse_args()
     dev=find_dev()
+
+    use_bulk = bool(args.bulk)
+    use_ctrl = bool(args.ctrl) or not use_bulk
+
+    if args.stop:
+        # START/STOP по EP0 поддерживаются прошивкой, безопаснее bulk.
+        ctrl_send_nodata(dev, CMD_STOP)
+        print('STOP sent (CTRL)')
     if args.start:
-        dev.write(EP_OUT, bytes([CMD_START]))
-        print('START sent')
+        ctrl_send_nodata(dev, CMD_START)
+        print('START sent (CTRL)')
+
     for i in range(args.repeat):
-        dev.write(EP_OUT, bytes([CMD_GET_STATUS]))
-        t0=time.time(); pkt=None
-        while time.time()-t0 < 0.6:
-            p=read_pkt(dev, timeout=150)
-            if p is None: continue
-            if p[:4]==b'STAT': pkt=p; break
+        pkt=None
+        if use_bulk:
+            dev.write(EP_OUT, bytes([CMD_GET_STATUS]))
+            t0=time.time()
+            while time.time()-t0 < 0.6:
+                p=read_pkt(dev, timeout=150)
+                if p is None: continue
+                if p[:4]==b'STAT':
+                    pkt=p
+                    break
+
+        if pkt is None and use_ctrl:
+            pkt = ctrl_get_status(dev, timeout=300)
         if pkt is None:
             print(f'[{i}] STAT timeout')
         else:
@@ -96,6 +147,12 @@ def main():
             else:
                 print(f'[{i}] len={len(pkt)} cur_samples={st["cur_samples"]} produced_seq={st["produced_seq"]} sent0={st["sent0"]} sent1={st["sent1"]} tx_cplt={st["dbg_tx_cplt"]} test_frames={st["test_frames"]} flags2={hex(st["flags2"])} bits={st["flags2_bits"]}')
         time.sleep(args.interval)
+
+    try:
+        usb.util.release_interface(dev, IF_NUM)
+        usb.util.dispose_resources(dev)
+    except Exception:
+        pass
 
 if __name__=='__main__':
     main()

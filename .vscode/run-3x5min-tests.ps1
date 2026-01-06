@@ -64,7 +64,13 @@ function Invoke-Cmd([string]$cmd, [string]$arguments, [string]$wd, [switch]$LogO
     $proc = $null
     $code = $null
     try {
-      $proc = Start-Process -FilePath $cmd -ArgumentList $arguments -WorkingDirectory $resolvedWd -NoNewWindow -Wait -PassThru -ErrorAction Stop
+      $ts = (Get-Date -Format 'yyyyMMdd_HHmmss')
+      $safeName = (($cmd -replace '[\\/:*?"<>| ]','_') -replace '_+','_')
+      $outFile = Join-Path $PSScriptRoot ("last-3x5-stdout_{0}_{1}.log" -f $safeName, $ts)
+      $errFile = Join-Path $PSScriptRoot ("last-3x5-stderr_{0}_{1}.log" -f $safeName, $ts)
+      Write-Log ("[HOST][IO] stdout={0}" -f $outFile)
+      Write-Log ("[HOST][IO] stderr={0}" -f $errFile)
+      $proc = Start-Process -FilePath $cmd -ArgumentList $arguments -WorkingDirectory $resolvedWd -NoNewWindow -Wait -PassThru -ErrorAction Stop -RedirectStandardOutput $outFile -RedirectStandardError $errFile
       $code = $proc.ExitCode
     } catch {
       Write-Host ("[HOST][ERR] Failed to start process: {0} {1} -> {2}" -f $cmd, $arguments, $_.Exception.Message) -ForegroundColor Red
@@ -72,7 +78,13 @@ function Invoke-Cmd([string]$cmd, [string]$arguments, [string]$wd, [switch]$LogO
       return 127
     }
     if ($null -eq $code) { $code = 999 }
-    Write-Log ("[HOST][EXIT] code={0} out_len=- err_len=-" -f $code)
+    try {
+      $outLen = if ($outFile -and (Test-Path $outFile)) { (Get-Item $outFile).Length } else { 0 }
+      $errLen = if ($errFile -and (Test-Path $errFile)) { (Get-Item $errFile).Length } else { 0 }
+      Write-Log ("[HOST][EXIT] code={0} out_len={1} err_len={2}" -f $code, $outLen, $errLen)
+    } catch {
+      Write-Log ("[HOST][EXIT] code={0} out_len=? err_len=?" -f $code)
+    }
     return $code
   } catch {
     Write-Host ("[HOST][ERR] Invoke-Cmd exception: {0}" -f $_.Exception.Message) -ForegroundColor Red
@@ -115,10 +127,14 @@ try {
     Write-Host ("================ RUN {0}/{1} ================" -f $i, $Runs) -ForegroundColor Cyan
     # Throttle STAT polling inside host reader to reduce contention
     $env:VND_MIN_STAT_SEC = "0.5"
+    $summaryJson = Join-Path $PSScriptRoot ("last-3x5-summary-run{0}.json" -f $i)
+    try { if(Test-Path $summaryJson){ Remove-Item -Path $summaryJson -ErrorAction SilentlyContinue } } catch {}
+    Write-Log ("[HOST][SUMMARY_JSON] run={0} path={1}" -f $i, $summaryJson)
     $argsLine = "`"$ScriptPath`" --profile $ProfileId --status-mode $StatusMode --pairs 0 --window-sec $WindowSec --log-interval 5.0 --abort-no-rx-sec $AbortNoRxSec"
     if ($FrameSamples -gt 0) {
       $argsLine += " --frame-samples $FrameSamples"
     }
+    $argsLine += " --summary-json `"$summaryJson`""
     $tried = 0
     $ok = $false
     $attempts = @()
@@ -156,6 +172,22 @@ try {
       Write-Host ("[HOST] Stopping after failure.") -ForegroundColor Red
       Write-Host ("[HOST] See log: {0}" -f $global:RunLogPath) -ForegroundColor Yellow
       exit 1
+    }
+
+    # Emit a compact per-run summary from JSON (if present)
+    if (Test-Path $summaryJson) {
+      try {
+        $sj = Get-Content $summaryJson -Raw | ConvertFrom-Json
+        $line = ("[HOST][SUMMARY] run={0} elapsed={1}s A={2} B={3} z0A={4} z0B={5} timeouts={6} pipe_errors={7}" -f $i, $sj.elapsed_s, $sj.cnt_a, $sj.cnt_b, $sj.zero_a, $sj.zero_b, $sj.timeouts, $sj.pipe_errors)
+        Write-Host $line -ForegroundColor DarkGreen
+        Write-Log  $line
+      } catch {
+        Write-Host ("[HOST][WARN] Failed to parse summary JSON: {0}" -f $_.Exception.Message) -ForegroundColor Yellow
+        Write-Log  ("[HOST][WARN] Failed to parse summary JSON: {0}" -f $_.Exception.Message)
+      }
+    } else {
+      Write-Host ("[HOST][WARN] Summary JSON not found for run {0}: {1}" -f $i, $summaryJson) -ForegroundColor Yellow
+      Write-Log  ("[HOST][WARN] Summary JSON not found for run {0}: {1}" -f $i, $summaryJson)
     }
     # Between runs, gently kick WinUSB pipes and altsetting to avoid lingering stalls
     if ($i -lt $Runs) {

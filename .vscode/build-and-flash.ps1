@@ -44,7 +44,10 @@ if (Test-Path $MainO) {
 if ($CleanBuild) {
     Write-Host "[2/4] Clean build..." -ForegroundColor Yellow
     Push-Location $ProjectRoot
+    $oldEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"  # gcc пишет warning в stderr; не считаем это фатальным
     make -C Debug clean 2>&1 | Out-Null
+    $ErrorActionPreference = $oldEap
     Pop-Location
     Write-Host "  [OK] Clean completed" -ForegroundColor Green
 } else {
@@ -54,8 +57,11 @@ if ($CleanBuild) {
 # Step 3: Build
 Write-Host "[3/4] Building..." -ForegroundColor Yellow
 Push-Location $ProjectRoot
+$oldEap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"  # gcc warnings -> stderr, но сборка может быть успешной
 $buildOutput = make -C Debug all 2>&1 | Out-String
 $buildExit = $LASTEXITCODE
+$ErrorActionPreference = $oldEap
 Pop-Location
 
 if ($buildExit -ne 0) {
@@ -89,8 +95,11 @@ if (!(Test-Path $CubeProgrammer)) {
     exit 1
 }
 
+$oldEap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"  # CubeCLI тоже может писать в stderr без фатального кода
 $flashOutput = & $CubeProgrammer -c port=SWD freq=4000 -w $ElfFile -v -rst 2>&1 | Out-String
 $flashExit = $LASTEXITCODE
+$ErrorActionPreference = $oldEap
 
 if ($flashOutput -match "Download verified successfully") {
     Write-Host "  [OK] Flash verified successfully" -ForegroundColor Green

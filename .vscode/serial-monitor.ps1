@@ -52,7 +52,9 @@ while ($true) {
     $sp = New-Object System.IO.Ports.SerialPort $curPort, $Baud, 'None', 8, 'One'
     $sp.Handshake = [System.IO.Ports.Handshake]::None
   $sp.ReadTimeout = $ReadTimeoutMs
-    $sp.NewLine = "`r`n"
+    # Be tolerant: many firmwares print LF-only ('\n') or CRLF ('\r\n').
+    # If we set NewLine='\n', ReadLine will work for both; CR is trimmed below.
+    $sp.NewLine = "`n"
     $sp.Open()
     Write-Host ("[Serial] Opened {0} at {1} (8N1). Ctrl+C to exit." -f $sp.PortName, $Baud)
 
@@ -73,7 +75,7 @@ while ($true) {
             try { Remove-Item -Force $CmdFile -ErrorAction SilentlyContinue } catch {}
           }
         }
-        $line = $sp.ReadLine()
+        $line = $sp.ReadLine().TrimEnd("`r")
         # Print the line as-is; adjust if your firmware uses LF-only
         $toPrint = $true
         if (-not [string]::IsNullOrWhiteSpace($FilterRegex)) { $toPrint = ($line -match $FilterRegex) }
