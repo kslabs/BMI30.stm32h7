@@ -51,6 +51,10 @@ extern volatile uint32_t adc_ch_wr_seq[2];     // записано по кана
 extern volatile uint32_t adc_ch_rd_seq[2];     // выдано по каналам (main)
 extern volatile uint32_t adc_ch_overflow_drops[2]; // переполнения по каналам
 
+// LOSSLESS/BACKPRESSURE: при заполнении FIFO поток может быть поставлен на паузу (без потери кадров)
+extern volatile uint8_t  adc_stream_paused;
+extern volatile uint32_t adc_stream_pause_events;
+
 // ДИАГНОСТИКА: счётчики нулевых буферов для выявления проблем с ADC/триггером
 extern volatile uint32_t adc_ch_zero_buffers[2]; // количество буферов с полностью нулевым содержимым
 
@@ -90,10 +94,22 @@ HAL_StatusTypeDef adc_stream_restart(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a
 // НОВОЕ: получить кадр конкретного канала (0=A/ADC1, 1=B/ADC2). Возвращает 1 при успехе.
 // Вернуть кадр конкретного канала и его порядковый номер DMA (seq_out опционален)
 uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples, uint32_t *seq_out);
+
+// LOSSLESS: подтвердить (consume) кадр, который ранее был получен через adc_get_frame_ch (seq должен совпадать)
+uint8_t adc_consume_frame_ch(uint8_t ch, uint32_t seq);
 // УСТАРЕВШЕ: парный интерфейс для обратной совместимости
 uint8_t adc_get_frame(uint16_t **ch1, uint16_t **ch2, uint16_t *samples);
 // НОВОЕ: парный интерфейс + вернуть seq (pair seq = frame_rd_seq до инкремента)
 uint8_t adc_get_frame_pair(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, uint32_t *seq_out);
+
+// НОВОЕ: парный интерфейс строго из FIFO (adc1_buffers/adc2_buffers),
+// игнорирует ADC_USB_STAGE_ENABLE (usb_stage_bufA). Нужен для lossless ROI/AVG.
+uint8_t adc_get_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, uint32_t *seq_out);
+
+// НОВОЕ: peek последнего опубликованного кадра (FIFO), НЕ двигает frame_rd_seq.
+// Возвращает самый свежий кадр: seq = frame_wr_seq-1.
+// ВАЖНО: указатели валидны пока соответствующий FIFO слот не будет перезаписан.
+uint8_t adc_peek_latest_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, uint32_t *seq_out);
 void adc_stream_get_debug(adc_stream_debug_t *out);
 
 // Получить parity (чётность) буфера по seq (0=even, 1=odd) для 400Hz режима

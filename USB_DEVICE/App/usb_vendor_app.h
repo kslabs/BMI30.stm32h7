@@ -144,6 +144,32 @@ void vnd_generate_test_sawtooth(void);
 void vnd_report_fps_stats(void);
 void vnd_print_perf_stats(void);
 
+/* DC (AVG_ROI) persistence: counters for LCD/diagnostics */
+extern volatile uint32_t vnd_dc_save_ok_count;
+extern volatile uint32_t vnd_dc_save_fail_count;
+extern volatile uint32_t vnd_dc_save_last_ms;
+extern volatile uint8_t  vnd_dc_save_last_result; /* 0=none, 1=ok, 2=fail */
+
+/* Monotonic counter stored in Flash blob (loaded on boot, incremented on each save attempt). */
+extern volatile uint32_t vnd_dc_write_counter_public;
+
+/* DC (AVG_ROI) live state for LCD progress indicator */
+extern volatile uint8_t  vnd_dc_dirty_public;      /* 0/1: DC changed and pending save */
+extern volatile uint32_t vnd_dc_dirty_since_ms;    /* HAL_GetTick() when became dirty */
+extern volatile uint32_t vnd_dc_save_period_ms;    /* save period used by firmware */
+
+/* DC save diagnostics */
+extern volatile uint32_t vnd_dc_save_last_err;          /* HAL_FLASH_GetError() (if available) */
+extern volatile uint32_t vnd_dc_save_last_sector_error; /* sector_error from HAL_FLASHEx_Erase */
+extern volatile uint32_t vnd_dc_save_last_bank;         /* FLASH_BANK_1/2 */
+extern volatile uint32_t vnd_dc_save_last_sector;       /* FLASH_SECTOR_x */
+
+/* DC load diagnostics for LCD/debug
+    flags: bit0=loaded OK, bit1=erase_pending (journal tail corrupted or sector full) */
+extern volatile uint8_t  vnd_dc_load_flags_public;
+extern volatile uint16_t vnd_dc_loaded_crc16_public;
+extern volatile uint32_t vnd_dc_flash_next_off_public;
+
 #ifdef __cplusplus
 }
 #endif

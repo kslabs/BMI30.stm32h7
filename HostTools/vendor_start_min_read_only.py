@@ -46,7 +46,7 @@ def main():
         pass
     # Basic config: windows, rate, async=1, chmode=0(A-only)
     try:
-        payload = struct.pack('<BHHHH', 0x10, 100, 300, 700, 300)
+        payload = struct.pack('<BHHHH', 0x10, 280, 200, 280, 200)
         dev.write(OUT_EP, payload, timeout=1000)
     except Exception:
         pass

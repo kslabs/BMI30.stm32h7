@@ -31,7 +31,7 @@ try:
     time.sleep(0.15)
     # Configure windows minimally, then START
     try:
-        payload = struct.pack('<BHHHH', 0x10, 100, 300, 700, 300)
+        payload = struct.pack('<BHHHH', 0x10, 280, 200, 280, 200)
         dev.write(OUT_EP, payload, timeout=1000)
         print('[MIN] SET_WINDOWS sent')
         time.sleep(0.02)

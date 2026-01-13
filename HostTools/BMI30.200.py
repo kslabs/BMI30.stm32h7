@@ -1339,11 +1339,14 @@ class ScopeWindow:
 			self.avg20_enabled = False
 			self._switch_to_lossless_roi()
 		elif idx == 5:
-			# Кнопка 5: DC compensation (LOSSLESS_ROI + DC removal).
-			# Просили закрепить DC-компенсацию на "5", а следующие кнопки оставить под будущие алгоритмы.
+			# Кнопка 5: DC compensation на УСТРОЙСТВЕ.
+			# В прошивке DC (персистентный) гарантированно применяется в STREAM_MODE=2 (AVG_ROI).
+			# Поэтому на "5" переключаемся в AVG_ROI и выключаем host-side DC removal,
+			# чтобы не было двойной коррекции и путаницы "показывает/сохраняет не то".
+			self.dc_removal_enabled = False
 			self.avg20_enabled = False
-			self._switch_to_dc_removal_mode()
-			self._set_status("DC compensation: LOSSLESS_ROI + DC removal", hold_sec=3.0)
+			self._switch_to_avg_roi(avg_n=20)
+			self._set_status("DC compensation: AVG_ROI(device) + FW DC", hold_sec=3.0)
 		elif idx == 6:
 			# Кнопка 6+: зарезервировано под будущие алгоритмы.
 			# (оставляем как "пустую" команду, чтобы не ломать сохранение sel)
@@ -3193,7 +3196,10 @@ class ScopeWindow:
 			self._set_status(f"Power-cycle ошибка: {e}", hold_sec=3.0)
 
 	def _try_connect(self, first=False):
-		if self.num_group.checkedId() not in (1, 3):
+		# Разрешаем подключение для всех режимов, кроме 0 (остановка).
+		# Иначе автозапуск/режимы 4/5 (LOSSLESS_ROI/AVG_ROI) не смогут стартовать,
+		# и пользователю приходится "лечить" это ручным reset.
+		if self.num_group.checkedId() == 0:
 			return
 		if self._connecting or self.stream is not None:
 			return

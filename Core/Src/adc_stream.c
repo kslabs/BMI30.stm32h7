@@ -59,6 +59,7 @@ void adc_stream_stop(void) {
     frame_overflow_drops = 0;
     frame_backlog_max = 0;
     s_next_ring_index = 0;
+    adc_stream_paused = 0;
     ADC_LOGF("[ADC][STOP] DMA и ADC остановлены, буферы сброшены\r\n");
 }
 
@@ -244,6 +245,10 @@ volatile uint32_t adc_ch_wr_seq[2] = {0,0};     // записано буферо
 volatile uint32_t adc_ch_rd_seq[2] = {0,0};     // выдано потребителю по каналу
 volatile uint32_t adc_ch_overflow_drops[2] = {0,0}; // переполнения по каналу
 
+/* LOSSLESS/BACKPRESSURE: при заполнении FIFO поток ставится на паузу вместо дропа/перезаписи */
+volatile uint8_t  adc_stream_paused = 0;
+volatile uint32_t adc_stream_pause_events = 0;
+
 // ДИАГНОСТИКА: счётчики нулевых буферов (детектируем проблемы с ADC/триггером)
 volatile uint32_t adc_ch_zero_buffers[2] = {0,0}; // количество буферов с нулевым содержимым (по каналу A/B)
 
@@ -320,6 +325,18 @@ static inline void adc_marker_pa3_toggle(void)
         GPIOA->BSRR = (uint32_t)GPIO_PIN_3;
     }
 #endif
+}
+
+/* Привязка чет/нечет к уровню PA3.
+   Требование: PA3=1 -> EVEN, PA3=0 -> ODD.
+   Это позволяет синхронизировать even/odd с внешней амплитудной модуляцией,
+   даже если где-то «поплывёт» деление/маркер таймера.
+   Возвращаем parity bit: 0=even, 1=odd. */
+static inline uint8_t adc_parity_from_pa3(void)
+{
+    /* IDR — фактический уровень на ноге (без HAL, минимальные ресурсы) */
+    uint8_t pa3 = (GPIOA->IDR & GPIO_PIN_3) ? 1u : 0u;
+    return pa3 ? 0u : 1u;
 }
 
 /* Отметить готовность канала и, если пара на очередном индексе готова, опубликовать её */
@@ -820,7 +837,7 @@ uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples, uint32_t
         __enable_irq();
         return 0; // нет новых
     }
-    uint32_t seq = adc_ch_rd_seq[ch]++;
+    uint32_t seq = adc_ch_rd_seq[ch];
     __enable_irq();
     if (seq_out) { *seq_out = seq; }
 
@@ -871,6 +888,19 @@ uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples, uint32_t
     }
     
     return 1;
+}
+
+uint8_t adc_consume_frame_ch(uint8_t ch, uint32_t seq)
+{
+    if (ch > 1) return 0;
+    uint8_t ok = 0;
+    __disable_irq();
+    if (adc_ch_rd_seq[ch] != adc_ch_wr_seq[ch] && adc_ch_rd_seq[ch] == seq) {
+        adc_ch_rd_seq[ch]++;
+        ok = 1;
+    }
+    __enable_irq();
+    return ok;
 }
 
 uint8_t adc_get_frame(uint16_t **ch1, uint16_t **ch2, uint16_t *samples) {
@@ -926,6 +956,51 @@ uint8_t adc_get_frame_pair(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, ui
     return 1;
 }
 
+// Строго FIFO-версия парного pop (без usb_stage_bufA)
+uint8_t adc_get_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, uint32_t *seq_out) {
+    if (!ch1 || !ch2 || !samples) {
+        ADC_LOGF("[ADC][GET_FRAME_PAIR_FIFO] ERROR: ch1/ch2/samples NULL\r\n");
+        return 0;
+    }
+    __disable_irq();
+    if (frame_rd_seq == frame_wr_seq) {
+        __enable_irq();
+        return 0;
+    }
+    uint32_t seq = frame_rd_seq++;
+    __enable_irq();
+    if (seq_out) { *seq_out = seq; }
+
+    uint32_t index = seq & (FIFO_FRAMES - 1u);
+    *ch1 = adc1_buffers[index];
+    *ch2 = adc2_buffers[index];
+    *samples = g_active_samples;
+    return 1;
+}
+
+// Peek последнего опубликованного кадра (FIFO), НЕ потребляя FIFO.
+// Возвращает самый свежий кадр: seq = frame_wr_seq-1.
+uint8_t adc_peek_latest_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, uint32_t *seq_out) {
+    if (!ch1 || !ch2 || !samples) {
+        ADC_LOGF("[ADC][PEEK_LATEST_PAIR_FIFO] ERROR: ch1/ch2/samples NULL\r\n");
+        return 0;
+    }
+    __disable_irq();
+    uint32_t wr = frame_wr_seq;
+    __enable_irq();
+    if (wr == 0u) {
+        return 0;
+    }
+    uint32_t seq = wr - 1u;
+    if (seq_out) { *seq_out = seq; }
+
+    uint32_t index = seq & (FIFO_FRAMES - 1u);
+    *ch1 = adc1_buffers[index];
+    *ch2 = adc2_buffers[index];
+    *samples = g_active_samples;
+    return 1;
+}
+
 void adc_stream_get_debug(adc_stream_debug_t *out) {
     if (!out) return;
     out->frame_wr_seq = frame_wr_seq;
@@ -952,15 +1027,14 @@ void adc_stream_get_debug(adc_stream_debug_t *out) {
 }
 
 // Получить номер буфера по seq для передачи в GUI (0-7)
-// Читаем buffer_index из s_frame_buffer_idx[] массива по frame seq
+// ВАЖНО: seq здесь используется как «dma_seq» (поканальный или парный),
+// и должен маппиться на тот же FIFO слот, что и adc_get_frame_ch()/adc_get_frame_pair(): index = seq & (FIFO_FRAMES-1).
 uint8_t adc_get_buffer_parity(uint32_t seq) {
-    // seq - это номер frame (frame_wr_seq)
-    uint32_t frame_idx = seq % FIFO_FRAMES;  // FIFO_FRAMES = 32
-    
-    // Читаем buffer_index (0-7), который был сохранен при публикации этого frame
-    uint8_t buffer_index = s_frame_buffer_idx[frame_idx] & 0x07;
-    
-    return buffer_index;
+    uint32_t index = seq & (FIFO_FRAMES - 1u);
+    /* s_buffer_parity[] заполняется в момент фиксации готового DMA-буфера.
+       Возвращаем 0..7, где LSB кодирует фазу even/odd.
+       В текущей схеме LSB привязан к уровню PA3 (PA3=1 -> even, PA3=0 -> odd). */
+    return (uint8_t)(s_buffer_parity[index] & 0x07u);
 }
 
 // DEBUG: dump trace из non-ISR контекста
@@ -1138,6 +1212,10 @@ void adc_stream_tim2_switch_buffers(void) {
     /* ЛОГИКА TIM2-DRIVEN (восстановлена для синхронизации осциллограммы) */
     #if 1
 
+    if (adc_stream_paused) {
+        return;
+    }
+
     DMA_Stream_TypeDef *dma1 = (DMA_Stream_TypeDef*)s_adc1->DMA_Handle->Instance;
     #if !DIAG_SINGLE_ADC1
     DMA_Stream_TypeDef *dma2 = (DMA_Stream_TypeDef*)s_adc2->DMA_Handle->Instance;
@@ -1181,13 +1259,60 @@ void adc_stream_tim2_switch_buffers(void) {
     // adc_check_guard_idx(next_idx, "tim2-pre");
     // adc_fill_guard_for_idx(next_idx);  // 32 записи × 200Hz = 6400 операций/сек
 
-    /* Останавливаем и перезапускаем DMA на следующий буфер в такт TIM2 */
+    /* DMA завершил текущий буфер (NDTR==0). Фиксируем кадр как готовый и решаем: продолжать или пауза. */
     HAL_ADC_Stop_DMA(s_adc1);
+    #if !DIAG_SINGLE_ADC1
+    HAL_ADC_Stop_DMA(s_adc2);
+    #endif
+
+    /* Обновляем поканальные счётчики (для USB таска) */
+    adc_ch_wr_seq[0]++;
+    #if !DIAG_SINGLE_ADC1
+    adc_ch_wr_seq[1]++;
+    #endif
+
+     /* Метаданные для GUI/USB: номер DMA-буфера 0..7 для этого FIFO слота.
+         ВАЖНО: используем ИНДЕКС буфера, а не глобальный счётчик.
+         Иначе после reboot "чётность"/phase смещается, и DC начинает применяться не к той фазе. */
+     {
+         /* Сохраняем 0..7 (для GUI), но LSB (even/odd) берём от PA3. */
+         uint8_t parity = adc_parity_from_pa3();
+         uint8_t buffer_index = (uint8_t)((done_idx & 0x06u) | (parity & 1u));
+         s_buffer_parity[done_idx & (FIFO_FRAMES - 1u)] = buffer_index;
+     }
+
+    /* Cache maintenance для только что заполненного буфера */
+    adc_invalidate_cache_for_buffer(adc1_buffers[done_idx], total_samples);
+    #if !DIAG_SINGLE_ADC1
+    adc_invalidate_cache_for_buffer(adc2_buffers[done_idx], total_samples);
+    #endif
+
+    uint32_t backlogA = adc_ch_wr_seq[0] - adc_ch_rd_seq[0];
+    uint32_t backlogB = 0;
+    #if !DIAG_SINGLE_ADC1
+    backlogB = adc_ch_wr_seq[1] - adc_ch_rd_seq[1];
+    #endif
+
+    /* LOSSLESS/backpressure: не дропаем и не переписываем непрочитанные кадры */
+    if (backlogA >= FIFO_FRAMES || backlogB >= FIFO_FRAMES) {
+        adc_stream_paused = 1;
+        adc_stream_pause_events++;
+        /* Счётчик оставляем для диагностики (историческое имя) */
+        adc_ch_overflow_drops[0]++;
+        #if !DIAG_SINGLE_ADC1
+        adc_ch_overflow_drops[1]++;
+        #endif
+        s_next_ring_index = next_idx;
+        adc_last_full0_ms = HAL_GetTick();
+        adc_last_full1_ms = adc_last_full0_ms;
+        return;
+    }
+
+    /* Есть место — запускаем DMA на следующий буфер */
     /* NDTR страховка: программируем фактическое N только перед новым стартом */
     dma1->NDTR = total_samples;
     HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[next_idx], total_samples);
     #if !DIAG_SINGLE_ADC1
-    HAL_ADC_Stop_DMA(s_adc2);
     dma2->NDTR = total_samples;
     HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[next_idx], total_samples);
     #endif
@@ -1213,28 +1338,7 @@ void adc_stream_tim2_switch_buffers(void) {
     #endif
     (void)guard_bad_done; // suppress unused warning
 
-    /* Обновляем поканальные счётчики (для USB таска) с контролем переполнения очереди */
-    adc_ch_wr_seq[0]++;
-    uint32_t backlogA = adc_ch_wr_seq[0] - adc_ch_rd_seq[0];
-    if (backlogA > FIFO_FRAMES) {
-        uint32_t excess = backlogA - FIFO_FRAMES;
-        adc_ch_overflow_drops[0] += excess;
-        adc_ch_rd_seq[0] += excess;
-    }
-    #if !DIAG_SINGLE_ADC1
-    adc_ch_wr_seq[1]++;
-    uint32_t backlogB = adc_ch_wr_seq[1] - adc_ch_rd_seq[1];
-    if (backlogB > FIFO_FRAMES) {
-        uint32_t excess = backlogB - FIFO_FRAMES;
-        adc_ch_overflow_drops[1] += excess;
-        adc_ch_rd_seq[1] += excess;
-    }
-    #endif
-
-    adc_invalidate_cache_for_buffer(adc1_buffers[done_idx], total_samples);
-    #if !DIAG_SINGLE_ADC1
-    adc_invalidate_cache_for_buffer(adc2_buffers[done_idx], total_samples);
-    #endif
+    /* (lossless/backpressure) overflow drops removed */
 
     // ========== ДИАГНОСТИКА: Сравнение данных EVEN vs ODD (БЕЗОПАСНО - после DMA check) ==========
     static uint32_t dbg_sample_count = 0;
@@ -1372,16 +1476,17 @@ void adc_stream_tim2_switch_buffers(void) {
     #endif
 
     // ВАЖНО: Сохраняем buffer_index ЗДЕСЬ (в момент готовности пары),
-    // а не раньше в TIM2. Это гарантирует что buffer_index соответствует данным.
-    uint8_t buffer_index = (uint8_t)(s_global_buffer_counter & 0x07);
+    // чтобы он точно соответствовал данным. Берём индекс DMA-буфера (done_idx%8).
+    /* Для согласования с внешней модуляцией: parity берём по PA3 (PA3=1 -> even). */
+    uint8_t buffer_index = (uint8_t)((done_idx & 0x06u) | (adc_parity_from_pa3() & 1u));
     uint32_t safe_done_idx = done_idx & (FIFO_FRAMES - 1u);
     s_buffer_parity[safe_done_idx] = buffer_index;
     
     // DEBUG: Выводим каждые 200 сохранений
     static uint32_t dbg_save_counter = 0;
     if (++dbg_save_counter % 200 == 0) {
-        printf("[SAVE] global_counter=%lu, buf_idx=%u, done_idx=%lu\r\n", 
-               s_global_buffer_counter, buffer_index, done_idx);
+         printf("[SAVE] global_counter=%lu, buf_idx=%u, done_idx=%lu\r\n", 
+             s_global_buffer_counter, buffer_index, done_idx);
     }
     
     s_pair_ready_mask[done_idx] = READY_MASK_FULL;
@@ -1449,10 +1554,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     if ((s_tc_mask & READY_MASK_FULL) == READY_MASK_FULL) {
         s_tc_mask = 0;
 
-        /* Сохраняем номер буфера 0..7 для этого done_idx (для заголовка/диагностики) */
-        uint8_t buffer_index = (uint8_t)(s_global_buffer_counter & 0x07u);
-        s_global_buffer_counter++;
-        s_buffer_parity[done_idx] = buffer_index;
+          /* Сохраняем номер DMA-буфера 0..7 для этого done_idx (для заголовка/диагностики).
+              Не используем глобальный счётчик, чтобы не ломать соответствие фаз после reboot. */
+          uint8_t buffer_index = (uint8_t)((done_idx & 0x06u) | (adc_parity_from_pa3() & 1u));
+          s_global_buffer_counter++;
+          s_buffer_parity[done_idx] = buffer_index;
 
         uint32_t next_idx = (done_idx + 1u) & (FIFO_FRAMES - 1u);
         uint32_t total_samples = (uint32_t)g_active_samples;
@@ -1656,6 +1762,33 @@ void adc_stream_watchdog(void)
     uint32_t now_ms = HAL_GetTick();
     if(s_adc1 == NULL || (!DIAG_SINGLE_ADC1 && s_adc2 == NULL)) return; /* ещё не инициализированы */
     if(adc_stream_static_mode_enabled()) return; /* статический режим: DMA не запускается */
+
+    /* LOSSLESS/backpressure: при паузе из-за заполненного FIFO не делаем рестарт,
+       а возобновляем захват, когда хост «разгрузит» очередь. */
+    if (adc_stream_paused) {
+        uint32_t backlogA = adc_ch_wr_seq[0] - adc_ch_rd_seq[0];
+        uint32_t backlogB = 0;
+        #if !DIAG_SINGLE_ADC1
+        backlogB = adc_ch_wr_seq[1] - adc_ch_rd_seq[1];
+        #endif
+        if (backlogA <= (FIFO_FRAMES / 2u) && backlogB <= (FIFO_FRAMES / 2u)) {
+            uint32_t idx = s_next_ring_index & (FIFO_FRAMES - 1u);
+            uint32_t total_samples = (uint32_t)g_active_samples;
+            DMA_Stream_TypeDef *dma1_stream = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
+            dma1_stream->NDTR = total_samples;
+            (void)HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[idx], total_samples);
+            #if !DIAG_SINGLE_ADC1
+            DMA_Stream_TypeDef *dma2_stream = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
+            dma2_stream->NDTR = total_samples;
+            (void)HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[idx], total_samples);
+            #endif
+            adc_stream_paused = 0;
+            adc_last_full0_ms = adc_last_full1_ms = HAL_GetTick();
+            ADC_LOGF("[ADC][BP] resume idx=%lu backlogA=%lu backlogB=%lu\r\n",
+                     (unsigned long)idx, (unsigned long)backlogA, (unsigned long)backlogB);
+        }
+        return;
+    }
     uint32_t lastA = adc_last_full0_ms;
     uint32_t lastB = adc_last_full1_ms;
     if(lastA == 0) return; /* поток ещё не стартовал (нет ни одного полного завершения) */

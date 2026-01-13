@@ -83,11 +83,11 @@ def setup_device(dev):
 
 def configure_streaming(dev):
     """Конфигурирует параметры стриминга"""
-    # SET_WINDOWS: win0=(100,300), win1=(700,300)
+    # SET_WINDOWS: win0=(280,200), win1=(280,200)
     try:
-        payload = struct.pack('<BHHHH', 0x10, 100, 300, 700, 300)
+        payload = struct.pack('<BHHHH', 0x10, 280, 200, 280, 200)
         dev.write(args.ep_out, payload, timeout=1000)
-        print(f"[USB] SET_WINDOWS: (100,300) (700,300)")
+        print(f"[USB] SET_WINDOWS: (280,200) (280,200)")
     except Exception as e:
         print(f"[WARN] SET_WINDOWS failed: {e}")
     

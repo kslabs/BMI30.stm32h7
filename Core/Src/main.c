@@ -88,8 +88,9 @@ static volatile int err_code = 0;
 #ifndef STAGE
 #define STAGE(idx, tag) do{ (void)(idx); (void)(tag); }while(0)
 #endif
-static char stage_log[32][16];
-static int  stage_count = 0;
+static char stage_log[32][16] __attribute__((unused));
+static int  stage_count __attribute__((unused)) = 0;
+static void FlushStageLog(void) __attribute__((unused));
 static void FlushStageLog(void) { /* no-op в безопасном режиме */ }
 
 /* Дефолты для флагов сборки, чтобы они не оставались «неопределёнными» */
@@ -115,6 +116,7 @@ static void diag_config_led_pe3(void){
   GPIOE->MODER &= ~(3u << (led_idx*2));
   GPIOE->MODER |=  (1u << (led_idx*2));
 }
+static void diag_trap(uint8_t code) __attribute__((unused));
 static void diag_trap(uint8_t code){
   diag_config_led_pe3();
   /* Цикл: code отчётливых вспышек (~300мс ON/~300мс OFF), затем длинная пауза ~1.5с */
@@ -285,7 +287,8 @@ static const char* usb_state_str(uint8_t s) __attribute__((unused)); // пуст
 static void lcd_print_padded_if_changed(int x, int y, const char* new_text,
                                         char *prev, size_t buf_sz,
                                         uint8_t max_len, uint8_t font_height,
-                                        uint16_t fg, uint16_t bg);
+                                        uint16_t fg, uint16_t bg,
+                                        uint16_t *prev_fg, uint16_t *prev_bg);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -878,11 +881,8 @@ int main(void)
     const char* prd = USBD_Desc_GetProduct();
     printf("[USB] VID=0x%04X PID=0x%04X LANGID=%u\r\n", vid, pid, (unsigned)lang);
     printf("[USB] MFG=\"%s\" PROD=\"%s\"\r\n", mfg, prd);
-    // Короткая строка на LCD
-    char line[32];
-  /* Переносим строку VID/PID ниже (y=36), чтобы не конфликтовать с динамической строкой TX */
-  snprintf(line, sizeof(line), "VID:%04X PID:%04X", vid, pid);
-  LCD_ShowString_Size(1, 56, line, 16, WHITE, BLACK);
+     /* На LCD последняя текстовая строка (y=56) зарезервирована под диагностику DC.
+       Поэтому VID/PID на экран больше не выводим (оставляем только UART printf). */
   }
   #endif
 
@@ -997,6 +997,7 @@ int main(void)
   DWT->CYCCNT = 0;
   DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
   uint32_t last_diag_ms = 0; /* для периодического аварийного принта даже если * не печатается */
+  (void)last_diag_ms;
   #ifdef DIAG_HALT_BEFORE_LOOP
     diag_halt("BEFORE_LOOP");
   #endif
@@ -1017,14 +1018,16 @@ int main(void)
   static uint8_t first_loop=1; if(first_loop){ PROG('M'); first_loop=0; }
   PROG('A'); // loop start
 
-  // ДИАГНОСТИКА TIM2: периодическая проверка что счётчик работает
+  // ДИАГНОСТИКА TIM2: очень шумный вывод, включать только при необходимости
+#if defined(DIAG_TIM2_ENABLE) && (DIAG_TIM2_ENABLE == 1)
   static uint32_t last_tim2_check_ms = 0;
   if (now - last_tim2_check_ms >= 5000) {
     last_tim2_check_ms = now;
     printf("[TIM2][DIAG] CR1=0x%08lX CNT=%lu ARR=%lu SR=0x%08lX DIER=0x%08lX\r\n",
-           (unsigned long)TIM2->CR1, (unsigned long)TIM2->CNT, 
+           (unsigned long)TIM2->CR1, (unsigned long)TIM2->CNT,
            (unsigned long)TIM2->ARR, (unsigned long)TIM2->SR, (unsigned long)TIM2->DIER);
   }
+#endif
 
   /* DEBUG dumps отключены: TIM2 больше не управляет DMA, а вывод s_frame_buffer_idx в COM4 шумит. */
 
@@ -1148,9 +1151,16 @@ int main(void)
 #if !SAFE_MINIMAL
   extern volatile uint8_t vnd_tx_kick;
   extern uint8_t vnd_is_streaming(void);
-  if (vnd_tx_kick || vnd_is_streaming()) {
-    extern void Vendor_Stream_Task(void);
-    Vendor_Stream_Task();
+  /* ВАЖНО: Vendor_Stream_Task() обслуживает не только USB TX, но и always-on фоновые задачи
+     (например, DC адаптацию/сохранение). Поэтому вызываем периодически даже без START/GUI.
+     При наличии kick/streaming — вызываем сразу без ожидания периода. */
+  {
+    static uint32_t last_vendor_ms = 0;
+    if (vnd_tx_kick || vnd_is_streaming() || (now - last_vendor_ms) >= 5u) {
+      last_vendor_ms = now;
+      extern void Vendor_Stream_Task(void);
+      Vendor_Stream_Task();
+    }
   }
   /* Вотчдог ADC/DMA: если давно нет DMA событий, мягко перезапустить цепочку выборки. */
   {
@@ -2294,12 +2304,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 }
 
 static void lcd_print_padded_if_changed(int x, int y, const char* new_text,
-                                        char *prev, size_t buf_sz,
-                                        uint8_t max_len, uint8_t font_height,
-                                        uint16_t fg, uint16_t bg)
+                    char *prev, size_t buf_sz,
+                    uint8_t max_len, uint8_t font_height,
+                    uint16_t fg, uint16_t bg,
+                    uint16_t *prev_fg, uint16_t *prev_bg)
 {
     if(!new_text || !prev || buf_sz == 0) return;
-    if(strncmp(new_text, prev, buf_sz-1) == 0) return;
+  if(strncmp(new_text, prev, buf_sz-1) == 0){
+    if(prev_fg && prev_bg && (*prev_fg == fg) && (*prev_bg == bg)) return;
+  }
     char line[32];
     size_t n = strlen(new_text);
     if(n > max_len) n = max_len;
@@ -2309,6 +2322,8 @@ static void lcd_print_padded_if_changed(int x, int y, const char* new_text,
     LCD_ShowString_Size((uint16_t)x, (uint16_t)y, line, font_height, fg, bg);
     strncpy(prev, new_text, buf_sz-1);
     prev[buf_sz-1] = 0;
+  if(prev_fg) *prev_fg = fg;
+  if(prev_bg) *prev_bg = bg;
 }
 
 void UpdateLCDStatus(void){ need_usb_status_refresh = 1; }
@@ -2372,14 +2387,33 @@ void DrawUSBStatus(void){
     // LCD not ready
         return;
     }
+    /* Heartbeat основного цикла: '*' мигает ~1 Гц в правом конце первой строки. */
+    {
+      static uint32_t last_star_toggle_ms = 0;
+      static uint8_t star_on = 0;
+      static uint8_t star_prev = 0xFF;
+      uint32_t now_ms = HAL_GetTick();
+      if(last_star_toggle_ms == 0u) last_star_toggle_ms = now_ms;
+      if((now_ms - last_star_toggle_ms) >= 500u){ /* 0.5с on / 0.5с off */
+        last_star_toggle_ms = now_ms;
+        star_on = (uint8_t)!star_on;
+      }
+      if(star_prev != star_on){
+        LCD_ShowString_Size(151, 0, star_on?"*":" ", 16, YELLOW, BLACK);
+        star_prev = star_on;
+      }
+    }
     static char prev_line0[16] = "";
     static char prev_line1[16] = "";
   static char prev_line2[16] = "";
     static char prev_line3[16] = "";
+    static char prev_line4[24] = "";
+  static uint16_t dc_bar_prev_len = 0xFFFF;
+  static uint16_t dc_bar_prev_color = 0xFFFF;
   static uint64_t prev_tx_bytes = 0ULL;
   static uint64_t prev_tx_samples = 0ULL;
   static uint32_t prev_rate_calc_ms = 0;
-  static uint32_t last_rate_bps = 0; /* приблизительно bytes/sec */
+  static uint32_t last_rate_bps __attribute__((unused)) = 0; /* приблизительно bytes/sec */
   static uint32_t last_rate_sps = 0; /* семплов в секунду (оба канала суммарно) */
   uint32_t now = HAL_GetTick();
   /* Хост присутствует только при свежем SOF (<400мс) или SUSPENDED */
@@ -2397,23 +2431,31 @@ void DrawUSBStatus(void){
             default: text0 = "USB:--"; color0 = RED; break;
         }
     }
-    lcd_print_padded_if_changed(0,0,text0, prev_line0, sizeof(prev_line0), 7, 16, color0, BLACK);
+    static uint16_t prev_line0_fg = 0, prev_line0_bg = 0;
+    static uint16_t prev_line1_fg = 0, prev_line1_bg = 0;
+    static uint16_t prev_line2_fg = 0, prev_line2_bg = 0;
+    static uint16_t prev_line3_fg = 0, prev_line3_bg = 0;
+    static uint16_t prev_line4_fg = 0, prev_line4_bg = 0;
+    lcd_print_padded_if_changed(0,0,text0, prev_line0, sizeof(prev_line0), 7, 16, color0, BLACK, &prev_line0_fg, &prev_line0_bg);
 
-  /* Диагностика частоты TIM2 IRQ */
-  static uint32_t prev_tim2_count = 0;
-  static uint32_t prev_tim2_calc_ms = 0;
-  static uint32_t tim2_hz_display = 0;
-  char ds_buf[16];
-  uint32_t dt_tim2 = now - prev_tim2_calc_ms;
-  if(dt_tim2 >= 1000) {
-    uint32_t tim2_delta = tim2_irq_counter - prev_tim2_count;
-    /* Правильный расчёт: нормализуем к 1 секунде */
-    tim2_hz_display = (uint32_t)((tim2_delta * 1000ULL) / dt_tim2);
-    prev_tim2_count = tim2_irq_counter;
-    prev_tim2_calc_ms = now;
+  /* 2-я строка LCD (y=14): расширенная диагностика DC.
+     Показываем факт загрузки из Flash (L), флаг "нужен erase" (E),
+     сигнатуру (CRC16 загруженной записи) и dirty/result.
+     Это позволяет понять после перезагрузки: загрузилось ли состояние или DC пошёл "с нуля". */
+  {
+    char dc2_buf[24];
+    uint16_t dc2_color = WHITE;
+    if(vnd_dc_save_last_result == 1u) dc2_color = GREEN;
+    else if(vnd_dc_save_last_result == 2u) dc2_color = RED;
+    unsigned loaded = (unsigned)((vnd_dc_load_flags_public & 1u) ? 1u : 0u);
+    char erase_flag = ((vnd_dc_load_flags_public & 2u) ? 'E' : ' ');
+    snprintf(dc2_buf, sizeof(dc2_buf), "DC L%u%c S%04X d%u r%u",
+             loaded, erase_flag,
+             (unsigned)(vnd_dc_loaded_crc16_public),
+             (unsigned)(vnd_dc_dirty_public ? 1u : 0u),
+             (unsigned)(vnd_dc_save_last_result));
+    lcd_print_padded_if_changed(0,14, dc2_buf, prev_line1, sizeof(prev_line1), 20, 16, dc2_color, BLACK, &prev_line1_fg, &prev_line1_bg);
   }
-  snprintf(ds_buf,sizeof(ds_buf),"T2:%u Hz", (unsigned)tim2_hz_display);
-    lcd_print_padded_if_changed(0,14, ds_buf, prev_line1, sizeof(prev_line1), 12, 16, CYAN, BLACK);
 
   /* Скорость обмена: считаем раз в ~500мс (байты/с и семплы/с) */
   if(host_present && s == USBD_STATE_CONFIGURED){
@@ -2442,7 +2484,7 @@ void DrawUSBStatus(void){
     }
   /* Очистка legacy VID/PID убрана */
     /* Используем ширину 12 символов для гарантированного затирания хвоста */
-    lcd_print_padded_if_changed(0,28, rate_buf, prev_line2, sizeof(prev_line2), 12, 16, vnd_is_streaming()?GREEN:WHITE, BLACK);
+    lcd_print_padded_if_changed(0,28, rate_buf, prev_line2, sizeof(prev_line2), 12, 16, vnd_is_streaming()?GREEN:WHITE, BLACK, &prev_line2_fg, &prev_line2_bg);
     /* Показываем время компиляции для контроля версии - ПРИНУДИТЕЛЬНО при первом запуске */
     {
       extern const char fw_build_time[];
@@ -2453,11 +2495,11 @@ void DrawUSBStatus(void){
         memset(prev_line3, 0, sizeof(prev_line3)); // Сбросить для принудительного обновления
         build_time_shown = 1;
       }
-      lcd_print_padded_if_changed(0,42, build_time, prev_line3, sizeof(prev_line3), 16, 16, YELLOW, BLACK);
+      lcd_print_padded_if_changed(0,42, build_time, prev_line3, sizeof(prev_line3), 16, 16, YELLOW, BLACK, &prev_line3_fg, &prev_line3_bg);
     }
   } else {
   /* Очистка legacy VID/PID убрана */
-    lcd_print_padded_if_changed(0,28, host_present?"S:----":"S:----", prev_line2, sizeof(prev_line2), 12, 16, WHITE, BLACK);
+    lcd_print_padded_if_changed(0,28, host_present?"S:----":"S:----", prev_line2, sizeof(prev_line2), 12, 16, WHITE, BLACK, &prev_line2_fg, &prev_line2_bg);
     /* При отсутствии хоста показываем время компиляции */
     {
       extern const char fw_build_time[];
@@ -2468,13 +2510,73 @@ void DrawUSBStatus(void){
         memset(prev_line3, 0, sizeof(prev_line3));
         build_time_shown2 = 1;
       }
-      lcd_print_padded_if_changed(0,42, build_time, prev_line3, sizeof(prev_line3), 16, 16, YELLOW, BLACK);
+      lcd_print_padded_if_changed(0,42, build_time, prev_line3, sizeof(prev_line3), 16, 16, YELLOW, BLACK, &prev_line3_fg, &prev_line3_bg);
     }
     prev_rate_calc_ms = now;
     prev_tx_bytes = vnd_get_total_tx_bytes();
     prev_tx_samples = vnd_get_total_tx_samples();
     last_rate_bps = 0;
     last_rate_sps = 0;
+  }
+
+  /* Индикатор прогресса адаптации/сохранения DC: нижняя линия пикселей (y=79, 0..159).
+     - Пока DC "dirty" (идёт адаптация, ожидаем запись) — линия заполняется слева направо.
+     - Если последняя запись DC не удалась — рисуем красным; после успешной записи — зелёным.
+     Важно: используем только 1px высоту, чтобы не мешать тексту. */
+  {
+    const uint16_t y = 79;
+    uint16_t color = BLACK;
+    uint16_t filled = 0;
+
+    if(vnd_dc_dirty_public){
+      uint32_t period = vnd_dc_save_period_ms;
+      if(period == 0u) period = 1u;
+      uint32_t start = vnd_dc_dirty_since_ms;
+      uint32_t elapsed = (start == 0u) ? 0u : (now - start);
+      if(elapsed > period) elapsed = period;
+      filled = (uint16_t)((elapsed * (uint32_t)LCD_W) / period);
+      if(filled > LCD_W) filled = LCD_W;
+      if(vnd_dc_save_last_result == 2u) color = RED;
+      else if(vnd_dc_save_last_result == 1u) color = GREEN;
+      else color = WHITE;
+    } else {
+      if(vnd_dc_save_last_result == 2u){
+        filled = LCD_W;
+        color = RED;
+      } else if(vnd_dc_save_last_result == 1u){
+        filled = LCD_W;
+        color = GREEN;
+      } else {
+        filled = 0;
+        color = BLACK;
+      }
+    }
+
+    if(dc_bar_prev_len != filled || dc_bar_prev_color != color){
+      LCD_FillRect(0, y, LCD_W, 1, BLACK);
+      if(filled > 0u){
+        LCD_FillRect(0, y, filled, 1, color);
+      }
+      dc_bar_prev_len = filled;
+      dc_bar_prev_color = color;
+    }
+  }
+
+  /* Диагностическая строка DC (нижняя строка текста y=56):
+     строго 20 символов (160px при шрифте 16), чтобы не было переноса.
+     Важно: показываем счётчики OK/FAIL и счётчик записи (из Flash blob),
+     чтобы однозначно понимать: была ли попытка записи и изменилось ли содержимое Flash. */
+  {
+    char dc_buf[24];
+    uint16_t dc_color = WHITE;
+    if(vnd_dc_save_last_result == 1u) dc_color = GREEN;
+    else if(vnd_dc_save_last_result == 2u) dc_color = RED;
+    unsigned ok3 = (unsigned)(vnd_dc_save_ok_count % 1000u);
+    unsigned fl3 = (unsigned)(vnd_dc_save_fail_count % 1000u);
+    unsigned wc3 = (unsigned)(vnd_dc_write_counter_public % 1000u);
+    snprintf(dc_buf, sizeof(dc_buf), "DC o%03u f%03u c%03u",
+             ok3, fl3, wc3);
+    lcd_print_padded_if_changed(0,56, dc_buf, prev_line4, sizeof(prev_line4), 20, 16, dc_color, BLACK, &prev_line4_fg, &prev_line4_bg);
   }
   PROG('u');
 }
@@ -2484,7 +2586,8 @@ void DrawUSBStatus(void){
 
  /* MPU Configuration */
 
-void MPU_Config(void)
+static void MPU_Config(void) __attribute__((unused));
+static void MPU_Config(void)
 {
   MPU_Region_InitTypeDef MPU_InitStruct = {0};
 
@@ -2506,6 +2609,22 @@ void MPU_Config(void)
   MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
 
   HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
+  /* DC persistence Flash sector: map as non-cacheable data region to avoid stale DCache reads.
+     Address 0x080E0000..0x080FFFFF (128KB). Execute never. */
+  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+  MPU_InitStruct.Number = MPU_REGION_NUMBER1;
+  MPU_InitStruct.BaseAddress = 0x080E0000;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_128KB;
+  MPU_InitStruct.SubRegionDisable = 0x00;
+  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
+  MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
+  MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
+  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
+
   /* Enables the MPU */
   HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 

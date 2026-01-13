@@ -74,7 +74,7 @@ def setup_device(dev):
 
 def configure_streaming(dev):
     try:
-        payload = struct.pack('<BHHHH', 0x10, 100, 300, 700, 300)
+        payload = struct.pack('<BHHHH', 0x10, 280, 200, 280, 200)
         dev.write(args.ep_out, payload, timeout=1000)
         print(f"[CFG] SET_WINDOWS OK")
     except Exception as e:

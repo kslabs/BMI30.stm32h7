@@ -20,6 +20,7 @@ Debug/*.out
 .vscode/quick_status_last.log
 .vscode/last-3x5-run.log
 .vscode/com*_*.txt
+.vscode/serial-monitor.pid
 
 # Артефакты HostTools
 HostTools/*.log
@@ -27,6 +28,14 @@ HostTools/__pycache__/
 HostTools/*.pyc
 HostTools/*.png
 HostTools/host_smoke_summary.txt
+HostTools/dc_offset_samples.npz
+HostTools/dc_offset_samples.npz.bak
+HostTools/logs/
+HostTools/bmi30_config.json
+HostTools/bmi30_sel.json
+
+# Автогенерация (дата/время сборки)
+Core/Inc/build_autogen.h
 
 # Python кэш
 __pycache__/

@@ -18,8 +18,14 @@ VND_CMD_SET_TRUNC_SAMPLES = 0x16
 VND_CMD_SET_FRAME_SAMPLES = 0x17
 VND_CMD_SET_FULL_MODE     = 0x13
 VND_CMD_SET_PROFILE       = 0x14
+VND_CMD_SET_ASYNC         = 0x18
+VND_CMD_SET_CHMODE        = 0x19
+VND_CMD_SET_STREAM_MODE   = 0x1A
 
 MAGIC = 0xA55A
+
+STAT_LEN_V1 = 64
+STAT_LEN_V4 = 96
 
 
 def find_device(vid, pid):
@@ -78,6 +84,8 @@ def parse_frame(buf: bytes):
     magic, ver, flags, seq, ts, total_samples, zone_cnt = struct.unpack_from('<HBBIIHH', buf, 0)[:7]
     if magic != MAGIC:
         return None
+    if ver != 1:
+        return None
     total = 32 + total_samples * 2
     if total != len(buf):
         # Allow short reads with extra zero padding on some stacks
@@ -95,7 +103,7 @@ def parse_frame(buf: bytes):
     }
 
 def parse_stat(buf: bytes):
-    if len(buf) < 64 or buf[:4] != b'STAT':
+    if len(buf) < STAT_LEN_V1 or buf[:4] != b'STAT':
         return None
     st = {}
     st['ver'] = buf[4]
@@ -117,7 +125,27 @@ def parse_stat(buf: bytes):
     st['pair_idx'] = int.from_bytes(buf[54:56], 'little')
     st['last_tx_len'] = int.from_bytes(buf[56:58], 'little')
     st['cur_stream_seq'] = int.from_bytes(buf[58:62], 'little')
+
+    # v2/v3/v4 extensions (total 96 bytes in current firmware)
+    if len(buf) >= STAT_LEN_V4:
+        st['stage_alt1_ms'] = int.from_bytes(buf[64:68], 'little')
+        st['stage_start_ms'] = int.from_bytes(buf[68:72], 'little')
+        st['stage_first_frame_ms'] = int.from_bytes(buf[72:76], 'little')
+        st['ch_zero_buffers_A'] = int.from_bytes(buf[76:80], 'little')
+        st['ch_zero_buffers_B'] = int.from_bytes(buf[80:84], 'little')
+        st['now_ms'] = int.from_bytes(buf[84:88], 'little')
+        st['last_full0_ms'] = int.from_bytes(buf[88:92], 'little')
+        st['last_full1_ms'] = int.from_bytes(buf[92:96], 'little')
     return st
+
+
+def stat_expected_len(acc: bytes) -> int:
+    """Return expected STAT length based on version byte, if present."""
+    if len(acc) < 5 or not acc.startswith(b'STAT'):
+        return STAT_LEN_V1
+    ver = acc[4]
+    # Current firmware uses v4 (96 bytes) on bulk; keep v1 compatibility.
+    return STAT_LEN_V4 if ver >= 2 else STAT_LEN_V1
 
 
 def main():
@@ -128,21 +156,36 @@ def main():
     ap.add_argument('--ep-in', type=lambda x: int(x,0), default=0x83)
     ap.add_argument('--ep-out', type=lambda x: int(x,0), default=0x03)
     ap.add_argument('--profile', type=int, default=2, help='1=A(200Hz), 2=B(default)')
-    ap.add_argument('--frame-samples', type=int, default=10, help='Samples per channel per frame (A and B)')
+    ap.add_argument('--frame-samples', type=int, default=0, help='Samples per channel per frame (A and B). 0 = do not send SET_FRAME_SAMPLES')
     ap.add_argument('--full-mode', type=int, default=1, help='1=ADC mode, 0=diagnostic')
     ap.add_argument('--block-hz', type=int, default=200, help='ADC block rate hint')
-    ap.add_argument('--frames', type=int, default=200)
+    ap.add_argument('--frames', type=int, default=0, help='Stop after N frames (0=disabled, use --secs)')
+    ap.add_argument('--secs', type=float, default=60.0, help='Stop after N seconds (used if --frames=0)')
     ap.add_argument('--timeout', type=int, default=300, help='IN timeout ms')
+    ap.add_argument('--read-size', type=int, default=16384, help='Bulk IN read size (bytes)')
     # Windows (time windows) configuration like in quick-start script
-    ap.add_argument('--win0-start', type=int, default=100)
-    ap.add_argument('--win0-len', type=int, default=300)
-    ap.add_argument('--win1-start', type=int, default=700)
-    ap.add_argument('--win1-len', type=int, default=300)
+    ap.add_argument('--win0-start', type=int, default=280)
+    ap.add_argument('--win0-len', type=int, default=200)
+    ap.add_argument('--win1-start', type=int, default=280)
+    ap.add_argument('--win1-len', type=int, default=200)
     ap.add_argument('--status-interval', type=float, default=0.5, help='Request GET_STATUS every N seconds (0=off)')
     ap.add_argument('--ctrl-status', action='store_true', help='Use control transfer for GET_STATUS (works even mid-pair)')
     ap.add_argument('--ab-strict', action='store_true', help='Fail if A→B ordering is violated or STAT appears mid-pair')
+    ap.add_argument('--seq-strict', action='store_true', help='Verify that completed pairs have strictly consecutive seq (no gaps/dupes)')
+    ap.add_argument('--warmup-pairs', type=int, default=0, help='Ignore ordering/seq checks for the first N completed pairs after sync')
+    ap.add_argument('--fail-fast', action='store_true', help='Exit immediately on first violation (default: count and continue)')
+    ap.add_argument('--verify', choices=['pair', 'mono'], default=None, help='Verification mode: pair=A->B strict pairs, mono=single stream seq continuity')
+    ap.add_argument('--stream-mode', type=int, default=0, help='0=latest (lossy), 1=LOSSLESS_ROI, 2=AVG_ROI')
+    ap.add_argument('--avg-n', type=int, default=1, help='AVG_ROI parameter (1..32), used when --stream-mode=2')
+    ap.add_argument('--async-mode', dest='async_mode', type=int, choices=[0, 1], default=None, help='Set ASYNC mode (0/1). In LOSSLESS_ROI firmware may force 0.')
+    ap.add_argument('--chmode', type=int, choices=[0, 1, 2, 3], default=None, help='Set channel mode (firmware-defined).')
     ap.add_argument('--quiet', action='store_true', help='Reduce per-frame prints, show only summary and warnings')
     args = ap.parse_args()
+
+    verify_mode = args.verify
+    if verify_mode is None:
+        # If host requests both channels, verify strict pairs; otherwise verify monotonic seq stream.
+        verify_mode = 'pair' if args.chmode == 2 else 'mono'
 
     dev = find_device(args.vid, args.pid)
     intf = claim_interface(dev, args.intf)
@@ -151,7 +194,22 @@ def main():
     print(f"Opened VID=0x{args.vid:04X} PID=0x{args.pid:04X} IF#{args.intf} IN=0x{ep_in:02X} OUT=0x{ep_out:02X}")
 
     # Configure
-    # Set windows first (some firmware profiles expect non-zero windows to start streaming)
+    # IMPORTANT ORDERING: apply SET_STREAM_MODE first, then SET_WINDOWS.
+    try:
+        sm = int(args.stream_mode) & 0xFF
+        if sm == 2:
+            n = int(args.avg_n)
+            if n < 1:
+                n = 1
+            if n > 32:
+                n = 32
+            send_cmd(dev, ep_out, bytes([VND_CMD_SET_STREAM_MODE, sm, n & 0xFF]))
+        else:
+            send_cmd(dev, ep_out, bytes([VND_CMD_SET_STREAM_MODE, sm]))
+    except Exception:
+        pass
+
+    # Some firmware profiles expect non-zero windows to start streaming
     try:
         payload = struct.pack('<BHHHH', VND_CMD_SET_WINDOWS, args.win0_start, args.win0_len, args.win1_start, args.win1_len)
         send_cmd(dev, ep_out, payload)
@@ -159,13 +217,47 @@ def main():
         pass
     send_cmd(dev, ep_out, bytes([VND_CMD_SET_PROFILE, args.profile & 0xFF]))
     send_cmd(dev, ep_out, bytes([VND_CMD_SET_BLOCK_HZ]) + le16(args.block_hz))
-    send_cmd(dev, ep_out, bytes([VND_CMD_SET_FRAME_SAMPLES]) + le16(args.frame_samples))
+    if int(args.frame_samples) > 0:
+        send_cmd(dev, ep_out, bytes([VND_CMD_SET_FRAME_SAMPLES]) + le16(int(args.frame_samples)))
     send_cmd(dev, ep_out, bytes([VND_CMD_SET_FULL_MODE, 1 if args.full_mode else 0]))
+
+    # Optional extra mode knobs
+    try:
+        if args.async_mode is not None:
+            # LOSSLESS_ROI is expected to be synchronous; enforce 0 by default.
+            val = 0 if int(args.stream_mode) == 1 else (1 if args.async_mode else 0)
+            send_cmd(dev, ep_out, bytes([VND_CMD_SET_ASYNC, val & 0xFF]))
+    except Exception:
+        pass
+    try:
+        if args.chmode is not None:
+            send_cmd(dev, ep_out, bytes([VND_CMD_SET_CHMODE, int(args.chmode) & 0xFF]))
+    except Exception:
+        pass
+
+    # Stop any ongoing stream first, then flush IN to avoid stale buffered frames.
+    try:
+        send_cmd(dev, ep_out, bytes([VND_CMD_STOP_STREAM]))
+        time.sleep(0.2)
+    except Exception:
+        pass
+    try:
+        while True:
+            try:
+                junk = dev.read(ep_in, args.read_size, timeout=100)
+                if not junk:
+                    break
+            except usb.core.USBError:
+                break
+    except Exception:
+        pass
 
     # Start
     send_cmd(dev, ep_out, bytes([VND_CMD_START_STREAM]))
 
-    want_frames = args.frames
+    want_frames = int(args.frames)
+    use_time_limit = (want_frames <= 0)
+    time_limit_sec = float(args.secs)
     got_a = got_b = tests = 0
     expect_b = False
     last_status = 0.0
@@ -173,6 +265,25 @@ def main():
     first_seq = None
     first_pair_time = None
     last_pair_time = None
+    last_seq_any = None
+    synced = False
+    pre_sync_b = 0
+    pre_sync_stat = 0
+    pairs_completed = 0
+    frames_checked = 0
+    wrong_channel = 0
+    # Seq verification (tracked over a window; compute gaps within observed span)
+    seq_seen = set()
+    seq_first = None
+    seq_max_seen = None
+    seq_dupes = 0
+    seq_reorders = 0
+    seq_prev = None
+    missing_a = 0
+    missing_b = 0
+    stat_midpair = 0
+    in_timeouts = 0
+    in_errors = 0
 
     try:
         t0 = time.time()
@@ -183,14 +294,20 @@ def main():
             out = acc[:n]
             acc = acc[n:]
             return out
-        while got_a + got_b + tests < want_frames:
+        while True:
+            if use_time_limit:
+                if (time.time() - t0) >= time_limit_sec:
+                    break
+            else:
+                if (got_a + got_b + tests) >= want_frames:
+                    break
             # Periodically ask for status (device will send between pairs)
             now = time.time()
             if args.status_interval > 0 and (now - last_status) >= args.status_interval:
                 try:
                     if args.ctrl_status:
                         # bmRequestType: 0xC0 (device-to-host, vendor, device)
-                        raw = dev.ctrl_transfer(0xC0, VND_CMD_GET_STATUS, 0, 0, 64, timeout=300)
+                        raw = dev.ctrl_transfer(0xC0, VND_CMD_GET_STATUS, 0, 0, STAT_LEN_V4, timeout=300)
                         buf = bytes(raw)
                         st = parse_stat(buf)
                         if st and not args.quiet:
@@ -204,16 +321,20 @@ def main():
                         print("GET_STATUS err:", e)
                 last_status = now
 
-            # Читать крупнее, чтобы получить целый кадр HS (до ~2KB)
+            # Читать крупнее, чтобы снижать overhead и риск переполнения host-side очереди
             try:
-                chunk = dev.read(ep_in, 2048, timeout=args.timeout)
+                chunk = dev.read(ep_in, args.read_size, timeout=args.timeout)
             except usb.core.USBError as e:
-                if e.errno is None:
-                    print(f"IN error: {e}")
-                else:
-                    print(f"IN timeout/err: {e}")
                 # даже при таймауте пробуем выделить из буфера, если вдруг уже накопили
                 chunk = b""
+                if getattr(e, 'errno', None) is None:
+                    in_errors += 1
+                    if not args.quiet:
+                        print(f"IN error: {e}")
+                else:
+                    in_timeouts += 1
+                    if not args.quiet:
+                        print(f"IN timeout/err: {e}")
             acc += bytes(chunk)
 
             # Парсинг acc: возможен leading мусор — сдвигаем до 'STAT' или 0x5A 0xA5
@@ -221,30 +342,39 @@ def main():
             while progressed:
                 progressed = False
                 # Выравнивание
-                while len(acc) >= 2 and not (acc.startswith(b'STAT') or (acc[0] == 0x5A and acc[1] == 0xA5)):
+                while len(acc) >= 3 and not (acc.startswith(b'STAT') or (acc[0] == 0x5A and acc[1] == 0xA5 and acc[2] == 0x01)):
                     acc = acc[1:]
                     progressed = True
                 if len(acc) < 4:
                     break
                 if acc.startswith(b'STAT'):
-                    if len(acc) < 64:
+                    want = stat_expected_len(acc)
+                    if len(acc) < want:
                         break  # ждём полный STAT
-                    st = pop(64)
-                    if expect_b and args.ab_strict:
-                        print("[VIOLATION] STAT received mid-pair while expecting B")
-                        sys.exit(3)
+                    st = pop(want)
+                    if not synced:
+                        pre_sync_stat += 1
+                        progressed = True
+                        continue
+                    if expect_b:
+                        stat_midpair += 1
+                        if args.ab_strict and not args.quiet:
+                            print("[WARN] STAT received mid-pair while expecting B (allowed)")
                     if not args.quiet:
                         stp = parse_stat(st)
                         if stp:
-                            print(f"STAT v{stp['ver']} f2=0x{stp['flags2']:04X} cur={stp['cur_samples']} seq={stp['cur_stream_seq']} sentA/B={stp['sent0']}/{stp['sent1']} wr={stp['wr']} dma0/1={stp['dma0']}/{stp['dma1']} lastTX={stp['last_tx_len']} send={stp['sending_ch']} pair fs={stp['pair_idx']>>8}/{stp['pair_idx']&0xFF}")
+                            extra = ""
+                            if 'now_ms' in stp:
+                                extra = f" now={stp['now_ms']} last_full0/1={stp['last_full0_ms']}/{stp['last_full1_ms']}"
+                            print(f"STAT v{stp['ver']} f2=0x{stp['flags2']:04X} cur={stp['cur_samples']} seq={stp['cur_stream_seq']} sentA/B={stp['sent0']}/{stp['sent1']} wr={stp['wr']} dma0/1={stp['dma0']}/{stp['dma1']} lastTX={stp['last_tx_len']} send={stp['sending_ch']} pair fs={stp['pair_idx']>>8}/{stp['pair_idx']&0xFF}{extra}")
                         else:
-                            print("STAT", st[:16].hex(), "len=64")
+                            print("STAT", st[:16].hex(), "len=", len(st))
                     progressed = True
                     continue
                 # Кадр: имеем минимум 32 байта на заголовок?
                 if len(acc) < 32:
                     break
-                if not (acc[0] == 0x5A and acc[1] == 0xA5):
+                if not (acc[0] == 0x5A and acc[1] == 0xA5 and acc[2] == 0x01):
                     # не распознали — сдвиг
                     acc = acc[1:]
                     progressed = True
@@ -254,6 +384,11 @@ def main():
                     total_samples = struct.unpack_from('<H', acc, 12)[0]
                 except Exception:
                     break
+                # Sanity-check: if we are misaligned, ns will be garbage. Don't consume a bogus length.
+                if total_samples <= 0 or total_samples > 4096:
+                    acc = acc[1:]
+                    progressed = True
+                    continue
                 total_len = 32 + total_samples * 2
                 # В DIAG-режиме устройство может паддировать кадры до кратности 512 (HS MPS)
                 padded_len = total_len
@@ -282,8 +417,65 @@ def main():
                         print(f"TEST len={fr['len']}")
                     progressed = True
                     continue
-                ch = 'A' if (fl & 0x01) else 'B'
+
+                is_a = bool(fl & 0x01)
+                is_b = bool(fl & 0x02)
+                ch = 'A' if is_a else ('B' if is_b else 'UNK')
+
+                if verify_mode == 'mono':
+                    # In mono mode, ignore pairing; just validate seq continuity.
+                    if args.chmode == 0 and not is_a:
+                        wrong_channel += 1
+                    elif args.chmode == 1 and not is_b:
+                        wrong_channel += 1
+                    # Pre-sync is just first valid frame.
+                    if not synced and ch != 'UNK':
+                        synced = True
+                    # Seq continuity check (after warmup): track uniques and compute gaps within observed span.
+                    if synced and ch != 'UNK' and args.seq_strict:
+                        check_enabled = (frames_checked >= args.warmup_pairs)
+                        if check_enabled:
+                            s = fr['seq']
+                            if seq_first is None:
+                                seq_first = s
+                                seq_max_seen = s
+                            if seq_prev is not None and s < seq_prev:
+                                seq_reorders += 1
+                                if args.fail_fast:
+                                    print(f"[VIOLATION] seq reorder: got {s} after {seq_prev}")
+                                    sys.exit(6)
+                            if s in seq_seen:
+                                seq_dupes += 1
+                                if args.fail_fast:
+                                    print(f"[VIOLATION] seq duplicate: {s}")
+                                    sys.exit(7)
+                            else:
+                                seq_seen.add(s)
+                                seq_max_seen = s if seq_max_seen is None else max(seq_max_seen, s)
+                            seq_prev = s
+                        frames_checked += 1
+
+                    # Counts / optional prints
+                    if ch == 'A':
+                        got_a += 1
+                    elif ch == 'B':
+                        got_b += 1
+                    if not args.quiet:
+                        print(f"{ch} seq={fr['seq']} ns={fr['ns']} len={fr['len']}")
+                    progressed = True
+                    continue
+
+                # verify_mode == 'pair'
                 if ch == 'A':
+                    if not synced:
+                        synced = True
+                    if expect_b:
+                        # new A arrived while expecting B => missing B / desync
+                        if pairs_completed >= args.warmup_pairs:
+                            missing_b += 1
+                            if args.ab_strict and args.fail_fast:
+                                print(f"[VIOLATION] A received while expecting B (missing B). A seq={fr['seq']}")
+                                sys.exit(4)
                     got_a += 1
                     expect_b = True
                     last_seq = fr['seq']
@@ -293,16 +485,55 @@ def main():
                     if not args.quiet:
                         print(f"A seq={fr['seq']} ns={fr['ns']} len={fr['len']}")
                 else:
+                    if not synced:
+                        # We may start mid-stream (B first). Ignore until first A syncs.
+                        pre_sync_b += 1
+                        progressed = True
+                        continue
+                    if not expect_b:
+                        if pairs_completed >= args.warmup_pairs:
+                            missing_a += 1
+                            if args.ab_strict and args.fail_fast:
+                                print(f"[VIOLATION] B received while not expecting B (missing A). B seq={fr['seq']}")
+                                sys.exit(5)
                     got_b += 1
                     if last_seq is not None and fr['seq'] != last_seq:
                         msg = f"B seq mismatch: got {fr['seq']} expected {last_seq}"
-                        if args.ab_strict:
-                            print("[VIOLATION]", msg)
-                            sys.exit(4)
-                        else:
-                            print("[WARN]", msg)
+                        if pairs_completed >= args.warmup_pairs:
+                            if args.ab_strict and args.fail_fast:
+                                print("[VIOLATION]", msg)
+                                sys.exit(4)
+                            elif not args.quiet:
+                                print("[WARN]", msg)
                     expect_b = False
                     last_pair_time = time.time()
+                    # Pair completed: track uniques and compute true gaps at end.
+                    if args.seq_strict:
+                        check_enabled = (pairs_completed >= args.warmup_pairs)
+                        if check_enabled:
+                            s = fr['seq']
+                            if seq_first is None:
+                                seq_first = s
+                                seq_max_seen = s
+                            if seq_prev is not None and s < seq_prev:
+                                seq_reorders += 1
+                                if args.fail_fast:
+                                    print(f"[VIOLATION] seq reorder: got {s} after {seq_prev}")
+                                    sys.exit(6)
+                                elif not args.quiet:
+                                    print(f"[WARN] seq reorder: got {s} after {seq_prev}")
+                            if s in seq_seen:
+                                seq_dupes += 1
+                                if args.fail_fast:
+                                    print(f"[VIOLATION] seq duplicate: {s}")
+                                    sys.exit(7)
+                                elif not args.quiet:
+                                    print(f"[WARN] seq duplicate: {s}")
+                            else:
+                                seq_seen.add(s)
+                                seq_max_seen = s if seq_max_seen is None else max(seq_max_seen, s)
+                            seq_prev = s
+                        pairs_completed += 1
                     if not args.quiet:
                         print(f"B seq={fr['seq']} ns={fr['ns']} len={fr['len']}")
                 progressed = True
@@ -314,7 +545,22 @@ def main():
             pairs = (fr['seq'] - first_seq + 1) if fr is not None else (got_b)
             if pairs > 0:
                 fps = pairs / (last_pair_time - first_pair_time)
-        print(f"Done. A={got_a} B={got_b} TEST={tests} time={dt:.2f}s pairs_fps≈{fps:.1f}")
+        # Compute true seq gaps from observed window.
+        seq_range = "n/a"
+        seq_unique = 0
+        if args.seq_strict and seq_first is not None and seq_max_seen is not None:
+            seq_unique = len(seq_seen)
+            seq_gaps = (seq_max_seen - seq_first + 1) - seq_unique
+            seq_range = f"{seq_first}..{seq_max_seen}"
+        else:
+            seq_gaps = 0
+        print(
+            f"Done. mode={verify_mode} A={got_a} B={got_b} TEST={tests} time={dt:.2f}s pairs_fps≈{fps:.1f} "
+            f"timeouts={in_timeouts} in_errors={in_errors} missingA={missing_a} missingB={missing_b} "
+            f"seq_gaps={seq_gaps} seq_dupes={seq_dupes} seq_reorders={seq_reorders} "
+            f"seq_unique={seq_unique} seq_range={seq_range} stat_midpair={stat_midpair} "
+            f"wrong_ch={wrong_channel} pre_sync_b={pre_sync_b} pre_sync_stat={pre_sync_stat}"
+        )
     finally:
         try:
             send_cmd(dev, ep_out, bytes([VND_CMD_STOP_STREAM]))
