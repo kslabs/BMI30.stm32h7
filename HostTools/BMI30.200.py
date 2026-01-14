@@ -37,12 +37,13 @@ import numpy as np  # type: ignore
 import serial, glob
 
 try:
-	from usb_vendor.usb_stream import USBStream, CMD_SET_PROFILE, CMD_STOP_STREAM, CMD_START_STREAM, CMD_SOFT_RESET, CMD_DEEP_RESET, CMD_SET_WINDOWS, CMD_SET_STREAM_MODE, CMD_ASYNC  # type: ignore
+	from usb_vendor.usb_stream import USBStream, CMD_SET_PROFILE, CMD_STOP_STREAM, CMD_START_STREAM, CMD_SOFT_RESET, CMD_DEEP_RESET, CMD_SET_WINDOWS, CMD_SET_STREAM_MODE, CMD_ASYNC, CMD_SET_DC_ADAPT  # type: ignore
 except Exception:
 	from usb_vendor.usb_stream import USBStream  # type: ignore
 	CMD_SET_PROFILE = 0x14
 	CMD_STOP_STREAM = 0x21
 	CMD_START_STREAM = 0x20
+	CMD_SET_DC_ADAPT = 0x1B
 	CMD_GET_STATUS = 0x30
 	CMD_FULL_MODE = 0x13
 	CMD_CHMODE = 0x19
@@ -361,6 +362,8 @@ class ScopeWindow:
 			self.dc_adapt_modes = modes if modes else {1, 2}
 		except Exception:
 			self.dc_adapt_modes = {1, 2}
+		# Флаг управления адаптацией DC (можно заморозить при детекции сигнала)
+		self.dc_adapt_enabled = True  # По умолчанию включено
 		# Загрузить сохраненные DC offset массивы при старте
 		self._load_dc_offset()
 		
@@ -2004,7 +2007,8 @@ class ScopeWindow:
 						
 						# Адаптивное обновление DC offset (пошагово, по семплам)
 						# По умолчанию включено для STREAM_MODE=1 (LOSSLESS_ROI) и 2 (AVG_ROI)
-						if int(getattr(self, 'stream_mode', 0) or 0) in set(getattr(self, 'dc_adapt_modes', {1, 2})) and len(ch0) > 0:
+						# Можно заморозить через CMD_SET_DC_ADAPT при детекции сигнала
+						if getattr(self, 'dc_adapt_enabled', True) and int(getattr(self, 'stream_mode', 0) or 0) in set(getattr(self, 'dc_adapt_modes', {1, 2})) and len(ch0) > 0:
 							if par:
 								self._update_dc_offset_adaptive(ch0, self.dc_offset_ch0_odd, len(ch0))
 							else:
@@ -2075,7 +2079,8 @@ class ScopeWindow:
 								self._ts_b_even = ts
 						
 						# Адаптивное обновление DC offset
-						if int(getattr(self, 'stream_mode', 0) or 0) in set(getattr(self, 'dc_adapt_modes', {1, 2})) and len(ch1) > 0:
+						# Можно заморозить через CMD_SET_DC_ADAPT при детекции сигнала
+						if getattr(self, 'dc_adapt_enabled', True) and int(getattr(self, 'stream_mode', 0) or 0) in set(getattr(self, 'dc_adapt_modes', {1, 2})) and len(ch1) > 0:
 							if par:
 								self._update_dc_offset_adaptive(ch1, self.dc_offset_ch1_odd, len(ch1))
 							else:

@@ -104,6 +104,8 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
          - [2] u8 avg_n (опционально, только для mode=2): 1..32, default=20
 */
 #define VND_CMD_SET_STREAM_MODE  0x1Au
+/* DC Adaptation control: 0x00=freeze (stop learning), 0x01=active (resume learning) */
+#define VND_CMD_SET_DC_ADAPT     0x1Bu
 #define VND_STREAM_MODE_LATEST        0u
 #define VND_STREAM_MODE_LOSSLESS_ROI  1u
 #define VND_STREAM_MODE_AVG_ROI       2u
@@ -419,6 +421,9 @@ volatile uint32_t vnd_dc_save_fail_count = 0;
 volatile uint32_t vnd_dc_save_last_ms = 0;
 volatile uint8_t  vnd_dc_save_last_result = 0; /* 0=none, 1=ok, 2=fail */
 
+/* DC Adaptation control (can be frozen by host during signal detection) */
+volatile uint8_t  vnd_dc_adapt_enabled = 1; /* 1=active (learning), 0=freeze (keep current values) */
+
 /* Public mirror of blob write_counter for LCD/debug (see usb_vendor_app.h) */
 volatile uint32_t vnd_dc_write_counter_public = 0;
 
@@ -711,6 +716,12 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
 
     if(!gate_enabled){
         return; /* адаптация выключена */
+    }
+
+    /* Проверяем флаг управления адаптацией от хоста (CMD_SET_DC_ADAPT).
+       Если 0 (FREEZE) - только вычитаем DC, но не обучаемся (не меняем vnd_dc_buf). */
+    if(!vnd_dc_adapt_enabled){
+        return; /* адаптация заморожена хостом */
     }
 
     /* На старте после reboot/load применяем DC, но не учимся некоторое время,
@@ -4298,6 +4309,20 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 vnd_update_lcd_params();
             }
             break;
+
+        case VND_CMD_SET_DC_ADAPT:
+            /* Управление адаптацией DC: 0x00=заморозить, 0x01=включить
+               При детекции сигнала на RPI можно заморозить обучение DC,
+               оставив вычитание текущих значений. */
+            if(len >= 2)
+            {
+                uint8_t enable = data[1];
+                vnd_dc_adapt_enabled = (enable != 0) ? 1 : 0;
+                printf("[CMD_IND] SET_DC_ADAPT %s\r\n", vnd_dc_adapt_enabled ? "ACTIVE" : "FREEZE");
+                cdc_logf("EVT SET_DC_ADAPT %u", (unsigned)vnd_dc_adapt_enabled);
+            }
+            break;
+
         case VND_CMD_SET_BLOCK_HZ:
             if(len >= 3)
             {

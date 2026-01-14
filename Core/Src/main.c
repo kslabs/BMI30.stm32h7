@@ -2522,6 +2522,7 @@ void DrawUSBStatus(void){
   /* Индикатор прогресса адаптации/сохранения DC: нижняя линия пикселей (y=79, 0..159).
      - Пока DC "dirty" (идёт адаптация, ожидаем запись) — линия заполняется слева направо.
      - Если последняя запись DC не удалась — рисуем красным; после успешной записи — зелёным.
+     - Если адаптация заморожена (CMD_SET_DC_ADAPT freeze) — полоса становится синей.
      Важно: используем только 1px высоту, чтобы не мешать тексту. */
   {
     const uint16_t y = 79;
@@ -2536,9 +2537,17 @@ void DrawUSBStatus(void){
       if(elapsed > period) elapsed = period;
       filled = (uint16_t)((elapsed * (uint32_t)LCD_W) / period);
       if(filled > LCD_W) filled = LCD_W;
-      if(vnd_dc_save_last_result == 2u) color = RED;
-      else if(vnd_dc_save_last_result == 1u) color = GREEN;
-      else color = WHITE;
+      
+      /* Если адаптация заморожена - используем синий цвет */
+      if(!vnd_dc_adapt_enabled){
+        color = BLUE;
+      } else if(vnd_dc_save_last_result == 2u){
+        color = RED;
+      } else if(vnd_dc_save_last_result == 1u){
+        color = GREEN;
+      } else {
+        color = WHITE;
+      }
     } else {
       if(vnd_dc_save_last_result == 2u){
         filled = LCD_W;

@@ -150,6 +150,9 @@ extern volatile uint32_t vnd_dc_save_fail_count;
 extern volatile uint32_t vnd_dc_save_last_ms;
 extern volatile uint8_t  vnd_dc_save_last_result; /* 0=none, 1=ok, 2=fail */
 
+/* DC Adaptation control (can be frozen by host during signal detection) */
+extern volatile uint8_t  vnd_dc_adapt_enabled; /* 1=active (learning), 0=freeze (keep current values) */
+
 /* Monotonic counter stored in Flash blob (loaded on boot, incremented on each save attempt). */
 extern volatile uint32_t vnd_dc_write_counter_public;
 
