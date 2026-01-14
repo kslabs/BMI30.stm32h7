@@ -109,7 +109,7 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #define VND_STREAM_MODE_LATEST        0u
 #define VND_STREAM_MODE_LOSSLESS_ROI  1u
 #define VND_STREAM_MODE_AVG_ROI       2u
-#define VND_AVG_MAX_N                 32u
+#define VND_AVG_MAX_N                 64u  /* Максимум 64 буфера для усреднения (шаг 8: 8/16/24/32/40/48/56/64) */
 #define VND_AVG_OUT_Q                 4u
 
 /* Параметры */
@@ -302,7 +302,7 @@ static uint16_t win_start0 = 0, win_len0 = 0, win_start1 = 0, win_len1 = 0;
 static volatile uint8_t vnd_stream_mode = VND_STREAM_MODE_LATEST;
 
 /* stream_mode=2: усреднение ROI по N буферам, раздельно для even/odd. */
-static volatile uint8_t vnd_avg_n = 20; /* 1..32 */
+static volatile uint8_t vnd_avg_n = 20; /* 1..64 (рекомендуемые значения: 8/16/24/32/40/48/56/64) */
 static uint8_t vnd_avg_cnt[2] = {0,0};
 static uint8_t vnd_avg_next_parity = 0; /* 0=even, 1=odd (legacy; не используется для выпуска кадров) */
 static uint32_t vnd_avg_last_dma_seq[2] = {0,0};
