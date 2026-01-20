@@ -277,7 +277,7 @@ static void MX_TIM15_Init(void);
 static void MX_IWDG1_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
-static uint32_t tim2_apply_profile_window(void);
+uint32_t tim2_apply_profile_window(void);
 void UpdateLCDStatus(void);
 void DrawStarIndicator(void);
 static void __attribute__((unused)) UpdateUSBDebug(void); // теперь будет пустая заглушка
@@ -395,7 +395,7 @@ static inline void uart1_rx_led_pulse(void){
 }
 /* USER CODE END 0 */
 
-static uint32_t tim2_apply_profile_window(void){
+uint32_t tim2_apply_profile_window(void){
   uint16_t buf_rate = adc_stream_get_buf_rate();
   uint16_t samples  = adc_stream_get_active_samples();
   if (buf_rate == 0u) {
@@ -953,9 +953,8 @@ int main(void)
   printf("[TIM2][NVIC] Before Start_IT: TIM2_IRQn=%d enabled=%lu\r\n",
          TIM2_IRQn, (unsigned long)((nvic_iser0 & tim2_bit) ? 1 : 0));
   
-  /* TIM2 не управляет DMA: запускаем только генерацию маркера на CH3 (PA2).
-     Прерывания TIM2 отключены для стабильности. */
-  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
+  /* TIM2 не управляет DMA и не генерирует PWM на PA2.
+     PA2 теперь GPIO - переключается в DMA callback для синхронизации с буфером. */
   HAL_TIM_Base_Start(&htim2);
   
   // ДИАГНОСТИКА: проверка после запуска
@@ -1834,26 +1833,17 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  /* Инвертируем выход TIM2_CH2 (PA1):
-     - CH2 настроен в принудительном ACTIVE режиме, но с инверсией полярности
-       (OCPolarity = LOW), чтобы PA1 был 0 в периоде меандра CH3 и 1 когда
-       меандра нет. Это даёт аппаратный (независимый от CPU) инверсный индикатор.
+  /* TIM2_CH2 (PA1): маркер синхронизации (меандр как CH3)
+     - Используем PWM1 режим для генерации меандра
+     - Полярность HIGH для нормального выхода
   */
-  sConfigOC.OCMode = TIM_OCMODE_ACTIVE;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
-    /* TIM2_CH3 (PA2): меандр 50% для разделения even/odd.
-      PA2=HIGH → even (parity=0), PA2=LOW → odd (parity=1). */
-    sConfigOC.OCMode = TIM_OCMODE_PWM1;
-    sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-    sConfigOC.Pulse = 2500;  // 50% при Period=4999
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  /* TIM2_CH3 (PA2) отключён: PA2 используется как GPIO для DMA done */
   /* USER CODE BEGIN TIM2_Init 2 */
   // Разрешаем прерывания TIM2
   HAL_NVIC_SetPriority(TIM2_IRQn, 1, 0); // TIM2 gate interrupt just below DMA
@@ -2185,14 +2175,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA2 */
+  /*Configure GPIO pin : PA2 (DMA done indicator) */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
   GPIO_InitStruct.Pin = GPIO_PIN_2;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
+  
   /* USER CODE BEGIN MX_GPIO_Init_2 */
   /* PA3: логический маркер (toggle на каждый опубликованный буфер/кадр) */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
@@ -2436,25 +2426,17 @@ void DrawUSBStatus(void){
     static uint16_t prev_line2_fg = 0, prev_line2_bg = 0;
     static uint16_t prev_line3_fg = 0, prev_line3_bg = 0;
     static uint16_t prev_line4_fg = 0, prev_line4_bg = 0;
+    
+    /* Первая строка (y=0): USB статус */
     lcd_print_padded_if_changed(0,0,text0, prev_line0, sizeof(prev_line0), 7, 16, color0, BLACK, &prev_line0_fg, &prev_line0_bg);
 
-  /* 2-я строка LCD (y=14): расширенная диагностика DC.
-     Показываем факт загрузки из Flash (L), флаг "нужен erase" (E),
-     сигнатуру (CRC16 загруженной записи) и dirty/result.
-     Это позволяет понять после перезагрузки: загрузилось ли состояние или DC пошёл "с нуля". */
+  /* Строка 1 (y=14): частота маркера (PA1/PA2) */
   {
-    char dc2_buf[24];
-    uint16_t dc2_color = WHITE;
-    if(vnd_dc_save_last_result == 1u) dc2_color = GREEN;
-    else if(vnd_dc_save_last_result == 2u) dc2_color = RED;
-    unsigned loaded = (unsigned)((vnd_dc_load_flags_public & 1u) ? 1u : 0u);
-    char erase_flag = ((vnd_dc_load_flags_public & 2u) ? 'E' : ' ');
-    snprintf(dc2_buf, sizeof(dc2_buf), "DC L%u%c S%04X d%u r%u",
-             loaded, erase_flag,
-             (unsigned)(vnd_dc_loaded_crc16_public),
-             (unsigned)(vnd_dc_dirty_public ? 1u : 0u),
-             (unsigned)(vnd_dc_save_last_result));
-    lcd_print_padded_if_changed(0,14, dc2_buf, prev_line1, sizeof(prev_line1), 20, 16, dc2_color, BLACK, &prev_line1_fg, &prev_line1_bg);
+    uint16_t buf_rate = adc_stream_get_buf_rate();
+    uint16_t marker_hz = buf_rate / 2;  // TIM2 делит buf_rate на 2 для получения меандра
+    char freq_buf[20];
+    snprintf(freq_buf, sizeof(freq_buf), "%u Hz", (unsigned)marker_hz);
+    lcd_print_padded_if_changed(0,14, freq_buf, prev_line1, sizeof(prev_line1), 10, 16, CYAN, BLACK, &prev_line1_fg, &prev_line1_bg);
   }
 
   /* Скорость обмена: считаем раз в ~500мс (байты/с и семплы/с) */

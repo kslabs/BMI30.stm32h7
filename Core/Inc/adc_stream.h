@@ -132,6 +132,9 @@ void adc_stream_watchdog(void);
 // Вызов в начале цикла (0→1 TIM2) перед началом заполнения нового буфера
 void adc_stream_tim2_switch_buffers(void);
 
+// Fine frequency tuning: установка buf_rate в диапазоне 200-210 Hz
+void adc_stream_set_buf_rate_fine(uint16_t buf_rate_hz);
+
 #ifdef __cplusplus
 }
 #endif

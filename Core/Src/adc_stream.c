@@ -489,11 +489,56 @@ void adc_stage_write_markers(uint16_t *buf, uint16_t samples, uint16_t buf_idx)
 
 uint8_t adc_stream_static_mode_enabled(void){ return s_static_stage_mode; }
 
+// Fine frequency tuning: override для buf_rate_hz (0 = use profile default)
+static uint16_t g_fine_buf_rate_override = 0;
+
 // Публичные функции профиля
 uint8_t adc_stream_get_profile(void) { return g_active_profile; }
 uint16_t adc_stream_get_active_samples(void) { return g_active_samples; }
-uint16_t adc_stream_get_buf_rate(void) { return g_profiles[g_active_profile].buf_rate_hz; }
+uint16_t adc_stream_get_buf_rate(void) { 
+    // Если установлен fine tuning override, используем его
+    return (g_fine_buf_rate_override != 0) ? g_fine_buf_rate_override : g_profiles[g_active_profile].buf_rate_hz; 
+}
 uint32_t adc_stream_get_fs(void) { return g_profiles[g_active_profile].fs_hz; }
+
+/* Применить актуальные настройки частоты к TIM15 и TIM2 (независимо от профиля) */
+static void adc_stream_apply_timing(void)
+{
+    extern TIM_HandleTypeDef htim15;
+    uint16_t samples = adc_stream_get_active_samples();
+    uint16_t buf_rate_hz = adc_stream_get_buf_rate();
+    if (samples == 0u || buf_rate_hz == 0u) {
+        return;
+    }
+
+    /* Fs = buf_rate * N */
+    uint32_t sample_rate = (uint32_t)buf_rate_hz * (uint32_t)samples;
+
+    /* TIM15 тактируется от APB2 timer clock (с удвоением при делителе != 1) */
+    uint32_t tim_clk = HAL_RCC_GetPCLK2Freq();
+    uint32_t d2ppre2 = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE2_Msk) >> RCC_D2CFGR_D2PPRE2_Pos;
+    if (d2ppre2 != 0u) {
+        tim_clk *= 2u;
+    }
+    uint32_t tick_hz = tim_clk / (htim15.Init.Prescaler + 1u);
+    if (tick_hz == 0u || sample_rate == 0u) {
+        return;
+    }
+
+    uint32_t tim15_arr = (tick_hz / sample_rate);
+    if (tim15_arr == 0u) tim15_arr = 1u;
+    tim15_arr -= 1u;
+    __HAL_TIM_SET_AUTORELOAD(&htim15, tim15_arr);
+    __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, (tim15_arr + 1u) / 2u); /* 50% */
+
+    /* Обновляем TIM2 (маркеры/окно) */
+    extern uint32_t tim2_apply_profile_window(void);
+    tim2_apply_profile_window();
+
+    ADC_LOGF("[ADC][RATE] Apply timing: buf_rate=%u Hz samples=%u Fs=%lu Hz TIM15_CLK=%lu ARR=%lu\r\n",
+             (unsigned)buf_rate_hz, (unsigned)samples,
+             (unsigned long)sample_rate, (unsigned long)tick_hz, (unsigned long)tim15_arr);
+}
 
 static HAL_StatusTypeDef adc_stream_apply_profile(void) {
     if (!s_adc1 || (!DIAG_SINGLE_ADC1 && !s_adc2)) {
@@ -539,6 +584,9 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
         ADC_LOGF("[ADC][STATIC] mode: DMA disabled, staged markers cleared (samples=%lu)\r\n", (unsigned long)stage_ns);
         return HAL_OK;
     }
+
+    /* Применяем тайминги (TIM15/TIM2) под текущий профиль/override до старта DMA */
+    adc_stream_apply_timing();
     
     #if DIAG_DISABLE_ADC_DMA
         ADC_LOGF("[ADC][DIAG] DMA start suppressed (DIAG_DISABLE_ADC_DMA=1) total_samples=%lu\r\n", (unsigned long)total_samples);
@@ -757,6 +805,11 @@ int adc_stream_set_profile(uint8_t prof_id) {
             return -2;
         }
         ADC_LOGF("[ADC][PROF] apply_profile OK\r\n");
+        /* Обновляем тайминги (TIM15/TIM2) под новый профиль/override */
+        adc_stream_apply_timing();
+    } else {
+        /* Даже без активных ADC применяем тайминги для маркеров */
+        adc_stream_apply_timing();
     }
     return 0;
 }
@@ -1554,6 +1607,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     if ((s_tc_mask & READY_MASK_FULL) == READY_MASK_FULL) {
         s_tc_mask = 0;
 
+          /* Переключаем PA2 для индикации завершения буфера (чётный/нечётный) */
+          extern void HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_2);
+          
           /* Сохраняем номер DMA-буфера 0..7 для этого done_idx (для заголовка/диагностики).
               Не используем глобальный счётчик, чтобы не ломать соответствие фаз после reboot. */
           uint8_t buffer_index = (uint8_t)((done_idx & 0x06u) | (adc_parity_from_pa3() & 1u));
@@ -1880,6 +1937,41 @@ void adc_stream_watchdog(void)
      /* Дополнительный селективный контроль канала B отключён как
          нестабильный и шумный. Если когда-нибудь понадобится вернуть эксперименты,
          здесь можно восстановить логику dtB/dtA и выборочные рестарты. */
+}
+
+/* === Fine Frequency Tuning === */
+/* Установка частоты маркера (PA1/PA2) в диапазоне 180-250 Hz
+ * Допускаем два формата payload:
+ *  - marker_hz (<=350): желаемая частота меандра на PA1/PA2
+ *  - buf_rate_hz (>350): частота DMA буферов (маркер = buf_rate/2)
+ */
+void adc_stream_set_buf_rate_fine(uint16_t raw_hz) {
+    uint16_t marker_hz = 0;
+    uint16_t buf_rate_hz = 0;
+
+    if (raw_hz > 350u) {
+        /* трактуем как buf_rate_hz */
+        buf_rate_hz = raw_hz;
+        marker_hz = (uint16_t)(buf_rate_hz / 2u);
+    } else {
+        /* трактуем как marker_hz */
+        marker_hz = raw_hz;
+        buf_rate_hz = (uint16_t)(marker_hz * 2u);
+    }
+
+    if (marker_hz < 180u || marker_hz > 250u) {
+        ADC_LOGF("[ADC][RATE] Fine-tune marker=%u Hz out of range (180-250), ignoring\r\n", (unsigned)marker_hz);
+        return;
+    }
+    
+    /* Устанавливаем override для buf_rate */
+    g_fine_buf_rate_override = buf_rate_hz;
+
+    /* Применяем тайминги независимо от активного профиля */
+    adc_stream_apply_timing();
+
+    ADC_LOGF("[ADC][RATE] Fine-tune: raw=%u -> marker=%u Hz, buf_rate=%u Hz\r\n",
+             (unsigned)raw_hz, (unsigned)marker_hz, (unsigned)buf_rate_hz);
 }
 
 // Тестовые функции удалены - используем только реальный ADC+DMA

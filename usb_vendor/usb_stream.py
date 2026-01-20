@@ -38,6 +38,7 @@ CMD_ASYNC = 0x18
 CMD_CHMODE = 0x19
 CMD_SET_STREAM_MODE = 0x1A
 CMD_SET_DC_ADAPT = 0x1B
+CMD_SET_BUF_RATE_FINE = 0x1C
 CMD_START_STREAM = 0x20
 CMD_STOP_STREAM = 0x21
 CMD_GET_STATUS = 0x30
@@ -220,6 +221,14 @@ class USBStream:
         if hz_i > 2000:
             hz_i = 2000
         self.send_cmd(CMD_BLOCK_HZ, int(hz_i).to_bytes(2, "little", signed=False))
+
+    def set_buf_rate_fine(self, hz: int):
+        """Тонкая настройка частоты буферов: 200-210 Гц с шагом 1 Гц.
+        Для проверки влияния переходных процессов."""
+        hz_i = int(hz)
+        if hz_i < 200 or hz_i > 210:
+            raise ValueError(f"buf_rate_fine must be 200..210 Hz, got {hz_i}")
+        self.send_cmd(CMD_SET_BUF_RATE_FINE, int(hz_i).to_bytes(2, "little", signed=False))
 
     def soft_reset(self):
         # vendor control OUT without data

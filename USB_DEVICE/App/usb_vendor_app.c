@@ -88,6 +88,7 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #define VND_CMD_TOGGLE_TIM2CH3_INV 0x32u
 /* ДОБАВЛЕНО: управление окнами/частотой */
 #define VND_CMD_SET_WINDOWS    0x10u /* payload: start0,len0,start1,len1 (LE, u16) */
+#define VND_CMD_SET_BUF_RATE_FINE 0x1Cu /* payload: marker_hz (<=350) или buf_rate_hz (>350), fine 180-250 Hz */
 #define VND_CMD_SET_BLOCK_HZ   0x11u /* payload: u16 hz (20..100) или 0xFFFF=макс (100) */
 /* Новая команда: установка ограничения числа выборок на канал в рабочем кадре */
 #define VND_CMD_SET_TRUNC_SAMPLES 0x16u /* payload: u16 samples (0=отключить усечение) */
@@ -2157,14 +2158,14 @@ static void vnd_prepare_pair(void)
 #else
     /* Два режима:
        0) LATEST (как сейчас): "последний заполненный буфер", пропуски допустимы.
-       1) LOSSLESS_ROI: строго по FIFO (без пропусков на стороне прошивки), но отправляем только окно ROI.
-          Окно задаётся win_start0/win_len0; для требуемого режима по умолчанию используем 280..480 (200). */
+         1) LOSSLESS_ROI: строго по FIFO (без пропусков на стороне прошивки), но отправляем только окно ROI.
+             Окно задаётся win_start0/win_len0; для требуемого режима по умолчанию используем 300..500 (200). */
     if (vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI)
     {
         /* ROI окно */
         uint16_t roi_start = win_start0;
         uint16_t roi_len   = win_len0;
-        if(roi_len == 0u){ roi_start = 280u; roi_len = 200u; }
+        if(roi_len == 0u){ roi_start = 300u; roi_len = 200u; }
         if(roi_len > VND_MAX_SAMPLES) roi_len = VND_MAX_SAMPLES;
         if(roi_len > MAX_FRAME_SAMPLES) roi_len = MAX_FRAME_SAMPLES;
 
@@ -4479,6 +4480,15 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 (void)us;
                 /* TODO: применить ROI к цепочке выборки */
                 VND_LOG("SET_ROI_US %lu", (unsigned long)us);
+            }
+            break;
+        case VND_CMD_SET_BUF_RATE_FINE:
+            if(len >= 3)
+            {
+                uint16_t buf_rate_hz = (uint16_t)(data[1] | (data[2] << 8));
+                adc_stream_set_buf_rate_fine(buf_rate_hz);
+                VND_LOG("CMD_IND SET_BUF_RATE_FINE %u Hz OK", (unsigned)buf_rate_hz);
+                cdc_logf("CMD_IND SET_BUF_RATE_FINE %u Hz OK", (unsigned)buf_rate_hz);
             }
             break;
         default:
