@@ -298,6 +298,41 @@ static uint8_t diag_b_buf[VND_FRAME_MAX_SIZE];
 static uint32_t diag_prepared_seq = 0xFFFFFFFFu;
 static uint32_t diag_current_pair_seq = 0xFFFFFFFFu;
 static uint16_t win_start0 = 0, win_len0 = 0, win_start1 = 0, win_len1 = 0;
+static uint8_t win_auto = 1; /* авто-окно для ROI (зависит от частоты) */
+
+#ifndef VND_ROI_LEN_DEFAULT
+#define VND_ROI_LEN_DEFAULT 200u
+#endif
+#ifndef VND_ROI_BASE_START_200HZ
+#define VND_ROI_BASE_START_200HZ 300u
+#endif
+#ifndef VND_ROI_BASE_MARKER_HZ
+#define VND_ROI_BASE_MARKER_HZ 200u
+#endif
+
+static uint16_t vnd_compute_auto_roi_start(uint16_t samples, uint16_t marker_hz)
+{
+    int32_t delta = (int32_t)marker_hz - (int32_t)VND_ROI_BASE_MARKER_HZ;
+    int32_t start = (int32_t)VND_ROI_BASE_START_200HZ + delta;
+    int32_t max_start = (int32_t)samples - (int32_t)VND_ROI_LEN_DEFAULT;
+    if (max_start < 0) max_start = 0;
+    if (start < 0) start = 0;
+    if (start > max_start) start = max_start;
+    return (uint16_t)start;
+}
+
+static void vnd_apply_auto_roi_window(void)
+{
+    uint16_t samples = adc_stream_get_active_samples();
+    if (samples == 0u) samples = 600u;
+    uint16_t buf_rate = adc_stream_get_buf_rate();
+    uint16_t marker_hz = (buf_rate != 0u) ? (uint16_t)(buf_rate / 2u) : (uint16_t)VND_ROI_BASE_MARKER_HZ;
+    uint16_t new_start = vnd_compute_auto_roi_start(samples, marker_hz);
+    win_len0 = VND_ROI_LEN_DEFAULT;
+    win_start0 = new_start;
+    win_start1 = 0u;
+    win_len1 = 0u;
+}
 
 /* Текущий режим стриминга (по умолчанию оставляем текущий "последний буфер") */
 static volatile uint8_t vnd_stream_mode = VND_STREAM_MODE_LATEST;
@@ -517,6 +552,9 @@ static inline uint8_t vnd_raw_has_full_swing_u16(const uint16_t *p, uint16_t n, 
    IMPORTANT: uses peek API so it does NOT consume FIFO frames used for USB streaming. */
 static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
 {
+    /* Обязательно загрузить DC из Flash как можно раньше после reboot,
+       даже если окно пока не выставлено в 200. */
+    vnd_dc_load_once();
     if(roi_len == 0u) return;
     if(roi_len != (uint16_t)VND_DC_ROI_LEN) return;
 
@@ -2156,16 +2194,24 @@ static void vnd_prepare_pair(void)
         }
     }
 #else
-    /* Два режима:
-       0) LATEST (как сейчас): "последний заполненный буфер", пропуски допустимы.
-         1) LOSSLESS_ROI: строго по FIFO (без пропусков на стороне прошивки), но отправляем только окно ROI.
-             Окно задаётся win_start0/win_len0; для требуемого режима по умолчанию используем 300..500 (200). */
+        /* Два режима:
+             0) LATEST (как сейчас): "последний заполненный буфер", пропуски допустимы.
+                 1) LOSSLESS_ROI: строго по FIFO (без пропусков на стороне прошивки), но отправляем только окно ROI.
+                         Окно задаётся win_start0/win_len0; по умолчанию 280..480 (200) и сдвигается по частоте. */
     if (vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI)
     {
         /* ROI окно */
         uint16_t roi_start = win_start0;
         uint16_t roi_len   = win_len0;
-        if(roi_len == 0u){ roi_start = 300u; roi_len = 200u; }
+        if(roi_len == 0u){
+            roi_len = VND_ROI_LEN_DEFAULT;
+            if(win_auto){
+                vnd_apply_auto_roi_window();
+                roi_start = win_start0;
+            } else {
+                roi_start = 0u;
+            }
+        }
         if(roi_len > VND_MAX_SAMPLES) roi_len = VND_MAX_SAMPLES;
         if(roi_len > MAX_FRAME_SAMPLES) roi_len = MAX_FRAME_SAMPLES;
 
@@ -3029,6 +3075,9 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
     /* Сервис EP0: выполняем отложенные SOFT/DEEP RESET без блокировки SETUP */
     USBD_VND_ProcessControlRequests();
 
+    /* Принудительная загрузка DC после reboot: не зависит от stream_mode/ROI. */
+    vnd_dc_load_once();
+
     /* DC (always-on): загрузка по запросу + фоновая адаптация/сохранение не зависят от stream_mode.
        stream_mode влияет только на формирование USB кадров. */
     if(vnd_dc_load_request){
@@ -3038,7 +3087,16 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
     {
         uint16_t roi_start = win_start0;
         uint16_t roi_len   = win_len0;
-        if(roi_len == 0u){ roi_start = 280u; roi_len = 200u; }
+        if(roi_len == 0u){
+            if(win_auto){
+                vnd_apply_auto_roi_window();
+                roi_start = win_start0;
+                roi_len = win_len0;
+            } else {
+                roi_start = (uint16_t)VND_ROI_BASE_START_200HZ;
+                roi_len = (uint16_t)VND_ROI_LEN_DEFAULT;
+            }
+        }
         vnd_dc_background_step(roi_start, roi_len);
         vnd_dc_try_save_periodic();
     }
@@ -4260,6 +4318,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 win_len0   = (uint16_t)(data[3] | (data[4] << 8));
                 win_start1 = (uint16_t)(data[5] | (data[6] << 8));
                 win_len1   = (uint16_t)(data[7] | (data[8] << 8));
+                win_auto = 0; /* ручное окно отключает авто-смещение */
                 VND_LOG("SET_WINDOWS s0=%u l0=%u s1=%u l1=%u", win_start0, win_len0, win_start1, win_len1);
                 /* При смене ROI сбросить накопители усреднения, чтобы не смешивать разные окна */
                 vnd_avg_reset();
@@ -4301,11 +4360,12 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 cur_samples_per_frame = 0;
                 cur_expected_frame_size = 0;
 
-                /* Для требуемого режима "lossless ROI" выставляем дефолтное окно 280..480 (200).
+                /* Для требуемого режима "lossless ROI" выставляем дефолтное окно 200 семплов
+                   со сдвигом по частоте (база 200 Гц -> старт 280).
                    Хост всё равно может переопределить через SET_WINDOWS. */
                 if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI){
-                    win_start0 = 280u; win_len0 = 200u;
-                    win_start1 = 0u;   win_len1 = 0u;
+                    win_auto = 1;
+                    vnd_apply_auto_roi_window();
                 }
                 vnd_update_lcd_params();
             }
@@ -4489,6 +4549,15 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 adc_stream_set_buf_rate_fine(buf_rate_hz);
                 VND_LOG("CMD_IND SET_BUF_RATE_FINE %u Hz OK", (unsigned)buf_rate_hz);
                 cdc_logf("CMD_IND SET_BUF_RATE_FINE %u Hz OK", (unsigned)buf_rate_hz);
+                if(win_auto && (vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI)){
+                    uint16_t prev_start = win_start0;
+                    vnd_apply_auto_roi_window();
+                    if(win_start0 != prev_start){
+                        vnd_avg_reset();
+                        vnd_update_lcd_params();
+                        VND_LOG("AUTO_WINDOW s0=%u l0=%u", win_start0, win_len0);
+                    }
+                }
             }
             break;
         default:
