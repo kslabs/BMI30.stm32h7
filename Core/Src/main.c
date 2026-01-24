@@ -63,6 +63,9 @@ volatile uint32_t loop_cycle_last_report_ms = 0;
 volatile uint32_t loop_cycle_last_avg = 0;
 volatile uint8_t  need_recovery = 0;
 volatile uint8_t  need_usb_status_refresh = 0;
+static volatile uint32_t sync_edge_count = 0;   /* диагностика фронтов PD5 */
+static volatile uint32_t sync_last_exti_ms = 0; /* время последнего EXTI по PD5 */
+static volatile uint32_t tim2_irq_counter = 0;  /* диагностика TIM2 IRQ */
 /* Новый флаг: запрос на ПОЛНЫЙ аппаратный сброс по команде 0x22 */
 volatile uint8_t  need_hard_reset = 0;
 volatile uint32_t systick_heartbeat = 0; /* глобальный счётчик SysTick для stm32h7xx_it.c */
@@ -217,6 +220,10 @@ enum {
   BOOT_PROGRESS_ENTER_LOOP     = (1u<<3)
 };
 static uint32_t g_progress_flags = 0;
+static volatile uint32_t g_uart1_diag_flags = 0;
+static volatile uint32_t g_cdc_tx_ok = 0;
+static volatile uint32_t g_cdc_tx_err = 0;
+static volatile uint32_t g_cdc_tx_busy = 0;
 
 static void boot_diag_init(uint32_t current_rsr){
   if(g_boot_diag.magic != 0x42444731UL){ // 'BDG1'
@@ -328,6 +335,28 @@ static void lcd_print_padded_if_changed(int x, int y, const char* new_text,
 #define DIAG_SKIP_LCD 0
 // Логировать состояние масок прерываний и BASEPRI каждые N циклов
 #define DIAG_INT_MASK_LOG_PERIOD 50
+// Диагностика синхронизации по PD5 (печать счётчика фронтов)
+#ifndef DIAG_SYNC_PRINT
+#define DIAG_SYNC_PRINT 0
+#endif
+// Отключаем EXTI по PD5 (переходим на опрос)
+#ifndef SYNC_EXTI_ENABLE
+#define SYNC_EXTI_ENABLE 1
+#endif
+// Адаптивная подстройка частоты (PLL-like) по уровню PD5
+#ifndef SYNC_PLL_ENABLE
+#define SYNC_PLL_ENABLE 0
+#endif
+#ifndef SYNC_PLL_MIN_ARR
+#define SYNC_PLL_MIN_ARR 200u
+#endif
+#ifndef SYNC_PLL_CHECK_PERIODS
+#define SYNC_PLL_CHECK_PERIODS 12u
+#endif
+// Диагностическая строка UART1 на LCD вместо build-time
+#ifndef DIAG_UART1_LINE
+#define DIAG_UART1_LINE 0
+#endif
 
 static inline void diag_halt(const char *tag){
   printf("[DIAG] HALT %s\r\n", tag);
@@ -340,6 +369,10 @@ void uart1_raw_putc(char c){
   for(volatile uint32_t to=0; to<20000; ++to){
     if(USART1->ISR & USART_ISR_TXE_TXFNF){ USART1->TDR = (uint8_t)c; return; }
   }
+}
+static void uart1_raw_puts(const char *s){
+  if(!s) return;
+  while(*s){ uart1_raw_putc(*s++); }
 }
 /* Контрольные маркеры прохождения кода */
 static inline void LED_ON(void){ HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_SET); }
@@ -414,10 +447,16 @@ uint32_t tim2_apply_profile_window(void){
     return 0u;
   }
 
-    /* TIM2 теперь используется ТОЛЬКО как маркер/делитель на 2 (PA2 = TIM2_CH3).
-      buf_rate = частота готовых DMA-буферов (например 400 Гц при fs=240кГц и N=600)
-      → период TIM2 = tick_hz / (buf_rate/2) для получения 200 Гц меандра CH3 */
-  uint32_t period_ticks = (tick_hz * 2u) / buf_rate; // период для 200 Гц меандра (при buf_rate=400)
+    /* TIM2 используется как маркер (PA2 = TIM2_CH3).
+      Для SYNC профиля: f_marker = f_buf (200 Гц).
+      Для остальных: f_marker = f_buf/2. */
+  uint8_t prof = adc_stream_get_profile();
+  uint32_t period_ticks = 0u;
+  if (prof == ADC_PROFILE_F_SYNC_200HZ) {
+    period_ticks = tick_hz / buf_rate; // 200 Гц при buf_rate=200
+  } else {
+    period_ticks = (tick_hz * 2u) / buf_rate; // 200 Гц при buf_rate=400
+  }
   if (period_ticks < 16u) {
     period_ticks = 16u; // минимальная защита
   }
@@ -595,6 +634,18 @@ int main(void)
   /* USER CODE BEGIN SysInit */
   /* РАННИЙ UART для диагностики: инициализация сразу после тактирования */
   MX_USART1_UART_Init();
+  {
+    uint32_t cr1 = USART1->CR1;
+    uint32_t isr = USART1->ISR;
+    g_uart1_diag_flags = 0;
+    if(cr1 & USART_CR1_UE) g_uart1_diag_flags |= (1u<<0);
+    if(cr1 & USART_CR1_TE) g_uart1_diag_flags |= (1u<<1);
+    if(cr1 & USART_CR1_RE) g_uart1_diag_flags |= (1u<<2);
+    if(isr & USART_ISR_TEACK) g_uart1_diag_flags |= (1u<<3);
+    if(isr & USART_ISR_REACK) g_uart1_diag_flags |= (1u<<4);
+    if(isr & USART_ISR_TXE_TXFNF) g_uart1_diag_flags |= (1u<<5);
+  }
+  uart1_raw_puts("[RAW] UART1 init ok\r\n");
   setvbuf(stdout, NULL, _IONBF, 0);
   static uint32_t build_counter __attribute__((section(".noinit"))) = 0;
   build_counter++;
@@ -771,6 +822,20 @@ int main(void)
 #if !SAFE_MINIMAL
   LCD_Init();
   LCD_FillRect(0, 0, LCD_W, LCD_H, BLACK);
+  /* Минимальный тест отрисовки сразу после инициализации LCD */
+  LCD_ShowString_Size(2, 2, "LCD OK", 16, WHITE, BLACK);
+  LCD_ShowString_Size(2, 20, "BOOT", 16, YELLOW, BLACK);
+  {
+    char u1[24];
+    u1[0]='U'; u1[1]='1'; u1[2]=' ';
+    u1[3]='U'; u1[4]='='; u1[5]=(g_uart1_diag_flags&(1u<<0))?'1':'0'; u1[6]=' ';
+    u1[7]='T'; u1[8]='='; u1[9]=(g_uart1_diag_flags&(1u<<1))?'1':'0'; u1[10]=' ';
+    u1[11]='R'; u1[12]='='; u1[13]=(g_uart1_diag_flags&(1u<<2))?'1':'0'; u1[14]=' ';
+    u1[15]='A'; u1[16]='='; u1[17]=(g_uart1_diag_flags&(1u<<3))?'1':'0';
+    u1[18]='\0';
+    LCD_ShowString_Size(2, 38, u1, 12, GREEN, BLACK);
+  }
+  printf("[LCD] init done, lcd_ready=%u\r\n", (unsigned)lcd_ready);
   /* Гарантированно включаем подсветку после инициализации LCD независимо от режима PWM/GPIO */
   BL_ON();
 #if 1
@@ -893,7 +958,31 @@ int main(void)
 
   // Запуск АЦП с DMA через модуль adc_stream (перенумеровано после LCD)
 #if !MINIMAL_BRINGUP && !SAFE_MINIMAL
-  CHECK(adc_stream_start(&hadc1, &hadc2), 1001); // если ошибка -> Error_Handler
+  {
+    HAL_StatusTypeDef rc;
+    uint32_t attempt = 0;
+    do {
+      rc = adc_stream_start(&hadc1, &hadc2);
+      if (rc == HAL_OK) {
+        break;
+      }
+      printf("[ADC][BOOT] adc_stream_start failed rc=%d attempt=%lu\r\n", (int)rc, (unsigned long)attempt);
+      #ifdef __HAL_RCC_ADC12_FORCE_RESET
+      __HAL_RCC_ADC12_FORCE_RESET();
+      __HAL_RCC_ADC12_RELEASE_RESET();
+      #endif
+      HAL_Delay(10);
+      attempt++;
+    } while (attempt < 5u);
+    if (rc != HAL_OK) {
+      printf("[ADC][BOOT] adc_stream_start failed after retries -> continue without halt\r\n");
+    }
+  }
+  /* ВРЕМЕННО: принудительно фиксируем профиль синхронизации (PD5) */
+  {
+    int prc = adc_stream_set_profile(ADC_PROFILE_F_SYNC_200HZ);
+    printf("[ADC][BOOT] force profile=SYNC_200Hz rc=%d\r\n", prc);
+  }
   STAGE(21,"ADCSTR");
   // --- FIX TIM15 SLAVE RESET HANG ---
   __HAL_TIM_DISABLE(&htim15);
@@ -953,9 +1042,9 @@ int main(void)
   printf("[TIM2][NVIC] Before Start_IT: TIM2_IRQn=%d enabled=%lu\r\n",
          TIM2_IRQn, (unsigned long)((nvic_iser0 & tim2_bit) ? 1 : 0));
   
-  /* TIM2 не управляет DMA и не генерирует PWM на PA2.
-     PA2 теперь GPIO - переключается в DMA callback для синхронизации с буфером. */
-  HAL_TIM_Base_Start(&htim2);
+    /* TIM2 не управляет DMA. PA2 = TIM2_CH3 используется как маркер even/odd. */
+    HAL_TIM_Base_Start(&htim2);
+    HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
   
   // ДИАГНОСТИКА: проверка после запуска
   nvic_iser0 = NVIC->ISER[TIM2_IRQn >> 5];
@@ -1014,8 +1103,30 @@ int main(void)
     main_loop_heartbeat++;
     last_heartbeat_ms = HAL_GetTick();
     uint32_t now = last_heartbeat_ms;
+    /* PB1: отражаем реальное состояние разрешения EXTI PD5 (IMR1) */
+    if (EXTI->IMR1 & SYNC_IN_Pin) {
+      GPIOB->BSRR = GPIO_PIN_1;
+    } else {
+      GPIOB->BSRR = ((uint32_t)GPIO_PIN_1 << 16);
+    }
   static uint8_t first_loop=1; if(first_loop){ PROG('M'); first_loop=0; }
   PROG('A'); // loop start
+
+#if DIAG_SYNC_PRINT
+  {
+    static uint32_t last_sync_ms = 0;
+    static uint32_t last_sync_cnt = 0;
+    if (now - last_sync_ms >= 1000u) {
+      uint32_t c = sync_edge_count;
+      uint32_t dc = c - last_sync_cnt;
+      last_sync_cnt = c;
+      last_sync_ms = now;
+      printf("[SYNC] edges=%lu (+%lu/s)\r\n", (unsigned long)c, (unsigned long)dc);
+    }
+  }
+#endif
+
+  /* Опрос PD5 удалён: синхронизация только по EXTI (без polling). */
 
   // ДИАГНОСТИКА TIM2: очень шумный вывод, включать только при необходимости
 #if defined(DIAG_TIM2_ENABLE) && (DIAG_TIM2_ENABLE == 1)
@@ -1071,6 +1182,25 @@ int main(void)
              (unsigned int)need_recovery_guard.flag,
              (unsigned long)need_recovery_guard.c1, (unsigned long)need_recovery_guard.c2);
       need_recovery_guard.flag = 0; /* предотвращаем цикл */
+    }
+  }
+
+  /* Диагностика CDC (COM4): раз в 1s пытаемся отправить строку через USB CDC */
+  {
+    static uint32_t last_cdc_ms = 0;
+    if (now - last_cdc_ms >= 1000u) {
+      last_cdc_ms = now;
+      if (hUsbDeviceHS.dev_state == USBD_STATE_CONFIGURED) {
+        char msg[80];
+        int n = snprintf(msg, sizeof(msg), "[CDC] ping ok=%lu busy=%lu err=%lu\r\n",
+                         (unsigned long)g_cdc_tx_ok,
+                         (unsigned long)g_cdc_tx_busy,
+                         (unsigned long)g_cdc_tx_err);
+        uint8_t rc = CDC_Transmit_HS((uint8_t*)msg, (uint16_t)((n > 0) ? n : 0));
+        if (rc == USBD_OK) g_cdc_tx_ok++;
+        else if (rc == USBD_BUSY) g_cdc_tx_busy++;
+        else g_cdc_tx_err++;
+      }
     }
   }
 
@@ -1843,7 +1973,13 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  /* TIM2_CH3 (PA2) отключён: PA2 используется как GPIO для DMA done */
+  /* TIM2_CH3 (PA2): основной маркер even/odd (PA2=1 -> even, PA2=0 -> odd) */
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN TIM2_Init 2 */
   // Разрешаем прерывания TIM2
   HAL_NVIC_SetPriority(TIM2_IRQn, 1, 0); // TIM2 gate interrupt just below DMA
@@ -2103,10 +2239,10 @@ static void MX_DMA_Init(void)
 
   /* DMA interrupt init */
   /* DMA1_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 0, 0); // ADC1 DMA = highest priority
+  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 1, 0); // ADC1 DMA ниже EXTI9_5
   HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
   /* Enable DMA1_Stream1 IRQ for ADC2 DMA completion (used to re-arm oneshot) */
-  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 1); // ADC2 DMA just below ADC1
+  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 1, 1); // ADC2 DMA ниже EXTI9_5
   HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
 
 }
@@ -2129,6 +2265,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_SYSCFG_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOE, Led_Test_Pin|LCD_CS_Pin|LCD_WR_RS_Pin, GPIO_PIN_RESET);
@@ -2175,12 +2312,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA2 (DMA done indicator) */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+  /*Configure GPIO pin : PA2 (TIM2_CH3 marker) */
   GPIO_InitStruct.Pin = GPIO_PIN_2;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
   
   /* USER CODE BEGIN MX_GPIO_Init_2 */
@@ -2191,6 +2328,30 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* PB2: контроль запрета/разрешения PD5 IRQ (1=запрет, 0=разрешено) */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* PB1: монитор состояния EXTI PD5 (1=разрешено, 0=запрещено) */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* PB3: импульс в HAL_GPIO_EXTI_Callback (факт IRQ) */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = GPIO_PIN_3;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   // Настройка RST дисплея и подсветки как GPIO до старта PWM
   GPIO_InitStruct.Pin = LCD_RST_Pin;
@@ -2216,6 +2377,29 @@ static void MX_GPIO_Init(void)
 #endif
   // Светодиод выключен по умолчанию (индицирует только прием команд UART)
   HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_RESET);
+
+  // Вход синхронизации PD5: внешний фронт по EXTI (falling)
+  GPIO_InitStruct.Pin = SYNC_IN_Pin;
+#if SYNC_EXTI_ENABLE
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+#else
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+#endif
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(SYNC_IN_GPIO_Port, &GPIO_InitStruct);
+#if SYNC_EXTI_ENABLE
+  // Явная привязка EXTI5 к порту D + фильтры
+  SYSCFG->EXTICR[1] = (SYSCFG->EXTICR[1] & ~SYSCFG_EXTICR2_EXTI5) | SYSCFG_EXTICR2_EXTI5_PD;
+  EXTI->RTSR1 &= ~SYNC_IN_Pin;
+  EXTI->FTSR1 |= SYNC_IN_Pin;
+  EXTI->IMR1  |= SYNC_IN_Pin;
+  EXTI->PR1    = SYNC_IN_Pin; // сброс pending
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+#else
+  EXTI->IMR1  &= ~SYNC_IN_Pin;
+  EXTI->PR1    = SYNC_IN_Pin; // сброс pending
+#endif
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
@@ -2224,8 +2408,17 @@ static void MX_GPIO_Init(void)
 static void UpdateUSBDebug(void) { /* no-op */ }
 static const char* usb_state_str(uint8_t s) { (void)s; return ""; }
 
+/* Отображение состояния разрешения EXTI PD5 на PB1 (1=разрешено, 0=запрещено) */
+void adc_sync_irq_state(uint8_t enabled)
+{
+  if (enabled) {
+    GPIOB->BSRR = GPIO_PIN_1;
+  } else {
+    GPIOB->BSRR = ((uint32_t)GPIO_PIN_1 << 16);
+  }
+}
+
 // Мигание светодиодом и сторож
-static volatile uint32_t tim2_irq_counter = 0; /* диагностика TIM2 IRQ */
 
 /* TIM Period Elapsed callback - обрабатывает Update события для TIM2 и TIM6 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -2290,6 +2483,28 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       HAL_Delay(1);
       HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1);
     }
+  }
+}
+
+// Callback по внешнему фронту PD5 (sync profile)
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == SYNC_IN_Pin) {
+    /* Импульс на PB3: факт входа в EXTI IRQ */
+    GPIOB->BSRR = GPIO_PIN_3;
+    /* Простейший софт-фильтр дребезга: игнорируем слишком частые фронты */
+    #ifndef SYNC_IRQ_DEBOUNCE_MS
+    #define SYNC_IRQ_DEBOUNCE_MS 1u
+    #endif
+    static uint32_t last_sync_irq_ms = 0;
+    uint32_t now_ms = HAL_GetTick();
+    if ((now_ms - last_sync_irq_ms) >= SYNC_IRQ_DEBOUNCE_MS) {
+      last_sync_irq_ms = now_ms;
+      sync_last_exti_ms = now_ms;
+      sync_edge_count++;
+      adc_stream_on_sync_edge();
+    }
+    GPIOB->BSRR = ((uint32_t)GPIO_PIN_3 << 16);
   }
 }
 
@@ -2382,6 +2597,9 @@ void DrawUSBStatus(void){
       static uint32_t last_star_toggle_ms = 0;
       static uint8_t star_on = 0;
       static uint8_t star_prev = 0xFF;
+      static uint32_t last_sync_cnt = 0;
+      static uint8_t sync_seen = 0;
+      static uint16_t sync_prev_color = 0xFFFF;
       uint32_t now_ms = HAL_GetTick();
       if(last_star_toggle_ms == 0u) last_star_toggle_ms = now_ms;
       if((now_ms - last_star_toggle_ms) >= 500u){ /* 0.5с on / 0.5с off */
@@ -2391,6 +2609,20 @@ void DrawUSBStatus(void){
       if(star_prev != star_on){
         LCD_ShowString_Size(151, 0, star_on?"*":" ", 16, YELLOW, BLACK);
         star_prev = star_on;
+        /* Индикатор наличия прерываний по PD5 за интервал мигания */
+        if (sync_edge_count != last_sync_cnt) {
+          sync_seen = 1u;
+        } else {
+          sync_seen = 0u;
+        }
+        last_sync_cnt = sync_edge_count;
+        {
+          uint16_t sync_color = sync_seen ? GREEN : RED;
+          if (sync_prev_color != sync_color) {
+            LCD_ShowString_Size(135, 0, "S", 16, sync_color, BLACK);
+            sync_prev_color = sync_color;
+          }
+        }
       }
     }
     static char prev_line0[16] = "";
@@ -2432,10 +2664,14 @@ void DrawUSBStatus(void){
 
   /* Строка 1 (y=14): частота маркера (PA1/PA2) */
   {
-    uint16_t buf_rate = adc_stream_get_buf_rate();
-    uint16_t marker_hz = buf_rate / 2;  // TIM2 делит buf_rate на 2 для получения меандра
+    uint32_t tim_clk = HAL_RCC_GetPCLK1Freq();
+    uint32_t d2ppre1 = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1_Msk) >> RCC_D2CFGR_D2PPRE1_Pos;
+    if (d2ppre1 != 0u) { tim_clk *= 2u; }
+    uint32_t tick_hz = tim_clk / (TIM2->PSC + 1u);
+    uint32_t period = (uint32_t)TIM2->ARR + 1u;
+    uint32_t marker_hz = (period ? (tick_hz / period) : 0u);
     char freq_buf[20];
-    snprintf(freq_buf, sizeof(freq_buf), "%u Hz", (unsigned)marker_hz);
+    snprintf(freq_buf, sizeof(freq_buf), "%lu Hz", (unsigned long)marker_hz);
     lcd_print_padded_if_changed(0,14, freq_buf, prev_line1, sizeof(prev_line1), 10, 16, CYAN, BLACK, &prev_line1_fg, &prev_line1_bg);
   }
 
@@ -2467,6 +2703,13 @@ void DrawUSBStatus(void){
   /* Очистка legacy VID/PID убрана */
     /* Используем ширину 12 символов для гарантированного затирания хвоста */
     lcd_print_padded_if_changed(0,28, rate_buf, prev_line2, sizeof(prev_line2), 12, 16, vnd_is_streaming()?GREEN:WHITE, BLACK, &prev_line2_fg, &prev_line2_bg);
+    #if DIAG_UART1_LINE
+    {
+      char u1buf[20];
+      snprintf(u1buf, sizeof(u1buf), "U1rx:%lu", (unsigned long)uart1_rx_count);
+      lcd_print_padded_if_changed(0,42, u1buf, prev_line3, sizeof(prev_line3), 16, 16, YELLOW, BLACK, &prev_line3_fg, &prev_line3_bg);
+    }
+    #else
     /* Показываем время компиляции для контроля версии - ПРИНУДИТЕЛЬНО при первом запуске */
     {
       extern const char fw_build_time[];
@@ -2479,9 +2722,17 @@ void DrawUSBStatus(void){
       }
       lcd_print_padded_if_changed(0,42, build_time, prev_line3, sizeof(prev_line3), 16, 16, YELLOW, BLACK, &prev_line3_fg, &prev_line3_bg);
     }
+    #endif
   } else {
   /* Очистка legacy VID/PID убрана */
     lcd_print_padded_if_changed(0,28, host_present?"S:----":"S:----", prev_line2, sizeof(prev_line2), 12, 16, WHITE, BLACK, &prev_line2_fg, &prev_line2_bg);
+    #if DIAG_UART1_LINE
+    {
+      char u1buf[20];
+      snprintf(u1buf, sizeof(u1buf), "U1rx:%lu", (unsigned long)uart1_rx_count);
+      lcd_print_padded_if_changed(0,42, u1buf, prev_line3, sizeof(prev_line3), 16, 16, YELLOW, BLACK, &prev_line3_fg, &prev_line3_bg);
+    }
+    #else
     /* При отсутствии хоста показываем время компиляции */
     {
       extern const char fw_build_time[];
@@ -2494,6 +2745,7 @@ void DrawUSBStatus(void){
       }
       lcd_print_padded_if_changed(0,42, build_time, prev_line3, sizeof(prev_line3), 16, 16, YELLOW, BLACK, &prev_line3_fg, &prev_line3_bg);
     }
+    #endif
     prev_rate_calc_ms = now;
     prev_tx_bytes = vnd_get_total_tx_bytes();
     prev_tx_samples = vnd_get_total_tx_samples();
@@ -2634,10 +2886,21 @@ void Error_Handler(void)
     error_logged = 1;
     /* Простейший вывод через polling (IRQ могут быть отключены) */
     const char msg[] = "\r\n[ERROR_HANDLER] CRITICAL ERROR - System halted!\r\n";
+    /* Печать через USART1 (COM4), чтобы видеть ошибку в основном порту */
     for (int i = 0; msg[i]; i++) {
-      /* Ждём готовности UART (TXE_TXFNF flag в ISR для STM32H7) */
-      while (!(USART3->ISR & USART_ISR_TXE_TXFNF)) {}
-      USART3->TDR = msg[i];
+      while (!(USART1->ISR & USART_ISR_TXE_TXFNF)) {}
+      USART1->TDR = msg[i];
+    }
+    /* Печатаем err_code, если есть */
+    {
+      char buf[48];
+      int n = snprintf(buf, sizeof(buf), "[ERROR_HANDLER] err_code=%d\r\n", err_code);
+      if (n > 0) {
+        for (int i = 0; i < n; i++) {
+          while (!(USART1->ISR & USART_ISR_TXE_TXFNF)) {}
+          USART1->TDR = buf[i];
+        }
+      }
     }
     /* Даём время на передачу последнего байта */
     for(volatile uint32_t d=0; d<1000000UL; ++d){ __NOP(); }
@@ -2653,14 +2916,14 @@ void Error_Handler(void)
   GPIOE->MODER |=  (1u << (led_idx*2));
   GPIOE->MODER &= ~(3u << (bl_idx*2));
   GPIOE->MODER |=  (1u << (bl_idx*2));
+  /* Держим подсветку включенной постоянно (active-low) */
+  GPIOE->BSRR = (LCD_Led_Pin << 16);
   for(;;){
-    /* LED ON, BL ON (active-low -> reset) */
+    /* LED ON */
     GPIOE->BSRR = Led_Test_Pin;
-    GPIOE->BSRR = (LCD_Led_Pin << 16);
     for(volatile uint32_t d=0; d<24000000UL; ++d){ __NOP(); }
-    /* LED OFF, BL OFF (active-low -> set) */
+    /* LED OFF */
     GPIOE->BSRR = (Led_Test_Pin << 16);
-    GPIOE->BSRR = LCD_Led_Pin;
     for(volatile uint32_t d=0; d<12000000UL; ++d){ __NOP(); }
   }
   /* USER CODE END Error_Handler_Debug */

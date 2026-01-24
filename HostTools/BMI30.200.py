@@ -76,7 +76,15 @@ def load_config():
 	try:
 		with open(config_file, "r") as f:
 			data = json.load(f)
-		return data.get("desired_profile", 1)
+		prof = data.get("desired_profile", 1)
+		# Разрешаем сохранять/восстанавливать SYNC профиль (0x10)
+		try:
+			prof_i = int(prof)
+		except Exception:
+			return 1
+		if prof_i in (1, 2, 0x10):
+			return prof_i
+		return 1
 	except Exception:
 		return 1
 
@@ -84,8 +92,11 @@ def load_config():
 def save_config(desired_profile):
 	config_file = os.path.join(os.path.dirname(__file__), "bmi30_config.json")
 	try:
+		prof = int(desired_profile)
+		if prof not in (1, 2, 0x10):
+			prof = 1
 		with open(config_file, "w") as f:
-			json.dump({"desired_profile": desired_profile}, f)
+			json.dump({"desired_profile": prof}, f)
 	except Exception:
 		pass
 
@@ -218,6 +229,16 @@ class ScopeWindow:
 		except Exception:
 			pass
 		legend_bar.addWidget(self.btn_diag, 0)
+		# Кнопка профиля SYNC (0x10)
+		self.btn_profile_sync = QtWidgets.QPushButton("P10")
+		self.btn_profile_sync.setToolTip("Профиль 0x10: SYNC 200 Гц, 600 семплов (внешний фронт PD5)")
+		self.btn_profile_sync.clicked.connect(self._on_profile_sync)
+		try:
+			self.btn_profile_sync.setFixedSize(28, 21)
+		except Exception:
+			pass
+		legend_bar.addWidget(self.btn_profile_sync, 0)
+		self._update_profile_button_styles()
 		layout.addLayout(legend_bar)
 		# plots
 		self.plotw = pg.GraphicsLayoutWidget()
@@ -247,10 +268,10 @@ class ScopeWindow:
 		# Обновлённые размеры кадров: профиль 1 ~1360 семплов, профиль 2 ~912
 		# Не полагаемся на жёсткие размеры: устройство авто-фиксирует total_samples по первому рабочему кадру.
 		# Эти значения используются только как "подсказка"/резерв.
-		self.expected_len_map = {1: 912, 2: 912}
+		self.expected_len_map = {1: 912, 2: 912, 0x10: 600}
 		self.initial_expected = self.expected_len_map.get(1, 912)
 		# Рекомендуемые FRAME_SAMPLES для стабильных ~20 FPS (используем фактические длины кадров)
-		self.ns_map = {1: 912, 2: 912}
+		self.ns_map = {1: 912, 2: 912, 0x10: 600}
 		# По умолчанию не навязываем Ns устройству (макс. FPS). Включить подсказку Ns: BMI30_SEND_NS=1
 		try:
 			# Важно: SET_FRAME_SAMPLES ломает профиль 1, поэтому по умолчанию НЕ отправляем.
@@ -305,6 +326,21 @@ class ScopeWindow:
 		self.data0_odd = np.zeros(self.max_samples, dtype=np.int32)
 		self.data1_even = self.data1
 		self.data1_odd = np.zeros(self.max_samples, dtype=np.int32)
+		# SYNC режим (P10): храним последние N периодов (even/odd отдельно)
+		self.sync_periods = 12
+		self.sync_frame_len = int(self.expected_len_map.get(0x10, 600))
+		self._sync0_even = np.zeros((self.sync_periods, self.max_samples), dtype=np.int32)
+		self._sync0_odd = np.zeros((self.sync_periods, self.max_samples), dtype=np.int32)
+		self._sync1_even = np.zeros((self.sync_periods, self.max_samples), dtype=np.int32)
+		self._sync1_odd = np.zeros((self.sync_periods, self.max_samples), dtype=np.int32)
+		self._sync0_even_pos = 0
+		self._sync0_odd_pos = 0
+		self._sync1_even_pos = 0
+		self._sync1_odd_pos = 0
+		self._sync0_even_cnt = 0
+		self._sync0_odd_cnt = 0
+		self._sync1_even_cnt = 0
+		self._sync1_odd_cnt = 0
 		# phase diagnostics (even/odd should be same magnitude, opposite phase)
 		self.seq0_even = None
 		self.seq0_odd = None
@@ -643,7 +679,7 @@ class ScopeWindow:
 			self.stop_warn_after = 5.0
 		self._instr = (
 			"Инструкция: 1) Прошивка должна обрабатывать START_STREAM (0x20) и слать кадры vendor bulk на EP IN 0x83. "
-			"SET_PROFILE (0x14) 1=200Гц / 2=300Гц используйте по необходимости (переключатель в GUI). "
+			"SET_PROFILE (0x14) 1=200Гц / 2=300Гц / 0x10=SYNC200(600) используйте по необходимости (переключатель в GUI). "
 			"Каждый кадр: заголовок 32 байта (magic 0xA55A LE), флаги 0x01 (ADC0) и 0x02 (ADC1); total_samples авто-фиксируется по первому рабочему кадру, payload = total_samples*2 байт. "
 			"Тестовый кадр (flag 0x80) может быть один в начале и пропускается. 4) Проверьте права доступа (udev) если устройство не открывается. 5) Кнопка 1 в GUI запускает поток."
 		)
@@ -776,7 +812,7 @@ class ScopeWindow:
 			# Имитируем получение данных исходя из текущего профиля
 			self.base_buf_len = self.expected_len_map.get(self.desired_profile, self.initial_expected)
 			self.base_buf_len_bytes = self.base_buf_len * 2
-			self.freq_hz = 200 if self.desired_profile == 1 else 300 if self.desired_profile == 2 else None
+			self.freq_hz = 200 if self.desired_profile in (1, 0x10) else 300 if self.desired_profile == 2 else None
 			# Заполняем тестовыми данными
 			import math
 			for i in range(self.base_buf_len):
@@ -1954,13 +1990,21 @@ class ScopeWindow:
 							self.base_buf_len = first_len
 							self.base_buf_len_bytes = self.base_buf_len * 2
 							self._sliders_initialized = False
-							if getattr(self, 'desired_profile', None) == 1:
+							if getattr(self, 'desired_profile', None) in (1, 0x10):
 								self.freq_hz = 200
 							elif getattr(self, 'desired_profile', None) == 2:
 								self.freq_hz = 300
 							else:
 								self.freq_hz = None
 							print(f"[READER] Buffer size changed: {old_len} -> {self.base_buf_len} семплов, freq={self.freq_hz}Hz", flush=True)
+							if getattr(self, 'desired_profile', None) == 0x10 and getattr(self, 'view_mode', 0) == 1:
+								try:
+									self.view_start = 0
+									self.view_len = int(self.base_buf_len) * int(self.sync_periods)
+									self.slider_start.setEnabled(False)
+									self.slider_len.setEnabled(False)
+								except Exception:
+									pass
 				
 				# Копируем данные в shared buffers (поддержка независимых каналов)
 				with self.data_lock:
@@ -1988,6 +2032,8 @@ class ScopeWindow:
 							self.seq0_odd = seqv
 						else:
 							self.seq0_even = seqv
+						if self.desired_profile == 0x10:
+							self._sync_push(0, par, ch0)
 						# Per-parity rhythm counters + timestamp cadence
 						try:
 							ts = int(getattr(a, 'timestamp', 0)) if a is not None else None
@@ -2061,6 +2107,8 @@ class ScopeWindow:
 							self.seq1_odd = seqv
 						else:
 							self.seq1_even = seqv
+						if self.desired_profile == 0x10:
+							self._sync_push(1, par, ch1)
 						# Per-parity rhythm counters + timestamp cadence
 						try:
 							ts = int(getattr(b, 'timestamp', 0)) if b is not None else None
@@ -2529,6 +2577,54 @@ class ScopeWindow:
 
 	def _update_view(self):
 		"""Перерисовать окно по текущим параметрам (без чтения новых данных)."""
+		if self.desired_profile == 0x10 and self.view_mode == 1:
+			frame_len = int(self.base_buf_len or self.sync_frame_len or 600)
+			with self.data_lock:
+				seg0 = self._sync_get_concat(0, 0, frame_len)
+				seg0b = self._sync_get_concat(0, 1, frame_len)
+				seg1 = self._sync_get_concat(1, 0, frame_len)
+				seg1b = self._sync_get_concat(1, 1, frame_len)
+				v0e = (len(seg0) > 0)
+				v0o = (len(seg0b) > 0)
+				v1e = (len(seg1) > 0)
+				v1o = (len(seg1b) > 0)
+			vlen = max(len(seg0), len(seg0b), len(seg1), len(seg1b))
+			if vlen == 0:
+				return
+			if len(seg0) < vlen:
+				seg0 = np.pad(seg0, (0, vlen - len(seg0)), mode='constant')
+			if len(seg0b) < vlen:
+				seg0b = np.pad(seg0b, (0, vlen - len(seg0b)), mode='constant')
+			if len(seg1) < vlen:
+				seg1 = np.pad(seg1, (0, vlen - len(seg1)), mode='constant')
+			if len(seg1b) < vlen:
+				seg1b = np.pad(seg1b, (0, vlen - len(seg1b)), mode='constant')
+			x = np.arange(vlen)
+			if v0e and (self.show_zero or not np.all(seg0 == 0)):
+				self.curve0_a.setData(x, seg0)
+			else:
+				self.curve0_a.setData([], [])
+			if v0o and (self.show_zero or not np.all(seg0b == 0)):
+				self.curve0_b.setData(x, seg0b)
+			else:
+				self.curve0_b.setData([], [])
+			if v1e and (self.show_zero or not np.all(seg1 == 0)):
+				self.curve1_a.setData(x, seg1)
+			else:
+				self.curve1_a.setData([], [])
+			if v1o and (self.show_zero or not np.all(seg1b == 0)):
+				self.curve1_b.setData(x, seg1b)
+			else:
+				self.curve1_b.setData([], [])
+			self.p0.show()
+			self.p1.show()
+			self.view_start = 0
+			self.view_len = vlen
+			self.lbl_start_value.setText(str(self.view_start))
+			self.lbl_len_value.setText(str(vlen))
+			self._apply_x_range(0, vlen)
+			return
+
 		if self.base_buf_len is None or self.max_samples == 0:
 			return
 		vlen = max(1, min(self.view_len, self.base_buf_len))
@@ -2647,6 +2743,15 @@ class ScopeWindow:
 	def _set_view_mode(self, mode:int):
 		"""Установить режим отображения: 0=оба, 1=только канал 1, 2=только канал 2"""
 		self.view_mode = mode
+		if self.desired_profile == 0x10 and mode == 1:
+			try:
+				frame_len = int(self.base_buf_len or self.sync_frame_len)
+				self.view_start = 0
+				self.view_len = max(1, frame_len * self.sync_periods)
+				self.slider_start.setEnabled(False)
+				self.slider_len.setEnabled(False)
+			except Exception:
+				pass
 		self._update_view()
 
 	def _apply_x_range(self, start: float, end: float):
@@ -2725,7 +2830,7 @@ class ScopeWindow:
 			print("[initseq] FULL err", e)
 		# PROFILE
 		try:
-			prof = self.desired_profile if self.desired_profile in (1,2) else 1
+			prof = self.desired_profile if self.desired_profile in (1, 2, 0x10) else 1
 			self.stream.send_cmd(CMD_SET_PROFILE, bytes([prof]))
 		except Exception as e:
 			print("[initseq] PROFILE err", e)
@@ -2821,6 +2926,139 @@ class ScopeWindow:
 			self._set_status(tt, hold_sec=2.0)
 		except Exception:
 			pass
+
+	def _set_profile(self, prof: int, label: str = ""):
+		"""Apply desired profile and optionally re-kick stream."""
+		try:
+			self.desired_profile = int(prof) & 0xFF
+		except Exception:
+			self.desired_profile = 1
+		save_config(self.desired_profile)
+		self._update_profile_button_styles()
+		if self.desired_profile == 0x10:
+			self._sync_reset()
+		# сбросить длину буфера, чтобы пересчитать слайдеры на новом профиле
+		self.base_buf_len = None
+		self.base_buf_len_bytes = None
+		try:
+			self._reset_sliders()
+		except Exception:
+			pass
+		if self.desired_profile in (1, 0x10):
+			self.freq_hz = 200
+		elif self.desired_profile == 2:
+			self.freq_hz = 300
+		else:
+			self.freq_hz = None
+		if self.stream is not None:
+			try:
+				self.stream.send_cmd(CMD_SET_PROFILE, bytes([self.desired_profile]))
+				time.sleep(0.02)
+			except Exception as e:
+				print(f"[PROFILE] set {self.desired_profile} err: {e}")
+			if self.desired_profile == 0x10:
+				try:
+					self.stream.send_cmd(CMD_SET_STREAM_MODE, b"\x00")
+					time.sleep(0.02)
+				except Exception:
+					pass
+			try:
+				self._soft_kick_stream()
+			except Exception:
+				pass
+		label_txt = label or f"PROFILE {self.desired_profile}"
+		self._set_status(f"Профиль: {label_txt}", hold_sec=2.0)
+
+	def _update_profile_button_styles(self):
+		try:
+			is_sync = (getattr(self, 'desired_profile', None) == 0x10)
+			if is_sync:
+				self.btn_profile_sync.setStyleSheet(
+					"QPushButton { background:#3bbf5a; color:#000; border:1px solid #2a7c3d; font-weight:bold; }")
+			else:
+				self.btn_profile_sync.setStyleSheet(
+					"QPushButton { background:#2b6cff; color:#fff; border:1px solid #1d3f7a; }")
+		except Exception:
+			pass
+
+	def _sync_reset(self):
+		try:
+			self._sync0_even_pos = 0
+			self._sync0_odd_pos = 0
+			self._sync1_even_pos = 0
+			self._sync1_odd_pos = 0
+			self._sync0_even_cnt = 0
+			self._sync0_odd_cnt = 0
+			self._sync1_even_cnt = 0
+			self._sync1_odd_cnt = 0
+			self._sync0_even[:] = 0
+			self._sync0_odd[:] = 0
+			self._sync1_even[:] = 0
+			self._sync1_odd[:] = 0
+		except Exception:
+			pass
+
+	def _sync_push(self, ch: int, par: int, data):
+		try:
+			if data is None:
+				return
+			n = min(len(data), self.max_samples)
+			if ch == 0 and par == 0:
+				pos = self._sync0_even_pos
+				self._sync0_even[pos, :n] = data[:n]
+				if n < self.max_samples:
+					self._sync0_even[pos, n:] = 0
+				self._sync0_even_pos = (pos + 1) % self.sync_periods
+				self._sync0_even_cnt = min(self._sync0_even_cnt + 1, self.sync_periods)
+			elif ch == 0 and par == 1:
+				pos = self._sync0_odd_pos
+				self._sync0_odd[pos, :n] = data[:n]
+				if n < self.max_samples:
+					self._sync0_odd[pos, n:] = 0
+				self._sync0_odd_pos = (pos + 1) % self.sync_periods
+				self._sync0_odd_cnt = min(self._sync0_odd_cnt + 1, self.sync_periods)
+			elif ch == 1 and par == 0:
+				pos = self._sync1_even_pos
+				self._sync1_even[pos, :n] = data[:n]
+				if n < self.max_samples:
+					self._sync1_even[pos, n:] = 0
+				self._sync1_even_pos = (pos + 1) % self.sync_periods
+				self._sync1_even_cnt = min(self._sync1_even_cnt + 1, self.sync_periods)
+			elif ch == 1 and par == 1:
+				pos = self._sync1_odd_pos
+				self._sync1_odd[pos, :n] = data[:n]
+				if n < self.max_samples:
+					self._sync1_odd[pos, n:] = 0
+				self._sync1_odd_pos = (pos + 1) % self.sync_periods
+				self._sync1_odd_cnt = min(self._sync1_odd_cnt + 1, self.sync_periods)
+		except Exception:
+			pass
+
+	def _sync_concat(self, buf, pos: int, cnt: int, frame_len: int):
+		if cnt <= 0 or frame_len <= 0:
+			return np.zeros(0, dtype=buf.dtype)
+		start = (pos - cnt) % self.sync_periods
+		if start + cnt <= self.sync_periods:
+			arr = buf[start:start+cnt, :frame_len]
+		else:
+			first = buf[start:, :frame_len]
+			second = buf[:(start + cnt) % self.sync_periods, :frame_len]
+			arr = np.vstack((first, second))
+		return arr.reshape(-1)
+
+	def _sync_get_concat(self, ch: int, par: int, frame_len: int):
+		if ch == 0 and par == 0:
+			return self._sync_concat(self._sync0_even, self._sync0_even_pos, self._sync0_even_cnt, frame_len)
+		if ch == 0 and par == 1:
+			return self._sync_concat(self._sync0_odd, self._sync0_odd_pos, self._sync0_odd_cnt, frame_len)
+		if ch == 1 and par == 0:
+			return self._sync_concat(self._sync1_even, self._sync1_even_pos, self._sync1_even_cnt, frame_len)
+		if ch == 1 and par == 1:
+			return self._sync_concat(self._sync1_odd, self._sync1_odd_pos, self._sync1_odd_cnt, frame_len)
+		return np.zeros(0, dtype=np.int32)
+
+	def _on_profile_sync(self):
+		self._set_profile(0x10, "SYNC 200Гц/600")
 
 	def _copy_legend_from_btn(self, pos):
 		"""Handle right-click on `btn_power`: copy `legend_lbl` text to clipboard."""
@@ -2952,7 +3190,7 @@ class ScopeWindow:
 			# частота блока 200/300 Гц
 			try:
 				if hasattr(self.stream, 'set_block_rate'):
-					self.stream.set_block_rate(200 if self.desired_profile == 1 else 300)
+					self.stream.set_block_rate(200 if self.desired_profile in (1, 0x10) else 300)
 					try:
 						import time as _t
 						_t.sleep(0.1)
@@ -3276,9 +3514,32 @@ class ScopeWindow:
 		# Транспорт при подключении посылает минимальный START сам.
 		# Не дублируем SET_PROFILE/START здесь, чтобы не подавить первые A/B кадры.
 		if self.stream is not None:
+			# Для SYNC профиля (P10) — жёстко переутвердим SET_PROFILE после подключения,
+			# чтобы исключить откат к profile=0 со стороны других хост-скриптов.
+			if self.desired_profile == 0x10:
+				try:
+					self.stream.send_cmd(CMD_SET_PROFILE, bytes([self.desired_profile]))
+					try:
+						import time as _t
+						_t.sleep(0.05)
+					except Exception:
+						pass
+					# SYNC профиль предполагает LATEST режим
+					try:
+						self.stream.send_cmd(CMD_SET_STREAM_MODE, b"\x00")
+						try:
+							import time as _t
+							_t.sleep(0.02)
+						except Exception:
+							pass
+					except Exception:
+						pass
+					print("[CONNECT] Forced SYNC profile (0x10) on connect")
+				except Exception as e:
+					print(f"[CONNECT] Force SYNC profile failed: {e}")
 			# Показать ожидаемое число семплов одного буфера по профилю
 			expected = self.expected_len_map.get(self.desired_profile, self.initial_expected)
-			freq = 200 if self.desired_profile == 1 else 300 if self.desired_profile == 2 else None
+			freq = 200 if self.desired_profile in (1, 0x10) else 300 if self.desired_profile == 2 else None
 			msg = f"Старт потока… ожидание данных… BUF≈{expected} семплов"
 			if freq:
 				msg += f" (профиль {freq} Гц)"
@@ -3327,7 +3588,7 @@ class ScopeWindow:
 			# Явно задаём частоту блока под профиль
 			try:
 				if hasattr(self.stream, 'set_block_rate'):
-					self.stream.set_block_rate(200 if self.desired_profile == 1 else 300)
+					self.stream.set_block_rate(200 if self.desired_profile in (1, 0x10) else 300)
 					try:
 						import time as _t
 						_t.sleep(0.1)

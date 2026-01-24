@@ -267,7 +267,10 @@ void usb_stream_on_rx_bytes(const uint8_t* data, size_t len) {
                 uint8_t m = data[i++]; usb_stream_cfg()->full_mode = m?1:0; stream_send_ack_param(cmd, usb_stream_cfg()->full_mode); break; }
             case CMD_SET_PROFILE: {
                 if (i>=len){ stream_send_nack(cmd,1); break; }
-                uint8_t p = data[i++]; if (adc_stream_set_profile(p)!=0){ stream_send_nack(cmd,2); break; }
+                uint8_t p = data[i++];
+                uint8_t prof_id = p;
+                if (p == 0x10u) { prof_id = ADC_PROFILE_F_SYNC_200HZ; }
+                if (adc_stream_set_profile(prof_id)!=0){ stream_send_nack(cmd,2); break; }
                 usb_stream_cfg()->profile_id = p; stream_send_ack_param(cmd,p); break; }
             case CMD_SET_ROI_US: {
                 if (i+8>len){ stream_send_nack(cmd,1); i=len; break; }

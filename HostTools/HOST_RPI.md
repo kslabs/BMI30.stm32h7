@@ -74,6 +74,26 @@ python3 HostTools/vendor_stream_read.py \
 python3 HostTools/vendor_stream_read.py --ctrl-status --status-interval 0.5 ...
 ```
 
+## 4.1) Режим P10 (SYNC 200 Гц, внешний фронт PD5)
+
+P10 — это SYNC профиль 0x10: 200 Гц, 600 семплов, синхронизация по PD5. На RPi нужны только команды старта потока — синхронизацию обеспечивает внешний фронт на устройстве.
+
+```bash
+python3 HostTools/vendor_stream_read.py \
+  --vid 0xCAFE --pid 0x4001 --intf 2 --ep-in 0x83 --ep-out 0x03 \
+  --profile 0x10 \
+  --block-hz 200 \
+  --frame-samples 600 \
+  --full-mode 1 \
+  --frames 800 \
+  --ab-strict \
+  --quiet
+```
+
+Отладка синхронизации:
+- PB2 = 1, когда прерывание PD5 запрещено; PB2 = 0, когда разрешено.
+- PA2 показывает маркер TIM2CH3 (even/odd). Если even/odd прыгают — проверяйте синхроимпульс на PD5.
+
 ## 5) DIAG режим (максимальный FPS, тестовые кадры)
 
 DIAG отправляет синтетические кадры, паддированные до 512 Б (HS MPS), чтобы убрать лишние накладные расходы. STAT по Bulk в DIAG блокируется, порядок A→B сохраняется.

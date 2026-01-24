@@ -20,7 +20,7 @@ extern "C" {
 #define CMD_GET_STATUS      0x30
 #define CMD_SET_FULL_MODE   0x13  // 0=оконный, 1=full (полный буфер)
 // Новые команды Vendor протокола
-#define CMD_SET_PROFILE      0x14  // param: profile id (0=B,1=C)
+#define CMD_SET_PROFILE      0x14  // param: profile id (0..4, 0x10=SYNC)
 #define CMD_SET_ROI_US       0x15  // payload: offset_us(uint32), length_us(uint32)
 
 // Ответы (IN <- STM32)
@@ -59,7 +59,7 @@ extern "C" {
 typedef struct {
     uint8_t  streaming;          // 0/1
     uint8_t  full_mode;          // 1=FULL, 0=ROI1
-    uint8_t  profile_id;         // активный профиль (0=B,1=C)
+    uint8_t  profile_id;         // активный профиль (0..4, 0x10=SYNC)
     uint32_t roi_offset_us;      // начало окна в мкс
     uint32_t roi_length_us;      // длина окна в мкс
     uint32_t seq_adc[2];         // отдельные счётчики кадров per ADC

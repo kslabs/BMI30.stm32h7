@@ -123,7 +123,7 @@ extern volatile uint32_t systick_heartbeat;
 // Профиль B (default): f_buf=300 Гц, N=912 (Fs=273600 Гц)
 // Профиль C (high):    f_buf=300 Гц, N=944 (Fs=283200 Гц)
 // Профиль D (max):     f_buf=300 Гц, N=976 (Fs=292800 Гц) — ближе к пределу USB, тестовый
-// Legacy (не активируем сейчас): f_buf=200 Гц, N=1360 (Fs=272000 Гц)
+// Профиль F (sync):    f_buf=200 Гц, N=600 (Fs=120000 Гц) — синхронизация по PD5
 
 typedef struct {
     uint16_t samples_per_buf;  // N
@@ -137,8 +137,13 @@ enum {
   ADC_PROFILE_C_HIGH    = 2,     /*  944 @ 300Hz (Fs≈283.2kHz) */
   ADC_PROFILE_D_MAX     = 3,     /*  976 @ 300Hz (Fs≈292.8kHz) */
   ADC_PROFILE_E_400HZ   = 4,     /*  680 @ 400Hz (Fs≈272kHz) HIGH-FPS mode */
+  ADC_PROFILE_F_SYNC_200HZ = 5,  /*  600 @ 200Hz (Fs≈120kHz) SYNC mode */
   ADC_PROFILE_COUNT
 };
+
+// Вход синхронизации (PD5)
+#define SYNC_IN_Pin GPIO_PIN_5
+#define SYNC_IN_GPIO_Port GPIOD
 
 #define MAX_FRAME_SAMPLES 1360u   // Максимум из поддерживаемых профилей (для статических буферов)
 #define FIFO_FRAMES       32u     // Глубина FIFO: увеличена с 8 до 32 для диагностики и предобработки (16 бит ADC)

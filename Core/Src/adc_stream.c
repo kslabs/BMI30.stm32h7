@@ -27,6 +27,15 @@
 extern ADC_HandleTypeDef* s_adc1;
 extern ADC_HandleTypeDef* s_adc2;
 extern volatile uint32_t s_next_ring_index;
+extern TIM_HandleTypeDef htim15;
+extern TIM_HandleTypeDef htim2;
+static inline void adc_sync_exti_enable(void);
+static inline void adc_sync_exti_disable(void);
+void adc_sync_irq_state(uint8_t enabled);
+static inline uint32_t adc_addr_to_index(uint32_t addr, uint16_t buf[FIFO_FRAMES][MAX_FRAME_SAMPLES]);
+static volatile uint8_t s_sync_pending_reset;
+static volatile uint8_t s_sync_gate_locked;
+static volatile uint32_t s_sync_gate_buf_count;
 
 // Выводит count семплов из последнего доступного кадра в терминал (ch2 — если true, то второй канал)
 void adc_stream_print_samples(uint32_t count, bool ch2) {
@@ -55,11 +64,19 @@ void adc_stream_stop(void) {
         HAL_ADC_Stop_DMA(s_adc2);
         HAL_ADC_Stop(s_adc2);
     }
+        s_sync_gate_locked = 0u;
+        s_sync_gate_buf_count = 0u;
+        s_sync_pending_reset = 0u;
+        adc_sync_exti_enable();
     frame_wr_seq = frame_rd_seq = 0;
     frame_overflow_drops = 0;
     frame_backlog_max = 0;
     s_next_ring_index = 0;
     adc_stream_paused = 0;
+    s_sync_gate_locked = 0u;
+    s_sync_gate_buf_count = 0u;
+    s_sync_pending_reset = 0u;
+    adc_sync_exti_enable();
     ADC_LOGF("[ADC][STOP] DMA и ADC остановлены, буферы сброшены\r\n");
 }
 
@@ -160,9 +177,15 @@ static const adc_stream_profile_t g_profiles[ADC_PROFILE_COUNT] = {
     { .samples_per_buf = 944,  .buf_rate_hz = 300, .fs_hz = 944u  * 300u }, // 2: high Fs
     { .samples_per_buf = 976,  .buf_rate_hz = 300, .fs_hz = 976u  * 300u }, // 3: max Fs (near USB limit test)
     { .samples_per_buf = 680,  .buf_rate_hz = 400, .fs_hz = 680u  * 400u }, // 4: HIGH-FPS (smaller frames)
+    { .samples_per_buf = 600,  .buf_rate_hz = 200, .fs_hz = 600u  * 200u }, // 5: SYNC profile (200Hz, 600 samples)
 };
-static uint8_t g_active_profile = 0;  // Default profile 0
-static uint16_t g_active_samples = 600; // runtime N для GATED mode
+#ifndef ADC_DEFAULT_PROFILE
+/* По умолчанию включаем SYNC профиль для внешней синхронизации PD5.
+   При необходимости вернуть прежнее поведение, задайте ADC_DEFAULT_PROFILE=0. */
+#define ADC_DEFAULT_PROFILE ADC_PROFILE_F_SYNC_200HZ
+#endif
+static uint8_t g_active_profile = ADC_DEFAULT_PROFILE;
+static uint16_t g_active_samples = (uint16_t)g_profiles[ADC_DEFAULT_PROFILE].samples_per_buf;
 
 // --- DMA buffers ---
 // ВАЖНО: ранее использовалась схема "guard words вокруг полезных данных" через каст
@@ -301,6 +324,156 @@ volatile uint32_t adc_stage_crc_seq = 0;
 /* Флаг активного статического режима (без реального DMA) */
 static uint8_t s_static_stage_mode = 0;
 
+// Синхронизация по внешнему фронту (PD5) — используется только в sync профиле
+#ifndef ADC_SYNC_EARLY_THRESHOLD_DIV
+#define ADC_SYNC_EARLY_THRESHOLD_DIV 16u  /* «начало буфера» = первые 1/16 буфера */
+#endif
+#ifndef ADC_SYNC_FORCE_IMMEDIATE
+#define ADC_SYNC_FORCE_IMMEDIATE 0u
+#endif
+#ifndef ADC_SYNC_ADJUST_ENABLE
+#define ADC_SYNC_ADJUST_ENABLE 1u
+#endif
+#ifndef ADC_SYNC_ADJUST_PERIOD
+#define ADC_SYNC_ADJUST_PERIOD 4u  /* корректируем частоту раз в N фронтов */
+#endif
+#ifndef ADC_SYNC_ADJUST_STEP
+#define ADC_SYNC_ADJUST_STEP 2u    /* максимальный шаг изменения ARR */
+#endif
+#ifndef ADC_SYNC_ADJUST_STEP_MIN
+#define ADC_SYNC_ADJUST_STEP_MIN 1u /* минимальный шаг (сброс при смене направления) */
+#endif
+#ifndef ADC_SYNC_EDGE_MIN_DIV
+#define ADC_SYNC_EDGE_MIN_DIV 2u   /* минимальный допустимый период: target/2 */
+#endif
+#ifndef ADC_SYNC_EDGE_MAX_MUL
+#define ADC_SYNC_EDGE_MAX_MUL 2u   /* максимальный допустимый период: target*2 */
+#endif
+#ifndef ADC_SYNC_PHASE_MARGIN_DIV
+#define ADC_SYNC_PHASE_MARGIN_DIV 16u /* deadband для фазы в тиках TIM15 */
+#endif
+#ifndef ADC_SYNC_ARR_DELTA_MAX
+#define ADC_SYNC_ARR_DELTA_MAX 300u /* допустимое отклонение ARR от номинала */
+#endif
+#ifndef ADC_SYNC_REARM_AFTER_BUFS
+#define ADC_SYNC_REARM_AFTER_BUFS 6u /* после скольких буферов снова разрешать PD5 IRQ */
+#endif
+#ifndef ADC_SYNC_RESET_END_DIV
+#define ADC_SYNC_RESET_END_DIV 4u /* «конец буфера» = последние 1/4 буфера */
+#endif
+static volatile uint32_t s_sync_edge_count = 0;
+static volatile uint32_t s_sync_edge_drop = 0;
+static volatile uint32_t s_sync_restart_immediate = 0;
+static volatile uint32_t s_sync_defer_count = 0;
+static volatile uint8_t s_sync_pending_reset = 0;
+static volatile uint32_t g_sync_arr_nominal = 0u;
+static volatile int32_t s_sync_last_phase_err = 0;
+static volatile uint32_t s_sync_adjust_count = 0u;
+static volatile uint32_t s_sync_gate_buf_count = 0u;
+static volatile uint8_t s_sync_gate_locked = 0u;
+static volatile uint8_t s_sync_exti_was_enabled = 0u;
+
+static inline void adc_sync_reset_timer(void)
+{
+    extern TIM_HandleTypeDef htim15;
+    /* Синхронизируем фазу выборки с внешним фронтом PD5 */
+    __HAL_TIM_DISABLE(&htim15);
+    __HAL_TIM_SET_COUNTER(&htim15, 0u);
+    HAL_TIM_GenerateEvent(&htim15, TIM_EVENTSOURCE_UPDATE);
+    __HAL_TIM_ENABLE(&htim15);
+}
+
+/* Управление маской EXTI для PD5 (если была включена) */
+static inline void adc_sync_exti_disable(void)
+{
+    GPIOB->BSRR = GPIO_PIN_2; /* PB2=1: IRQ запрещено */
+    if (EXTI->IMR1 & SYNC_IN_Pin) {
+        s_sync_exti_was_enabled = 1u;
+        EXTI->IMR1 &= ~SYNC_IN_Pin;
+        EXTI->PR1 = SYNC_IN_Pin; /* сброс pending */
+    } else {
+        s_sync_exti_was_enabled = 0u;
+    }
+    adc_sync_irq_state(0u);
+}
+
+static inline void adc_sync_exti_enable(void)
+{
+    GPIOB->BSRR = ((uint32_t)GPIO_PIN_2 << 16); /* PB2=0: IRQ разрешено */
+    if (s_sync_exti_was_enabled) {
+        EXTI->PR1 = SYNC_IN_Pin; /* сброс pending */
+        EXTI->IMR1 |= SYNC_IN_Pin;
+    }
+    adc_sync_irq_state(1u);
+}
+
+/* Хук для вывода состояния на GPIO (переопределить при необходимости) */
+void __attribute__((weak)) adc_sync_debug_state(uint8_t state) { (void)state; }
+void __attribute__((weak)) adc_sync_debug_pulse(uint8_t code) { (void)code; }
+void __attribute__((weak)) adc_sync_irq_state(uint8_t enabled) { (void)enabled; }
+
+/* Сброс заполнения DMA по фронту PD5: выбрать текущий или следующий буфер и перезапустить DMA */
+static inline void adc_sync_force_resync(uint32_t total_samples)
+{
+    if (total_samples == 0u) return;
+    DMA_Stream_TypeDef *st1 = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
+    uint32_t current_idx = adc_addr_to_index(st1->M0AR, adc1_buffers);
+    uint32_t remaining = st1->NDTR;
+    uint32_t end_thresh = total_samples / ADC_SYNC_RESET_END_DIV;
+    if (end_thresh == 0u) end_thresh = 1u;
+
+    /* Если в конце буфера — переходим на следующий, иначе начинаем текущий заново */
+    uint32_t target_idx = (remaining <= end_thresh)
+        ? ((current_idx + 1u) & (FIFO_FRAMES - 1u))
+        : (current_idx & (FIFO_FRAMES - 1u));
+
+    /* Отключаем IRQ DMA на время ресета */
+    __HAL_DMA_DISABLE_IT(&hdma_adc1, DMA_IT_TC | DMA_IT_TE | DMA_IT_HT);
+#if !DIAG_SINGLE_ADC1
+    __HAL_DMA_DISABLE_IT(&hdma_adc2, DMA_IT_TC | DMA_IT_TE | DMA_IT_HT);
+#endif
+
+    /* Останавливаем DMA */
+    (void)HAL_ADC_Stop_DMA(s_adc1);
+#if !DIAG_SINGLE_ADC1
+    (void)HAL_ADC_Stop_DMA(s_adc2);
+#endif
+
+    /* Сброс внутреннего состояния публикации, чтобы не было разрыва пар */
+    __disable_irq();
+    s_tc_mask = 0u;
+    s_pair_ready_mask[current_idx] = 0u;
+    s_pair_ready_mask[target_idx] = 0u;
+    s_pair_ready_idx = target_idx;
+    __enable_irq();
+
+    /* Перезапуск DMA на целевом буфере */
+    st1->NDTR = total_samples;
+    (void)HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[target_idx], total_samples);
+    __HAL_DMA_ENABLE_IT(&hdma_adc1, DMA_IT_TC);
+    __HAL_DMA_ENABLE_IT(&hdma_adc1, DMA_IT_TE);
+    __HAL_DMA_DISABLE_IT(&hdma_adc1, DMA_IT_HT);
+
+#if !DIAG_SINGLE_ADC1
+    ((DMA_Stream_TypeDef*)hdma_adc2.Instance)->NDTR = total_samples;
+    (void)HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[target_idx], total_samples);
+    __HAL_DMA_ENABLE_IT(&hdma_adc2, DMA_IT_TC);
+    __HAL_DMA_ENABLE_IT(&hdma_adc2, DMA_IT_TE);
+    __HAL_DMA_DISABLE_IT(&hdma_adc2, DMA_IT_HT);
+#endif
+
+    /* Сбросить TIM2 ПОСЛЕ старта DMA, чтобы сохранить even/odd */
+    __HAL_TIM_DISABLE(&htim2);
+    __HAL_TIM_SET_COUNTER(&htim2, 0u);
+    HAL_TIM_GenerateEvent(&htim2, TIM_EVENTSOURCE_UPDATE);
+    __HAL_TIM_ENABLE(&htim2);
+
+    s_last_started_idx = target_idx;
+    s_next_ring_index = target_idx;
+
+    adc_sync_debug_pulse((uint8_t)((target_idx == current_idx) ? 1u : 2u));
+}
+
 /* Вспомогательная функция: вычислить индекс кольца по адресу M0AR/M1AR */
 static inline uint32_t adc_addr_to_index(uint32_t addr, uint16_t buf[FIFO_FRAMES][MAX_FRAME_SAMPLES])
 {
@@ -334,7 +507,12 @@ static inline void adc_marker_pa3_toggle(void)
    Возвращаем parity bit: 0=even, 1=odd. */
 static inline uint8_t adc_parity_from_pa3(void)
 {
-    /* IDR — фактический уровень на ноге (без HAL, минимальные ресурсы) */
+    /* В SYNC профиле используем TIM2CH3 (PA2) как источник even/odd */
+    if (g_active_profile == ADC_PROFILE_F_SYNC_200HZ) {
+        uint8_t pa2 = (GPIOA->IDR & GPIO_PIN_2) ? 1u : 0u;
+        return pa2 ? 0u : 1u;
+    }
+    /* Иначе — PA3 маркер публикации */
     uint8_t pa3 = (GPIOA->IDR & GPIO_PIN_3) ? 1u : 0u;
     return pa3 ? 0u : 1u;
 }
@@ -489,6 +667,46 @@ void adc_stage_write_markers(uint16_t *buf, uint16_t samples, uint16_t buf_idx)
 
 uint8_t adc_stream_static_mode_enabled(void){ return s_static_stage_mode; }
 
+// Синхронизация по внешнему фронту (PD5).
+// Требование: по фронту импульса сбрасываем DMA-адресацию и начинаем заполнение буферов заново.
+void adc_stream_on_sync_edge(void)
+{
+    if (g_active_profile != ADC_PROFILE_F_SYNC_200HZ) return;
+    if (s_static_stage_mode) return;
+    if (!s_adc1 || (!DIAG_SINGLE_ADC1 && !s_adc2)) return;
+    if (!s_adc1->DMA_Handle) return;
+
+    if (s_sync_gate_locked) {
+        s_sync_edge_drop++;
+        s_sync_defer_count++;
+        return;
+    }
+
+    uint32_t total_samples = (uint32_t)g_active_samples;
+    if (total_samples == 0u) return;
+
+    /* Дребезг/двойные вызовы: игнорируем события ближе 1 мс */
+    {
+        static uint32_t s_sync_last_edge_ms = 0;
+        uint32_t now_ms = HAL_GetTick();
+        if ((now_ms - s_sync_last_edge_ms) < 1u) {
+            s_sync_edge_drop++;
+            return;
+        }
+        s_sync_last_edge_ms = now_ms;
+    }
+
+    s_sync_edge_count++;
+    s_sync_restart_immediate++;
+    s_sync_gate_locked = 1u;
+    s_sync_gate_buf_count = 0u;
+    s_sync_pending_reset = 1u;
+
+    adc_sync_debug_state(1u); /* sync edge -> reset + gate */
+    adc_sync_exti_disable();
+    adc_sync_force_resync(total_samples);
+}
+
 // Fine frequency tuning: override для buf_rate_hz (0 = use profile default)
 static uint16_t g_fine_buf_rate_override = 0;
 
@@ -530,6 +748,7 @@ static void adc_stream_apply_timing(void)
     tim15_arr -= 1u;
     __HAL_TIM_SET_AUTORELOAD(&htim15, tim15_arr);
     __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, (tim15_arr + 1u) / 2u); /* 50% */
+    g_sync_arr_nominal = tim15_arr;
 
     /* Обновляем TIM2 (маркеры/окно) */
     extern uint32_t tim2_apply_profile_window(void);
@@ -822,17 +1041,50 @@ void adc_stream_init(void) {
 
 HAL_StatusTypeDef adc_stream_start(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a2) {
     s_adc1 = a1; s_adc2 = a2;
+
     
     // Диагностика начального состояния ADC
     printf("[ADC][DIAG] adc_stream_start: ADC1->CR=0x%08lX ADC2->CR=0x%08lX\r\n",
            (unsigned long)ADC1->CR, (unsigned long)ADC2->CR);
     
-    // КРИТИЧНО: Сброс ADCAL перед новой калибровкой (может остаться после предыдущего старта)
+    // КРИТИЧНО: перед калибровкой ADC должен быть отключён (ADEN=0, ADSTART=0)
+    // Останавливаем DMA/ADC и принудительно выключаем ADC1/ADC2, чтобы калибровка не падала после кнопки RESET.
+    HAL_ADC_Stop_DMA(a1);
+    HAL_ADC_Stop(a1);
+    if (ADC1->CR & ADC_CR_ADSTART) {
+        ADC1->CR |= ADC_CR_ADSTP;
+        uint32_t to = 100000;
+        while ((ADC1->CR & ADC_CR_ADSTP) && (to-- > 0)) { /* wait */ }
+        if (to == 0) { printf("[ADC][CALIB] ADC1: ADSTP timeout\r\n"); }
+    }
+    if (ADC1->CR & ADC_CR_ADEN) {
+        ADC1->CR |= ADC_CR_ADDIS;
+        uint32_t to = 100000;
+        while ((ADC1->CR & ADC_CR_ADEN) && (to-- > 0)) { /* wait */ }
+        if (to == 0) { printf("[ADC][CALIB] ADC1: ADDIS timeout\r\n"); }
+    }
+    ADC1->ISR |= ADC_ISR_ADRDY; // clear ADRDY
     if (ADC1->CR & ADC_CR_ADCAL) {
         ADC1->CR &= ~ADC_CR_ADCAL;  // Очистить бит калибровки
         printf("[ADC][CALIB] ADC1: Cleared stale ADCAL bit\r\n");
     }
+
     #if !DIAG_SINGLE_ADC1
+    HAL_ADC_Stop_DMA(a2);
+    HAL_ADC_Stop(a2);
+    if (ADC2->CR & ADC_CR_ADSTART) {
+        ADC2->CR |= ADC_CR_ADSTP;
+        uint32_t to = 100000;
+        while ((ADC2->CR & ADC_CR_ADSTP) && (to-- > 0)) { /* wait */ }
+        if (to == 0) { printf("[ADC][CALIB] ADC2: ADSTP timeout\r\n"); }
+    }
+    if (ADC2->CR & ADC_CR_ADEN) {
+        ADC2->CR |= ADC_CR_ADDIS;
+        uint32_t to = 100000;
+        while ((ADC2->CR & ADC_CR_ADEN) && (to-- > 0)) { /* wait */ }
+        if (to == 0) { printf("[ADC][CALIB] ADC2: ADDIS timeout\r\n"); }
+    }
+    ADC2->ISR |= ADC_ISR_ADRDY;
     if (ADC2->CR & ADC_CR_ADCAL) {
         ADC2->CR &= ~ADC_CR_ADCAL;
         printf("[ADC][CALIB] ADC2: Cleared stale ADCAL bit\r\n");
@@ -840,6 +1092,9 @@ HAL_StatusTypeDef adc_stream_start(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a2)
     #endif
     
     // КРИТИЧЕСКИ ВАЖНО: Калибровка ADC перед запуском DMA для точности данных
+    a1->State = HAL_ADC_STATE_READY;
+    a1->ErrorCode = HAL_ADC_ERROR_NONE;
+    HAL_Delay(2);
     ADC_LOGF("[ADC][CALIB] Starting ADC1 calibration...\r\n");
     if (HAL_ADCEx_Calibration_Start(a1, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) {
         ADC_LOGF("[ADC][CALIB] ADC1 calibration FAILED!\r\n");
@@ -848,12 +1103,29 @@ HAL_StatusTypeDef adc_stream_start(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a2)
     ADC_LOGF("[ADC][CALIB] ADC1 calibration OK\r\n");
     
     #if !DIAG_SINGLE_ADC1
+    a2->State = HAL_ADC_STATE_READY;
+    a2->ErrorCode = HAL_ADC_ERROR_NONE;
+    /* Попробуем аппаратный reset ADC12 блока (если доступно) */
+    #ifdef __HAL_RCC_ADC12_FORCE_RESET
+    __HAL_RCC_ADC12_FORCE_RESET();
+    __HAL_RCC_ADC12_RELEASE_RESET();
+    #endif
+    HAL_Delay(5);
     ADC_LOGF("[ADC][CALIB] Starting ADC2 calibration...\r\n");
-    if (HAL_ADCEx_Calibration_Start(a2, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK) {
-        ADC_LOGF("[ADC][CALIB] ADC2 calibration FAILED!\r\n");
-        return HAL_ERROR;
+    for (uint32_t attempt = 0; attempt < 3u; ++attempt) {
+        if (HAL_ADCEx_Calibration_Start(a2, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) == HAL_OK) {
+            ADC_LOGF("[ADC][CALIB] ADC2 calibration OK (attempt %lu)\r\n", (unsigned long)(attempt + 1u));
+            goto adc2_calib_ok;
+        }
+        ADC_LOGF("[ADC][CALIB] ADC2 calibration FAILED (attempt %lu)\r\n", (unsigned long)(attempt + 1u));
+        HAL_ADC_Stop_DMA(a2);
+        HAL_ADC_Stop(a2);
+        HAL_Delay(5);
     }
-    ADC_LOGF("[ADC][CALIB] ADC2 calibration OK\r\n");
+    ADC_LOGF("[ADC][CALIB] ADC2 calibration FAILED! Continue without hard stop.\r\n");
+    /* Не останавливаем систему: продолжаем запуск, чтобы сохранить работу синхронизации */
+    goto adc2_calib_ok;
+adc2_calib_ok:
     #endif
     
     /* Не переустанавливаем профиль по умолчанию здесь.
@@ -1607,15 +1879,33 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     if ((s_tc_mask & READY_MASK_FULL) == READY_MASK_FULL) {
         s_tc_mask = 0;
 
-          /* Переключаем PA2 для индикации завершения буфера (чётный/нечётный) */
-          extern void HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
-          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_2);
+        if (s_sync_gate_locked) {
+            s_sync_gate_buf_count++;
+            if (s_sync_gate_buf_count >= ADC_SYNC_REARM_AFTER_BUFS) {
+                s_sync_gate_locked = 0u;
+                s_sync_pending_reset = 0u;
+                adc_sync_debug_state(2u); /* re-arm PD5 IRQ */
+                adc_sync_exti_enable();
+            }
+        }
+        /* После 6-го буфера: переармливаем EXTI на каждом заполнении (страховка) */
+        if (!s_sync_gate_locked && (s_sync_gate_buf_count >= ADC_SYNC_REARM_AFTER_BUFS)) {
+            adc_sync_exti_enable();
+        }
+
+          /* Переключаем PA2 только вне SYNC профиля (в SYNC PA2 = TIM2_CH3) */
+          if (g_active_profile != ADC_PROFILE_F_SYNC_200HZ) {
+              extern void HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
+              HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_2);
+          }
           
           /* Сохраняем номер DMA-буфера 0..7 для этого done_idx (для заголовка/диагностики).
               Не используем глобальный счётчик, чтобы не ломать соответствие фаз после reboot. */
           uint8_t buffer_index = (uint8_t)((done_idx & 0x06u) | (adc_parity_from_pa3() & 1u));
           s_global_buffer_counter++;
           s_buffer_parity[done_idx] = buffer_index;
+
+        /* Синхросбросы отключены: работаем только через подстройку ARR */
 
         uint32_t next_idx = (done_idx + 1u) & (FIFO_FRAMES - 1u);
         uint32_t total_samples = (uint32_t)g_active_samples;
@@ -1873,7 +2163,7 @@ void adc_stream_watchdog(void)
         static uint32_t prev_wr_seq = 0;
         uint32_t bufs_done = (frame_wr_seq > prev_wr_seq) ? (frame_wr_seq - prev_wr_seq) : 0;
         prev_wr_seq = frame_wr_seq;
-        float bufHz = (float)bufs_done / 10.0f;
+        uint32_t buf_hz_x10 = bufs_done; /* окно 10с: Hz *10 == count */
 
         /* Раздельная статистика по каналам A/B */
         static uint32_t prev_ch_wr[2] = {0,0};
@@ -1881,18 +2171,49 @@ void adc_stream_watchdog(void)
         uint32_t chB_done = (adc_ch_wr_seq[1] > prev_ch_wr[1]) ? (adc_ch_wr_seq[1] - prev_ch_wr[1]) : 0;
         prev_ch_wr[0] = adc_ch_wr_seq[0];
         prev_ch_wr[1] = adc_ch_wr_seq[1];
-        float hzA = (float)chA_done / 10.0f;
-        float hzB = (float)chB_done / 10.0f;
+           uint32_t hzA_x10 = chA_done; /* окно 10с: Hz *10 == count */
+           uint32_t hzB_x10 = chB_done;
 
-        ADC_LOGF("[ADC][STAT_10s] buffers=%lu (%.1f Hz) restarts=%lu/%lu dtA=%lums dtB=%lums samples=%u\r\n",
-                 (unsigned long)bufs_done, bufHz,
-                 (unsigned long)adc_restart_attempts, (unsigned long)adc_restart_success,
-                 (unsigned long)dtA, (unsigned long)((lastB==0)?0:tick_diff32(now_ms,lastB)),
-                 (unsigned)g_active_samples);
-        ADC_LOGF("[ADC][STAT_CH] A=%lu (%.1f Hz) B=%lu (%.1f Hz) pairs=%lu (%.1f Hz)\r\n",
-                 (unsigned long)chA_done, hzA,
-                 (unsigned long)chB_done, hzB,
-                 (unsigned long)bufs_done, bufHz);
+                     extern TIM_HandleTypeDef htim15;
+                     uint32_t tim15_arr = (uint32_t)TIM15->ARR;
+                     uint32_t tim15_psc = (uint32_t)TIM15->PSC;
+                                             ADC_LOGF("[ADC][STAT_10s] buffers=%lu (%lu.%lu Hz) profile=%u buf_rate=%uHz restarts=%lu/%lu dtA=%lums dtB=%lums samples=%u sync_edges=%lu sync_drop=%lu sync_restart=%lu sync_defer=%lu sync_pending=%u sync_adj=%lu sync_phase=%ld tim15_psc=%lu tim15_arr=%lu\r\n",
+               (unsigned long)bufs_done, (unsigned long)(buf_hz_x10 / 10u), (unsigned long)(buf_hz_x10 % 10u),
+               (unsigned)g_active_profile, (unsigned)g_profiles[g_active_profile].buf_rate_hz,
+             (unsigned long)adc_restart_attempts, (unsigned long)adc_restart_success,
+             (unsigned long)dtA, (unsigned long)((lastB==0)?0:tick_diff32(now_ms,lastB)),
+             (unsigned)g_active_samples,
+             (unsigned long)s_sync_edge_count,
+                                         (unsigned long)s_sync_edge_drop,
+             (unsigned long)s_sync_restart_immediate,
+             (unsigned long)s_sync_defer_count,
+                                                 (unsigned)s_sync_pending_reset,
+                                                 (unsigned long)s_sync_adjust_count,
+                                                 (long)s_sync_last_phase_err,
+                                                 (unsigned long)tim15_psc,
+                                                 (unsigned long)tim15_arr);
+           if (g_active_profile == ADC_PROFILE_F_SYNC_200HZ) {
+              uint32_t pd5_lvl = (SYNC_IN_GPIO_Port->IDR & SYNC_IN_Pin) ? 1u : 0u;
+              uint32_t exticr2 = SYSCFG->EXTICR[1];
+              uint32_t imr1 = EXTI->IMR1;
+              uint32_t rtsr1 = EXTI->RTSR1;
+              uint32_t ftsr1 = EXTI->FTSR1;
+              uint32_t pr1 = EXTI->PR1;
+              uint32_t nvic_bit = 1UL << (EXTI9_5_IRQn & 0x1FU);
+              uint32_t nvic_en = (NVIC->ISER[EXTI9_5_IRQn >> 5] & nvic_bit) ? 1u : 0u;
+              ADC_LOGF("[SYNC][EXTI] pd5=%lu exticr2=0x%08lX imr1=0x%08lX rtsr1=0x%08lX ftsr1=0x%08lX pr1=0x%08lX nvic=%lu\r\n",
+                     (unsigned long)pd5_lvl,
+                     (unsigned long)exticr2,
+                     (unsigned long)imr1,
+                     (unsigned long)rtsr1,
+                     (unsigned long)ftsr1,
+                     (unsigned long)pr1,
+                     (unsigned long)nvic_en);
+           }
+        ADC_LOGF("[ADC][STAT_CH] A=%lu (%lu.%lu Hz) B=%lu (%lu.%lu Hz) pairs=%lu (%lu.%lu Hz)\r\n",
+             (unsigned long)chA_done, (unsigned long)(hzA_x10 / 10u), (unsigned long)(hzA_x10 % 10u),
+             (unsigned long)chB_done, (unsigned long)(hzB_x10 / 10u), (unsigned long)(hzB_x10 % 10u),
+             (unsigned long)bufs_done, (unsigned long)(buf_hz_x10 / 10u), (unsigned long)(buf_hz_x10 % 10u));
     }
     
     if(now_ms - last_dbg_ms >= 250u){

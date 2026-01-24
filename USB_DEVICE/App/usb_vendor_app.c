@@ -4511,21 +4511,31 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 uint8_t profile = data[1];
                 uint8_t prof_id = ADC_PROFILE_B_DEFAULT;
                 // Маппинг host profile -> firmware profile ID:
-                // 0 -> ADC_PROFILE_A_200HZ (1360 samples @ 200Hz)
+                // 0 -> ADC_PROFILE_A_200HZ (legacy)
                 // 1 -> ADC_PROFILE_B_DEFAULT (912 samples @ 300Hz)
                 // 2 -> ADC_PROFILE_C_HIGH (944 samples @ 300Hz)
                 // 3 -> ADC_PROFILE_D_MAX (976 samples @ 300Hz)
                 // 4 -> ADC_PROFILE_E_400HZ (680 samples @ 400Hz HIGH-FPS)
+                // 0x10 -> ADC_PROFILE_F_SYNC_200HZ (600 samples @ 200Hz, sync on PD5)
                 if(profile == 0) prof_id = ADC_PROFILE_A_200HZ;
                 else if(profile == 1) prof_id = ADC_PROFILE_B_DEFAULT;
                 else if(profile == 2) prof_id = ADC_PROFILE_C_HIGH;
                 else if(profile == 3) prof_id = ADC_PROFILE_D_MAX;
                 else if(profile == 4) prof_id = ADC_PROFILE_E_400HZ;
+                else if(profile == 0x10) prof_id = ADC_PROFILE_F_SYNC_200HZ;
                 int rc = adc_stream_set_profile(prof_id);
                 VND_LOG("SET_PROFILE %u -> prof_id=%u rc=%d", profile, prof_id, rc);
                 /* ДИАГНОСТИКА: вывести текущее состояние после смены профиля */
                 if(rc == 0) {
                     host_profile = profile; /* запомним для LCD ровно то, что прислал хост */
+                    if(profile == 0x10u){
+                        /* SYNC профиль работает в LATEST (lossy) режиме, без ROI/AVG */
+                        vnd_stream_mode = VND_STREAM_MODE_LATEST;
+                        win_auto = 0;
+                        vnd_avg_reset();
+                        cur_samples_per_frame = 0;
+                        cur_expected_frame_size = 0;
+                    }
                     uint16_t cur_samples = adc_stream_get_active_samples();
                     uint16_t cur_rate = adc_stream_get_buf_rate();
                     cdc_logf("EVT SET_PROFILE p=%u samples=%u rate=%u Hz", profile, cur_samples, cur_rate);
