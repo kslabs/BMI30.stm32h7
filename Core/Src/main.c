@@ -55,6 +55,10 @@ extern volatile uint32_t g_usb_last_sof_ms; /* объявлен в USB_DEVICE/Ta
 volatile uint32_t tim6_irq_count = 0;
 volatile uint8_t  tim6_led_toggled_flag = 0;
 volatile uint32_t tim6_led_toggle_counter = 0;
+/* Счётчик HT-событий DMA ADC2 (инкремент в stm32h7xx_it.c) */
+volatile uint32_t g_dma_ht_count_adc2 = 0;
+/* Счётчик HT-событий DMA ADC1 (инкремент в stm32h7xx_it.c) */
+volatile uint32_t g_dma_ht_count_adc1 = 0;
 volatile uint32_t main_loop_heartbeat = 0;
 volatile uint32_t last_heartbeat_ms = 0;
 volatile uint32_t loop_cycle_accum = 0;

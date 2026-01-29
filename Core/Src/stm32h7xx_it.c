@@ -247,6 +247,15 @@ void DMA1_Stream0_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream0_IRQn 0 */
   /* minimized: no UART in IRQ */
+  extern volatile uint32_t g_dma_ht_count_adc1;
+  extern uint16_t adc_stream_get_active_samples(void);
+  if (__HAL_DMA_GET_FLAG(&hdma_adc1, __HAL_DMA_GET_HT_FLAG_INDEX(&hdma_adc1))) {
+    uint32_t samples = adc_stream_get_active_samples();
+    DMA_Stream_TypeDef *st = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
+    if ((st->CR & DMA_SxCR_EN) && samples && (st->NDTR <= (samples / 2u))) {
+      g_dma_ht_count_adc1++;
+    }
+  }
   /* USER CODE END DMA1_Stream0_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_adc1);
   /* USER CODE BEGIN DMA1_Stream0_IRQn 1 */
@@ -261,6 +270,15 @@ void DMA1_Stream1_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream1_IRQn 0 */
   /* minimized: no UART in IRQ */
+  extern volatile uint32_t g_dma_ht_count_adc2;
+  extern uint16_t adc_stream_get_active_samples(void);
+  if (__HAL_DMA_GET_FLAG(&hdma_adc2, __HAL_DMA_GET_HT_FLAG_INDEX(&hdma_adc2))) {
+    uint32_t samples = adc_stream_get_active_samples();
+    DMA_Stream_TypeDef *st = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
+    if ((st->CR & DMA_SxCR_EN) && samples && (st->NDTR <= (samples / 2u))) {
+      g_dma_ht_count_adc2++;
+    }
+  }
   /* USER CODE END DMA1_Stream1_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_adc2);
   /* USER CODE BEGIN DMA1_Stream1_IRQn 1 */
@@ -276,7 +294,11 @@ void EXTI9_5_IRQHandler(void)
   /* USER CODE BEGIN EXTI9_5_IRQn 0 */
   /* minimized: no UART in IRQ */
   /* USER CODE END EXTI9_5_IRQn 0 */
+  #ifdef SYNC_IN_Pin
   HAL_GPIO_EXTI_IRQHandler(SYNC_IN_Pin);
+  #elif defined(DATA_READY_Pin)
+  HAL_GPIO_EXTI_IRQHandler(DATA_READY_Pin);
+  #endif
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */
 
   /* USER CODE END EXTI9_5_IRQn 1 */
