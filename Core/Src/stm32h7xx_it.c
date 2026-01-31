@@ -25,6 +25,8 @@
 #include <stdint.h>
 #include <stdio.h>  /* для printf в диагностике TIM2 IRQ */
 #include "lcd.h" // добавлено для вывода на экран при HardFault
+#include "adc_stream.h"
+#include "usb_vendor_app.h"
 extern volatile uint32_t systick_heartbeat; // добавлено: глобальный счётчик из main.c
 /* Прототип низкоуровневого вывода UART1 из main.c */
 extern void uart1_raw_putc(char c);
@@ -79,6 +81,7 @@ extern DMA_HandleTypeDef hdma_adc2;
 extern DAC_HandleTypeDef hdac1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim6;
+extern TIM_HandleTypeDef htim16;
 extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
 
@@ -205,6 +208,45 @@ void PendSV_Handler(void)
   /* USER CODE BEGIN PendSV_IRQn 1 */
 
   /* USER CODE END PendSV_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM16 global interrupt.
+  */
+void TIM16_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM16_IRQn 0 */
+
+  /* USER CODE END TIM16_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim16);
+  /* USER CODE BEGIN TIM16_IRQn 1 */
+
+  /* USER CODE END TIM16_IRQn 1 */
+}
+
+/**
+  * @brief This function handles EXTI line[9:5] interrupts.
+  */
+void EXTI9_5_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI9_5_IRQn 0 */
+
+  /* USER CODE END EXTI9_5_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(SYNC_IN_Pin);
+  /* USER CODE BEGIN EXTI9_5_IRQn 1 */
+
+  /* USER CODE END EXTI9_5_IRQn 1 */
+}
+
+/* Callback on GPIO EXTI interrupt */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == SYNC_IN_Pin) {
+    if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+      vnd_sync_on_edge();
+      adc_stream_sync_edge();
+    }
+  }
 }
 
 /**

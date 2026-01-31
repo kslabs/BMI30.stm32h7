@@ -37,13 +37,14 @@ import numpy as np  # type: ignore
 import serial, glob
 
 try:
-	from usb_vendor.usb_stream import USBStream, CMD_SET_PROFILE, CMD_STOP_STREAM, CMD_START_STREAM, CMD_SOFT_RESET, CMD_DEEP_RESET, CMD_SET_WINDOWS, CMD_SET_STREAM_MODE, CMD_ASYNC, CMD_SET_DC_ADAPT  # type: ignore
+	from usb_vendor.usb_stream import USBStream, CMD_SET_PROFILE, CMD_STOP_STREAM, CMD_START_STREAM, CMD_SOFT_RESET, CMD_DEEP_RESET, CMD_SET_WINDOWS, CMD_SET_STREAM_MODE, CMD_ASYNC, CMD_SET_DC_ADAPT, CMD_SET_SYNC_MODE  # type: ignore
 except Exception:
 	from usb_vendor.usb_stream import USBStream  # type: ignore
 	CMD_SET_PROFILE = 0x14
 	CMD_STOP_STREAM = 0x21
 	CMD_START_STREAM = 0x20
 	CMD_SET_DC_ADAPT = 0x1B
+	CMD_SET_SYNC_MODE = 0x1D
 	CMD_GET_STATUS = 0x30
 	CMD_FULL_MODE = 0x13
 	CMD_CHMODE = 0x19
@@ -218,6 +219,24 @@ class ScopeWindow:
 		except Exception:
 			pass
 		legend_bar.addWidget(self.btn_diag, 0)
+		# Кнопка SYNC master/slave (TIM16)
+		self.btn_sync = QtWidgets.QPushButton("M")
+		self.btn_sync.setToolTip("SYNC: MASTER (TIM16 CH1 генерирует частоту буферов)")
+		self.btn_sync.setCheckable(True)
+		try:
+			self.btn_sync.setChecked(True)
+		except Exception:
+			pass
+		self.btn_sync.toggled.connect(self._on_toggle_sync_mode)
+		try:
+			self.btn_sync.setFixedSize(21, 21)
+		except Exception:
+			pass
+		try:
+			self._on_toggle_sync_mode(bool(self.btn_sync.isChecked()))
+		except Exception:
+			pass
+		legend_bar.addWidget(self.btn_sync, 0)
 		layout.addLayout(legend_bar)
 		# plots
 		self.plotw = pg.GraphicsLayoutWidget()
@@ -365,6 +384,13 @@ class ScopeWindow:
 			self.dc_adapt_modes = {1, 2}
 		# Флаг управления адаптацией DC (можно заморозить при детекции сигнала)
 		self.dc_adapt_enabled = True  # По умолчанию включено
+		# Состояние команды CMD_SET_DC_ADAPT (чтобы не спамить устройству)
+		self._dc_adapt_cmd_state = None
+		self._dc_adapt_cmd_last = 0.0
+		# Sync master/slave (TIM16): 0=master, 1=slave
+		self.sync_mode = 0
+		self._sync_cmd_state = None
+		self._sync_cmd_last = 0.0
 		# Загрузить сохраненные DC offset массивы при старте
 		self._load_dc_offset()
 		
@@ -659,6 +685,8 @@ class ScopeWindow:
 		self.usb_retry_timer.setInterval(1500)
 		self.usb_retry_timer.timeout.connect(self._try_connect)
 		self._set_status("Нажмите кнопку 1 для запуска потока (200 Гц по умолчанию)")
+		# Флаг намерения пользователя: передача включена/выключена
+		self.stream_enabled = False
 		# Сохраним порт info для power cycle без stream
 		self.last_port_info = None
 		# timer
@@ -940,7 +968,13 @@ class ScopeWindow:
 			print("[LATEST] Параметры буфера сброшены для переинициализации с 600 семплами")
 			
 			# Запуск потока
+			self.stream_enabled = True
 			self.stream.send_cmd(CMD_START_STREAM, b"")
+			# Включаем внешний передатчик
+			try:
+				self.stream.send_cmd(0x33, b"\x01")
+			except Exception:
+				pass
 			time.sleep(0.05)
 			print("[LATEST] START отправлен")
 			
@@ -1003,7 +1037,13 @@ class ScopeWindow:
 			print("[LOSSLESS_ROI] SET_ASYNC_MODE=0 отправлен")
 			
 			# Запуск потока
+			self.stream_enabled = True
 			self.stream.send_cmd(CMD_START_STREAM, b"")
+			# Включаем внешний передатчик
+			try:
+				self.stream.send_cmd(0x33, b"\x01")
+			except Exception:
+				pass
 			time.sleep(0.05)
 			print("[LOSSLESS_ROI] START отправлен")
 			
@@ -1100,7 +1140,13 @@ class ScopeWindow:
 			print("[AVG_ROI] SET_ASYNC_MODE=1 отправлен")
 
 			# Запуск потока
+			self.stream_enabled = True
 			self.stream.send_cmd(CMD_START_STREAM, b"")
+			# Включаем внешний передатчик
+			try:
+				self.stream.send_cmd(0x33, b"\x01")
+			except Exception:
+				pass
 			time.sleep(0.05)
 			print("[AVG_ROI] START отправлен")
 
@@ -1317,6 +1363,45 @@ class ScopeWindow:
 		except Exception as e:
 			print(f"[DC_REMOVAL] Ошибка загрузки DC offset: {e}")
 
+	def _set_dc_adapt_cmd(self, enable: bool, reason: str = ""):
+		"""Отправить CMD_SET_DC_ADAPT (FREEZE/ACTIVE) при смене состояния."""
+		try:
+			if self.stream is None:
+				return
+			state = 1 if enable else 0
+			if getattr(self, '_dc_adapt_cmd_state', None) == state:
+				return
+			now = time.time()
+			last = float(getattr(self, '_dc_adapt_cmd_last', 0.0) or 0.0)
+			if (now - last) < 0.2:
+				return
+			self.stream.send_cmd(CMD_SET_DC_ADAPT, bytes([state]))
+			self._dc_adapt_cmd_state = state
+			self._dc_adapt_cmd_last = now
+			if reason:
+				print(f"[DC_ADAPT_CMD] {'ACTIVE' if state else 'FREEZE'} ({reason})", flush=True)
+		except Exception as e:
+			print(f"[DC_ADAPT_CMD] send failed: {e}", flush=True)
+
+	def _set_sync_mode_cmd(self, mode: int):
+		"""Отправить CMD_SET_SYNC_MODE (0=master, 1=slave)."""
+		try:
+			if self.stream is None:
+				return
+			mode = 0 if int(mode) == 0 else 1
+			if getattr(self, '_sync_cmd_state', None) == mode:
+				return
+			now = time.time()
+			last = float(getattr(self, '_sync_cmd_last', 0.0) or 0.0)
+			if (now - last) < 0.2:
+				return
+			self.stream.send_cmd(CMD_SET_SYNC_MODE, bytes([mode]))
+			self._sync_cmd_state = mode
+			self._sync_cmd_last = now
+			print(f"[SYNC_CMD] {'MASTER' if mode == 0 else 'SLAVE'}", flush=True)
+		except Exception as e:
+			print(f"[SYNC_CMD] send failed: {e}", flush=True)
+
 	# --- numeric buttons persistence ---
 	def _num_clicked(self, idx: int):
 		if idx in (1, 2, 3):
@@ -1356,8 +1441,11 @@ class ScopeWindow:
 			# (оставляем как "пустую" команду, чтобы не ломать сохранение sel)
 			self._set_status("Режим 6 зарезервирован под будущие алгоритмы", hold_sec=2.0)
 		elif self.stream is not None and idx not in (1, 2, 3, 4, 5):
+			self.stream_enabled = False
 			try:
-				self.stream.close()
+				# выключаем только внешний передатчик, поток данных остаётся активным
+				self.stream.send_cmd(0x33, b"\x00")
+				print("[TX] DISABLE отправлен (idx=0)")
 			except Exception:
 				pass
 			self.stream = None
@@ -2112,6 +2200,20 @@ class ScopeWindow:
 								except Exception as e:
 									print(f"[AVG20] ch1 накопление ошибка: {e}")
 					
+					# Авто-заморозка DC на устройстве при детектировании метки (phase_key=auto)
+					try:
+						sm = int(getattr(self, 'stream_mode', 0) or 0)
+						modes = set(getattr(self, 'dc_adapt_modes', {1, 2}))
+						if sm in modes:
+							key = str(getattr(self, 'phase_key', 'auto') or 'auto').strip().lower()
+							detecting_marker = (key == 'auto' and getattr(self, '_phase_key_chosen', None) is None)
+							if detecting_marker:
+								self._set_dc_adapt_cmd(False, "marker_detect")
+							else:
+								self._set_dc_adapt_cmd(bool(getattr(self, 'dc_adapt_enabled', True)), "")
+					except Exception:
+						pass
+
 					# Сохранять DC offset в файл каждые 10 минут (при STREAM_MODE=1)
 					if getattr(self, 'stream_mode', 0) == 1 and (current_time - self.dc_last_save >= self.dc_save_interval):
 						self._save_dc_offset()
@@ -2504,7 +2606,7 @@ class ScopeWindow:
 				self._set_status(f"Нет новых стереопар >{int(self.stop_warn_after)}с (приём идёт). Проверьте A/B и seq. Нажмите ↻ для переподключения.", hold_sec=3.0)
 			self.last_diag_t = now2
 			# Попробуем мягко пнуть поток (без STOP), но не чаще чем раз в diag_interval
-			if self.auto_soft_kick and (now2 - self.last_soft_kick_t) > max(2.0, self.diag_interval):
+			if self.stream_enabled and self.auto_soft_kick and (now2 - self.last_soft_kick_t) > max(2.0, self.diag_interval):
 				try:
 					self._set_status("Мягкий рестарт потока…", hold_sec=1.0)
 					self._soft_kick_stream()
@@ -2817,6 +2919,29 @@ class ScopeWindow:
 				self.btn_diag.setStyleSheet(style)
 			except Exception:
 				pass
+
+		def _on_toggle_sync_mode(self, enabled: bool):
+			"""Handler for SYNC master/slave button (TIM16)."""
+			try:
+				self.sync_mode = 0 if bool(enabled) else 1
+			except Exception:
+				self.sync_mode = 0
+			try:
+				if self.sync_mode == 0:
+					style = "QPushButton { background:#b6e0f0; color:#000; border:1px solid #6f9bb3; }"
+					self.btn_sync.setText("M")
+					self.btn_sync.setToolTip("SYNC: MASTER (TIM16 CH1 генерирует частоту буферов)")
+				else:
+					style = "QPushButton { background:#f0d0b6; color:#000; border:1px solid #b38f6f; }"
+					self.btn_sync.setText("S")
+					self.btn_sync.setToolTip("SYNC: SLAVE (TIM16 CH1 принимает частоту)")
+				self.btn_sync.setStyleSheet(style)
+			except Exception:
+				pass
+			try:
+				self._set_sync_mode_cmd(self.sync_mode)
+			except Exception:
+				pass
 			# краткий статус
 			self._set_status(tt, hold_sec=2.0)
 		except Exception:
@@ -2916,6 +3041,8 @@ class ScopeWindow:
 		"""Мягко переинициализировать параметры и запустить START без STOP, чтобы не ронять интерфейс."""
 		if self.stream is None:
 			raise RuntimeError("нет активного потока")
+		if not getattr(self, 'stream_enabled', True):
+			return
 		# Повторим текущий профиль и Ns и отправим START
 		try:
 			# Попробуем новый SOFT_RESET, если прошивка его поддерживает
@@ -3269,6 +3396,7 @@ class ScopeWindow:
 				self.usb_retry_timer.stop()
 
 	def _activate_stream(self):
+		self.stream_enabled = True
 		if not self.usb_retry_timer.isActive():
 			self.usb_retry_timer.start()
 		self._send_soft_reset_via_cdc()
@@ -3388,6 +3516,11 @@ class ScopeWindow:
 			# Перед выходом сохраним DC offset (best-effort)
 			try:
 				self._save_dc_offset(force=True)
+			except Exception:
+				pass
+			try:
+				if self.stream is not None:
+					self.stream.send_cmd(CMD_STOP_STREAM, b"")
 			except Exception:
 				pass
 			self.stream.close()

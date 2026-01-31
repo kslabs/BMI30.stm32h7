@@ -89,6 +89,7 @@ void Error_Handler(void);
 // Экспорт дескрипторов периферии для модулей
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
+extern TIM_HandleTypeDef htim16;
 // Экспорт системного счётчика SysTick тиков
 extern volatile uint32_t systick_heartbeat;
 /* USER CODE END EFP */
@@ -118,6 +119,12 @@ extern volatile uint32_t systick_heartbeat;
 // Определения для пина сброса LCD (защищены от перезаписи CubeMX)
 #define LCD_RST_Pin GPIO_PIN_15
 #define LCD_RST_GPIO_Port GPIOE
+
+// Синхронизация: вход (slave) и выход (master)
+#define SYNC_IN_Pin GPIO_PIN_5
+#define SYNC_IN_GPIO_Port GPIOD
+#define SYNC_OUT_Pin GPIO_PIN_2
+#define SYNC_OUT_GPIO_Port GPIOE
 
 // --- Профили потоков ADC (буфер/частота) ---
 // Профиль B (default): f_buf=300 Гц, N=912 (Fs=273600 Гц)

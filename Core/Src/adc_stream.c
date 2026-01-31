@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "main.h"
 #include "adc_stream.h"
+#include "usb_vendor_app.h"
 
 /* Управление логированием этого модуля: по умолчанию выключено, чтобы не спамить из ISR */
 #ifndef ADC_LOG_ENABLE
@@ -1607,9 +1608,18 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     if ((s_tc_mask & READY_MASK_FULL) == READY_MASK_FULL) {
         s_tc_mask = 0;
 
-          /* Переключаем PA2 для индикации завершения буфера (чётный/нечётный) */
+             /* Переключаем PA2 только при активной передаче и включённом передатчике.
+                 PA1 задаётся отдельно (постоянный уровень по состоянию передатчика). */
           extern void HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
-          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_2);
+          extern uint8_t vnd_is_streaming(void);
+             extern uint8_t vnd_is_tx_enabled(void);
+             extern volatile uint8_t vnd_sync_mode_public;
+             if (vnd_is_streaming() && vnd_is_tx_enabled()) {
+              HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_2);
+              if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+                  HAL_GPIO_TogglePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin);
+              }
+          }
           
           /* Сохраняем номер DMA-буфера 0..7 для этого done_idx (для заголовка/диагностики).
               Не используем глобальный счётчик, чтобы не ломать соответствие фаз после reboot. */
@@ -1793,6 +1803,52 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 #endif  /* ОСНОВНОЙ DMA CALLBACK - ВКЛЮЧЁН */
 }
 
+// Внешняя синхронизация (slave): по фронту перезапускаем DMA буфер
+void adc_stream_sync_edge(void)
+{
+    if (adc_stream_paused) return;
+    if (s_adc1 == NULL) return;
+    #if !DIAG_SINGLE_ADC1
+    if (s_adc2 == NULL) return;
+    #endif
+
+    uint32_t total_samples = (uint32_t)g_active_samples;
+    if (total_samples == 0u) return;
+
+    uint32_t remaining = __HAL_DMA_GET_COUNTER(&hdma_adc1);
+    uint32_t half = total_samples / 2u;
+
+    uint32_t cur_idx = s_next_ring_index & (FIFO_FRAMES - 1u);
+    uint32_t target_idx = cur_idx;
+    if (remaining <= half) {
+        target_idx = (cur_idx + 1u) & (FIFO_FRAMES - 1u);
+    }
+
+    // Сбрасываем промежуточные метки готовности текущего буфера
+    s_pair_ready_mask[cur_idx] = 0;
+    if (target_idx != cur_idx) {
+        s_pair_ready_mask[target_idx] = 0;
+    }
+    s_tc_mask = 0;
+
+    // Перезапуск DMA на выбранный буфер
+    (void)HAL_ADC_Stop_DMA(s_adc1);
+    (void)HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[target_idx], total_samples);
+    __HAL_DMA_ENABLE_IT(&hdma_adc1, DMA_IT_TC);
+    __HAL_DMA_ENABLE_IT(&hdma_adc1, DMA_IT_TE);
+    __HAL_DMA_DISABLE_IT(&hdma_adc1, DMA_IT_HT);
+
+    #if !DIAG_SINGLE_ADC1
+    (void)HAL_ADC_Stop_DMA(s_adc2);
+    (void)HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[target_idx], total_samples);
+    __HAL_DMA_ENABLE_IT(&hdma_adc2, DMA_IT_TC);
+    __HAL_DMA_ENABLE_IT(&hdma_adc2, DMA_IT_TE);
+    __HAL_DMA_DISABLE_IT(&hdma_adc2, DMA_IT_HT);
+    #endif
+
+    s_next_ring_index = target_idx;
+}
+
 /* Периодический вотчдог: если давно не было DMA Full от ADC1, считаем поток зависшим и мягко перезапускаем.
    Это устраняет зависания, когда цепочка ADC/DMA перестаёт генерировать события (см. STALL_WARN: ADC_IDLE). */
 /* Беззнаковая разность тиков (учёт переполнения 32-битного HAL_GetTick()) */
@@ -1972,6 +2028,17 @@ void adc_stream_set_buf_rate_fine(uint16_t raw_hz) {
 
     ADC_LOGF("[ADC][RATE] Fine-tune: raw=%u -> marker=%u Hz, buf_rate=%u Hz\r\n",
              (unsigned)raw_hz, (unsigned)marker_hz, (unsigned)buf_rate_hz);
+}
+
+// Внешняя синхронизация: установка buf_rate без ограничений marker_hz
+void adc_stream_set_buf_rate_external(uint16_t buf_rate_hz) {
+    if(buf_rate_hz < 20u || buf_rate_hz > 1000u) {
+        ADC_LOGF("[ADC][RATE] External sync out of range: %u Hz\r\n", (unsigned)buf_rate_hz);
+        return;
+    }
+    g_fine_buf_rate_override = buf_rate_hz;
+    adc_stream_apply_timing();
+    ADC_LOGF("[ADC][RATE] External sync: buf_rate=%u Hz\r\n", (unsigned)buf_rate_hz);
 }
 
 // Тестовые функции удалены - используем только реальный ADC+DMA

@@ -41,6 +41,7 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim15;
+TIM_HandleTypeDef htim16;
 IWDG_HandleTypeDef hiwdg1;
 UART_HandleTypeDef huart1;
 DAC_HandleTypeDef  hdac1;
@@ -274,6 +275,7 @@ static void MX_DAC1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM15_Init(void);
+static void MX_TIM16_Init(void);
 static void MX_IWDG1_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
@@ -699,6 +701,7 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM15_Init();
+  MX_TIM16_Init();
   MX_USART1_UART_Init();
   /* USER CODE: Диагностика TIM15/ADC после всех Init */
   printf("[TIM15][CFG] TIM15->CR2=0x%08lX MMS=%lu (expected 2=UPDATE)\r\n",
@@ -744,6 +747,9 @@ int main(void)
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); // Фаза
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2); // Меандр
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3); // Контроль
+
+  // Запуск TIM16 CH1: ~16 Гц, импульс ~2 мс
+  HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
 
   // Установка скважности для TIM3 (CH1, CH2, CH3) — 50%
   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 2499); // 50% скважность
@@ -1140,6 +1146,23 @@ int main(void)
      чистоты. Вернём позже после подтверждения нормальной скорости цикла. */
 
   /* USB детект временно отключен для упрощения */
+
+  /* Авто-STOP: если хост не активен (нет SOF) — выключить передачу */
+#if !SAFE_MINIMAL
+  {
+    extern uint8_t vnd_is_streaming(void);
+    if (vnd_is_streaming()) {
+      uint32_t dt_sof = (g_usb_last_sof_ms > 0u) ? (now - g_usb_last_sof_ms) : 0xFFFFFFFFu;
+      uint8_t host_present = (hUsbDeviceHS.dev_state == USBD_STATE_SUSPENDED) || (dt_sof < 400u);
+      if (!host_present) {
+        extern void vnd_pipeline_stop_reset(int deep);
+        vnd_pipeline_stop_reset(0);
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+      }
+    }
+  }
+#endif
 
   // PROG('V'); // vendor diag disabled for isolation
   // vnd_diag_send64_once();
@@ -2042,6 +2065,65 @@ static void MX_TIM15_Init(void)
 }
 
 /**
+  * @brief TIM16 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM16_Init(void)
+{
+
+  /* USER CODE BEGIN TIM16_Init 0 */
+  /* USER CODE END TIM16_Init 0 */
+
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM16_Init 1 */
+  /* USER CODE END TIM16_Init 1 */
+  htim16.Instance = TIM16;
+
+  /* Хотим ~16 Гц с импульсом ~2 мс. Используем базовую частоту 10 кГц (100 мкс шаг). */
+  {
+    uint32_t pclk2 = HAL_RCC_GetPCLK2Freq();
+    uint32_t ppre2 = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE2) >> RCC_D2CFGR_D2PPRE2_Pos;
+    uint32_t tim_clk = ((ppre2 & 0x4u) != 0u) ? (pclk2 * 2u) : pclk2;
+    const uint32_t tick_hz = 10000u; /* 10 kHz */
+    uint32_t presc = (tim_clk + (tick_hz / 2u)) / tick_hz;
+    if(presc < 1u) presc = 1u;
+    htim16.Init.Prescaler = (uint32_t)(presc - 1u);
+    {
+      uint32_t period_ticks = (tick_hz + 8u) / 16u; /* ~16 Гц */
+      if(period_ticks < 1u) period_ticks = 1u;
+      htim16.Init.Period = (uint32_t)(period_ticks - 1u);
+      {
+        uint32_t pulse_ticks = (tick_hz * 2u) / 1000u; /* 2 мс */
+        if(pulse_ticks < 1u) pulse_ticks = 1u;
+        if(pulse_ticks > period_ticks) pulse_ticks = period_ticks;
+        sConfigOC.Pulse = pulse_ticks;
+      }
+    }
+  }
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_PWM_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim16, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM16_Init 2 */
+  /* USER CODE END TIM16_Init 2 */
+  HAL_TIM_MspPostInit(&htim16);
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -2167,9 +2249,9 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PA1 */
   GPIO_InitStruct.Pin = GPIO_PIN_1;
-    /* PA1 должен быть принудительно в 0 (логический 0):
-      не используем TIM2_CH2 на PA1, держим как GPIO low. */
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+    /* PA1 инверсен PA2: при импульсах на PA2 -> PA1=0, иначе PA1=1.
+      Начальное состояние при PA2=0: PA1=1. */
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
@@ -2191,6 +2273,22 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* PE2: синхровыход (master), по умолчанию LOW */
+  HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = SYNC_OUT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(SYNC_OUT_GPIO_Port, &GPIO_InitStruct);
+
+  /* PD5: синхровход (slave) с EXTI по фронту */
+  GPIO_InitStruct.Pin = SYNC_IN_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(SYNC_IN_GPIO_Port, &GPIO_InitStruct);
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
   // Настройка RST дисплея и подсветки как GPIO до старта PWM
   GPIO_InitStruct.Pin = LCD_RST_Pin;
@@ -2430,6 +2528,22 @@ void DrawUSBStatus(void){
     /* Первая строка (y=0): USB статус */
     lcd_print_padded_if_changed(0,0,text0, prev_line0, sizeof(prev_line0), 7, 16, color0, BLACK, &prev_line0_fg, &prev_line0_bg);
 
+    /* Индикатор SYNC рядом со звездочкой: M/S + цвет (зелёный=есть импульсы, красный=нет) */
+    {
+      static uint8_t prev_mode = 0xFF;
+      static uint8_t prev_ok = 0xFF;
+      char ch = 'M';
+      if(vnd_sync_mode_public == 1u) ch = 'S';
+      else if(vnd_sync_mode_public == 2u) ch = 'O';
+      uint16_t c = vnd_sync_ok_public ? GREEN : RED;
+      if(prev_mode != vnd_sync_mode_public || prev_ok != vnd_sync_ok_public){
+        char buf[2] = {ch, 0};
+        LCD_ShowString_Size(140, 0, buf, 16, c, BLACK);
+        prev_mode = vnd_sync_mode_public;
+        prev_ok = vnd_sync_ok_public;
+      }
+    }
+
   /* Строка 1 (y=14): частота маркера (PA1/PA2) */
   {
     uint16_t buf_rate = adc_stream_get_buf_rate();
@@ -2501,17 +2615,23 @@ void DrawUSBStatus(void){
     last_rate_sps = 0;
   }
 
-  /* Индикатор прогресса адаптации/сохранения DC: нижняя линия пикселей (y=79, 0..159).
-     - Пока DC "dirty" (идёт адаптация, ожидаем запись) — линия заполняется слева направо.
-     - Если последняя запись DC не удалась — рисуем красным; после успешной записи — зелёным.
-     - Если адаптация заморожена (CMD_SET_DC_ADAPT freeze) — полоса становится синей.
-     Важно: используем только 1px высоту, чтобы не мешать тексту. */
+    /* Индикатор прогресса адаптации/сохранения DC: нижняя линия пикселей (y=79, 0..159).
+      - Пока DC "dirty" (идёт адаптация, ожидаем запись) — линия заполняется слева направо.
+      - Если последняя запись DC не удалась — рисуем красным; после успешной записи — зелёным.
+      - Если адаптация заморожена (CMD_SET_DC_ADAPT freeze) или авто-заморозка по амплитуде — полоса становится синей и останавливается.
+      Важно: используем только 1px высоту, чтобы не мешать тексту. */
   {
     const uint16_t y = 79;
     uint16_t color = BLACK;
     uint16_t filled = 0;
 
-    if(vnd_dc_dirty_public){
+    uint8_t freeze = (uint8_t)((!vnd_dc_adapt_enabled || vnd_dc_auto_freeze) ? 1u : 0u);
+
+    if(freeze){
+      color = BLUE;
+      filled = dc_bar_prev_len;
+      if(filled > LCD_W) filled = LCD_W;
+    } else if(vnd_dc_dirty_public){
       uint32_t period = vnd_dc_save_period_ms;
       if(period == 0u) period = 1u;
       uint32_t start = vnd_dc_dirty_since_ms;
@@ -2520,10 +2640,7 @@ void DrawUSBStatus(void){
       filled = (uint16_t)((elapsed * (uint32_t)LCD_W) / period);
       if(filled > LCD_W) filled = LCD_W;
       
-      /* Если адаптация заморожена - используем синий цвет */
-      if(!vnd_dc_adapt_enabled){
-        color = BLUE;
-      } else if(vnd_dc_save_last_result == 2u){
+      if(vnd_dc_save_last_result == 2u){
         color = RED;
       } else if(vnd_dc_save_last_result == 1u){
         color = GREEN;

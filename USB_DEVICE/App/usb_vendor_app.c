@@ -86,9 +86,11 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #define VND_CMD_GET_STATUS_IMM 0x31u
 /* Отладка фаз/буферов: инверсия тестового выхода PA2 (TIM2_CH3) */
 #define VND_CMD_TOGGLE_TIM2CH3_INV 0x32u
+#define VND_CMD_SET_TX_ENABLE   0x33u /* payload: u8 0/1 (внешний передатчик) */
 /* ДОБАВЛЕНО: управление окнами/частотой */
 #define VND_CMD_SET_WINDOWS    0x10u /* payload: start0,len0,start1,len1 (LE, u16) */
 #define VND_CMD_SET_BUF_RATE_FINE 0x1Cu /* payload: marker_hz (<=350) или buf_rate_hz (>350), fine 180-250 Hz */
+#define VND_CMD_SET_SYNC_MODE     0x1Du /* payload: u8 mode (0=master, 1=slave, 2=off) */
 #define VND_CMD_SET_BLOCK_HZ   0x11u /* payload: u16 hz (20..100) или 0xFFFF=макс (100) */
 /* Новая команда: установка ограничения числа выборок на канал в рабочем кадре */
 #define VND_CMD_SET_TRUNC_SAMPLES 0x16u /* payload: u16 samples (0=отключить усечение) */
@@ -107,6 +109,9 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #define VND_CMD_SET_STREAM_MODE  0x1Au
 /* DC Adaptation control: 0x00=freeze (stop learning), 0x01=active (resume learning) */
 #define VND_CMD_SET_DC_ADAPT     0x1Bu
+#define VND_SYNC_MODE_MASTER 0u
+#define VND_SYNC_MODE_SLAVE  1u
+#define VND_SYNC_MODE_OFF    2u
 #define VND_STREAM_MODE_LATEST        0u
 #define VND_STREAM_MODE_LOSSLESS_ROI  1u
 #define VND_STREAM_MODE_AVG_ROI       2u
@@ -121,6 +126,7 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 /* ---------------- Глобальные переменные состояния (централизовано) ---------------- */
 /* Видимая снаружи (CDC) метка стриминга */
 volatile uint8_t streaming = 0;
+static volatile uint8_t vnd_tx_enable = 1; /* 1=передатчик включён (PA1=0), 0=выкл (PA1=1) */
 /* Последовательность пар (инкремент только после успешного завершения B) */
 volatile uint32_t stream_seq = 0;
 /* Фактически зафиксированный размер кадров и ожидаемый размер байт */
@@ -199,6 +205,26 @@ static volatile uint8_t  last_cmd_received = 0;     /* 0x20=START, 0x21=STOP, 0=
 static volatile uint32_t last_cmd_timestamp_ms = 0; /* HAL_GetTick() когда команда получена */
 static volatile uint32_t cmd_start_count = 0;       /* счётчик принятых START */
 static volatile uint32_t cmd_stop_count = 0;        /* счётчик принятых STOP */
+
+/* Sync master/slave via TIM16 CH1 */
+static volatile uint8_t  vnd_sync_mode = VND_SYNC_MODE_MASTER; /* 0=master, 1=slave, 2=off */
+static volatile uint16_t vnd_sync_pending_hz = 0;
+static volatile uint16_t vnd_sync_last_hz = 0;
+static volatile uint32_t vnd_sync_last_apply_ms = 0;
+static volatile uint32_t vnd_sync_last_capture = 0;
+static volatile uint8_t  vnd_sync_capture_valid = 0;
+static volatile uint32_t vnd_sync_tick_hz = 1000000u; /* TIM16 IC tick (Hz) */
+static volatile uint32_t vnd_sync_last_capture_ms = 0;
+
+/* Public status for LCD */
+volatile uint8_t  vnd_sync_mode_public = VND_SYNC_MODE_MASTER;
+volatile uint8_t  vnd_sync_ok_public = 1u;
+
+void vnd_sync_on_edge(void)
+{
+    vnd_sync_last_capture_ms = HAL_GetTick();
+    vnd_sync_ok_public = 1u;
+}
 
 /* TX диагностика */
 static volatile uint8_t  vnd_tx_ready = 1;      /* готовность к новой передаче */
@@ -370,6 +396,9 @@ static uint32_t dbg_avg_in_last = 0, dbg_avg_out_last = 0, dbg_avg_tx_last = 0;
 #ifndef VND_DC_SAVE_PERIOD_MS
 #define VND_DC_SAVE_PERIOD_MS (20u*60u*1000u) /* 20 минут (стандартный режим) */
 #endif
+#ifndef VND_DC_SAVE_PERIOD_FIRST_MS
+#define VND_DC_SAVE_PERIOD_FIRST_MS (60u*1000u) /* 60 секунд: быстрое первое сохранение после reboot */
+#endif
 
 /* После загрузки DC из Flash первые кадры могут быть нестабильны (старт ADC/аналоговой части).
     Чтобы не «переписать» только что восстановленное состояние, временно блокируем адаптацию,
@@ -460,6 +489,9 @@ volatile uint8_t  vnd_dc_save_last_result = 0; /* 0=none, 1=ok, 2=fail */
 /* DC Adaptation control (can be frozen by host during signal detection) */
 volatile uint8_t  vnd_dc_adapt_enabled = 1; /* 1=active (learning), 0=freeze (keep current values) */
 
+/* Auto-freeze when signal swing is below threshold (no DC save/progress) */
+volatile uint8_t  vnd_dc_auto_freeze = 0; /* 1=auto-freeze by amplitude gate */
+
 /* Public mirror of blob write_counter for LCD/debug (see usb_vendor_app.h) */
 volatile uint32_t vnd_dc_write_counter_public = 0;
 
@@ -487,6 +519,122 @@ static uint32_t vnd_dc_adapt_block_until_ms = 0;
     stream_mode влияет только на то, что отправляется по USB. */
 
 static uint16_t vnd_crc16_ccitt(const uint8_t *data, uint32_t len); /* объявлена ниже в файле */
+
+/* === TIM16 sync helpers (master/slave) === */
+static uint32_t vnd_tim16_get_tim_clk(void)
+{
+    uint32_t pclk2 = HAL_RCC_GetPCLK2Freq();
+    uint32_t ppre2 = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE2) >> RCC_D2CFGR_D2PPRE2_Pos;
+    return ((ppre2 & 0x4u) != 0u) ? (pclk2 * 2u) : pclk2;
+}
+
+static void vnd_sync_stop_tim16(void)
+{
+    (void)HAL_TIM_PWM_Stop(&htim16, TIM_CHANNEL_1);
+    (void)HAL_TIM_IC_Stop_IT(&htim16, TIM_CHANNEL_1);
+    (void)HAL_TIM_Base_Stop(&htim16);
+}
+
+static void vnd_sync_set_master(uint16_t buf_rate_hz)
+{
+    if(buf_rate_hz == 0u) return;
+    vnd_sync_stop_tim16();
+
+    /* PWM: generate sync pulse at buf_rate_hz with 2ms width. */
+    htim16.Instance = TIM16;
+    htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+    htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    htim16.Init.RepetitionCounter = 0;
+    htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+    {
+        uint32_t tim_clk = vnd_tim16_get_tim_clk();
+        const uint32_t tick_hz = 10000u; /* 10 kHz -> 100 us ticks */
+        uint32_t presc = (tim_clk + (tick_hz / 2u)) / tick_hz;
+        if(presc < 1u) presc = 1u;
+        htim16.Init.Prescaler = (uint32_t)(presc - 1u);
+
+        uint32_t period_ticks = (tick_hz + (buf_rate_hz / 2u)) / buf_rate_hz;
+        if(period_ticks < 1u) period_ticks = 1u;
+        htim16.Init.Period = (uint32_t)(period_ticks - 1u);
+    }
+
+    if(HAL_TIM_PWM_Init(&htim16) != HAL_OK){
+        return;
+    }
+
+    TIM_OC_InitTypeDef sConfigOC = {0};
+    sConfigOC.OCMode = TIM_OCMODE_PWM1;
+    sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+    sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+    {
+        const uint32_t tick_hz = 10000u;
+        uint32_t pulse_ticks = (tick_hz * 2u) / 1000u; /* 2 ms */
+        uint32_t period_ticks = htim16.Init.Period + 1u;
+        if(pulse_ticks < 1u) pulse_ticks = 1u;
+        if(pulse_ticks > period_ticks) pulse_ticks = period_ticks;
+        sConfigOC.Pulse = pulse_ticks;
+    }
+    if(HAL_TIM_PWM_ConfigChannel(&htim16, &sConfigOC, TIM_CHANNEL_1) != HAL_OK){
+        return;
+    }
+    (void)HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
+    vnd_sync_last_hz = buf_rate_hz;
+}
+
+static void vnd_sync_set_slave(void)
+{
+    vnd_sync_stop_tim16();
+
+    /* Input capture on TIM16_CH1 (PB8) */
+    htim16.Instance = TIM16;
+    htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+    htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    htim16.Init.RepetitionCounter = 0;
+    htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    {
+        uint32_t tim_clk = vnd_tim16_get_tim_clk();
+        uint32_t presc = (tim_clk + 500000u) / 1000000u; /* 1 MHz tick */
+        if(presc < 1u) presc = 1u;
+        htim16.Init.Prescaler = (uint32_t)(presc - 1u);
+        vnd_sync_tick_hz = tim_clk / presc;
+    }
+    htim16.Init.Period = 0xFFFFu;
+
+    if(HAL_TIM_IC_Init(&htim16) != HAL_OK){
+        return;
+    }
+
+    TIM_IC_InitTypeDef sConfigIC = {0};
+    sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+    sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+    sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+    sConfigIC.ICFilter = 0;
+    if(HAL_TIM_IC_ConfigChannel(&htim16, &sConfigIC, TIM_CHANNEL_1) != HAL_OK){
+        return;
+    }
+    vnd_sync_capture_valid = 0;
+    (void)HAL_TIM_IC_Start_IT(&htim16, TIM_CHANNEL_1);
+}
+
+static void vnd_sync_apply_mode(uint8_t mode)
+{
+    if(mode > VND_SYNC_MODE_OFF) mode = VND_SYNC_MODE_MASTER;
+    vnd_sync_mode = mode;
+    vnd_sync_mode_public = mode;
+    if(vnd_sync_mode == VND_SYNC_MODE_MASTER){
+        vnd_sync_set_master(adc_stream_get_buf_rate());
+        vnd_sync_ok_public = 1u;
+        cdc_logf("EVT SYNC_MODE MASTER");
+    } else if(vnd_sync_mode == VND_SYNC_MODE_SLAVE){
+        vnd_sync_set_slave();
+        vnd_sync_ok_public = 0u;
+        cdc_logf("EVT SYNC_MODE SLAVE");
+    } else {
+        vnd_sync_stop_tim16();
+        vnd_sync_ok_public = 0u;
+        cdc_logf("EVT SYNC_MODE OFF");
+    }
+}
 
 static uint16_t vnd_dc_bank_crc16(uint8_t ch, uint8_t parity)
 {
@@ -582,6 +730,29 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
 
     uint8_t gate_a = vnd_raw_has_full_swing_u16(a_ptr, check_n, (uint32_t)VND_DC_RANGE_THRESHOLD);
     uint8_t gate_b = vnd_raw_has_full_swing_u16(b_ptr, check_n, (uint32_t)VND_DC_RANGE_THRESHOLD);
+
+    /* Auto-freeze DC save/progress when signal swing is below threshold (both channels). */
+    {
+        static uint8_t  prev_freeze = 0u;
+        static uint32_t freeze_start_ms = 0u;
+        uint8_t now_freeze = (uint8_t)((gate_a || gate_b) ? 0u : 1u);
+
+        if(now_freeze){
+            if(!prev_freeze){
+                freeze_start_ms = now_ms;
+            }
+        } else {
+            if(prev_freeze && freeze_start_ms != 0u){
+                if(vnd_dc_dirty_since_ms != 0u){
+                    uint32_t delta = now_ms - freeze_start_ms;
+                    vnd_dc_dirty_since_ms += delta; /* pause progress timer during freeze */
+                }
+                freeze_start_ms = 0u;
+            }
+        }
+        prev_freeze = now_freeze;
+        vnd_dc_auto_freeze = now_freeze;
+    }
 
     /* Use local copy of ROI so we don't mutate ADC buffers. */
     static uint16_t tmp_a[VND_DC_ROI_LEN];
@@ -923,6 +1094,7 @@ static void vnd_dc_load_once(void)
 
 static void vnd_dc_try_save_periodic(void)
 {
+    if(vnd_dc_auto_freeze) return; /* auto-freeze: no saving while signal below threshold */
     /* Привязываем период к моменту, когда DC стал dirty (и к LCD-прогрессу).
        Это устраняет ситуацию, когда прогресс дошёл до конца, а попытка save не делается.
        Условие: если dirty и прошло >= period с dirty_since_ms — пытаемся писать.
@@ -932,7 +1104,10 @@ static void vnd_dc_try_save_periodic(void)
     if(!vnd_dc_dirty_public) return;
     if(!vnd_dc_dirty) return;
     uint32_t now = HAL_GetTick();
-    uint32_t period = (uint32_t)VND_DC_SAVE_PERIOD_MS;
+    uint32_t period = (vnd_dc_write_counter == 0u)
+                      ? (uint32_t)VND_DC_SAVE_PERIOD_FIRST_MS
+                      : (uint32_t)VND_DC_SAVE_PERIOD_MS;
+    vnd_dc_save_period_ms = period;
     if(period == 0u) period = 1u;
     if(vnd_dc_dirty_since_ms == 0u){
         vnd_dc_dirty_since_ms = now;
@@ -2141,6 +2316,7 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
 }
 
 uint8_t vnd_is_streaming(void){ return streaming; }
+uint8_t vnd_is_tx_enabled(void){ return vnd_tx_enable; }
 
 /* функция vnd_generate_test_sawtooth() реализована в vnd_testgen.c */
 
@@ -3101,6 +3277,39 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
         vnd_dc_try_save_periodic();
     }
 
+    /* Sync master/slave: обновление частоты TIM16 и подстройка buf_rate по входу */
+    {
+        uint32_t now_ms = HAL_GetTick();
+        if(vnd_sync_mode == VND_SYNC_MODE_MASTER){
+            uint16_t hz = adc_stream_get_buf_rate();
+            if(hz != 0u && hz != vnd_sync_last_hz){
+                vnd_sync_set_master(hz);
+            }
+            vnd_sync_ok_public = 1u;
+        } else if(vnd_sync_mode == VND_SYNC_MODE_SLAVE){
+            uint16_t hz = vnd_sync_pending_hz;
+            if(hz != 0u && (now_ms - vnd_sync_last_apply_ms) > 200u){
+                vnd_sync_pending_hz = 0;
+                vnd_sync_last_apply_ms = now_ms;
+                adc_stream_set_buf_rate_external(hz);
+                vnd_sync_last_hz = hz;
+                if(win_auto && (vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI)){
+                    uint16_t prev_start = win_start0;
+                    vnd_apply_auto_roi_window();
+                    if(win_start0 != prev_start){
+                        vnd_avg_reset();
+                        vnd_update_lcd_params();
+                    }
+                }
+            }
+            if(vnd_sync_last_capture_ms != 0u && (now_ms - vnd_sync_last_capture_ms) <= 1000u){
+                vnd_sync_ok_public = 1u;
+            } else {
+                vnd_sync_ok_public = 0u;
+            }
+        }
+    }
+
     /* ПРИОРИТЕТ 0: если не сконфигурировано стримингом — обслуживаем оффлайн-STAT
        и параллельно ведём DC адаптацию/сохранение по входному сигналу (если есть кадры в FIFO). */
     if(!streaming)
@@ -3720,6 +3929,34 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
     /* Если нет прогресса — не синтезируем кадры; ждём реальные данные от АЦП */
 }
 
+/* TIM16 input-capture callback (slave sync) */
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+    if(!htim) return;
+    if(htim->Instance != TIM16) return;
+    if(vnd_sync_mode != VND_SYNC_MODE_SLAVE) return;
+
+    uint32_t cap = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+    if(!vnd_sync_capture_valid){
+        vnd_sync_last_capture = cap;
+        vnd_sync_capture_valid = 1;
+        vnd_sync_last_capture_ms = HAL_GetTick();
+        return;
+    }
+    uint32_t last = vnd_sync_last_capture;
+    vnd_sync_last_capture = cap;
+    vnd_sync_last_capture_ms = HAL_GetTick();
+
+    uint32_t diff = (cap >= last) ? (cap - last) : ((0x10000u - last) + cap);
+    if(diff == 0u) return;
+
+    uint32_t tick_hz = vnd_sync_tick_hz ? vnd_sync_tick_hz : 1000000u;
+    uint32_t hz = tick_hz / diff;
+    if(hz < 20u || hz > 1000u) return;
+
+    vnd_sync_pending_hz = (uint16_t)hz;
+}
+
 /* Обработчик завершения передачи */
 void USBD_VND_TxCplt(void)
 {
@@ -4052,6 +4289,11 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     cur_samples_per_frame = 0; /* снять lock, чтобы применилось немедленно */
                     cur_expected_frame_size = 0;
                 }
+                /* Начальные уровни синхронизации: PA2=0, PA1=0 (передача включена). */
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);
+
                 /* ПРОАКТИВНО: очистим возможный "хвост" занятости IN EP с прошлой сессии */
                 do {
                     extern void USBD_VND_ForceTxIdle(void);
@@ -4191,6 +4433,10 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 vnd_tx_ready = 1;
                 /* ADC/DMA продолжают работать в фоне, STOP только выключает передачу по USB */
                 HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_RESET);
+                /* Остановка синхросигналов: PA2=0, PA1=1 */
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);
                 {
                     uint64_t cur = vnd_total_tx_bytes;
                     uint64_t delta = (cur >= vnd_tx_bytes_at_start) ? (cur - vnd_tx_bytes_at_start) : 0ULL;
@@ -4236,6 +4482,10 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 /* async_mode должен остаться 1 после первого START */
                 
                 HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_RESET);
+                /* Остановка синхросигналов: PA2=0, PA1=1 */
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+                HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);
                 cdc_logf("EVT STOP t=%lu async=%d full=%d ep_busy=%d", 
                          (unsigned long)HAL_GetTick(), async_mode, full_mode, vnd_ep_busy);
             }
@@ -4310,6 +4560,25 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
         }
         break;
 
+        case VND_CMD_SET_TX_ENABLE:
+        {
+            if(len >= 2){
+                uint8_t en = (data[1] != 0u) ? 1u : 0u;
+                vnd_tx_enable = en;
+                if(en){
+                    /* Передатчик включён: PA1=0, PA2 остаётся под управлением DMA */
+                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+                } else {
+                    /* Передатчик выключён: PA1=1, PA2 принудительно в 0 */
+                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+                    HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);
+                }
+                cdc_logf("EVT TX_ENABLE=%u", (unsigned)en);
+            }
+        }
+        break;
+
         case VND_CMD_SET_WINDOWS:
             if(len >= 9)
             {
@@ -4381,6 +4650,16 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 vnd_dc_adapt_enabled = (enable != 0) ? 1 : 0;
                 printf("[CMD_IND] SET_DC_ADAPT %s\r\n", vnd_dc_adapt_enabled ? "ACTIVE" : "FREEZE");
                 cdc_logf("EVT SET_DC_ADAPT %u", (unsigned)vnd_dc_adapt_enabled);
+            }
+            break;
+
+        case VND_CMD_SET_SYNC_MODE:
+            if(len >= 2)
+            {
+                uint8_t mode = data[1];
+                if(mode > VND_SYNC_MODE_OFF) mode = VND_SYNC_MODE_MASTER;
+                vnd_sync_apply_mode(mode);
+                printf("[CMD_IND] SET_SYNC_MODE %u\r\n", (unsigned)mode);
             }
             break;
 

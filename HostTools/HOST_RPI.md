@@ -170,6 +170,32 @@ python3 HostTools/vendor_stream_read.py --vid 0xCAFE --pid 0x4001 --intf 2 --ep-
 
 # GUI осциллограф (оптимизированный)
 python3 HostTools/gui_oscilloscope_optimized.py --ns 0 --profile 0 --watchdog
+
+## 9.1) Включение/выключение внешнего передатчика (без остановки потока)
+
+Команда 0x33 управляет внешним передатчиком:
+- payload 0x01 — включить (PA1=0, PA2 разрешён)
+- payload 0x00 — выключить (PA1=1, PA2=0)
+
+Пример (через bulk OUT 0x03):
+
+```bash
+python3 - <<'PY'
+import usb.core, usb.util
+VID, PID = 0xCAFE, 0x4001
+INTF, EP_OUT = 2, 0x03
+dev = usb.core.find(idVendor=VID, idProduct=PID)
+dev.set_configuration()
+try:
+  dev.set_interface_altsetting(interface=INTF, alternate_setting=1)
+except Exception:
+  pass
+# TX enable
+dev.write(EP_OUT, bytes([0x33, 0x01]), timeout=1000)
+# TX disable
+# dev.write(EP_OUT, bytes([0x33, 0x00]), timeout=1000)
+PY
+```
 ```
 
 ---

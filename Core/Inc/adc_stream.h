@@ -132,8 +132,14 @@ void adc_stream_watchdog(void);
 // Вызов в начале цикла (0→1 TIM2) перед началом заполнения нового буфера
 void adc_stream_tim2_switch_buffers(void);
 
+// Внешняя синхронизация: обработка фронта (slave) для перезапуска DMA
+void adc_stream_sync_edge(void);
+
 // Fine frequency tuning: установка buf_rate в диапазоне 200-210 Hz
 void adc_stream_set_buf_rate_fine(uint16_t buf_rate_hz);
+
+// Внешняя синхронизация: установка buf_rate по входным импульсам (без ограничения marker_hz)
+void adc_stream_set_buf_rate_external(uint16_t buf_rate_hz);
 
 #ifdef __cplusplus
 }
