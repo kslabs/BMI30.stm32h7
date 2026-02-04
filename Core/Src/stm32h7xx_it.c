@@ -72,6 +72,10 @@ void HardFault_Capture(uint32_t *stack_addr);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+#ifndef SYNC_ACTIONS_ENABLE
+#define SYNC_ACTIONS_ENABLE 0u
+#endif
+
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -81,6 +85,7 @@ extern DMA_HandleTypeDef hdma_adc2;
 extern DAC_HandleTypeDef hdac1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim6;
+extern TIM_HandleTypeDef htim15;
 extern TIM_HandleTypeDef htim16;
 extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
@@ -210,19 +215,7 @@ void PendSV_Handler(void)
   /* USER CODE END PendSV_IRQn 1 */
 }
 
-/**
-  * @brief This function handles TIM16 global interrupt.
-  */
-void TIM16_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM16_IRQn 0 */
-
-  /* USER CODE END TIM16_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim16);
-  /* USER CODE BEGIN TIM16_IRQn 1 */
-
-  /* USER CODE END TIM16_IRQn 1 */
-}
+/* TIM16 IRQHandler removed - now using TIM5 (32-bit) instead */
 
 /**
   * @brief This function handles EXTI line[9:5] interrupts.
@@ -242,10 +235,40 @@ void EXTI9_5_IRQHandler(void)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   if (GPIO_Pin == SYNC_IN_Pin) {
-    if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
-      vnd_sync_on_edge();
-      adc_stream_sync_edge();
-    }
+    /* Спад PD5: только измеряем период через TIM5, никакого влияния на TIM15/ADC/DMA */
+    extern TIM_HandleTypeDef htim5;
+    extern volatile uint32_t sync_last_edge_ms;
+    extern volatile uint8_t sync_edge_seen;
+    extern volatile uint32_t sync_edge_count;
+    
+    /* Сохраняем счетчик буферов при спаде PD5 и вычисляем delta (для статистики) */
+    extern volatile uint32_t sync_buffer_count_at_edge;
+    extern volatile uint32_t sync_buffers_between_edges;
+    extern volatile uint32_t adc_stream_total_buffer_count;
+    
+    uint32_t prev_count = sync_buffer_count_at_edge;
+    sync_buffer_count_at_edge = adc_stream_total_buffer_count;
+    sync_buffers_between_edges = adc_stream_total_buffer_count - prev_count;
+    
+    /* Измеряем период через TIM5 (275 MHz) для частотной синхронизации */
+    extern volatile uint32_t sync_tim5_period_ticks;
+    sync_tim5_period_ticks = htim5.Instance->CNT;  // Сохраняем текущее значение TIM5 как период
+    htim5.Instance->CNT = 0u;  // Сбрасываем TIM5 для измерения следующего периода
+    
+    /* Измеряем фазу TIM15 для фазовой синхронизации */
+    extern TIM_HandleTypeDef htim15;
+    extern volatile uint32_t sync_tim15_cnt_at_pd5;
+    sync_tim15_cnt_at_pd5 = htim15.Instance->CNT;
+    
+    /* УБРАНО: htim15.Instance->CNT = 0u; - нет сброса TIM15 */
+    /* УБРАНО: adc_stream_restart_sync() - нет перезапуска ADC/DMA */
+    
+    sync_last_edge_ms = HAL_GetTick();
+    sync_edge_seen = 1u;
+    sync_edge_count++;
+    
+    /* Отметим наличие синхроимпульсов для LCD */
+    vnd_sync_on_edge();
   }
 }
 
@@ -345,6 +368,20 @@ void TIM6_DAC_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles TIM15 global interrupt.
+  */
+void TIM15_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM15_IRQn 0 */
+
+  /* USER CODE END TIM15_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim15);
+  /* USER CODE BEGIN TIM15_IRQn 1 */
+
+  /* USER CODE END TIM15_IRQn 1 */
+}
+
+/**
   * @brief This function handles USB On The Go HS global interrupt.
   */
 void OTG_HS_IRQHandler(void)
@@ -377,6 +414,7 @@ static void hf_print_line(uint16_t y, const char *label, uint32_t val){
     buf[i]=0;
     LCD_ShowString_Size(0,y,buf,12,WHITE,BLACK);
 }
+static void HardFault_Display(void) __attribute__((unused));
 static void HardFault_Display(void){
     // очистим область
     LCD_FillRect(0,0,160,80,BLACK);
@@ -390,13 +428,6 @@ static void HardFault_Display(void){
 // Реализация захвата контекста HardFault
 void HardFault_Capture(uint32_t *stack_addr)
 {
-  hardfault_r0  = stack_addr[0];
-  hardfault_r1  = stack_addr[1];
-  hardfault_r2  = stack_addr[2];
-  hardfault_r3  = stack_addr[3];
-  hardfault_r12 = stack_addr[4];
-  hardfault_lr  = stack_addr[5];
-  hardfault_pc  = stack_addr[6];
   hardfault_psr = stack_addr[7];
   // Чтение системных регистров Fault
   hardfault_cfsr = SCB->CFSR;

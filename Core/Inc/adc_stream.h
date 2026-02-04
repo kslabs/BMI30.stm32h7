@@ -62,6 +62,13 @@ extern volatile uint32_t adc_ch_zero_buffers[2]; // количество буф�
 extern volatile uint32_t adc_last_full0_ms;
 extern volatile uint32_t adc_last_full1_ms;
 
+/* Диагностика синхронизации: индекс сэмпла TIM16 на конце буфера (slave) */
+extern volatile uint16_t adc_sync_dbg_last_idx;
+extern volatile uint16_t adc_sync_dbg_last_samples;
+extern volatile uint32_t adc_sync_dbg_last_buf;
+extern volatile uint32_t adc_sync_dbg_last_ms;
+extern volatile uint8_t  adc_sync_dbg_updated;
+
 // Debug info structure for runtime inspection
 typedef struct {
     uint32_t frame_wr_seq;
@@ -124,6 +131,9 @@ void adc_stream_print_sample95_all_buffers(void);
 // Хук: вызывается из ISR (ADC1 half/full) с количеством добавленных кадров FIFO (frames_added)
 void adc_stream_on_new_frames(uint32_t frames_added);
 
+/* Поллинг PD5 (SYNC_IN) по завершению буфера и мягкая подстройка TIM15 */
+void adc_sync_pd5_apply_adjustment(void);
+
 // Вотчдог: вызывать периодически из main-loop. Если нет DMA Full длительное время — перезапустить ADC/DMA.
 // (now_ms захватывается внутри; параметр удалён для предотвращения рассинхронизации тиков)
 void adc_stream_watchdog(void);
@@ -140,6 +150,17 @@ void adc_stream_set_buf_rate_fine(uint16_t buf_rate_hz);
 
 // Внешняя синхронизация: установка buf_rate по входным импульсам (без ограничения marker_hz)
 void adc_stream_set_buf_rate_external(uint16_t buf_rate_hz);
+
+// Считывание 32-битного счетчика TIM5 (для точных измерений времени)
+static inline uint32_t adc_get_tim5_counter(void) {
+    extern TIM_HandleTypeDef htim5;
+    return htim5.Instance->CNT;
+}
+
+// Вычисление разницы между двумя значениями 32-битного счетчика с учетом переполнения
+static inline uint32_t adc_tim5_diff(uint32_t start, uint32_t end) {
+    return end - start;  // Для uint32_t переполнение работает автоматически
+}
 
 #ifdef __cplusplus
 }

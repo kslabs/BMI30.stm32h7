@@ -13,6 +13,10 @@
 #include "main.h"
 #include <stddef.h> /* offsetof для отладочного вывода */
 #include "stm32h7xx_hal.h" /* SCB_* cache maintenance (may HardFault if MPU/cache config incomplete) */
+
+/* External timer handle for TIM5 (32-bit phase counter) */
+extern TIM_HandleTypeDef htim5;
+
 /* Для дублирования фрагментов кадров в CDC (Virtual COM) */
 #include "usbd_cdc_if.h"
 #include "usbd_cdc_custom.h" /* для USBD_VND_RequestSoftReset/DeepReset (объявления находятся в .c) */
@@ -35,6 +39,33 @@
     Если позже будет настроена некэшируемая память/MPU корректно — можно включить. */
 #ifndef VND_ENABLE_CACHE_INVALIDATE
 #define VND_ENABLE_CACHE_INVALIDATE 0
+#endif
+
+/* Управление шумными логами (по умолчанию выключено) */
+#ifndef VND_DC_LOG_ENABLE
+#define VND_DC_LOG_ENABLE 0
+#endif
+#if VND_DC_LOG_ENABLE
+#define VND_DC_LOGF(...) printf(__VA_ARGS__)
+#else
+#define VND_DC_LOGF(...) do { } while(0)
+#endif
+
+#ifndef VND_PROF_LOG_ENABLE
+#define VND_PROF_LOG_ENABLE 0
+#endif
+#if VND_PROF_LOG_ENABLE
+#define VND_PROF_LOGF(...) printf(__VA_ARGS__)
+#else
+#define VND_PROF_LOGF(...) do { } while(0)
+#endif
+
+#ifndef VND_SYNC_DIAG_ENABLE
+#define VND_SYNC_DIAG_ENABLE 1
+#endif
+
+#ifndef VND_SYNC_DIAG_PRINTF
+#define VND_SYNC_DIAG_PRINTF 1
 #endif
 
 /* Forward declaration (реализация ниже) для предотвращения implicit-function-warning при раннем вызове */
@@ -520,122 +551,75 @@ static uint32_t vnd_dc_adapt_block_until_ms = 0;
 
 static uint16_t vnd_crc16_ccitt(const uint8_t *data, uint32_t len); /* объявлена ниже в файле */
 
-/* === TIM16 sync helpers (master/slave) === */
-static uint32_t vnd_tim16_get_tim_clk(void)
+/* === TIM5 sync helpers (32-bit phase counter) === */
+__attribute__((unused))
+static uint32_t vnd_tim5_get_tim_clk(void)
 {
-    uint32_t pclk2 = HAL_RCC_GetPCLK2Freq();
-    uint32_t ppre2 = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE2) >> RCC_D2CFGR_D2PPRE2_Pos;
-    return ((ppre2 & 0x4u) != 0u) ? (pclk2 * 2u) : pclk2;
+    uint32_t pclk1 = HAL_RCC_GetPCLK1Freq();
+    uint32_t ppre1 = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1) >> RCC_D2CFGR_D2PPRE1_Pos;
+    return ((ppre1 & 0x4u) != 0u) ? (pclk1 * 2u) : pclk1;
 }
 
-static void vnd_sync_stop_tim16(void)
+__attribute__((unused))
+static void vnd_sync_stop_tim5(void)
 {
-    (void)HAL_TIM_PWM_Stop(&htim16, TIM_CHANNEL_1);
-    (void)HAL_TIM_IC_Stop_IT(&htim16, TIM_CHANNEL_1);
-    (void)HAL_TIM_Base_Stop(&htim16);
+    (void)HAL_TIM_Base_Stop(&htim5);
+}
+
+__attribute__((unused))
+static void vnd_sync_start_tim5_base(void)
+{
+    (void)HAL_TIM_Base_Start(&htim5);
 }
 
 static void vnd_sync_set_master(uint16_t buf_rate_hz)
 {
-    if(buf_rate_hz == 0u) return;
-    vnd_sync_stop_tim16();
-
-    /* PWM: generate sync pulse at buf_rate_hz with 2ms width. */
-    htim16.Instance = TIM16;
-    htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    htim16.Init.RepetitionCounter = 0;
-    htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-    {
-        uint32_t tim_clk = vnd_tim16_get_tim_clk();
-        const uint32_t tick_hz = 10000u; /* 10 kHz -> 100 us ticks */
-        uint32_t presc = (tim_clk + (tick_hz / 2u)) / tick_hz;
-        if(presc < 1u) presc = 1u;
-        htim16.Init.Prescaler = (uint32_t)(presc - 1u);
-
-        uint32_t period_ticks = (tick_hz + (buf_rate_hz / 2u)) / buf_rate_hz;
-        if(period_ticks < 1u) period_ticks = 1u;
-        htim16.Init.Period = (uint32_t)(period_ticks - 1u);
-    }
-
-    if(HAL_TIM_PWM_Init(&htim16) != HAL_OK){
-        return;
-    }
-
-    TIM_OC_InitTypeDef sConfigOC = {0};
-    sConfigOC.OCMode = TIM_OCMODE_PWM1;
-    sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-    sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-    {
-        const uint32_t tick_hz = 10000u;
-        uint32_t pulse_ticks = (tick_hz * 2u) / 1000u; /* 2 ms */
-        uint32_t period_ticks = htim16.Init.Period + 1u;
-        if(pulse_ticks < 1u) pulse_ticks = 1u;
-        if(pulse_ticks > period_ticks) pulse_ticks = period_ticks;
-        sConfigOC.Pulse = pulse_ticks;
-    }
-    if(HAL_TIM_PWM_ConfigChannel(&htim16, &sConfigOC, TIM_CHANNEL_1) != HAL_OK){
-        return;
-    }
-    (void)HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
+    /* TIM5 теперь используется как 32-битный счётчик фазы, не как генератор синхроимпульсов */
+    (void)buf_rate_hz;
     vnd_sync_last_hz = buf_rate_hz;
 }
 
 static void vnd_sync_set_slave(void)
 {
-    vnd_sync_stop_tim16();
-
-    /* Input capture on TIM16_CH1 (PB8) */
-    htim16.Instance = TIM16;
-    htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    htim16.Init.RepetitionCounter = 0;
-    htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-    {
-        uint32_t tim_clk = vnd_tim16_get_tim_clk();
-        uint32_t presc = (tim_clk + 500000u) / 1000000u; /* 1 MHz tick */
-        if(presc < 1u) presc = 1u;
-        htim16.Init.Prescaler = (uint32_t)(presc - 1u);
-        vnd_sync_tick_hz = tim_clk / presc;
-    }
-    htim16.Init.Period = 0xFFFFu;
-
-    if(HAL_TIM_IC_Init(&htim16) != HAL_OK){
-        return;
-    }
-
-    TIM_IC_InitTypeDef sConfigIC = {0};
-    sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
-    sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-    sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-    sConfigIC.ICFilter = 0;
-    if(HAL_TIM_IC_ConfigChannel(&htim16, &sConfigIC, TIM_CHANNEL_1) != HAL_OK){
-        return;
-    }
+    /* TIM5 как 32-битный счётчик фазы: запускается базовым таймером в main.c */
     vnd_sync_capture_valid = 0;
-    (void)HAL_TIM_IC_Start_IT(&htim16, TIM_CHANNEL_1);
 }
 
 static void vnd_sync_apply_mode(uint8_t mode)
 {
     if(mode > VND_SYNC_MODE_OFF) mode = VND_SYNC_MODE_MASTER;
     vnd_sync_mode = mode;
-    vnd_sync_mode_public = mode;
-    if(vnd_sync_mode == VND_SYNC_MODE_MASTER){
-        vnd_sync_set_master(adc_stream_get_buf_rate());
-        vnd_sync_ok_public = 1u;
-        cdc_logf("EVT SYNC_MODE MASTER");
-    } else if(vnd_sync_mode == VND_SYNC_MODE_SLAVE){
-        vnd_sync_set_slave();
-        vnd_sync_ok_public = 0u;
-        cdc_logf("EVT SYNC_MODE SLAVE");
-    } else {
-        vnd_sync_stop_tim16();
-        vnd_sync_ok_public = 0u;
-        cdc_logf("EVT SYNC_MODE OFF");
+    /* Всегда работаем в режиме авто-синхронизации: если есть импульсы PD5 — подстраиваемся,
+       если импульсов нет — работаем в свободном режиме. SYNC_OUT остаётся активным всегда. */
+    vnd_sync_mode_public = VND_SYNC_MODE_SLAVE;
+    vnd_sync_set_slave();
+    vnd_sync_ok_public = 0u;
+    vnd_sync_start_tim5_base();
+    {
+        extern volatile uint8_t sync_edge_seen;
+        extern volatile uint32_t sync_last_edge_ms;
+        extern TIM_HandleTypeDef htim5;
+        extern volatile uint8_t sync_align_pending;
+        extern volatile uint8_t sync_phase_lock_armed;
+        extern volatile uint8_t sync_phase_lock_active;
+        extern volatile uint8_t sync_restart_on_edge;
+        sync_edge_seen = 0u;
+        sync_last_edge_ms = 0u;
+        htim5.Instance->CNT = 0u;
+        sync_align_pending = 1u;
+        sync_phase_lock_armed = 1u;
+        sync_phase_lock_active = 0u;
+        sync_restart_on_edge = 1u;
     }
+    vnd_sync_pending_hz = 0u;
+    vnd_sync_last_capture_ms = 0u;
+    vnd_sync_last_apply_ms = 0u;
+    HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+    vnd_adc_restart_request = 1u;
+    cdc_logf("EVT SYNC_MODE AUTO (requested=%u)", (unsigned)mode);
 }
 
+__attribute__((unused))
 static uint16_t vnd_dc_bank_crc16(uint8_t ch, uint8_t parity)
 {
     if(ch > 1u || parity > 1u) return 0;
@@ -770,8 +754,8 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
     }
     uint16_t raw_mn_a = 0xFFFFu, raw_mx_a = 0u;
     uint16_t raw_mn_b = 0xFFFFu, raw_mx_b = 0u;
-    int32_t raw_mean_a = 0;
-    int32_t raw_mean_b = 0;
+    __attribute__((unused)) int32_t raw_mean_a = 0;
+    __attribute__((unused)) int32_t raw_mean_b = 0;
     if(do_stats){
         int64_t sum_a = 0;
         int64_t sum_b = 0;
@@ -808,7 +792,7 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
             vnd_dc_parity_swap = 0u;
         }
         vnd_dc_parity_swap_valid = 1u;
-        printf("[DC] PARITY_SWAP=%u (raw_parity=%u s0=%lu s1=%lu)\r\n",
+        VND_DC_LOGF("[DC] PARITY_SWAP=%u (raw_parity=%u s0=%lu s1=%lu)\r\n",
                (unsigned)vnd_dc_parity_swap, (unsigned)parity,
                (unsigned long)s0, (unsigned long)s1);
 
@@ -822,8 +806,8 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
                 raw_sum_a += (int32_t)a_ptr[roi_start + i];
                 raw_sum_b += (int32_t)b_ptr[roi_start + i];
             }
-            int32_t raw_mean_a = (int32_t)(raw_sum_a / (int32_t)roi_len);
-            int32_t raw_mean_b = (int32_t)(raw_sum_b / (int32_t)roi_len);
+            __attribute__((unused)) int32_t raw_mean_a = (int32_t)(raw_sum_a / (int32_t)roi_len);
+            __attribute__((unused)) int32_t raw_mean_b = (int32_t)(raw_sum_b / (int32_t)roi_len);
 
             /* check for chosen bank */
             int64_t sum_a = 0, sum_b = 0;
@@ -838,8 +822,8 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
                 err_a += (uint32_t)ea;
                 err_b += (uint32_t)eb;
             }
-            int32_t mean_a = (int32_t)(sum_a / (int32_t)roi_len);
-            int32_t mean_b = (int32_t)(sum_b / (int32_t)roi_len);
+            __attribute__((unused)) int32_t mean_a = (int32_t)(sum_a / (int32_t)roi_len);
+            __attribute__((unused)) int32_t mean_b = (int32_t)(sum_b / (int32_t)roi_len);
 
             /* check for alternative bank (flip parity bank) */
             int64_t sum2_a = 0, sum2_b = 0;
@@ -854,10 +838,10 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
                 err2_a += (uint32_t)ea;
                 err2_b += (uint32_t)eb;
             }
-            int32_t mean2_a = (int32_t)(sum2_a / (int32_t)roi_len);
-            int32_t mean2_b = (int32_t)(sum2_b / (int32_t)roi_len);
+            __attribute__((unused)) int32_t mean2_a = (int32_t)(sum2_a / (int32_t)roi_len);
+            __attribute__((unused)) int32_t mean2_b = (int32_t)(sum2_b / (int32_t)roi_len);
 
-            printf("[DC] APPLY_CHECK: roi=%u+%u raw_meanA=%ld raw_meanB=%ld p=%u meanA=%ld meanB=%ld errA=%lu errB=%lu alt_p=%u alt_meanA=%ld alt_meanB=%ld alt_errA=%lu alt_errB=%lu\r\n",
+                 VND_DC_LOGF("[DC] APPLY_CHECK: roi=%u+%u raw_meanA=%ld raw_meanB=%ld p=%u meanA=%ld meanB=%ld errA=%lu errB=%lu alt_p=%u alt_meanA=%ld alt_meanB=%ld alt_errA=%lu alt_errB=%lu\r\n",
                    (unsigned)roi_start, (unsigned)roi_len,
                    (long)raw_mean_a, (long)raw_mean_b,
                    (unsigned)p_use,
@@ -873,7 +857,7 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
     vnd_dc_apply_and_adapt(1, parity, tmp_b, roi_len, gate_b);
 
     if(do_stats && vnd_dc_parity_swap_valid){
-        uint8_t p_use = (uint8_t)(parity ^ vnd_dc_parity_swap);
+        __attribute__((unused)) uint8_t p_use = (uint8_t)(parity ^ vnd_dc_parity_swap);
 
         uint16_t mn_a = 0xFFFFu, mx_a = 0u;
         uint16_t mn_b = 0xFFFFu, mx_b = 0u;
@@ -889,10 +873,10 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
             sum_a += (int32_t)va;
             sum_b += (int32_t)vb;
         }
-        int32_t mean_a = (int32_t)(sum_a / (int32_t)roi_len);
-        int32_t mean_b = (int32_t)(sum_b / (int32_t)roi_len);
+        __attribute__((unused)) int32_t mean_a = (int32_t)(sum_a / (int32_t)roi_len);
+        __attribute__((unused)) int32_t mean_b = (int32_t)(sum_b / (int32_t)roi_len);
 
-        printf("[DC] ROI_STATS: roi=%u+%u raw_p=%u swap=%u p=%u gateA=%u gateB=%u "
+        VND_DC_LOGF("[DC] ROI_STATS: roi=%u+%u raw_p=%u swap=%u p=%u gateA=%u gateB=%u "
                "A_raw(mn=%u mx=%u mean=%ld) A_dc(mn=%u mx=%u mean=%ld) "
                "B_raw(mn=%u mx=%u mean=%ld) B_dc(mn=%u mx=%u mean=%ld)\r\n",
                (unsigned)roi_start, (unsigned)roi_len,
@@ -950,7 +934,7 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
     int64_t sum = 0;
     for(uint16_t i=0;i<roi_len;i++) sum += (int32_t)out[i];
     int32_t mean = (int32_t)(sum / (int32_t)roi_len);
-    int32_t err = mean - 32767;
+    __attribute__((unused)) int32_t err = mean - 32767;
 
     int32_t dead = (int32_t)VND_DC_DEADBAND;
     if(dead < 0) dead = 0;
@@ -995,7 +979,7 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
             uint32_t now_ms = HAL_GetTick();
             if(vnd_dc_last_dirty_log_ms == 0u || (now_ms - vnd_dc_last_dirty_log_ms) > 1000u){
                 vnd_dc_last_dirty_log_ms = now_ms;
-                  printf("[DC] DIRTY: ch=%u p=%u mean=%ld err=%ld step=per-sample(max=%ld)\r\n",
+                   VND_DC_LOGF("[DC] DIRTY: ch=%u p=%u mean=%ld err=%ld step=per-sample(max=%ld)\r\n",
                        (unsigned)ch, (unsigned)p,
                       (long)mean, (long)err, (long)(int32_t)VND_DC_SAMPLE_STEP_MAX);
             }
@@ -1052,7 +1036,7 @@ static void vnd_dc_load_once(void)
     vnd_dc_flash_next_off_public = vnd_dc_flash_next_off;
 
     if(best == NULL){
-        printf("[DC] LOAD EMPTY (journal)\r\n");
+        VND_DC_LOGF("[DC] LOAD EMPTY (journal)\r\n");
         memset(vnd_dc_buf, 0, sizeof(vnd_dc_buf));
         memset(vnd_dc_pos, 0, sizeof(vnd_dc_pos));
         vnd_dc_adapt_block_until_ms = HAL_GetTick() + (uint32_t)VND_DC_ADAPT_HOLDOFF_MS;
@@ -1079,15 +1063,15 @@ static void vnd_dc_load_once(void)
     vnd_dc_dirty_since_ms = 0;
     vnd_dc_adapt_block_until_ms = HAL_GetTick() + (uint32_t)VND_DC_ADAPT_HOLDOFF_MS;
     vnd_dc_last_save_ms = HAL_GetTick();
-    printf("[DC] LOAD OK (journal): cnt=%lu next_off=%lu%s\r\n",
+        VND_DC_LOGF("[DC] LOAD OK (journal): cnt=%lu next_off=%lu%s\r\n",
            (unsigned long)vnd_dc_write_counter,
            (unsigned long)vnd_dc_flash_next_off,
            need_erase ? " ERASE_PENDING" : "");
 
-    printf("[DC] ADAPT_HOLDOFF: %lu ms\r\n", (unsigned long)(uint32_t)VND_DC_ADAPT_HOLDOFF_MS);
+        VND_DC_LOGF("[DC] ADAPT_HOLDOFF: %lu ms\r\n", (unsigned long)(uint32_t)VND_DC_ADAPT_HOLDOFF_MS);
 
         /* Печатаем контрольные суммы 4 массивов DC (канал×parity), чтобы руками сравнить до/после reboot. */
-        printf("[DC] BANK CRC16: A0=%04X A1=%04X B0=%04X B1=%04X\r\n",
+        VND_DC_LOGF("[DC] BANK CRC16: A0=%04X A1=%04X B0=%04X B1=%04X\r\n",
             (unsigned)vnd_dc_bank_crc16(0u,0u), (unsigned)vnd_dc_bank_crc16(0u,1u),
             (unsigned)vnd_dc_bank_crc16(1u,0u), (unsigned)vnd_dc_bank_crc16(1u,1u));
 }
@@ -1130,7 +1114,7 @@ static void vnd_dc_try_save_periodic(void)
 
      /* Диагностика: контрольные суммы 4 DC массивов в RAM на момент сохранения.
          Это позволяет сравнить с тем, что загрузится после reboot. */
-     printf("[DC] SAVE BANK CRC16: A0=%04X A1=%04X B0=%04X B1=%04X\r\n",
+    VND_DC_LOGF("[DC] SAVE BANK CRC16: A0=%04X A1=%04X B0=%04X B1=%04X\r\n",
               (unsigned)vnd_dc_bank_crc16(0u,0u), (unsigned)vnd_dc_bank_crc16(0u,1u),
               (unsigned)vnd_dc_bank_crc16(1u,0u), (unsigned)vnd_dc_bank_crc16(1u,1u));
 
@@ -1196,7 +1180,7 @@ static void vnd_dc_try_save_periodic(void)
             vnd_dc_save_fail_count++;
             vnd_dc_save_last_result = 2;
             vnd_dc_save_last_ms = now;
-            printf("[DC] SAVE FAIL: erase(full) bank=%lu sector=%lu err=0x%08lX sec_err=%lu\r\n",
+                 VND_DC_LOGF("[DC] SAVE FAIL: erase(full) bank=%lu sector=%lu err=0x%08lX sec_err=%lu\r\n",
                    (unsigned long)erase_bank, (unsigned long)erase_sector, (unsigned long)err, (unsigned long)sector_error);
             HAL_FLASH_Lock();
             /* Не сбрасываем dirty. Перезапускаем отсчёт до следующей попытки. */
@@ -1243,7 +1227,7 @@ static void vnd_dc_try_save_periodic(void)
         vnd_dc_flash_next_off_public = vnd_dc_flash_next_off;
         vnd_dc_load_flags_public = 1u; /* after a successful write, journal state is sane */
         vnd_dc_loaded_crc16_public = blob.crc16;
-        printf("[DC] SAVE OK: bank=%lu sector=%lu addr=0x%08lX cnt=%lu\r\n",
+        VND_DC_LOGF("[DC] SAVE OK: bank=%lu sector=%lu addr=0x%08lX cnt=%lu\r\n",
                (unsigned long)erase_bank, (unsigned long)erase_sector,
                (unsigned long)(uint32_t)(VND_DC_FLASH_ADDR + write_off), (unsigned long)vnd_dc_write_counter);
     } else {
@@ -1255,7 +1239,7 @@ static void vnd_dc_try_save_periodic(void)
         vnd_dc_save_fail_count++;
         vnd_dc_save_last_result = 2;
         vnd_dc_save_last_ms = now;
-        printf("[DC] SAVE FAIL: prog bank=%lu sector=%lu err=0x%08lX\r\n",
+        VND_DC_LOGF("[DC] SAVE FAIL: prog bank=%lu sector=%lu err=0x%08lX\r\n",
                (unsigned long)erase_bank, (unsigned long)erase_sector, (unsigned long)err);
         /* Не сбрасываем dirty. Перезапускаем отсчёт до следующей попытки. */
         vnd_dc_dirty_since_ms = now;
@@ -1798,10 +1782,62 @@ static void cdc_logf(const char *fmt, ...)
     (void)CDC_Transmit_HS((uint8_t*)cdc_evt_buf, (uint16_t)n);
 }
 
+/* Периодическая диагностика синхронизации (slave): индекс сэмпла TIM16 на конце буфера */
+static void vnd_cdc_sync_diag(uint32_t now_ms)
+{
+    static uint32_t last_ms = 0;
+    static uint16_t prev_idx = 0;
+    static uint8_t prev_valid = 0;
+    if(diag_mode_active){ return; }
+    if(now_ms - last_ms < 1000u){ return; } /* не чаще 1 Гц */
+    last_ms = now_ms;
+
+    if(vnd_sync_mode_public != VND_SYNC_MODE_SLAVE){
+        return;
+    }
+
+    if(!adc_sync_dbg_updated){
+        return;
+    }
+    adc_sync_dbg_updated = 0u;
+
+    uint16_t idx = adc_sync_dbg_last_idx;
+    uint16_t n = adc_sync_dbg_last_samples;
+    uint32_t buf = adc_sync_dbg_last_buf;
+    uint32_t age = now_ms - adc_sync_dbg_last_ms;
+
+    uint16_t delta = 0;
+    if(prev_valid && n > 0u){
+        uint16_t d = (idx >= prev_idx) ? (uint16_t)(idx - prev_idx) : (uint16_t)(prev_idx - idx);
+        if(d > (n / 2u)) d = (uint16_t)(n - d);
+        delta = d;
+    }
+    prev_idx = idx;
+    prev_valid = 1u;
+
+    cdc_logf("SYNC_DBG t=%lums buf=%lu idx=%u/%u d=%u age=%lums",
+             (unsigned long)now_ms,
+             (unsigned long)buf,
+             (unsigned)idx,
+             (unsigned)n,
+             (unsigned)delta,
+             (unsigned long)age);
+#if VND_SYNC_DIAG_PRINTF
+    printf("[SYNC_DBG] t=%lums buf=%lu idx=%u/%u d=%u age=%lums\r\n",
+           (unsigned long)now_ms,
+           (unsigned long)buf,
+           (unsigned)idx,
+           (unsigned)n,
+           (unsigned)delta,
+           (unsigned long)age);
+#endif
+}
+
 static void vnd_cdc_periodic_stats(uint32_t now_ms)
 {
     /* В диагностическом режиме не трогаем CDC вовсе — уменьшаем накладные расходы */
     if(diag_mode_active){ return; }
+    vnd_cdc_sync_diag(now_ms);
     if(now_ms - cdc_stats_last_ms < 1000) return; /* не чаще 1 Гц */
     cdc_stats_last_ms = now_ms;
     uint64_t cur = vnd_total_tx_bytes;
@@ -2184,6 +2220,11 @@ static void vnd_try_send_pending_status_from_task(void)
 /* Тик от таймера */
 static volatile uint8_t vnd_tick_flag = 0;
 void usb_vendor_periodic_tick(void){ vnd_tick_flag = 1; }
+
+void vnd_request_adc_restart_from_isr(void)
+{
+    vnd_adc_restart_request = 1u;
+}
 
 /*
  * ВАЖНО:
@@ -2910,9 +2951,9 @@ static int vnd_async_try_tx(void)
         
         uint32_t now_profile = HAL_GetTick();
         if(now_profile - last_profile_log >= 5000){
-            uint32_t avg_us = call_count ? (total_time_us / call_count) : 0;
-            printf("[PROF_TX] calls=%lu avg=%lu.%luus max=%lu.%luus\r\n",
-                   call_count, avg_us, (elapsed_us%10), max_time_us, (max_time_us%10));
+            __attribute__((unused)) uint32_t avg_us = call_count ? (total_time_us / call_count) : 0;
+                 VND_PROF_LOGF("[PROF_TX] calls=%lu avg=%lu.%luus max=%lu.%luus\r\n",
+                     call_count, avg_us, (elapsed_us%10), max_time_us, (max_time_us%10));
             call_count = 0; total_time_us = 0; max_time_us = 0;
             last_profile_log = now_profile;
         }
@@ -3302,12 +3343,30 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
                     }
                 }
             }
-            if(vnd_sync_last_capture_ms != 0u && (now_ms - vnd_sync_last_capture_ms) <= 1000u){
+            {
+                extern volatile uint32_t sync_last_edge_ms;
+                if(sync_last_edge_ms != 0u && (now_ms - sync_last_edge_ms) <= 1000u){
                 vnd_sync_ok_public = 1u;
             } else {
                 vnd_sync_ok_public = 0u;
             }
+            }
         }
+    }
+
+    /* Если запросили перезапуск ADC/DMA — выполняем независимо от streaming */
+    if (vnd_adc_restart_request) {
+        vnd_adc_restart_request = 0;
+        HAL_StatusTypeDef rrc = adc_stream_restart(NULL, NULL);
+        /* Обновим снапшот DMA после перезапуска, чтобы таймауты/диагностика не срабатывали по старым значениям */
+        {
+            adc_stream_debug_t dbg;
+            adc_stream_get_debug(&dbg);
+            dma_snapshot_full0 = dbg.dma_full0;
+            dma_snapshot_full1 = dbg.dma_full1;
+        }
+        cdc_logf("EVT ADC_RESTART on MODE rc=%d", (int)rrc);
+        vnd_tx_kick = 1;
     }
 
     /* ПРИОРИТЕТ 0: если не сконфигурировано стримингом — обслуживаем оффлайн-STAT
@@ -3338,22 +3397,7 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
     }
 #endif
 
-    /* Если по START запросили перезапуск ADC/DMA — делаем это здесь (в main-loop),
-       до любых попыток передачи по USB. */
-    if (vnd_adc_restart_request) {
-        vnd_adc_restart_request = 0;
-        HAL_StatusTypeDef rrc = adc_stream_restart(NULL, NULL);
-        /* Обновим снапшот DMA после перезапуска, чтобы таймауты/диагностика не срабатывали по старым значениям */
-        {
-            adc_stream_debug_t dbg;
-            adc_stream_get_debug(&dbg);
-            dma_snapshot_full0 = dbg.dma_full0;
-            dma_snapshot_full1 = dbg.dma_full1;
-        }
-        cdc_logf("EVT ADC_RESTART on START rc=%d", (int)rrc);
-        /* Попросим немедленный kick TX после реинициализации */
-        vnd_tx_kick = 1;
-    }
+    /* (перезапуск ADC/DMA обработан выше, до выхода при !streaming) */
     /* СУПЕР-ПРИОРИТЕТ: если пришёл STOP — разрешаем только ACK-STAT, полностью блокируем стрим */
     if (stop_request) {
         if (!vnd_ep_busy) {
@@ -3981,10 +4025,10 @@ void USBD_VND_TxCplt(void)
         if(interval > txcplt_interval_max) txcplt_interval_max = interval;
         
         if(now_txcplt - last_txcplt_log >= 5000){
-            uint32_t avg = txcplt_interval_count ? (txcplt_interval_sum / txcplt_interval_count) : 0;
-            printf("[PROF_TxCplt] cnt=%lu avg=%lums max=%lums (rate=%.1fHz)\r\n",
-                   txcplt_interval_count, avg, txcplt_interval_max,
-                   avg > 0 ? (1000.0f / avg) : 0.0f);
+            __attribute__((unused)) uint32_t avg = txcplt_interval_count ? (txcplt_interval_sum / txcplt_interval_count) : 0;
+                 VND_PROF_LOGF("[PROF_TxCplt] cnt=%lu avg=%lums max=%lums (rate=%.1fHz)\r\n",
+                     txcplt_interval_count, avg, txcplt_interval_max,
+                     avg > 0 ? (1000.0f / avg) : 0.0f);
             txcplt_interval_sum = 0;
             txcplt_interval_count = 0;
             txcplt_interval_max = 0;
@@ -4292,7 +4336,13 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 /* Начальные уровни синхронизации: PA2=0, PA1=0 (передача включена). */
                 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
                 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);
+                /* Синхронизация всегда активна и не должна сбрасываться при START */
+                if(vnd_sync_mode_public == VND_SYNC_MODE_SLAVE){
+                    extern volatile uint8_t sync_restart_on_edge;
+                    sync_restart_on_edge = 1u; /* перезапуск ADC/DMA по первому фронту после START */
+                    HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+                    vnd_sync_start_tim5_base();
+                }
 
                 /* ПРОАКТИВНО: очистим возможный "хвост" занятости IN EP с прошлой сессии */
                 do {

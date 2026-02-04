@@ -123,8 +123,8 @@ extern volatile uint32_t systick_heartbeat;
 // Синхронизация: вход (slave) и выход (master)
 #define SYNC_IN_Pin GPIO_PIN_5
 #define SYNC_IN_GPIO_Port GPIOD
-#define SYNC_OUT_Pin GPIO_PIN_2
-#define SYNC_OUT_GPIO_Port GPIOE
+#define SYNC_OUT_Pin GPIO_PIN_8
+#define SYNC_OUT_GPIO_Port GPIOB
 
 // --- Профили потоков ADC (буфер/частота) ---
 // Профиль B (default): f_buf=300 Гц, N=912 (Fs=273600 Гц)

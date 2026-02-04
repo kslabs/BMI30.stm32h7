@@ -154,6 +154,7 @@ void vnd_print_perf_stats(void);
 
 /* Сигнал о фронте синхронизации (slave) для индикации S на LCD */
 void vnd_sync_on_edge(void);
+void vnd_request_adc_restart_from_isr(void);
 
 /* DC (AVG_ROI) persistence: counters for LCD/diagnostics */
 extern volatile uint32_t vnd_dc_save_ok_count;

@@ -39,14 +39,15 @@ SPI_HandleTypeDef hspi4;
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim15;
-TIM_HandleTypeDef htim16;
 IWDG_HandleTypeDef hiwdg1;
 UART_HandleTypeDef huart1;
 DAC_HandleTypeDef  hdac1;
 DMA_HandleTypeDef  hdma_adc1;
 DMA_HandleTypeDef  hdma_adc2;
+DMA_HandleTypeDef  hdma_tim15_up;  // DMA для автоматической записи ARR
 
 /* Экспорт переменной устройства USB (определена в usb_device.c) */
 extern USBD_HandleTypeDef hUsbDeviceHS;
@@ -70,6 +71,16 @@ volatile uint32_t systick_heartbeat = 0; /* глобальный счётчик 
 uint8_t star_visible = 0;
 uint8_t auto_stream_started = 0;
 uint8_t init_messages_ready = 0;
+/* Метка последнего синхро-фронта (для LCD/диагностики) */
+volatile uint32_t sync_last_edge_ms = 0;
+volatile uint8_t sync_edge_seen = 0;
+volatile uint8_t sync_align_pending = 0;
+volatile uint8_t sync_phase_lock_armed = 0;
+volatile uint8_t sync_phase_lock_active = 0;
+volatile uint8_t sync_restart_on_edge = 0;
+volatile uint32_t sync_edge_count = 0;
+/* Измерение периода PD5 через TIM5 (275 MHz) */
+volatile uint32_t sync_tim5_period_ticks = 0;
 /* Охраняемая «флаг-структура» для need_recovery с сигнатурами по краям */
 typedef struct {
   uint32_t c1;                 /* 0xDEADBEEF */
@@ -274,8 +285,8 @@ static void MX_ADC2_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_TIM5_Init(void);
 static void MX_TIM15_Init(void);
-static void MX_TIM16_Init(void);
 static void MX_IWDG1_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
@@ -701,7 +712,7 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM15_Init();
-  MX_TIM16_Init();
+  MX_TIM5_Init();
   MX_USART1_UART_Init();
   /* USER CODE: Диагностика TIM15/ADC после всех Init */
   printf("[TIM15][CFG] TIM15->CR2=0x%08lX MMS=%lu (expected 2=UPDATE)\r\n",
@@ -748,8 +759,8 @@ int main(void)
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2); // Меандр
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3); // Контроль
 
-  // Запуск TIM16 CH1: ~16 Гц, импульс ~2 мс
-  HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
+  // Запуск TIM5 как 32-битного счётчика фазы
+  HAL_TIM_Base_Start(&htim5);
 
   // Установка скважности для TIM3 (CH1, CH2, CH3) — 50%
   __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 2499); // 50% скважность
@@ -959,9 +970,9 @@ int main(void)
   printf("[TIM2][NVIC] Before Start_IT: TIM2_IRQn=%d enabled=%lu\r\n",
          TIM2_IRQn, (unsigned long)((nvic_iser0 & tim2_bit) ? 1 : 0));
   
-  /* TIM2 не управляет DMA и не генерирует PWM на PA2.
-     PA2 теперь GPIO - переключается в DMA callback для синхронизации с буфером. */
-  HAL_TIM_Base_Start(&htim2);
+      /* TIM2 не управляет DMA и не генерирует PWM на PA2.
+        Используем TIM2 только как счётчик/делитель. */
+      HAL_TIM_Base_Start(&htim2);
   
   // ДИАГНОСТИКА: проверка после запуска
   nvic_iser0 = NVIC->ISER[TIM2_IRQn >> 5];
@@ -980,6 +991,12 @@ int main(void)
   __HAL_TIM_DISABLE(&htim15);
   // ВАЖНО: Не трогаем SMCR! TIM15 в GATED mode управляется TIM2 CH1
   __HAL_TIM_SET_COUNTER(&htim15,0);
+  
+  // Включаем Update Interrupt для TIM15 (аппаратная коррекция ARR)
+  __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
+  HAL_NVIC_SetPriority(TIM15_IRQn, 3, 0);  // Средний приоритет
+  HAL_NVIC_EnableIRQ(TIM15_IRQn);
+  
   CHECK(HAL_TIM_Base_Start(&htim15), 1102);
   HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
 #else
@@ -1033,6 +1050,27 @@ int main(void)
            (unsigned long)TIM2->ARR, (unsigned long)TIM2->SR, (unsigned long)TIM2->DIER);
   }
 #endif
+
+  // Ежесекундный вывод периода PD5 измеренного через TIM5 (32-битный счетчик @ 275 MHz)
+  {
+    static uint32_t last_tim5_print_ms = 0;
+    if (now - last_tim5_print_ms >= 1000) {
+      last_tim5_print_ms = now;
+      uint32_t period_ticks = sync_tim5_period_ticks;
+      // TIM5 @ 275 MHz: 1 тик = 3.636 нс
+      // Период 200 Hz (5 ms) = 5000000 нс / 3.636 нс = ~1,375,000 тиков
+      float period_us = (float)period_ticks / 275.0f;  // в микросекундах
+      float freq_hz = 275000000.0f / (float)period_ticks;  // частота в Гц
+      extern volatile uint8_t vnd_sync_mode_public;
+      extern TIM_HandleTypeDef htim15;
+      extern volatile uint32_t sync_tim15_cnt_at_pd5;
+      uint32_t phase = sync_tim15_cnt_at_pd5;
+      uint32_t arr = htim15.Instance->ARR;
+      printf("[TIM5] PD5_period=%lu ticks (%.3f us, %.3f Hz) | mode=%u ARR=%lu phase=%lu\r\n", 
+             (unsigned long)period_ticks, period_us, freq_hz,
+             (unsigned)vnd_sync_mode_public, (unsigned long)arr, (unsigned long)phase);
+    }
+  }
 
   /* DEBUG dumps отключены: TIM2 больше не управляет DMA, а вывод s_frame_buffer_idx в COM4 шумит. */
 
@@ -1148,7 +1186,10 @@ int main(void)
   /* USB детект временно отключен для упрощения */
 
   /* Авто-STOP: если хост не активен (нет SOF) — выключить передачу */
-#if !SAFE_MINIMAL
+#ifndef USB_AUTO_STOP_ON_NO_SOF
+#define USB_AUTO_STOP_ON_NO_SOF 0u
+#endif
+#if !SAFE_MINIMAL && USB_AUTO_STOP_ON_NO_SOF
   {
     extern uint8_t vnd_is_streaming(void);
     if (vnd_is_streaming()) {
@@ -1173,6 +1214,44 @@ int main(void)
 #if !SAFE_MINIMAL
   extern volatile uint8_t vnd_tx_kick;
   extern uint8_t vnd_is_streaming(void);
+  #ifndef SYNC_DEBUG_LOG
+  #define SYNC_DEBUG_LOG 1
+  #endif
+  #if SYNC_DEBUG_LOG
+  {
+    static uint32_t last_sync_log_ms = 0u;
+    if ((now - last_sync_log_ms) >= 1000u) {
+      last_sync_log_ms = now;
+      extern volatile uint32_t sync_buffers_between_edges;
+      extern volatile uint32_t adc_stream_total_buffer_count;
+      extern volatile uint8_t vnd_sync_mode_public;
+      uint32_t age = (sync_last_edge_ms == 0u) ? 0xFFFFFFFFu : (now - sync_last_edge_ms);
+      printf("[SYNC] edges=%lu age=%lums mode=%u bufs_between_pd5=%lu total_bufs=%lu\r\n",
+             (unsigned long)sync_edge_count,
+             (unsigned long)age,
+             (unsigned)vnd_sync_mode_public,
+             (unsigned long)sync_buffers_between_edges,
+             (unsigned long)(adc_stream_total_buffer_count % 1000));
+    }
+  }
+  #endif
+  /* Подстройка частоты TIM15 по фазе (TIM16 счётчик, PD5 reset) */
+  {
+    extern void adc_sync_pd5_apply_adjustment(void);
+    adc_sync_pd5_apply_adjustment();
+  }
+  /* Выравнивание TIM15 по границе буфера — выполняем вне ISR */
+  #ifndef SYNC_ACTIONS_ENABLE
+  #define SYNC_ACTIONS_ENABLE 0u
+  #endif
+  #if SYNC_ACTIONS_ENABLE
+    if (sync_align_pending) {
+      sync_align_pending = 0u;
+      __HAL_TIM_SET_COUNTER(&htim15, 0u);
+      htim15.Instance->EGR = TIM_EGR_UG;
+      sync_phase_lock_active = 1u;
+    }
+  #endif
   /* ВАЖНО: Vendor_Stream_Task() обслуживает не только USB TX, но и always-on фоновые задачи
      (например, DC адаптацию/сохранение). Поэтому вызываем периодически даже без START/GUI.
      При наличии kick/streaming — вызываем сразу без ожидания периода. */
@@ -1188,6 +1267,11 @@ int main(void)
   {
   extern void adc_stream_watchdog(void);
   adc_stream_watchdog();
+  }
+  /* Применение подстройки частоты TIM15 по PD5 (slave polling) */
+  {
+    extern void adc_sync_pd5_apply_adjustment(void);
+    adc_sync_pd5_apply_adjustment();
   }
   // Проверка и выключение LED по таймауту (UART RX индикация)
   extern void CDC_LED_Process(void);
@@ -2003,7 +2087,7 @@ static void MX_TIM15_Init(void)
   htim15.Instance = TIM15;
   htim15.Init.Prescaler = 0;     // Без предделителя: 275 MHz тактовая
   htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim15.Init.Period = 1145;     // 275 MHz / (1145+1) = 240.0 kHz UPDATE (fs_hz профиля; с небольшим запасом по N)
+  htim15.Init.Period = 2145;     // 275 MHz / (2145+1) = 128.0 kHz UPDATE (fs_hz профиля; с небольшим запасом по N)
   htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim15.Init.RepetitionCounter = 0;
   htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -2021,9 +2105,9 @@ static void MX_TIM15_Init(void)
     Error_Handler();
   }
   /* TIM15 работает в свободном режиме (Free-Running), генерируя TRGO UPDATE @ 240kHz.
-     Slave Mode ОТКЛЮЧЁН для максимальной стабильности триггера ADC. 
-     Синхронизация с TIM2 выполняется программно через TIM2 IRQ. */
-  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_DISABLE;  // Свободный бег, без аппаратной синхронизации
+     Slave Mode ОТКЛЮЧЁН чтобы избежать разрушения ADC/DMA синхронизации.
+     Фазовая коррекция выполняется программно через минимальные шаги ARR. */
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_DISABLE;  // Свободный бег, без аппаратного сброса
   sSlaveConfig.InputTrigger = TIM_TS_ITR1;  // Параметр игнорируется когда SlaveMode = DISABLE
   if (HAL_TIM_SlaveConfigSynchro(&htim15, &sSlaveConfig) != HAL_OK)
   {
@@ -2069,57 +2153,32 @@ static void MX_TIM15_Init(void)
   * @param None
   * @retval None
   */
-static void MX_TIM16_Init(void)
+/**
+  * @brief TIM5 Initialization Function (32-bit timer for phase counter)
+  * @param None
+  * @retval None
+  */
+static void MX_TIM5_Init(void)
 {
 
-  /* USER CODE BEGIN TIM16_Init 0 */
-  /* USER CODE END TIM16_Init 0 */
+  /* USER CODE BEGIN TIM5_Init 0 */
+  /* USER CODE END TIM5_Init 0 */
 
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  /* USER CODE BEGIN TIM16_Init 1 */
-  /* USER CODE END TIM16_Init 1 */
-  htim16.Instance = TIM16;
-
-  /* Хотим ~16 Гц с импульсом ~2 мс. Используем базовую частоту 10 кГц (100 мкс шаг). */
-  {
-    uint32_t pclk2 = HAL_RCC_GetPCLK2Freq();
-    uint32_t ppre2 = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE2) >> RCC_D2CFGR_D2PPRE2_Pos;
-    uint32_t tim_clk = ((ppre2 & 0x4u) != 0u) ? (pclk2 * 2u) : pclk2;
-    const uint32_t tick_hz = 10000u; /* 10 kHz */
-    uint32_t presc = (tim_clk + (tick_hz / 2u)) / tick_hz;
-    if(presc < 1u) presc = 1u;
-    htim16.Init.Prescaler = (uint32_t)(presc - 1u);
-    {
-      uint32_t period_ticks = (tick_hz + 8u) / 16u; /* ~16 Гц */
-      if(period_ticks < 1u) period_ticks = 1u;
-      htim16.Init.Period = (uint32_t)(period_ticks - 1u);
-      {
-        uint32_t pulse_ticks = (tick_hz * 2u) / 1000u; /* 2 мс */
-        if(pulse_ticks < 1u) pulse_ticks = 1u;
-        if(pulse_ticks > period_ticks) pulse_ticks = period_ticks;
-        sConfigOC.Pulse = pulse_ticks;
-      }
-    }
-  }
-  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim16.Init.RepetitionCounter = 0;
-  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  if (HAL_TIM_PWM_Init(&htim16) != HAL_OK)
+  /* USER CODE BEGIN TIM5_Init 1 */
+  /* USER CODE END TIM5_Init 1 */
+  htim5.Instance = TIM5;
+  /* TIM5 используется как 32-битный счётчик фазы (частота выставляется в adc_stream_apply_timing) */
+  htim5.Init.Prescaler = 0;
+  htim5.Init.Period = 0xFFFFFFFF;  /* 32-bit maximum */
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
   {
     Error_Handler();
   }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim16, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM16_Init 2 */
-  /* USER CODE END TIM16_Init 2 */
-  HAL_TIM_MspPostInit(&htim16);
+  /* USER CODE BEGIN TIM5_Init 2 */
+  /* USER CODE END TIM5_Init 2 */
 
 }
 
@@ -2190,6 +2249,9 @@ static void MX_DMA_Init(void)
   /* Enable DMA1_Stream1 IRQ for ADC2 DMA completion (used to re-arm oneshot) */
   HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 1); // ADC2 DMA just below ADC1
   HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
+  /* Enable DMA1_Stream5 IRQ for TIM15 ARR auto-update (Half Transfer callback) */
+  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 2, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
 
 }
 
@@ -2274,7 +2336,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /* PE2: синхровыход (master), по умолчанию LOW */
+  /* PB8: синхровыход (master), по умолчанию LOW */
   HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);
   GPIO_InitStruct.Pin = SYNC_OUT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -2282,10 +2344,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(SYNC_OUT_GPIO_Port, &GPIO_InitStruct);
 
-  /* PD5: синхровход (slave) с EXTI по фронту */
-  GPIO_InitStruct.Pin = SYNC_IN_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  /* PE2: принудительно LOW (больше не используется как SYNC_OUT) */
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  /* PD5: синхровход (slave) с EXTI по спаду */
+  GPIO_InitStruct.Pin = SYNC_IN_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  /* Защита от «плавающего» входа при отсутствии импульсов: подтяжка вниз */
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(SYNC_IN_GPIO_Port, &GPIO_InitStruct);
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
@@ -2361,7 +2432,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
   if (!htim) return;
-  /* TIM2 PWM callbacks больше не используются для управления DMA */
 }
 
 // Callback по завершении приёма байта (USART1 RX interrupt)

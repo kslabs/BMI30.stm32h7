@@ -8,7 +8,7 @@
 
 /* Управление логированием этого модуля: по умолчанию выключено, чтобы не спамить из ISR */
 #ifndef ADC_LOG_ENABLE
-#define ADC_LOG_ENABLE 1
+#define ADC_LOG_ENABLE 0
 #endif
 #if ADC_LOG_ENABLE
 #define ADC_LOGF(...)    printf(__VA_ARGS__)
@@ -20,7 +20,7 @@
     DMA/ADC callbacks должны быть максимально короткими, иначе растёт джиттер и появляются
     «нулевые»/рваные кадры из-за задержек перезапуска DMA в NORMAL mode. */
 #ifndef ADC_ISR_LOG_ENABLE
-#define ADC_ISR_LOG_ENABLE 1  // Включено для диагностики DMA callbacks
+#define ADC_ISR_LOG_ENABLE 0  // Диагностика DMA callbacks отключена
 #endif
 
 /* Ранние forward-declare для локальных (в этом модуле) переменных,
@@ -156,7 +156,7 @@ static void dump_b_path_regs(uint32_t ndtrA, uint32_t ndtrB)
 
 // --- Профили ---
 static const adc_stream_profile_t g_profiles[ADC_PROFILE_COUNT] = {
-    { .samples_per_buf = 600, .buf_rate_hz = 400, .fs_hz = 240000u }, // 0: 600 samples @ 400Hz, fs=240kHz (DMA TC задаёт 400Hz)
+    { .samples_per_buf = 600, .buf_rate_hz = 400, .fs_hz = 240000u }, // 0: 600 samples @ 200Hz, fs=120kHz (вдвое медленнее для ручной проверки)
     { .samples_per_buf = 912,  .buf_rate_hz = 300, .fs_hz = 912u  * 300u }, // 1: balanced (higher pair rate)
     { .samples_per_buf = 944,  .buf_rate_hz = 300, .fs_hz = 944u  * 300u }, // 2: high Fs
     { .samples_per_buf = 976,  .buf_rate_hz = 300, .fs_hz = 976u  * 300u }, // 3: max Fs (near USB limit test)
@@ -272,7 +272,14 @@ static volatile uint8_t  s_tc_mask = 0;        // bit0=ADC1 TC seen, bit1=ADC2 T
 static volatile uint32_t s_frame_parity_counter = 0;  // Счётчик чётности кадров @ 400Hz (bit0: 0=even, 1=odd)
 static volatile uint32_t s_global_buffer_counter = 0; // Глобальный счётчик буферов (инкрементируется при каждом захвате)
 static volatile uint8_t  s_buffer_parity[FIFO_FRAMES] = {0};  // Номер буфера % 8 для каждого слота в FIFO
+static volatile uint8_t  s_pb8_state = 0;  // Текущее состояние PB8 (SYNC_OUT): 0=LOW, 1=HIGH
+volatile uint32_t s_buffers_since_restart = 0;  // Счётчик буферов после последнего restart (для детерминированного parity, используется в usb_vendor_app.c)
 static volatile uint8_t  s_frame_buffer_idx[FIFO_FRAMES] = {0};  // buffer_index (0-7) для каждого ОПУБЛИКОВАННОГО frame
+
+/* Диагностика синхронизации ADC/DMA */
+static volatile uint32_t s_adc1_alone = 0;  // ADC1 завершился без ADC2
+static volatile uint32_t s_adc2_alone = 0;  // ADC2 завершился без ADC1
+static volatile uint32_t s_both_ready = 0;  // Оба ADC завершились синхронно
 
 // DEBUG: trace последних N записей в s_buffer_parity[] (без printf из ISR)
 #define DBG_TRACE_SIZE 64
@@ -328,16 +335,15 @@ static inline void adc_marker_pa3_toggle(void)
 #endif
 }
 
-/* Привязка чет/нечет к уровню PA3.
-   Требование: PA3=1 -> EVEN, PA3=0 -> ODD.
-   Это позволяет синхронизировать even/odd с внешней амплитудной модуляцией,
-   даже если где-то «поплывёт» деление/маркер таймера.
+/* Привязка чет/нечет к счетчику буферов после restart.
+   После каждого restart (синхронизация по PD5) первый буфер всегда НЕЧЕТНЫЙ.
+   Каждый следующий буфер меняет четность: ODD -> EVEN -> ODD -> EVEN...
+   s_pb8_state = 0 (LOW) соответствует ODD, s_pb8_state = 1 (HIGH) соответствует EVEN.
    Возвращаем parity bit: 0=even, 1=odd. */
 static inline uint8_t adc_parity_from_pa3(void)
 {
-    /* IDR — фактический уровень на ноге (без HAL, минимальные ресурсы) */
-    uint8_t pa3 = (GPIOA->IDR & GPIO_PIN_3) ? 1u : 0u;
-    return pa3 ? 0u : 1u;
+    /* Просто читаем текущее состояние, которое инвертируется при каждом toggle */
+    return s_pb8_state ? 0u : 1u;
 }
 
 /* Отметить готовность канала и, если пара на очередном индексе готова, опубликовать её */
@@ -493,6 +499,283 @@ uint8_t adc_stream_static_mode_enabled(void){ return s_static_stage_mode; }
 // Fine frequency tuning: override для buf_rate_hz (0 = use profile default)
 static uint16_t g_fine_buf_rate_override = 0;
 
+// Fine ARR offset: ручная подстройка ARR для точной частоты (например -4 для 200→200.35 Гц)
+static int32_t g_arr_fine_offset = 0;  // По умолчанию БЕЗ коррекции
+
+// Периодическое применение offset: применять на 1 буфер каждые N буферов (0 = постоянно)
+static uint32_t g_arr_fine_period = 1000;  // 1 раз на 1000 буферов (~5 сек) → очень медленная коррекция
+
+// Автоматическая подстройка частоты по sync_buffers_between_edges (0=откл, 1=вкл)
+static uint8_t g_auto_freq_sync_enable = 1;  // ВКЛЮЧЕНО: фазовая синхронизация
+
+static uint32_t g_sync_last_check_buf = 0;  // Номер буфера последней проверки
+static const uint32_t SYNC_CHECK_PERIOD_BUFFERS = 4000;  // 10 сек при 400 Hz
+
+// Диагностика
+volatile uint32_t g_auto_freq_regulation_count = 0;
+volatile uint32_t g_auto_freq_last_phase = 0;
+volatile int32_t g_auto_freq_last_drift = 0;
+volatile uint32_t g_auto_freq_last_delta = 0;     // Последнее значение abs_delta
+volatile uint32_t g_auto_freq_last_threshold = 0; // Последний порог
+
+// Флаги для аппаратной коррекции TIM15 через Update Event
+volatile uint8_t g_tim15_correction_pending = 0;  // 1 = нужно восстановить ARR-1
+volatile uint32_t g_tim15_baseline_arr = 0;       // Базовое значение ARR для восстановления
+volatile uint32_t g_tim15_periods_elapsed = 0;    // Счетчик периодов до восстановления
+
+// DMA-буфер для 2 значений ARR: [ARR+1, ARR] - NORMAL авто-остановка, шаг ~8мкс
+__attribute__((aligned(4))) volatile uint32_t g_tim15_arr_dma_buffer[2] = {0};
+static uint8_t g_tim15_dma_initialized = 0;
+
+/* Настройка DMA для автоматической записи TIM15->ARR: 2 значения через 1 период */
+void adc_stream_setup_tim15_arr_dma(void)
+{
+    extern DMA_HandleTypeDef hdma_tim15_up;
+    extern TIM_HandleTypeDef htim15;
+    
+    if (g_tim15_dma_initialized) return;  // Уже настроен
+    
+    hdma_tim15_up.Instance = DMA1_Stream5;
+    hdma_tim15_up.Init.Request = DMA_REQUEST_TIM15_UP;
+    hdma_tim15_up.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_tim15_up.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_tim15_up.Init.MemInc = DMA_MINC_ENABLE;  // Автоинкремент: ARR+1, затем ARR-1
+    hdma_tim15_up.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    hdma_tim15_up.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_tim15_up.Init.Mode = DMA_NORMAL;  // NORMAL: авто-остановка после 2 трансферов
+    hdma_tim15_up.Init.Priority = DMA_PRIORITY_HIGH;
+    hdma_tim15_up.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    
+    if (HAL_DMA_Init(&hdma_tim15_up) != HAL_OK) {
+        printf("[TIM15_DMA] ERROR: DMA init failed!\r\n");
+        return;
+    }
+    
+    __HAL_LINKDMA(&htim15, hdma[TIM_DMA_ID_UPDATE], hdma_tim15_up);
+    g_tim15_dma_initialized = 1;
+    printf("[TIM15_DMA] DMA configured (NORMAL mode, 2-element buffer, auto-stop)\r\n");
+}
+
+/* Запуск однократной коррекции: DMA передаст [ARR+1, ARR-1] через 2 периода TIM15 */
+void adc_stream_trigger_tim15_correction(void)
+{
+    extern TIM_HandleTypeDef htim15;
+    
+    // Toggle LED to indicate correction
+    HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_3);
+
+    /* Коррекция без DMA и без новых прерываний:
+       1 период ARR+1, затем возврат ARR.
+       Используем флаги TIM_FLAG_UPDATE для точной синхронизации. */
+    uint32_t arr = htim15.Instance->ARR;
+
+    /* Очищаем старый флаг */
+    __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+
+    /* 1. Задаем ARR+1 (Preload). Применится при следующем UEV. */
+    htim15.Instance->ARR = arr + 1u;
+
+    /* Ждем окончания ТЕКУЩЕГО периода (UEV).
+       В этот момент Shadow ARR станет ARR+1. Начнется удлиненный период. */
+    for (volatile uint32_t wait = 0; wait < 50000u; wait++) {
+        if (__HAL_TIM_GET_FLAG(&htim15, TIM_FLAG_UPDATE)) {
+            __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+            break;
+        }
+    }
+
+    /* 2. Задаем исходный ARR (Preload). Применится при следующем UEV. */
+    htim15.Instance->ARR = arr;
+
+    /* Ждем окончания УДЛИНЕННОГО периода (UEV).
+       В этот момент Shadow ARR станет ARR. Фаза сместилась на +1 тик. */
+    for (volatile uint32_t wait = 0; wait < 50000u; wait++) {
+        if (__HAL_TIM_GET_FLAG(&htim15, TIM_FLAG_UPDATE)) {
+            __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+            break;
+        }
+    }
+}
+
+/* === TIM16 phase sync (slave) === */
+static volatile uint8_t sync_pd5_adjust_pending = 0;
+static volatile int8_t  sync_pd5_adjust_dir = 0; /* -1 снизить, +1 повысить */
+// static uint32_t sync_pd5_last_adjust_ms = 0;  // Неиспользуется
+#define SYNC_PD5_ADJUST_MIN_MS 10u
+#define SYNC_PD5_ADJUST_STEP_HZ 1u
+#define SYNC_PD5_ADJUST_MAX_DELTA 5u
+#define SYNC_PD5_FREQ_ADJUST_ENABLE 0u
+#define SYNC_PD5_RESTART_MIN_MS 200u
+// static int8_t sync_phase_dir = 1; /* направление подстройки (+1/-1) */
+// static uint16_t sync_phase_prev_dist = 0;
+// static uint8_t sync_phase_has_prev = 0;
+#define SYNC_PHASE_EDGE_WINDOW 8u
+#define SYNC_BUF_RATE_NOMINAL 400u
+
+/* === Счетчик буферов для синхронизации === */
+volatile uint32_t adc_stream_total_buffer_count = 0;
+volatile uint32_t sync_buffer_count_at_edge = 0;
+volatile uint32_t sync_buffers_between_edges = 0;  /* Реальное количество буферов между спадами PD5 */
+volatile uint32_t sync_tim15_cnt_at_pd5 = 0;        /* TIM15->CNT при спаде PD5 (фаза внутри семпла) */
+
+/* Диагностика: индекс сэмпла TIM15 на конце буфера */
+volatile uint16_t adc_sync_dbg_last_idx = 0;
+volatile uint16_t adc_sync_dbg_last_samples = 0;
+volatile uint32_t adc_sync_dbg_last_buf = 0;
+volatile uint32_t adc_sync_dbg_last_ms = 0;
+volatile uint8_t  adc_sync_dbg_updated = 0;
+volatile uint16_t sync_phase_last_dist = 0;
+volatile uint32_t sync_restart_requests = 0;
+
+static inline void adc_sync_phase_on_buffer(void)
+{
+    uint32_t now_ms = HAL_GetTick();
+    
+    /* ВСЕГДА инкрементируем счетчик буферов */
+    adc_stream_total_buffer_count++;
+    
+    uint32_t target = adc_stream_get_active_samples();
+    
+    /* Остальная логика только в режиме SLAVE */
+    extern volatile uint8_t vnd_sync_mode_public;
+    if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+        return;
+    }
+    
+    if (target < 2u) {
+        return;
+    }
+    
+    extern TIM_HandleTypeDef htim15;
+    extern volatile uint32_t sync_buffers_between_edges;
+    extern volatile uint32_t sync_edge_count;
+    
+    /* Читаем TIM15->CNT на момент буфера для фазы */
+    uint32_t tim15_cnt_now = htim15.Instance->CNT;
+    uint32_t cnt_mod = (tim15_cnt_now % target);
+    
+    /* Обновляем диагностические значения */
+    adc_sync_dbg_last_idx = cnt_mod;
+    adc_sync_dbg_last_samples = target;
+    adc_sync_dbg_last_ms = now_ms;
+    adc_sync_dbg_last_buf++;
+    adc_sync_dbg_updated = 1u;
+    
+    /* Диагностический вывод отключен - printf сбивает синхронизацию */
+    /* Блокирующий UART вывод может занимать миллисекунды и нарушать timing */
+    #if 0
+    static uint32_t diag_cnt = 0;
+    
+    if ((++diag_cnt % 200) == 0) {
+        uint32_t buffers_per_pd5 = sync_buffers_between_edges;
+        
+        /* Ожидаем ровно 2 буфера между спадами PD5 (1200 семплов / 600 = 2) */
+        uint32_t expected_buffers = 2;
+        int32_t error_buffers = (int32_t)buffers_per_pd5 - (int32_t)expected_buffers;
+        
+        uint16_t tim15_arr = htim15.Instance->ARR;
+        uint32_t tim15_phase = sync_tim15_cnt_at_pd5;
+        
+        printf("[TIM15_SYNC] PD5_edges=%lu bufs=%lu expected=%lu error=%ld ARR=%u phase=%lu\r\n",
+               (unsigned long)sync_edge_count,
+               (unsigned long)buffers_per_pd5,
+               (unsigned long)expected_buffers,
+               (long)error_buffers,
+               (unsigned)tim15_arr,
+               (unsigned long)tim15_phase);
+    }
+    #endif
+    
+    /* Автокоррекция TIM15.ARR отключена в режиме SLAVE */
+    /* В SLAVE мы принудительно синхронизируемся через перезапуск ADC/DMA */
+    /* Коррекция ARR и TIM_EGR_UG могут кратковременно сбивать фазу */
+    #if 0  /* Отключено для SLAVE mode */
+    /* Коррекция каждые 2 секунды (800 буферов) */
+    if ((diag_cnt % 800) == 0 && sync_buffers_between_edges == 2) {
+        uint16_t tim15_arr = htim15.Instance->ARR;
+        uint32_t tim15_phase = sync_tim15_cnt_at_pd5;
+        
+        /* Нормализуем фазу: 0.0 - 1.0 относительно текущего ARR */
+        float phase_norm = (float)tim15_phase / (float)tim15_arr;
+        
+        static float prev_phase_norm = 0.0f;
+        static uint8_t phase_init = 0;
+        
+        if (!phase_init) {
+            prev_phase_norm = phase_norm;
+            phase_init = 1;
+        } else {
+            /* Вычисляем тренд нормализованной фазы */
+            float phase_delta = phase_norm - prev_phase_norm;
+            
+            /* Обрабатываем переход через 0 (wrap around) */
+            if (phase_delta > 0.5f) phase_delta -= 1.0f;
+            if (phase_delta < -0.5f) phase_delta += 1.0f;
+            
+            /* Коррекция только если дельта > 0.01 (1% от периода ARR, ~11 тиков) */
+            int32_t arr_correction = 0;
+            
+            if (phase_delta > 0.01f) {
+                /* Фаза растет → TIM15 отстает → ускорить (уменьшить ARR) */
+                arr_correction = -1;
+            } else if (phase_delta < -0.01f) {
+                /* Фаза падает → TIM15 спешит → замедлить (увеличить ARR) */
+                arr_correction = +1;
+            }
+            
+            if (arr_correction != 0) {
+                uint16_t new_arr = (uint16_t)((int32_t)tim15_arr + arr_correction);
+                
+                /* Защита от выхода за пределы ±5% от номинала 1145 */
+                if (new_arr >= 1088 && new_arr <= 1202) {
+                    htim15.Instance->ARR = new_arr;
+                    htim15.Instance->EGR = TIM_EGR_UG;
+                    
+                    printf("[TIM15_CORR] ARR: %u -> %u (phase_delta=%.4f, phase_norm=%.3f->%.3f)\r\n",
+                           tim15_arr, new_arr, phase_delta,
+                           prev_phase_norm, phase_norm);
+                }
+            } else {
+                /* Фаза стабильна */
+                static uint32_t stable_count = 0;
+                if ((++stable_count % 5) == 0) {
+                    printf("[SYNC_OK] Phase stable: delta=%.4f phase_norm=%.3f ARR=%u (%lu checks)\r\n",
+                           phase_delta, phase_norm, 
+                           tim15_arr, (unsigned long)stable_count);
+                }
+            }
+            
+            prev_phase_norm = phase_norm;
+        }
+    }
+    #endif  /* Коррекция ARR отключена в SLAVE mode */
+}
+
+void adc_sync_pd5_apply_adjustment(void)
+{
+#if !SYNC_PD5_FREQ_ADJUST_ENABLE
+    return;
+#else
+    if (!sync_pd5_adjust_pending) return;
+    sync_pd5_adjust_pending = 0u;
+
+    int8_t dir = sync_pd5_adjust_dir;
+    if (dir == 0) return;
+
+    uint16_t cur = adc_stream_get_buf_rate();
+    if (cur == 0u) cur = SYNC_BUF_RATE_NOMINAL;
+    uint16_t min_rate = (SYNC_BUF_RATE_NOMINAL > SYNC_PD5_ADJUST_MAX_DELTA) ?
+                        (uint16_t)(SYNC_BUF_RATE_NOMINAL - SYNC_PD5_ADJUST_MAX_DELTA) : 1u;
+    uint16_t max_rate = (uint16_t)(SYNC_BUF_RATE_NOMINAL + SYNC_PD5_ADJUST_MAX_DELTA);
+    int32_t next = (int32_t)cur + ((dir > 0) ? (int32_t)SYNC_PD5_ADJUST_STEP_HZ : -(int32_t)SYNC_PD5_ADJUST_STEP_HZ);
+    if (next < (int32_t)min_rate) next = (int32_t)min_rate;
+    if (next > (int32_t)max_rate) next = (int32_t)max_rate;
+    if ((uint16_t)next != cur) {
+        adc_stream_set_buf_rate_external((uint16_t)next);
+    }
+#endif
+}
+
 // Публичные функции профиля
 uint8_t adc_stream_get_profile(void) { return g_active_profile; }
 uint16_t adc_stream_get_active_samples(void) { return g_active_samples; }
@@ -506,6 +789,7 @@ uint32_t adc_stream_get_fs(void) { return g_profiles[g_active_profile].fs_hz; }
 static void adc_stream_apply_timing(void)
 {
     extern TIM_HandleTypeDef htim15;
+    extern TIM_HandleTypeDef htim16;
     uint16_t samples = adc_stream_get_active_samples();
     uint16_t buf_rate_hz = adc_stream_get_buf_rate();
     if (samples == 0u || buf_rate_hz == 0u) {
@@ -521,6 +805,8 @@ static void adc_stream_apply_timing(void)
     if (d2ppre2 != 0u) {
         tim_clk *= 2u;
     }
+    
+    /* TIM15: триггер ADC с частотой sample_rate (использует исходный PSC из Init) */
     uint32_t tick_hz = tim_clk / (htim15.Init.Prescaler + 1u);
     if (tick_hz == 0u || sample_rate == 0u) {
         return;
@@ -529,8 +815,41 @@ static void adc_stream_apply_timing(void)
     uint32_t tim15_arr = (tick_hz / sample_rate);
     if (tim15_arr == 0u) tim15_arr = 1u;
     tim15_arr -= 1u;
+
+    /* Применяем тонкую подстройку ARR (только если включен ручной режим) */
+    if (!g_auto_freq_sync_enable && g_arr_fine_offset != 0) {
+        tim15_arr = (uint32_t)((int32_t)tim15_arr + g_arr_fine_offset);
+    }
+
     __HAL_TIM_SET_AUTORELOAD(&htim15, tim15_arr);
     __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, (tim15_arr + 1u) / 2u); /* 50% */
+
+    /* TIM5: 32-битный счётчик фазы без предделителя для максимальной точности
+     * PSC = 0 → без предделителя → частота счёта 275 МГц
+     * При sample_rate=240kHz получаем ~1146 тиков на семпл ADC (отличная точность!)
+     * ARR = 0xFFFFFFFF (максимум 32-bit) → переполнение через 15.6 секунд
+     * За буфер 2.5ms: ~687500 тиков | За период PD5 5ms: ~1375000 тиков
+     */
+    {
+        extern TIM_HandleTypeDef htim5;
+        const uint16_t tim5_psc = 0u;  /* Без предделителя - максимальная точность */
+        
+        htim5.Instance->PSC = tim5_psc;
+        htim5.Instance->ARR = 0xFFFFFFFFu;  /* Максимум 32-bit */
+        htim5.Instance->EGR = TIM_EGR_UG;  /* Update generation для применения PSC/ARR */
+        
+        uint32_t actual_tick_rate = tim_clk;  /* Полная частота без предделителя */
+        uint32_t ticks_per_sample = actual_tick_rate / sample_rate;
+        uint32_t ticks_per_buf = (actual_tick_rate / buf_rate_hz);  /* Тиков за буфер */
+        
+        printf("[SYNC_TIMING] TIM5 (32-bit): PSC=%u ARR=0xFFFFFFFF → tick_rate=%lu Hz\r\n",
+               (unsigned)tim5_psc, (unsigned long)actual_tick_rate);
+        printf("[SYNC_TIMING] TIM5: per_ADC_sample=%lu ticks | per_buffer=%lu ticks (%.1f ms)\r\n",
+               (unsigned long)ticks_per_sample, (unsigned long)ticks_per_buf,
+               (float)(1000.0f / buf_rate_hz));
+        printf("[SYNC_TIMING] TIM15: ARR=%lu sample_rate=%lu Hz | APB2=%lu MHz\r\n",
+               (unsigned long)tim15_arr, (unsigned long)sample_rate, (unsigned long)(tim_clk / 1000000u));
+    }
 
     /* Обновляем TIM2 (маркеры/окно) */
     extern uint32_t tim2_apply_profile_window(void);
@@ -872,6 +1191,49 @@ HAL_StatusTypeDef adc_stream_restart(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a
     if (a1) s_adc1 = a1;
     if (a2) s_adc2 = a2;
     return adc_stream_apply_profile();
+}
+
+/* Перезапуск ADC/DMA для синхронизации по PD5 (вызывается из EXTI в режиме SLAVE) */
+void adc_stream_restart_sync(void) {
+    extern TIM_HandleTypeDef htim15;
+    extern ADC_HandleTypeDef hadc1;
+    #if !DIAG_SINGLE_ADC1
+    extern ADC_HandleTypeDef hadc2;
+    #endif
+    
+    /* Останавливаем ADC/DMA (автоматически завершает текущую передачу) */
+    HAL_ADC_Stop_DMA(&hadc1);
+    #if !DIAG_SINGLE_ADC1
+    HAL_ADC_Stop_DMA(&hadc2);
+    #endif
+    
+    /* Сбрасываем TIM15 для начала нового цикла */
+    htim15.Instance->CNT = 0;
+    htim15.Instance->EGR = TIM_EGR_UG;
+    
+    /* Устанавливаем выходные сигналы в исходное состояние (LOW) */
+    HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);  // PB8 -> LOW
+    s_pb8_state = 0u;  // PB8=LOW -> ODD parity
+    s_buffers_since_restart = 0u;  // Сброс счетчика для детерминированной последовательности parity
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);                  // PA2 -> LOW (ODD parity)
+    
+    /* Сбрасываем маски готовности для синхронного старта обоих ADC */
+    extern volatile uint8_t s_pair_ready_mask[FIFO_FRAMES];
+    for (uint8_t i = 0; i < FIFO_FRAMES; i++) {
+        s_pair_ready_mask[i] = 0;
+    }
+    
+    /* ВАЖНО: НЕ инкрементируем s_next_ring_index - callback сам управляет кольцевым буфером */
+    /* Просто перезапускаем DMA на текущий буфер с начала */
+    uint32_t idx = s_next_ring_index & (FIFO_FRAMES - 1u);
+    
+    /* Запускаем оба ADC максимально синхронно - подготавливаем оба, потом стартуем */
+    #if !DIAG_SINGLE_ADC1
+    /* Подготовка ADC2 */
+    HAL_ADC_Start_DMA(&hadc2, (uint32_t*)adc2_buffers[idx], g_active_samples);
+    #endif
+    /* Подготовка ADC1 (небольшая задержка минимальна) */
+    HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc1_buffers[idx], g_active_samples);
 }
 
 // Проверка буфера на нулевое содержимое (для диагностики проблем ADC)
@@ -1571,11 +1933,12 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
         return;
     }
 
-    /* DMA_NORMAL + ручной перезапуск: Half interrupt не нужен */
-    if (bit & 0x01u) { __HAL_DMA_DISABLE_IT(&hdma_adc1, DMA_IT_HT); }
-    #if !DIAG_SINGLE_ADC1
-    if (bit & 0x02u) { __HAL_DMA_DISABLE_IT(&hdma_adc2, DMA_IT_HT); }
-    #endif
+    /* DMA_NORMAL + ручной перезапуск: Half interrupt НУЖЕН для остановки TIM15 DMA */
+    // НЕ отключаем Half Transfer - нужен для g_tim15_dma_disable_pending
+    // if (bit & 0x01u) { __HAL_DMA_DISABLE_IT(&hdma_adc1, DMA_IT_HT); }
+    // #if !DIAG_SINGLE_ADC1
+    // if (bit & 0x02u) { __HAL_DMA_DISABLE_IT(&hdma_adc2, DMA_IT_HT); }
+    // #endif
 
     /* Ожидаемый индекс буфера для текущего захвата (оба канала должны быть синхронны) */
     uint32_t done_idx = s_next_ring_index & (FIFO_FRAMES - 1u);
@@ -1604,11 +1967,137 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     }
     #endif
 
+    /* ДИАГНОСТИКА: Отслеживаем случаи когда только один ADC завершился */
+    
     /* Когда оба канала завершили текущий буфер — публикуем и перезапускаем DMA на следующий */
     if ((s_tc_mask & READY_MASK_FULL) == READY_MASK_FULL) {
         s_tc_mask = 0;
+        s_both_ready++;
+        
+        /* SYNC_OUT (PB8) переключается при завершении обоих ADC */
+        HAL_GPIO_TogglePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin);
+        s_pb8_state ^= 1u;
 
-             /* Переключаем PA2 только при активной передаче и включённом передатчике.
+        /* Программная фазовая синхронизация: минимальный шаг ARR±1 каждые 10 сек */
+        extern TIM_HandleTypeDef htim15;
+        
+        if (g_auto_freq_sync_enable) {
+            static uint32_t buffer_counter = 0;
+            static uint8_t initialized = 0;
+            
+            if (!initialized) {
+                initialized = 1;
+                buffer_counter = 0;
+                g_sync_last_check_buf = 0;
+                HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
+            }
+            
+            buffer_counter++;
+            
+            // Every 10 sec on ODD buffer: start DMA correction (auto-stops after 2 transfers)
+            if ((buffer_counter - g_sync_last_check_buf) >= SYNC_CHECK_PERIOD_BUFFERS) {
+                uint8_t is_odd = buffer_counter & 1;
+                if (is_odd) {
+                    g_sync_last_check_buf = buffer_counter;
+                    adc_stream_trigger_tim15_correction();  // DMA: 2 трансфера аппаратно
+                    g_auto_freq_regulation_count++;
+                }
+            }
+        }
+        
+        /* Если автосинхронизация выключена - используем периодическое применение offset */
+        if (!g_auto_freq_sync_enable && g_arr_fine_period > 0 && g_arr_fine_offset != 0) {
+            static uint32_t fine_buf_count = 0;
+            extern TIM_HandleTypeDef htim15;
+            
+            fine_buf_count++;
+            
+            if ((fine_buf_count % g_arr_fine_period) == 0) {
+                // Применяем offset на этот буфер
+                uint32_t current_arr = htim15.Instance->ARR;
+                int32_t new_arr = (int32_t)current_arr + g_arr_fine_offset;
+                if (new_arr > 0) {
+                    htim15.Instance->ARR = (uint32_t)new_arr;
+                }
+            } else if ((fine_buf_count % g_arr_fine_period) == 1) {
+                // Возвращаем обратно на следующем буфере
+                uint32_t current_arr = htim15.Instance->ARR;
+                int32_t new_arr = (int32_t)current_arr - g_arr_fine_offset;
+                if (new_arr > 0) {
+                    htim15.Instance->ARR = (uint32_t)new_arr;
+                }
+            }
+        }
+
+        /* Частотная синхронизация: корректируем TIM15 по TIM5 на нечетных буферах */
+            extern TIM_HandleTypeDef htim5;
+            extern TIM_HandleTypeDef htim15;
+            extern volatile uint8_t vnd_sync_mode_public;
+            
+            /* ВСЕГДА инкрементируем счетчик буферов (для статистики) */
+            adc_stream_total_buffer_count++;
+            
+            // Работаем только на нечетных буферах (1, 3, 5, ...)
+            // uint8_t is_odd_buffer = (s_buffers_since_restart & 1) ? 1 : 0;  // НЕИСПОЛЬЗУЕТСЯ
+            
+            // ДИАГНОСТИКА ОТКЛЮЧЕНА: printf блокирует прерывание и вызывает пропуски
+            // static uint32_t diag_cnt = 0;
+            // if ((++diag_cnt & 0x7F) == 0) {
+            //     printf("[SYNC_DBG] buf=%lu odd=%u mode=%u ARR=%lu | ADC: both=%lu a1_alone=%lu a2_alone=%lu\r\n",
+            //            (unsigned long)s_buffers_since_restart, (unsigned)is_odd_buffer, 
+            //            (unsigned)vnd_sync_mode_public, (unsigned long)htim15.Instance->ARR,
+            //            (unsigned long)s_both_ready, (unsigned long)s_adc1_alone, (unsigned long)s_adc2_alone);
+            // }
+            
+            // ТЕСТОВЫЙ РЕЖИМ: ОТКЛЮЧЕН - слишком сильные скачки
+            // С безопасной проверкой положения счётчика
+            #if 0
+            if (vnd_sync_mode_public == 1 && is_odd_buffer) {
+                static uint32_t test_cnt = 0;
+                static int8_t test_direction = -1;  // Начинаем с -1
+                static int8_t pending_correction = 0;  // Ожидающая коррекция
+                
+                extern TIM_HandleTypeDef htim15;
+                uint32_t current_arr = htim15.Instance->ARR;
+                uint32_t current_cnt = htim15.Instance->CNT;
+                
+                test_cnt++;
+                
+                // Каждые 400 нечётных буферов (~2.0 сек) запрашиваем изменение
+                if ((test_cnt % 400) == 0) {
+                    pending_correction = test_direction;
+                    test_direction = -test_direction;  // Меняем направление для следующего раза
+                }
+                
+                // Применяем коррекцию только когда CNT в безопасной зоне (первая четверть периода)
+                if (pending_correction != 0) {
+                    if (current_cnt < (current_arr / 4)) {
+                        // Безопасно изменять ARR
+                        int32_t new_arr = (int32_t)current_arr + pending_correction;
+                        
+                        // Ограничиваем диапазон ARR: 1100..1190
+                        if (new_arr < 1100) new_arr = 1100;
+                        if (new_arr > 1190) new_arr = 1190;
+                        
+                        htim15.Instance->ARR = (uint32_t)new_arr;
+                        pending_correction = 0;  // Коррекция применена
+                    }
+                }
+            }
+            #endif
+
+        /* ОТКЛЮЧЕНО: Старая подстройка по фазе - убрана для чистого режима частотной синхронизации */
+        /* adc_sync_phase_on_buffer(); */
+
+        /* Если видели фронт PD5 — запросим выравнивание TIM15 в main loop */
+        extern volatile uint8_t sync_edge_seen;
+        extern volatile uint8_t sync_align_pending;
+        if (sync_edge_seen) {
+            sync_edge_seen = 0u;
+            sync_align_pending = 1u;
+        }
+
+        /* Переключаем PA2 только при активной передаче и включённом передатчике.
                  PA1 задаётся отдельно (постоянный уровень по состоянию передатчика). */
           extern void HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
           extern uint8_t vnd_is_streaming(void);
@@ -1616,16 +2105,17 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
              extern volatile uint8_t vnd_sync_mode_public;
              if (vnd_is_streaming() && vnd_is_tx_enabled()) {
               HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_2);
-              if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
-                  HAL_GPIO_TogglePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin);
-              }
           }
           
-          /* Сохраняем номер DMA-буфера 0..7 для этого done_idx (для заголовка/диагностики).
-              Не используем глобальный счётчик, чтобы не ломать соответствие фаз после reboot. */
-          uint8_t buffer_index = (uint8_t)((done_idx & 0x06u) | (adc_parity_from_pa3() & 1u));
+          /* ВАЖНО: Определяем parity по счетчику буферов после restart */
+          /* Первый буфер после restart (s_buffers_since_restart=0) -> 0&1=0 -> инверсия -> 1=ODD */
+          /* Второй буфер (s_buffers_since_restart=1) -> 1&1=1 -> инверсия -> 0=EVEN */
+          uint8_t parity_bit = (s_buffers_since_restart++ & 1u) ? 0u : 1u;  // 0=EVEN, 1=ODD
+          uint8_t buffer_index = (uint8_t)((done_idx & 0x06u) | (parity_bit & 1u));
           s_global_buffer_counter++;
           s_buffer_parity[done_idx] = buffer_index;
+          
+          /* PB8 уже переключен выше (для всех буферов) */
 
         uint32_t next_idx = (done_idx + 1u) & (FIFO_FRAMES - 1u);
         uint32_t total_samples = (uint32_t)g_active_samples;
@@ -1649,6 +2139,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
         /* Попробуем опубликовать готовые подряд пары */
         adc_mark_ready_and_publish(READY_MASK_FULL);
+    } else {
+        /* Один из ADC завершился, но второй еще нет - считаем для диагностики */
+        if (bit == 0x01u) s_adc1_alone++;
+        if (bit == 0x02u) s_adc2_alone++;
     }
 
     return;
@@ -1847,6 +2341,14 @@ void adc_stream_sync_edge(void)
     #endif
 
     s_next_ring_index = target_idx;
+
+    /* Привязать фазу АЦП к фронту PD5: сбросить TIM15 и сгенерировать UPDATE */
+    {
+        extern TIM_HandleTypeDef htim15;
+        __HAL_TIM_SET_COUNTER(&htim15, 0u);
+        /* Генерируем UPDATE событие напрямую, чтобы гарантировать доступность без макроса */
+        htim15.Instance->EGR = TIM_EGR_UG;
+    }
 }
 
 /* Периодический вотчдог: если давно не было DMA Full от ADC1, считаем поток зависшим и мягко перезапускаем.
@@ -1913,7 +2415,7 @@ void adc_stream_watchdog(void)
 
     const uint32_t ADC_WD_TIMEOUT_MS = 500u; /* общий таймаут полного простоя */
     uint32_t dtA = tick_diff32(now_ms, lastA);
-    uint32_t dtB_now = (lastB==0) ? 0 : tick_diff32(now_ms, lastB);
+    // uint32_t dtB_now = (lastB==0) ? 0 : tick_diff32(now_ms, lastB);  // Неиспользуется
 
     /* Диагностика NDTR и эскалация при застывшем NDTRB (DMA не стартовал) */
     static uint32_t last_dbg_ms = 0;
@@ -1930,6 +2432,7 @@ void adc_stream_watchdog(void)
         uint32_t bufs_done = (frame_wr_seq > prev_wr_seq) ? (frame_wr_seq - prev_wr_seq) : 0;
         prev_wr_seq = frame_wr_seq;
         float bufHz = (float)bufs_done / 10.0f;
+        (void)bufHz;  // Используется в ADC_LOGF, может быть закомпилировано без логов
 
         /* Раздельная статистика по каналам A/B */
         static uint32_t prev_ch_wr[2] = {0,0};
@@ -1939,6 +2442,7 @@ void adc_stream_watchdog(void)
         prev_ch_wr[1] = adc_ch_wr_seq[1];
         float hzA = (float)chA_done / 10.0f;
         float hzB = (float)chB_done / 10.0f;
+        (void)hzA; (void)hzB;  // Используются в ADC_LOGF
 
         ADC_LOGF("[ADC][STAT_10s] buffers=%lu (%.1f Hz) restarts=%lu/%lu dtA=%lums dtB=%lums samples=%u\r\n",
                  (unsigned long)bufs_done, bufHz,
