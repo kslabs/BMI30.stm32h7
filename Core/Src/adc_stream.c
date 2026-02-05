@@ -509,7 +509,7 @@ static uint32_t g_arr_fine_period = 1000;  // 1 раз на 1000 буферов 
 static uint8_t g_auto_freq_sync_enable = 1;  // ВКЛЮЧЕНО: фазовая синхронизация
 
 static uint32_t g_sync_last_check_buf = 0;  // Номер буфера последней проверки
-static const uint32_t SYNC_CHECK_PERIOD_BUFFERS = 4000;  // 10 сек при 400 Hz
+static const uint32_t SYNC_CHECK_PERIOD_BUFFERS = 32;    // ~160ms при 200 Hz (быстрая реакция)
 
 // Диагностика
 volatile uint32_t g_auto_freq_regulation_count = 0;
@@ -557,7 +557,7 @@ void adc_stream_setup_tim15_arr_dma(void)
 }
 
 /* Запуск однократной коррекции: DMA передаст [ARR+1, ARR-1] через 2 периода TIM15 */
-void adc_stream_trigger_tim15_correction(void)
+void adc_stream_push_tim15_phase(int32_t correction_ticks)
 {
     extern TIM_HandleTypeDef htim15;
     
@@ -565,19 +565,20 @@ void adc_stream_trigger_tim15_correction(void)
     HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_3);
 
     /* Коррекция без DMA и без новых прерываний:
-       1 период ARR+1, затем возврат ARR.
+       1 период ARR +/- correction_ticks, затем возврат ARR.
        Используем флаги TIM_FLAG_UPDATE для точной синхронизации. */
     uint32_t arr = htim15.Instance->ARR;
 
     /* Очищаем старый флаг */
     __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
 
-    /* 1. Задаем ARR+1 (Preload). Применится при следующем UEV. */
-    htim15.Instance->ARR = arr + 1u;
-
+    /* 1. Задаем модифицированный ARR (Preload). Применится при следующем UEV. */
+    // Безопасное приведение и проверка переполнения не помешают, но предполагаем разумные значения
+    htim15.Instance->ARR = (uint32_t)((int32_t)arr + correction_ticks);
+    
     /* Ждем окончания ТЕКУЩЕГО периода (UEV).
-       В этот момент Shadow ARR станет ARR+1. Начнется удлиненный период. */
-    for (volatile uint32_t wait = 0; wait < 50000u; wait++) {
+       В этот момент Shadow ARR станет ARR+corr. Начнется измененный период. */
+    for (volatile uint32_t wait = 0; wait < 100000u; wait++) {
         if (__HAL_TIM_GET_FLAG(&htim15, TIM_FLAG_UPDATE)) {
             __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
             break;
@@ -587,14 +588,19 @@ void adc_stream_trigger_tim15_correction(void)
     /* 2. Задаем исходный ARR (Preload). Применится при следующем UEV. */
     htim15.Instance->ARR = arr;
 
-    /* Ждем окончания УДЛИНЕННОГО периода (UEV).
-       В этот момент Shadow ARR станет ARR. Фаза сместилась на +1 тик. */
-    for (volatile uint32_t wait = 0; wait < 50000u; wait++) {
+    /* Ждем окончания ИЗМЕНЕННОГО периода (UEV).
+       В этот момент Shadow ARR станет ARR. Фаза сместилась на correction_ticks. */
+    for (volatile uint32_t wait = 0; wait < 100000u; wait++) {
         if (__HAL_TIM_GET_FLAG(&htim15, TIM_FLAG_UPDATE)) {
             __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
             break;
         }
     }
+}
+
+// Legacy wrapper used by old code
+void adc_stream_trigger_tim15_correction(void) {
+    adc_stream_push_tim15_phase(1);
 }
 
 /* === TIM16 phase sync (slave) === */
@@ -624,6 +630,9 @@ volatile uint16_t adc_sync_dbg_last_samples = 0;
 volatile uint32_t adc_sync_dbg_last_buf = 0;
 volatile uint32_t adc_sync_dbg_last_ms = 0;
 volatile uint8_t  adc_sync_dbg_updated = 0;
+
+volatile int32_t g_tim5_avg_phase = 0;  // Глобальная переменная для отображения на LCD
+
 volatile uint16_t sync_phase_last_dist = 0;
 volatile uint32_t sync_restart_requests = 0;
 
@@ -1981,29 +1990,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
         /* Программная фазовая синхронизация: минимальный шаг ARR±1 каждые 10 сек */
         extern TIM_HandleTypeDef htim15;
         
-        if (g_auto_freq_sync_enable) {
-            static uint32_t buffer_counter = 0;
-            static uint8_t initialized = 0;
-            
-            if (!initialized) {
-                initialized = 1;
-                buffer_counter = 0;
-                g_sync_last_check_buf = 0;
-                HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
-            }
-            
-            buffer_counter++;
-            
-            // Every 10 sec on ODD buffer: start DMA correction (auto-stops after 2 transfers)
-            if ((buffer_counter - g_sync_last_check_buf) >= SYNC_CHECK_PERIOD_BUFFERS) {
-                uint8_t is_odd = buffer_counter & 1;
-                if (is_odd) {
-                    g_sync_last_check_buf = buffer_counter;
-                    adc_stream_trigger_tim15_correction();  // DMA: 2 трансфера аппаратно
-                    g_auto_freq_regulation_count++;
-                }
-            }
-        }
+
         
         /* Если автосинхронизация выключена - используем периодическое применение offset */
         if (!g_auto_freq_sync_enable && g_arr_fine_period > 0 && g_arr_fine_offset != 0) {
@@ -2029,25 +2016,111 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
             }
         }
 
-        /* Частотная синхронизация: корректируем TIM15 по TIM5 на нечетных буферах */
+        /* Частотная синхронизация: корректируем TIM15 по TIM5 */
             extern TIM_HandleTypeDef htim5;
             extern TIM_HandleTypeDef htim15;
-            extern volatile uint8_t vnd_sync_mode_public;
+            //extern volatile uint8_t vnd_sync_mode_public;
             
             /* ВСЕГДА инкрементируем счетчик буферов (для статистики) */
             adc_stream_total_buffer_count++;
             
-            // Работаем только на нечетных буферах (1, 3, 5, ...)
-            // uint8_t is_odd_buffer = (s_buffers_since_restart & 1) ? 1 : 0;  // НЕИСПОЛЬЗУЕТСЯ
+            /* Интегральный регулятор фазы (фильтр джиттера) */
+            // NON-BLOCKING IMPLEMENTATION
+            if (g_auto_freq_sync_enable) {
+                static int32_t phase_integrator = 0;
+                static uint32_t samples_collected = 0;
+                static int32_t arr_restore_val = 0; // 0 = no restore pending aka Idle
+                
+                // 1. Check for Pending Restore (from previous cycle)
+                if (arr_restore_val != 0) {
+                     // We applied a correction in the previous cycle.
+                     // The modified ARR is currently loaded in Shadow (or active).
+                     // We must now restore the original ARR (Base) for the next-next period.
+                     extern TIM_HandleTypeDef htim15;
+                     htim15.Instance->ARR = (uint32_t)arr_restore_val;
+                     arr_restore_val = 0;
+                     // Skip measurement this cycle while system settles
+                } 
+                else {
+                    // 2. Normal Measurement & Correction Logic
+                    extern volatile uint32_t sync_tim5_period_ticks;
+                    uint32_t period = sync_tim5_period_ticks;
+                    if (period < 1000000u) period = 1375000u;
+                    
+                    uint32_t cnt = htim5.Instance->CNT;
+                    int32_t current_phase = 0;
+                    
+                    // Normalize [-period/2 ... period/2]
+                    if (cnt <= (period / 2)) {
+                        current_phase = (int32_t)cnt;
+                    } else {
+                        current_phase = (int32_t)cnt - (int32_t)period;
+                    }
+
+                    // TIM15 is 90 deg leading (early) -> We want to DELAY it.
+                    // Delay means we target a positive phase (Lag).
+                    // Target = +90 degrees = Period / 4.
+                    int32_t target_phase = (int32_t)(period / 4);
+                    
+                    int32_t phase_error = current_phase - target_phase;
+                    
+                    // Circular wrap for error
+                    if (phase_error > (int32_t)(period/2)) {
+                        phase_error -= (int32_t)period;
+                    } else if (phase_error < -(int32_t)(period/2)) {
+                        phase_error += (int32_t)period;
+                    }
+                    
+                    phase_integrator += phase_error;
+                    samples_collected++;
+                    
+                    // Faster Check: 8 buffers (~40ms @ 200Hz)
+                    #define SYNC_CHECK_PERIOD_BUFFERS 8
+                    
+                    if (samples_collected >= SYNC_CHECK_PERIOD_BUFFERS) {
+                        int32_t avg_phase = phase_integrator / (int32_t)samples_collected;
+                        g_tim5_avg_phase = avg_phase;
+                        
+                        // Tighter Threshold for better lock
+                        #define PHASE_THRESHOLD 200 
+                        
+                        int32_t correction = 0;
+                        if (avg_phase > PHASE_THRESHOLD) {
+                             // Lagging -> Speed up (Decrease ARR)
+                             if (avg_phase > 2000) correction = -5; // Strong kick
+                             else correction = -1;
+                        } 
+                        else if (avg_phase < -PHASE_THRESHOLD) {
+                             // Leading -> Slow down (Increase ARR)
+                             if (avg_phase < -2000) correction = 5; // Strong kick
+                             else correction = 1;
+                        }
+                        
+                        if (correction != 0) {
+                            extern TIM_HandleTypeDef htim15;
+                            uint32_t current_arr = htim15.Instance->ARR;
+                            
+                            // Save original ARR for restoration next cycle
+                            arr_restore_val = (int32_t)current_arr;
+                            
+                            // Apply Phase Correction (Modify ARR for 1 cycle)
+                            // Note: Preload write applies at next Update
+                            htim15.Instance->ARR = (uint32_t)((int32_t)current_arr + correction);
+                        }
+                        
+                        // Reset Integrator
+                        phase_integrator = 0;
+                        samples_collected = 0;
+                    }
+                }
+            }  
             
-            // ДИАГНОСТИКА ОТКЛЮЧЕНА: printf блокирует прерывание и вызывает пропуски
-            // static uint32_t diag_cnt = 0;
-            // if ((++diag_cnt & 0x7F) == 0) {
-            //     printf("[SYNC_DBG] buf=%lu odd=%u mode=%u ARR=%lu | ADC: both=%lu a1_alone=%lu a2_alone=%lu\r\n",
-            //            (unsigned long)s_buffers_since_restart, (unsigned)is_odd_buffer, 
-            //            (unsigned)vnd_sync_mode_public, (unsigned long)htim15.Instance->ARR,
-            //            (unsigned long)s_both_ready, (unsigned long)s_adc1_alone, (unsigned long)s_adc2_alone);
-            // }
+            // СТАРЫЙ МЕХАНИЗМ ОТКЛЮЧЕН (заменен на интегратор выше)
+            #if 0
+            if (g_auto_freq_sync_enable) {
+                // ... old code ...
+            }
+            #endif
             
             // ТЕСТОВЫЙ РЕЖИМ: ОТКЛЮЧЕН - слишком сильные скачки
             // С безопасной проверкой положения счётчика

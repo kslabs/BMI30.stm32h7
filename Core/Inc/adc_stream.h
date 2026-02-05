@@ -1,5 +1,8 @@
 #include <stdbool.h>
 
+// Function for manual TIM15 correction by direction (+1 or -1)
+void adc_stream_push_tim15_phase(int32_t correction_ticks);
+
 // Выводит 30 семплов из последнего доступного кадра в терминал
 void adc_stream_print_samples(uint32_t count, bool ch2);
 void adc_stream_stop(void);
@@ -68,7 +71,8 @@ extern volatile uint16_t adc_sync_dbg_last_samples;
 extern volatile uint32_t adc_sync_dbg_last_buf;
 extern volatile uint32_t adc_sync_dbg_last_ms;
 extern volatile uint8_t  adc_sync_dbg_updated;
-
+// Текущая средняя фазовая ошибка TIM5 (фильтрованная, за 32 буфера)
+extern volatile int32_t g_tim5_avg_phase;
 // Debug info structure for runtime inspection
 typedef struct {
     uint32_t frame_wr_seq;

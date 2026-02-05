@@ -30,6 +30,7 @@
 #include "usb_cdc_proto.h"
 /* Для ранних CDC-тестов (COM4) */
 #include "usbd_cdc_if.h"
+#include "adc_stream.h"
 
 /* Глобальные хэндлы периферии (стандарт для CubeMX, ранее отсутствовали в файле) */
 ADC_HandleTypeDef hadc1;
@@ -2651,32 +2652,32 @@ void DrawUSBStatus(void){
   /* Очистка legacy VID/PID убрана */
     /* Используем ширину 12 символов для гарантированного затирания хвоста */
     lcd_print_padded_if_changed(0,28, rate_buf, prev_line2, sizeof(prev_line2), 12, 16, vnd_is_streaming()?GREEN:WHITE, BLACK, &prev_line2_fg, &prev_line2_bg);
-    /* Показываем время компиляции для контроля версии - ПРИНУДИТЕЛЬНО при первом запуске */
+    /* Показываем фазу TIM5 вместо времени компиляции (DEBUG) */
     {
-      extern const char fw_build_time[];
-      static uint8_t build_time_shown = 0;
-      char build_time[20];
-      snprintf(build_time, sizeof(build_time), "Build:%s", fw_build_time);
-      if(!build_time_shown) {
-        memset(prev_line3, 0, sizeof(prev_line3)); // Сбросить для принудительного обновления
-        build_time_shown = 1;
-      }
-      lcd_print_padded_if_changed(0,42, build_time, prev_line3, sizeof(prev_line3), 16, 16, YELLOW, BLACK, &prev_line3_fg, &prev_line3_bg);
+      char phase_buf[20];
+      snprintf(phase_buf, sizeof(phase_buf), "P:%ld", (long)g_tim5_avg_phase);
+      
+      uint16_t c = GREEN;
+      long abs_ph = (long)(g_tim5_avg_phase < 0 ? -g_tim5_avg_phase : g_tim5_avg_phase);
+      if(abs_ph > 5000) c = RED;
+      else if(abs_ph > 1000) c = YELLOW;
+
+      lcd_print_padded_if_changed(0,42, phase_buf, prev_line3, sizeof(prev_line3), 16, 16, c, BLACK, &prev_line3_fg, &prev_line3_bg);
     }
   } else {
   /* Очистка legacy VID/PID убрана */
     lcd_print_padded_if_changed(0,28, host_present?"S:----":"S:----", prev_line2, sizeof(prev_line2), 12, 16, WHITE, BLACK, &prev_line2_fg, &prev_line2_bg);
-    /* При отсутствии хоста показываем время компиляции */
+    /* При отсутствии хоста тоже показываем фазу */
     {
-      extern const char fw_build_time[];
-      static uint8_t build_time_shown2 = 0;
-      char build_time[20];
-      snprintf(build_time, sizeof(build_time), "Build:%s", fw_build_time);
-      if(!build_time_shown2) {
-        memset(prev_line3, 0, sizeof(prev_line3));
-        build_time_shown2 = 1;
-      }
-      lcd_print_padded_if_changed(0,42, build_time, prev_line3, sizeof(prev_line3), 16, 16, YELLOW, BLACK, &prev_line3_fg, &prev_line3_bg);
+      char phase_buf[20];
+      snprintf(phase_buf, sizeof(phase_buf), "P:%ld", (long)g_tim5_avg_phase);
+      
+      uint16_t c = GREEN;
+      long abs_ph = (long)(g_tim5_avg_phase < 0 ? -g_tim5_avg_phase : g_tim5_avg_phase);
+      if(abs_ph > 5000) c = RED;
+      else if(abs_ph > 1000) c = YELLOW;
+
+      lcd_print_padded_if_changed(0,42, phase_buf, prev_line3, sizeof(prev_line3), 16, 16, c, BLACK, &prev_line3_fg, &prev_line3_bg);
     }
     prev_rate_calc_ms = now;
     prev_tx_bytes = vnd_get_total_tx_bytes();
