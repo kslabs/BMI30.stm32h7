@@ -140,6 +140,9 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #define VND_CMD_SET_STREAM_MODE  0x1Au
 /* DC Adaptation control: 0x00=freeze (stop learning), 0x01=active (resume learning) */
 #define VND_CMD_SET_DC_ADAPT     0x1Bu
+/* DC Fast Calibration: Force fast adaptation for N frames */
+#define VND_CMD_CALIB_DC_FAST    0x1Eu
+
 #define VND_SYNC_MODE_MASTER 0u
 #define VND_SYNC_MODE_SLAVE  1u
 #define VND_SYNC_MODE_OFF    2u
@@ -246,6 +249,9 @@ static volatile uint32_t vnd_sync_last_capture = 0;
 static volatile uint8_t  vnd_sync_capture_valid = 0;
 static volatile uint32_t vnd_sync_tick_hz = 1000000u; /* TIM16 IC tick (Hz) */
 static volatile uint32_t vnd_sync_last_capture_ms = 0;
+
+/* DC Control Globals */
+volatile uint16_t vnd_dc_fast_frames = 0;   /* Countdown for fast calibration mode */
 
 /* Public status for LCD */
 volatile uint8_t  vnd_sync_mode_public = VND_SYNC_MODE_MASTER;
@@ -943,10 +949,29 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
     /* per-sample correction */
     {
         int32_t div = (int32_t)VND_DC_SAMPLE_GAIN_DIV;
-        if(div <= 0) div = 1;
         int32_t smax = (int32_t)VND_DC_SAMPLE_STEP_MAX;
+        
+        /* FAST CALIBRATION MODE override with Annealing */
+        if (vnd_dc_fast_frames > 0) {
+             div = 1;       // Max gain (1 error -> 1 correction)
+             
+             // Dynamic step size (Annealing) to reduce noise capture at the end
+             // User requested sequence: 128 -> 64 -> 32 ... -> 1
+             if (vnd_dc_fast_frames > 80)      smax = 256; // Very fast start
+             else if (vnd_dc_fast_frames > 60) smax = 64;
+             else if (vnd_dc_fast_frames > 40) smax = 16;
+             else if (vnd_dc_fast_frames > 20) smax = 4;
+             else                              smax = 1;   // Final polish
+             
+             // Decrement counter once per pair (at channel 1)
+             if (ch == 1) {
+                 vnd_dc_fast_frames--;
+             }
+        }
+        
+        if(div <= 0) div = 1;
         if(smax < 1) smax = 1;
-        if(smax > 64) smax = 64;
+        if(smax > 64 && vnd_dc_fast_frames == 0) smax = 64; /* cap only if not fast calib */
 
         for(uint16_t i=0;i<roi_len;i++){
             int32_t e = (int32_t)out[i] - 32767;
@@ -4702,6 +4727,24 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 cdc_logf("EVT SET_DC_ADAPT %u", (unsigned)vnd_dc_adapt_enabled);
             }
             break;
+            
+        case VND_CMD_CALIB_DC_FAST:
+            /* Запустить быструю адаптацию DC на N кадров (например 50-100) */
+            if(len >= 2)
+            {
+                uint16_t frames = (uint16_t)data[1];
+                if (len >= 3) frames |= ((uint16_t)data[2] << 8); // allow 16-bit
+                
+                if (frames > 1000) frames = 1000;
+                vnd_dc_fast_frames = frames;
+                
+                // Ensure adapt is enabled so it actually runs
+                vnd_dc_adapt_enabled = 1;
+                
+                printf("[CMD_IND] CALIB_DC_FAST frames=%u\r\n", (unsigned)frames);
+                cdc_logf("EVT CALIB_DC_FAST %u", (unsigned)frames);
+            }
+            break;
 
         case VND_CMD_SET_SYNC_MODE:
             if(len >= 2)
@@ -4865,10 +4908,22 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
         case VND_CMD_SET_ROI_US:
             if(len >= 5)
             {
-                uint32_t us = (uint32_t)(data[1] | (data[2] << 8) | (data[3] << 16) | (data[4] << 24));
-                (void)us;
-                /* TODO: применить ROI к цепочке выборки */
-                VND_LOG("SET_ROI_US %lu", (unsigned long)us);
+                uint32_t start_sample = (uint32_t)(data[1] | (data[2] << 8) | (data[3] << 16) | (data[4] << 24));
+                uint16_t samples = adc_stream_get_active_samples();
+                uint16_t roi_len = (uint16_t)VND_ROI_LEN_DEFAULT;
+                if(samples == 0u) samples = 600u;
+                if(samples < roi_len) roi_len = samples;
+                uint32_t max_start = (samples > roi_len) ? (uint32_t)(samples - roi_len) : 0u;
+                if(start_sample > max_start) start_sample = max_start;
+                win_start0 = (uint16_t)start_sample;
+                win_len0 = roi_len;
+                win_start1 = 0u;
+                win_len1 = 0u;
+                win_auto = 0;
+                VND_LOG("SET_ROI_US start=%lu -> s0=%u l0=%u", (unsigned long)start_sample, win_start0, win_len0);
+                /* При смене ROI сбросить накопители усреднения, чтобы не смешивать разные окна */
+                vnd_avg_reset();
+                vnd_update_lcd_params();
             }
             break;
         case VND_CMD_SET_BUF_RATE_FINE:

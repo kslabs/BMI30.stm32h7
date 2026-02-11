@@ -156,11 +156,11 @@ static void dump_b_path_regs(uint32_t ndtrA, uint32_t ndtrB)
 
 // --- Профили ---
 static const adc_stream_profile_t g_profiles[ADC_PROFILE_COUNT] = {
-    { .samples_per_buf = 600, .buf_rate_hz = 400, .fs_hz = 240000u }, // 0: 600 samples @ 200Hz, fs=120kHz (вдвое медленнее для ручной проверки)
-    { .samples_per_buf = 912,  .buf_rate_hz = 300, .fs_hz = 912u  * 300u }, // 1: balanced (higher pair rate)
-    { .samples_per_buf = 944,  .buf_rate_hz = 300, .fs_hz = 944u  * 300u }, // 2: high Fs
-    { .samples_per_buf = 976,  .buf_rate_hz = 300, .fs_hz = 976u  * 300u }, // 3: max Fs (near USB limit test)
-    { .samples_per_buf = 680,  .buf_rate_hz = 400, .fs_hz = 680u  * 400u }, // 4: HIGH-FPS (smaller frames)
+    { .samples_per_buf = 600, .buf_rate_hz = 400, .fs_hz = 240000u }, // 0: 600 samples @ 200Hz, fs=120kHz (DEFAULT & FIXED)
+    { .samples_per_buf = 600, .buf_rate_hz = 300, .fs_hz = 240000u }, // 1: Overridden to 600
+    { .samples_per_buf = 600, .buf_rate_hz = 300, .fs_hz = 240000u }, // 2: Overridden to 600
+    { .samples_per_buf = 600, .buf_rate_hz = 300, .fs_hz = 240000u }, // 3: Overridden to 600
+    { .samples_per_buf = 600, .buf_rate_hz = 400, .fs_hz = 240000u }, // 4: Overridden to 600
 };
 static uint8_t g_active_profile = 0;  // Default profile 0
 static uint16_t g_active_samples = 600; // runtime N для GATED mode
@@ -1224,6 +1224,7 @@ void adc_stream_restart_sync(void) {
     HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);  // PB8 -> LOW
     s_pb8_state = 0u;  // PB8=LOW -> ODD parity
     s_buffers_since_restart = 0u;  // Сброс счетчика для детерминированной последовательности parity
+    s_global_buffer_counter = 0u;  // ВАЖНО: Сброс глобального счетчика для детерминированного запуска захвата
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);                  // PA2 -> LOW (ODD parity)
     
     /* Сбрасываем маски готовности для синхронного старта обоих ADC */
@@ -1984,10 +1985,16 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
         s_both_ready++;
         
         /* SYNC_OUT (PB8) переключается при завершении обоих ADC */
-        HAL_GPIO_TogglePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin);
+        HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, (s_pb8_state) ? GPIO_PIN_RESET : GPIO_PIN_SET);
         s_pb8_state ^= 1u;
-
-        /* Программная фазовая синхронизация: минимальный шаг ARR±1 каждые 10 сек */
+        
+        /* HARDWARE FORCE: Update PA2 IMMEDIATELY after PB8 to minimize skew */
+        if (vnd_is_streaming() && vnd_is_tx_enabled()) {
+            /* Строгая синхронизация: PA2 повторяет состояние PB8 (In-Phase) */
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, (s_pb8_state) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        } else {
+             HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+        }
         extern TIM_HandleTypeDef htim15;
         
 
@@ -2026,10 +2033,109 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
             
             /* Интегральный регулятор фазы (фильтр джиттера) */
             // NON-BLOCKING IMPLEMENTATION
+            
+            // --- AUTO-SWITCH: Master/Slave Detection ---
+            extern volatile uint32_t sync_last_edge_ms;
+            uint32_t now_ms = HAL_GetTick();
+            uint32_t time_since_edge = 0;
+            if (now_ms >= sync_last_edge_ms) time_since_edge = now_ms - sync_last_edge_ms;
+            else time_since_edge = 0; // overflow safety
+            
+            bool signal_present = (time_since_edge < 2000u) && (sync_last_edge_ms != 0);
+            
+            extern volatile uint8_t vnd_sync_mode_public;
+            extern volatile uint8_t vnd_sync_ok_public;
+            static uint8_t sync_locked = 0;
+            static uint8_t sync_loop_reset_req = 0;
+
+            if (signal_present) {
+                // Signal IS present -> SLAVE MODE CANDIDATE
+                
+                static uint32_t lock_stable_cnt = 0;
+                static uint32_t unlock_stable_cnt = 0;
+
+                if (sync_locked) {
+                    // Already locked: check if we lost it (very wide window)
+                    bool bad_phase = (g_tim5_avg_phase <= -20000 || g_tim5_avg_phase >= 20000);
+                    if (bad_phase) {
+                        unlock_stable_cnt++;
+                        // Require continuous failure for ~1 second (200 checks @ 5ms)
+                        // This prevents blinking "S" due to short noise bursts
+                        if(unlock_stable_cnt > 200) {
+                            sync_locked = 0;
+                            unlock_stable_cnt = 0;
+                        }
+                    } else {
+                        unlock_stable_cnt = 0;
+                    }
+                } else {
+                    // Not locked: check if we found it (tight window)
+                    bool good_phase = (g_tim5_avg_phase > -2000 && g_tim5_avg_phase < 2000);
+                    if (good_phase) {
+                        lock_stable_cnt++;
+                        // Require stability for ~250ms (50 checks @ 5ms) before Green
+                        if(lock_stable_cnt > 50) {
+                            sync_locked = 1;
+                            lock_stable_cnt = 0;
+                        }
+                    } else {
+                        lock_stable_cnt = 0;
+                    }
+                }
+                vnd_sync_ok_public = sync_locked;
+                
+                if (!g_auto_freq_sync_enable) {
+                    // Switch MASTER -> SLAVE
+                    g_auto_freq_sync_enable = 1;
+                    vnd_sync_mode_public = 1; // SLAVE
+                    sync_locked = 0; // Reset lock state on mode switch
+                    sync_loop_reset_req = 1; // Request reset of PLL integrator
+                }
+            } else {
+                // Signal Lost -> MASTER MODE
+                vnd_sync_ok_public = 0; // RED (No Signal)
+                sync_locked = 0;
+                
+                if (g_auto_freq_sync_enable) {
+                    // Switch SLAVE -> MASTER
+                    g_auto_freq_sync_enable = 0;
+                    vnd_sync_mode_public = 0; // MASTER
+                    ADC_LOGF("[SYNC] Signal lost -> MASTER mode enabled\r\n");
+                }
+            }
+            
+            // Ensure public status is always consistent
+            if(g_auto_freq_sync_enable && vnd_sync_mode_public == 0) vnd_sync_mode_public = 1;
+            if(!g_auto_freq_sync_enable && vnd_sync_mode_public == 1) vnd_sync_mode_public = 0;
+            
             if (g_auto_freq_sync_enable) {
                 static int32_t phase_integrator = 0;
+                static int32_t phase_abs_integrator = 0; // Для детекции неправильного захвата
                 static uint32_t samples_collected = 0;
-                static int32_t arr_restore_val = 0; // 0 = no restore pending aka Idle
+                static int32_t arr_restore_val = 0; 
+                static int32_t adapt_strength = 1;      // Adaptive correction step
+                static int8_t  last_correction_dir = 0; // Direction of last correction
+                static uint8_t s_parity_offset = 0;     // Сдвиг интерпретации чётности для разрешения неоднозначности 0/180
+                
+                // Reset logic if request pending
+                if(sync_loop_reset_req) {
+                    phase_integrator = 0;
+                    phase_abs_integrator = 0;
+                    samples_collected = 0;
+                    arr_restore_val = 0;
+                    adapt_strength = 1;
+                    last_correction_dir = 0;
+                    s_parity_offset = 0;
+                    adapt_strength = 1;
+                    last_correction_dir = 0;
+                    g_tim5_avg_phase = 0; // Clear display
+                    sync_loop_reset_req = 0;
+                }
+
+                // Detect massive jump
+                if (phase_integrator > 20000000 || phase_integrator < -20000000) {
+                     phase_integrator = 0;
+                }
                 
                 // 1. Check for Pending Restore (from previous cycle)
                 if (arr_restore_val != 0) {
@@ -2059,41 +2165,133 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
                     // TIM15 is 90 deg leading (early) -> We want to DELAY it.
                     // Delay means we target a positive phase (Lag).
-                    // Target = +90 degrees = Period / 4.
-                    int32_t target_phase = (int32_t)(period / 4);
+                    // Target: Phase 0 relative to PD5 edge.
+                    // If current_phase is positive (Lag), we are late -> Decrease ARR to catch up.
+                    // If current_phase is negative (Lead), we are early -> Increase ARR to slow down.
+                    // Update 06.02.2026: FORCE IN-PHASE (NEGATIVE ZONE).
+                    // Logic:
+                    // 1. Target = -90 deg (matches 270 deg / 0.75 Period).
+                    // 2. If Current > 0 (Positive Zone 0..180): We are Anti-Phase.
+                    //    FORCE push Negative (Decrease ARR) until we slide into Negative Zone.
+                    // 3. If Current <= 0 (Negative Zone -180..0): We are In-Phase.
+                    //    Normal PID lock to -90 deg.
                     
-                    int32_t phase_error = current_phase - target_phase;
+                    uint8_t current_buffer_parity = (uint8_t)(s_global_buffer_counter & 1);
                     
-                    // Circular wrap for error
-                    if (phase_error > (int32_t)(period/2)) {
-                        phase_error -= (int32_t)period;
-                    } else if (phase_error < -(int32_t)(period/2)) {
-                        phase_error += (int32_t)period;
+                    // Allow sync ONLY on ODD buffers (1, 3, 5...)
+                    if (current_buffer_parity != 0) {
+                        
+                        // Target: 270 degrees = -90 degrees in signed math
+                        int32_t target_phase = -(int32_t)(period / 4); 
+                        int32_t phase_error = 0;
+                        
+                        // ZONE CHECK
+                        if (current_phase > 0) {
+                             // BAD ZONE (Positive/Anti-Phase).
+                             // Force massive negative error to drive PLL to Negative Zone.
+                             // We want correction < 0 (Decrease ARR).
+                             // Logic below: if(avg_phase < -threshold) correction = -adapt.
+                             // So we inject a large negative "measured phase".
+                             phase_error = -(int32_t)(period / 2); // -180 deg error equivalent
+                        } else {
+                             // GOOD ZONE (Negative/In-Phase).
+                             // Normal Linear Lock.
+                             phase_error = current_phase - target_phase;
+                             
+                             // Circular wrap (standard)
+                             if (phase_error > (int32_t)(period/2)) {
+                                 phase_error -= (int32_t)period;
+                             } else if (phase_error < -(int32_t)(period/2)) {
+                                 phase_error += (int32_t)period;
+                             }
+                        }
+                        
+                        phase_integrator += phase_error;
+                        phase_abs_integrator += (phase_error < 0) ? -phase_error : phase_error;
+                        samples_collected++;
                     }
+                    // Else: SKIP even buffers entirely for sync logic
                     
-                    phase_integrator += phase_error;
-                    samples_collected++;
-                    
-                    // Faster Check: 8 buffers (~40ms @ 200Hz)
+                    // Reduce fluctuation: Increase averaging window
+                    // 4 buffers -> 8 buffers (approx 40ms)
                     #define SYNC_CHECK_PERIOD_BUFFERS 8
                     
                     if (samples_collected >= SYNC_CHECK_PERIOD_BUFFERS) {
                         int32_t avg_phase = phase_integrator / (int32_t)samples_collected;
-                        g_tim5_avg_phase = avg_phase;
                         
-                        // Tighter Threshold for better lock
-                        #define PHASE_THRESHOLD 200 
+                        // Disable Ambiguity Parity Flip (Not needed with Zone Logic)
+                        s_parity_offset = 0; 
+                        
+                            g_tim5_avg_phase = avg_phase;
+                            
+                             // Threshold must be tolerable
                         
                         int32_t correction = 0;
-                        if (avg_phase > PHASE_THRESHOLD) {
-                             // Lagging -> Speed up (Decrease ARR)
-                             if (avg_phase > 2000) correction = -5; // Strong kick
-                             else correction = -1;
-                        } 
-                        else if (avg_phase < -PHASE_THRESHOLD) {
-                             // Leading -> Slow down (Increase ARR)
-                             if (avg_phase < -2000) correction = 5; // Strong kick
-                             else correction = 1;
+                        
+                        // Check User Button (PC13)
+                        // Active HIGH (Pressed = 1) via PULLDOWN
+                        uint8_t btn_state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13); 
+                        
+                        // Heartbeat REMOVED (User requested OFF by default)
+                        // HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_3); 
+
+                        if (btn_state == GPIO_PIN_SET) {
+                            // User pressed button: DISABLE CORRECTION & LED ON
+                            correction = 0;
+                            adapt_strength = 1;
+                            last_correction_dir = 0;
+                            HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
+                        }
+                        else {
+                            // Button not pressed: ENABLE CORRECTION & LED OFF
+                            HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
+                            
+                            // Adaptive Correction Logic
+                            // Deadband +/- 100 (Tight)
+                            #undef PHASE_THRESHOLD
+                            #define PHASE_THRESHOLD 100
+                            
+                            // Restore Max Strength 50 -> Relaxed to 30 (Better than 20 for pull-in, but stable)
+                            // User reported "large phase fluctuation"
+                            #define MAX_ADAPT_STRENGTH 30 
+                            
+                            // Force "Run Away" speed if in Bad Zone (avg_phase is huge negative)
+                            if (avg_phase < -(int32_t)(period/4)) {
+                                // If error is extremely negative, allow faster correction
+                                adapt_strength = MAX_ADAPT_STRENGTH; 
+                            }
+
+                            if (avg_phase > PHASE_THRESHOLD) {
+                                 // POSITIVE -> Need +Correction (Increase ARR -> Slow Down)
+                                 if (last_correction_dir == 1) {
+                                     // Consecutive correction -> Exponential ramp (*2)
+                                     // This provides the "stiff" holding force user requested
+                                     adapt_strength *= 2;
+                                     if(adapt_strength > MAX_ADAPT_STRENGTH) adapt_strength = MAX_ADAPT_STRENGTH;
+                                 } else {
+                                     // Direction changed or started
+                                     adapt_strength = 1;
+                                 }
+                                 last_correction_dir = 1;
+                                 correction = adapt_strength;
+                            } 
+                            else if (avg_phase < -PHASE_THRESHOLD) {
+                                 // NEGATIVE -> Need -Correction (Decrease ARR -> Speed Up)
+                                 if (last_correction_dir == -1) {
+                                     adapt_strength *= 2; // Exponential ramp
+                                     if(adapt_strength > MAX_ADAPT_STRENGTH) adapt_strength = MAX_ADAPT_STRENGTH;
+                                 } else {
+                                     adapt_strength = 1;
+                                 }
+                                 last_correction_dir = -1;
+                                 correction = -adapt_strength;
+                            }
+                            else {
+                                // Inside Deadband - Lock Achieved
+                                adapt_strength = 1;
+                                last_correction_dir = 0;
+                                correction = 0;
+                            }
                         }
                         
                         if (correction != 0) {
@@ -2110,6 +2308,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                         
                         // Reset Integrator
                         phase_integrator = 0;
+                        phase_abs_integrator = 0;
                         samples_collected = 0;
                     }
                 }
@@ -2170,15 +2369,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
             sync_align_pending = 1u;
         }
 
-        /* Переключаем PA2 только при активной передаче и включённом передатчике.
-                 PA1 задаётся отдельно (постоянный уровень по состоянию передатчика). */
-          extern void HAL_GPIO_TogglePin(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
-          extern uint8_t vnd_is_streaming(void);
-             extern uint8_t vnd_is_tx_enabled(void);
-             extern volatile uint8_t vnd_sync_mode_public;
-             if (vnd_is_streaming() && vnd_is_tx_enabled()) {
-              HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_2);
-          }
+/* PA2 update moved to early execution (near PB8 toggle) to minimize skew */
+          (void)0;
           
           /* ВАЖНО: Определяем parity по счетчику буферов после restart */
           /* Первый буфер после restart (s_buffers_since_restart=0) -> 0&1=0 -> инверсия -> 1=ODD */

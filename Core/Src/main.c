@@ -2281,6 +2281,16 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_RESET);
 
+  /* USER CODE BEGIN MX_GPIO_Init_PC13 */
+  /* Configure PC13 as USER BUTTON Input */
+  // Active High (Press=1) means we need PULLDOWN to keep it 0 when released.
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN; 
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  /* USER CODE END MX_GPIO_Init_PC13 */
+
   /*Configure GPIO pin : Led_Test_Pin */
   GPIO_InitStruct.Pin = Led_Test_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
