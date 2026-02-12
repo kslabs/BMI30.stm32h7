@@ -33,6 +33,7 @@ def _parse_args():
     p.add_argument('--rate-hz', type=int, default=int(os.getenv('VND_RATE_HZ','200')), help='Requested block rate (Hz)')
     p.add_argument('--profile', type=int, choices=[0,1,2,3], default=int(os.getenv('VND_PROFILE','0')), help='ADC profile id: 0=200Hz(1360),1=300Hz(912),2=300Hz(944),3=300Hz(976). Default 0 for full 200Hz buffer')
     p.add_argument('--full-mode', type=int, choices=[0,1], default=int(os.getenv('VND_FULL_MODE','1')), help='1=ADC, 0=DIAG(A-only)')
+    p.add_argument('--stream-mode', type=int, choices=[0,1], default=int(os.getenv('VND_STREAM_MODE','0')), help='0=LATEST (lossy), 1=LOSSLESS_ROI (paired/async=0 recommended)')
     # Status reporting mode during read: none (default), ctrl (EP0), or bulk (0x30 over OUT)
     p.add_argument('--status-mode', choices=['none','ctrl','bulk'], default=os.getenv('VND_STATUS_MODE','none'), help='How to request STAT during read. Default: none')
     p.add_argument('--frame-samples', type=int, default=int(os.getenv('VND_FRAME_SAMPLES','0')), help='Samples per frame per channel (CMD 0x17). E.g., 10 for 200Hz, 15 for 300Hz (~20 FPS). 0=disabled')
@@ -73,11 +74,14 @@ WIN0_START, WIN0_LEN = args.win0
 WIN1_START, WIN1_LEN = args.win1
 RATE_HZ = args.rate_hz
 FULL_MODE = args.full_mode
+STREAM_MODE = args.stream_mode
 FRAME_SAMPLES = args.frame_samples
 ASYNC_MODE = args.async_mode
 CH_MODE = args.ch_mode
 VERBOSE = bool(args.verbose)
 LOG_INTERVAL = args.log_interval if args.log_interval > 0 else 1.0
+
+CMD_SET_STREAM_MODE = 0x1A
 START_CHECK_SEC = args.start_check_sec if args.start_check_sec > 0 else 3.5
 START_RETRIES = max(0, args.start_retries)
 ABORT_NO_RX_SEC = args.abort_no_rx_sec if args.abort_no_rx_sec > 0 else 0.0
@@ -522,6 +526,15 @@ def main():
     except Exception as e:
         log_line(f"[HOST][WARN] SET_ASYNC_MODE failed: {e}")
 
+    # Optional: select streaming mode (0=latest lossy, 1=lossless ROI)
+    try:
+        sm = STREAM_MODE & 0xFF
+        wsm = write_vendor(dev, bytes([CMD_SET_STREAM_MODE, sm]), timeout_ms=1000, label="SET_STREAM_MODE", max_retries=1)
+        log_line(f"[HOST] SET_STREAM_MODE({sm}) written: {wsm} bytes")
+        time.sleep(0.02)
+    except Exception as e:
+        log_line(f"[HOST][WARN] SET_STREAM_MODE failed: {e}")
+
     # Set channel mode (0=A-only by default per current stabilization goal)
     try:
         cm = CH_MODE & 0xFF
@@ -662,7 +675,8 @@ def main():
                     if len(rx) < flen:
                         break
                     flags = rx[3]
-                    ftype = 'TEST' if (flags & 0x80) else ('A' if flags == 0x01 else ('B' if flags == 0x02 else 'UNK'))
+                    ch_bits = flags & 0x03  # 0x01=A, 0x02=B; CRC и прочие биты маскируем
+                    ftype = 'TEST' if (flags & 0x80) else ('A' if ch_bits == 0x01 else ('B' if ch_bits == 0x02 else 'UNK'))
                     frame = bytes(rx[:flen]); rx = rx[flen:]
                     if VERBOSE:
                         head = ' '.join(f"{b:02X}" for b in frame[:4])

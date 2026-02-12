@@ -22,6 +22,13 @@ extern "C" {
 #define VND_CMD_SET_CHMODE       0x19u /* payload: u8 mode (0=A-only, 1=B-only, 2=both) */
 #endif
 
+/* Режимы синхронизации (master/slave/off) */
+#ifndef VND_SYNC_MODE_MASTER
+#define VND_SYNC_MODE_MASTER 0u
+#define VND_SYNC_MODE_SLAVE  1u
+#define VND_SYNC_MODE_OFF    2u
+#endif
+
 /* Флаги статуса времени выполнения */
 #define VND_STFLAG_STREAMING      0x0001u  /* streaming включён (после START) */
 #define VND_STFLAG_DIAG_ACTIVE    0x0002u  /* активен диагностический режим */
@@ -117,6 +124,7 @@ extern volatile uint8_t vnd_tx_kick; /* Флаг пробуждения таск
 void Vendor_Stream_Task(void);
 void usb_vendor_periodic_tick(void); /* тик от TIM6 */
 uint8_t vnd_is_streaming(void);
+uint8_t vnd_is_tx_enabled(void);
 /* Построить статус в буфере (возвращает длину или 0 при ошибке) */
 uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len);
 /* Диагностическая одноразовая отправка 64B шаблона (оставляем) */
@@ -143,6 +151,46 @@ void vnd_generate_test_sawtooth(void);
 /* FPS и статистика производительности */
 void vnd_report_fps_stats(void);
 void vnd_print_perf_stats(void);
+
+/* Сигнал о фронте синхронизации (slave) для индикации S на LCD */
+void vnd_sync_on_edge(void);
+void vnd_request_adc_restart_from_isr(void);
+
+/* DC (AVG_ROI) persistence: counters for LCD/diagnostics */
+extern volatile uint32_t vnd_dc_save_ok_count;
+extern volatile uint32_t vnd_dc_save_fail_count;
+extern volatile uint32_t vnd_dc_save_last_ms;
+extern volatile uint8_t  vnd_dc_save_last_result; /* 0=none, 1=ok, 2=fail */
+
+/* DC Adaptation control (can be frozen by host during signal detection) */
+extern volatile uint8_t  vnd_dc_adapt_enabled; /* 1=active (learning), 0=freeze (keep current values) */
+
+/* Auto-freeze when signal swing is below threshold (no DC save/progress) */
+extern volatile uint8_t  vnd_dc_auto_freeze; /* 1=auto-freeze by amplitude gate */
+
+/* Monotonic counter stored in Flash blob (loaded on boot, incremented on each save attempt). */
+extern volatile uint32_t vnd_dc_write_counter_public;
+
+/* DC (AVG_ROI) live state for LCD progress indicator */
+extern volatile uint8_t  vnd_dc_dirty_public;      /* 0/1: DC changed and pending save */
+extern volatile uint32_t vnd_dc_dirty_since_ms;    /* HAL_GetTick() when became dirty */
+extern volatile uint32_t vnd_dc_save_period_ms;    /* save period used by firmware */
+
+/* DC save diagnostics */
+extern volatile uint32_t vnd_dc_save_last_err;          /* HAL_FLASH_GetError() (if available) */
+extern volatile uint32_t vnd_dc_save_last_sector_error; /* sector_error from HAL_FLASHEx_Erase */
+extern volatile uint32_t vnd_dc_save_last_bank;         /* FLASH_BANK_1/2 */
+extern volatile uint32_t vnd_dc_save_last_sector;       /* FLASH_SECTOR_x */
+
+/* DC load diagnostics for LCD/debug
+    flags: bit0=loaded OK, bit1=erase_pending (journal tail corrupted or sector full) */
+extern volatile uint8_t  vnd_dc_load_flags_public;
+extern volatile uint16_t vnd_dc_loaded_crc16_public;
+extern volatile uint32_t vnd_dc_flash_next_off_public;
+
+/* Sync master/slave status for LCD */
+extern volatile uint8_t  vnd_sync_mode_public; /* 0=master,1=slave,2=off */
+extern volatile uint8_t  vnd_sync_ok_public;   /* 1=sync pulses present */
 
 #ifdef __cplusplus
 }

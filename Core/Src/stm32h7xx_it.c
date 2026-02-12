@@ -23,7 +23,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdint.h>
+#include <stdio.h>  /* для printf в диагностике TIM2 IRQ */
 #include "lcd.h" // добавлено для вывода на экран при HardFault
+#include "adc_stream.h"
+#include "usb_vendor_app.h"
 extern volatile uint32_t systick_heartbeat; // добавлено: глобальный счётчик из main.c
 /* Прототип низкоуровневого вывода UART1 из main.c */
 extern void uart1_raw_putc(char c);
@@ -69,6 +72,10 @@ void HardFault_Capture(uint32_t *stack_addr);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+#ifndef SYNC_ACTIONS_ENABLE
+#define SYNC_ACTIONS_ENABLE 0u
+#endif
+
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -78,6 +85,8 @@ extern DMA_HandleTypeDef hdma_adc2;
 extern DAC_HandleTypeDef hdac1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim6;
+extern TIM_HandleTypeDef htim15;
+extern TIM_HandleTypeDef htim16;
 extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
 
@@ -206,6 +215,63 @@ void PendSV_Handler(void)
   /* USER CODE END PendSV_IRQn 1 */
 }
 
+/* TIM16 IRQHandler removed - now using TIM5 (32-bit) instead */
+
+/**
+  * @brief This function handles EXTI line[9:5] interrupts.
+  */
+void EXTI9_5_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI9_5_IRQn 0 */
+
+  /* USER CODE END EXTI9_5_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(SYNC_IN_Pin);
+  /* USER CODE BEGIN EXTI9_5_IRQn 1 */
+
+  /* USER CODE END EXTI9_5_IRQn 1 */
+}
+
+/* Callback on GPIO EXTI interrupt */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == SYNC_IN_Pin) {
+    /* Спад PD5: только измеряем период через TIM5, никакого влияния на TIM15/ADC/DMA */
+    extern TIM_HandleTypeDef htim5;
+    extern volatile uint32_t sync_last_edge_ms;
+    extern volatile uint8_t sync_edge_seen;
+    extern volatile uint32_t sync_edge_count;
+    
+    /* Сохраняем счетчик буферов при спаде PD5 и вычисляем delta (для статистики) */
+    extern volatile uint32_t sync_buffer_count_at_edge;
+    extern volatile uint32_t sync_buffers_between_edges;
+    extern volatile uint32_t adc_stream_total_buffer_count;
+    
+    uint32_t prev_count = sync_buffer_count_at_edge;
+    sync_buffer_count_at_edge = adc_stream_total_buffer_count;
+    sync_buffers_between_edges = adc_stream_total_buffer_count - prev_count;
+    
+    /* Измеряем период через TIM5 (275 MHz) для частотной синхронизации */
+    extern volatile uint32_t sync_tim5_period_ticks;
+    sync_tim5_period_ticks = htim5.Instance->CNT;  // Сохраняем текущее значение TIM5 как период
+    htim5.Instance->CNT = 0u;  // Сбрасываем TIM5 для измерения следующего периода
+    
+    /* Измеряем фазу TIM15 для фазовой синхронизации */
+    extern TIM_HandleTypeDef htim15;
+    extern volatile uint32_t sync_tim15_cnt_at_pd5;
+    sync_tim15_cnt_at_pd5 = htim15.Instance->CNT;
+    
+    /* УБРАНО: htim15.Instance->CNT = 0u; - нет сброса TIM15 */
+    /* УБРАНО: adc_stream_restart_sync() - нет перезапуска ADC/DMA */
+    
+    sync_last_edge_ms = HAL_GetTick();
+    sync_edge_seen = 1u;
+    sync_edge_count++;
+    
+    /* Отметим наличие синхроимпульсов для LCD */
+    vnd_sync_on_edge();
+  }
+}
+
 /**
   * @brief This function handles System tick timer.
   */
@@ -273,7 +339,12 @@ void DMA1_Stream1_IRQHandler(void)
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
-
+  static uint8_t first_irq = 1;
+  if (first_irq) {
+    printf("[TIM2][IRQ] FIRST IRQ! SR=0x%08lX CNT=%lu\r\n", 
+           (unsigned long)TIM2->SR, (unsigned long)TIM2->CNT);
+    first_irq = 0;
+  }
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
@@ -294,6 +365,20 @@ void TIM6_DAC_IRQHandler(void)
   /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
 
   /* USER CODE END TIM6_DAC_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM15 global interrupt.
+  */
+void TIM15_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM15_IRQn 0 */
+
+  /* USER CODE END TIM15_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim15);
+  /* USER CODE BEGIN TIM15_IRQn 1 */
+
+  /* USER CODE END TIM15_IRQn 1 */
 }
 
 /**
@@ -329,6 +414,7 @@ static void hf_print_line(uint16_t y, const char *label, uint32_t val){
     buf[i]=0;
     LCD_ShowString_Size(0,y,buf,12,WHITE,BLACK);
 }
+static void HardFault_Display(void) __attribute__((unused));
 static void HardFault_Display(void){
     // очистим область
     LCD_FillRect(0,0,160,80,BLACK);
@@ -342,13 +428,6 @@ static void HardFault_Display(void){
 // Реализация захвата контекста HardFault
 void HardFault_Capture(uint32_t *stack_addr)
 {
-  hardfault_r0  = stack_addr[0];
-  hardfault_r1  = stack_addr[1];
-  hardfault_r2  = stack_addr[2];
-  hardfault_r3  = stack_addr[3];
-  hardfault_r12 = stack_addr[4];
-  hardfault_lr  = stack_addr[5];
-  hardfault_pc  = stack_addr[6];
   hardfault_psr = stack_addr[7];
   // Чтение системных регистров Fault
   hardfault_cfsr = SCB->CFSR;
@@ -356,8 +435,85 @@ void HardFault_Capture(uint32_t *stack_addr)
   hardfault_bfar = SCB->BFAR;
   hardfault_mmfar= SCB->MMFAR;
   hardfault_active = 1;
-  // Пытаемся вывести на LCD (если инициализирован). Даже если нет — SPI просто не даст эффекта.
+  
+  // ========== ВЫВОД ДИАГНОСТИКИ В COM4 (USART1) ==========
+  // Используем printf который перенаправлен на huart1 в syscalls.c
+  printf("\r\n");
+  printf("======================================================================\r\n");
+  printf("                       *** HARDFAULT EXCEPTION ***\r\n");
+  printf("======================================================================\r\n");
+  printf("\r\n");
+  printf("[STACK REGISTERS]\r\n");
+  printf("  R0  = 0x%08lX\r\n", hardfault_r0);
+  printf("  R1  = 0x%08lX\r\n", hardfault_r1);
+  printf("  R2  = 0x%08lX\r\n", hardfault_r2);
+  printf("  R3  = 0x%08lX\r\n", hardfault_r3);
+  printf("  R12 = 0x%08lX\r\n", hardfault_r12);
+  printf("  LR  = 0x%08lX  (return address)\r\n", hardfault_lr);
+  printf("  PC  = 0x%08lX  (fault address)\r\n", hardfault_pc);
+  printf("  PSR = 0x%08lX\r\n", hardfault_psr);
+  printf("\r\n");
+  printf("[FAULT STATUS REGISTERS]\r\n");
+  printf("  CFSR  = 0x%08lX  (Configurable Fault Status Register)\r\n", hardfault_cfsr);
+  printf("  HFSR  = 0x%08lX  (HardFault Status Register)\r\n", hardfault_hfsr);
+  printf("  BFAR  = 0x%08lX  (Bus Fault Address Register)\r\n", hardfault_bfar);
+  printf("  MMFAR = 0x%08lX  (MemManage Fault Address Register)\r\n", hardfault_mmfar);
+  printf("\r\n");
+  
+  // Расшифровка CFSR (объединяет MMFSR, BFSR, UFSR)
+  printf("[FAULT ANALYSIS]\r\n");
+  uint32_t mmfsr = hardfault_cfsr & 0xFF;           // MemManage [7:0]
+  uint32_t bfsr  = (hardfault_cfsr >> 8) & 0xFF;    // BusFault [15:8]
+  uint32_t ufsr  = (hardfault_cfsr >> 16) & 0xFFFF; // UsageFault [31:16]
+  
+  if (mmfsr) {
+    printf("  MemManage Fault (MMFSR=0x%02lX):\r\n", mmfsr);
+    if (mmfsr & 0x01) printf("    - IACCVIOL: Instruction access violation\r\n");
+    if (mmfsr & 0x02) printf("    - DACCVIOL: Data access violation\r\n");
+    if (mmfsr & 0x08) printf("    - MUNSTKERR: Unstacking error\r\n");
+    if (mmfsr & 0x10) printf("    - MSTKERR: Stacking error\r\n");
+    if (mmfsr & 0x20) printf("    - MLSPERR: FP lazy state preservation\r\n");
+    if (mmfsr & 0x80) printf("    - MMARVALID: MMFAR contains valid address (0x%08lX)\r\n", hardfault_mmfar);
+  }
+  
+  if (bfsr) {
+    printf("  Bus Fault (BFSR=0x%02lX):\r\n", bfsr);
+    if (bfsr & 0x01) printf("    - IBUSERR: Instruction bus error\r\n");
+    if (bfsr & 0x02) printf("    - PRECISERR: Precise data bus error\r\n");
+    if (bfsr & 0x04) printf("    - IMPRECISERR: Imprecise data bus error\r\n");
+    if (bfsr & 0x08) printf("    - UNSTKERR: Unstacking error\r\n");
+    if (bfsr & 0x10) printf("    - STKERR: Stacking error\r\n");
+    if (bfsr & 0x20) printf("    - LSPERR: FP lazy state preservation\r\n");
+    if (bfsr & 0x80) printf("    - BFARVALID: BFAR contains valid address (0x%08lX)\r\n", hardfault_bfar);
+  }
+  
+  if (ufsr) {
+    printf("  Usage Fault (UFSR=0x%04lX):\r\n", ufsr);
+    if (ufsr & 0x0001) printf("    - UNDEFINSTR: Undefined instruction\r\n");
+    if (ufsr & 0x0002) printf("    - INVSTATE: Invalid state\r\n");
+    if (ufsr & 0x0004) printf("    - INVPC: Invalid PC load\r\n");
+    if (ufsr & 0x0008) printf("    - NOCP: No coprocessor\r\n");
+    if (ufsr & 0x0010) printf("    - STKOF: Stack overflow\r\n");
+    if (ufsr & 0x0100) printf("    - UNALIGNED: Unaligned access\r\n");
+    if (ufsr & 0x0200) printf("    - DIVBYZERO: Divide by zero\r\n");
+  }
+  
+  if (hardfault_hfsr & 0x40000000) {
+    printf("  FORCED: HardFault escalated from configurable fault\r\n");
+  }
+  if (hardfault_hfsr & 0x80000000) {
+    printf("  DEBUGEVT: Debug event\r\n");
+  }
+  
+  printf("\r\n");
+  printf("======================================================================\r\n");
+  printf("System halted. LED will blink to indicate HardFault state.\r\n");
+  printf("======================================================================\r\n");
+  printf("\r\n");
+  
+  // Пытаемся вывести на LCD (если инициализирован)
   HardFault_Display();
+  
   // Мигание LED для индикации HardFault
   while(1){
     HAL_GPIO_TogglePin(Led_Test_GPIO_Port, Led_Test_Pin);

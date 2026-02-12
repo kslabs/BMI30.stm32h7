@@ -1,5 +1,5 @@
 param(
-  [string]$Port = "COM4",
+  [string]$Port = "COM11",
   [int]$Baud = 115200,
   [int]$PerCommandReadMs = 1500,
   [string[]]$Commands = @("HELP","VER","STATUS","FPS","PERF"),
@@ -60,3 +60,4 @@ $logLines | Set-Content -Path $OutPath -Encoding UTF8
 $logLines | ForEach-Object { Write-Host $_ }
 
 exit 0
+

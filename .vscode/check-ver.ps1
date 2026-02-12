@@ -1,5 +1,5 @@
 param(
-  [string]$Port = "COM4",
+  [string]$Port = "COM11",
   [int]$Baud = 115200,
   [int]$OpenTimeoutSec = 15,
   [int]$ReadTimeoutSec = 5,
@@ -146,3 +146,4 @@ try {
 finally {
   if ($sp) { try { if ($sp.IsOpen) { $sp.Close() } } catch {}; $sp.Dispose() }
 }
+

@@ -1,0 +1,11 @@
+# Основные зависимости для HostTools (Linux/RPi)
+pyusb
+pyserial
+numpy
+matplotlib
+pyqtgraph
+
+# GUI-стек (установите ОДНУ из строк ниже при необходимости GUI)
+# PyQt5
+# PySide6
+# PyQt6

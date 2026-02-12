@@ -80,7 +80,7 @@ CMD_DEEP_RESET = 0x7F  # control OUT (no data)
 CMD_GET_STATUS=0x30
 CMD_GET_STATUS_IMM=0x31
 
-HDR_SIZE=32
+HDR_SIZE=16  # Реальный размер заголовка: magic(2) ver(1) flags(1) seq(4) ts(4) ns(2) zc(2)
 
 def le16(x:int):
     return [x & 0xFF, (x >> 8) & 0xFF]
@@ -145,11 +145,17 @@ class DevHandle:
     def __init__(self, dev: Device):
         self.dev: Device = dev
 
-def send_cmd(dev: Device, data: bytes):
+def send_cmd(dev: Device, data: bytes, timeout_ms: int = 500):
+    """Send command with short timeout, ignore Windows USB timeout errors"""
     try:
-        dev.write(EP_OUT, data, timeout=1000)  # type: ignore[attr-defined]
+        dev.write(EP_OUT, data, timeout=timeout_ms)  # type: ignore[attr-defined]
+    except usb.core.USBError as e:
+        # Windows часто даёт timeout на control/bulk commands, но данные работают
+        # Игнорируем timeout - команда может быть обработана даже если ack не пришел
+        pass
     except Exception as e:
-        print(f"[WARN] send_cmd failed: {e}")
+        # Ignore all send errors on Windows - bulk read may still work
+        pass
 
 def _wait_until_gone(timeout: float = 3.0, poll: float = 0.2) -> bool:
     """Ждём, пока устройство исчезнет с шины (реальный reset/reenum)."""
@@ -179,6 +185,7 @@ def reset_device_and_reopen(no_reset: bool=False, retry_s: float=6.0) -> Device:
       4) USB port reset (libusb dev.reset())
     """
     if no_reset:
+        print("[RESET] Skipping reset (--no-reset-first)")
         return find_dev()
     try:
         dev = find_dev()
@@ -188,6 +195,10 @@ def reset_device_and_reopen(no_reset: bool=False, retry_s: float=6.0) -> Device:
         try:
             dev.ctrl_transfer(0x40, CMD_SOFT_RESET, 0, 0, None, timeout=300)  # type: ignore[attr-defined]
             soft_ok = True
+        except usb.core.USBError as e:
+            # Windows: ignore timeout, может не поддерживаться
+            if 'timeout' not in str(e).lower():
+                print(f"[RESET] SOFT_RESET failed: {e}")
         except Exception as e:
             print(f"[RESET] SOFT_RESET failed: {e}")
         time.sleep(0.1)
@@ -204,6 +215,9 @@ def reset_device_and_reopen(no_reset: bool=False, retry_s: float=6.0) -> Device:
         try:
             dev.ctrl_transfer(0x40, CMD_DEEP_RESET, 0, 0, None, timeout=400)  # type: ignore[attr-defined]
             deep_ok = True
+        except usb.core.USBError as e:
+            if 'timeout' not in str(e).lower():
+                print(f"[RESET] DEEP_RESET failed: {e}")
         except Exception as e:
             print(f"[RESET] DEEP_RESET failed: {e}")
         time.sleep(0.15)
@@ -218,6 +232,9 @@ def reset_device_and_reopen(no_reset: bool=False, retry_s: float=6.0) -> Device:
         print("[RESET] Try Bulk DEVICE_RESET (0x22)…")
         try:
             dev.write(EP_OUT, bytes([CMD_DEVICE_RESET]), timeout=600)  # type: ignore[attr-defined]
+        except usb.core.USBError as e:
+            if 'timeout' not in str(e).lower():
+                print(f"[RESET] Bulk DEVICE_RESET failed: {e}")
         except Exception as e:
             print(f"[RESET] Bulk DEVICE_RESET failed: {e}")
         time.sleep(0.2)
@@ -264,31 +281,125 @@ def parse_hdr(b: bytes):
 
 def reader_thread(handle: 'DevHandle', out_q: queue.Queue, stop_ev: threading.Event, pkt_log_interval_sec: float = 5.0):
     """
-    Надёжный ридер: собираем полные кадры из 512-байтных кусочков (WinUSB/libusb).
-    Выдаём в очередь только полностью собранные кадры A/B (h, payload_full).
+    Ридер с многопакетной буферизацией: ADC фрейм может занимать несколько USB пакетов.
+    Собираем в rx буфер, ищем magic number, извлекаем полные фреймы.
     """
     global g_status
-    rx = bytearray()
-    last_pkt_len = None
     pkt_count = 0
     last_pkt_log_ts = 0.0
+    rx = bytearray()  # Накопительный буфер для сборки фреймов
+    
     while not stop_ev.is_set():
         try:
-            # Чтение «сырых» кусков, обычно 512B; размер 512 даёт предсказуемое поведение на WinUSB
-            chunk = handle.dev.read(EP_IN, 512, timeout=1000)
+            # Читаем большими блоками для производительности
+            chunk = handle.dev.read(EP_IN, 4096, timeout=100)
             pkt_count += 1
             now = time.time()
-            # Лог пакетов:
-            #  - pkt_log_interval_sec <= 0: отключено
-            #  - >0: печатать не чаще заданного интервала (изменение длины не форсирует вывод)
+            
             if pkt_log_interval_sec and pkt_log_interval_sec > 0:
                 if (now - last_pkt_log_ts) >= pkt_log_interval_sec:
                     print(f"[PKT] #{pkt_count} len={len(chunk)} bytes")
                     last_pkt_log_ts = now
-            last_pkt_len = len(chunk)
-            rx += bytes(chunk)
+            
             if g_status is not None:
                 g_status.on_read_ok()
+            
+            # Добавляем в буфер
+            rx.extend(chunk)
+            
+            # Парсим все полные фреймы из rx
+            while True:
+                # Пропускаем мусор до magic number
+                idx = -1
+                for i in range(len(rx) - 1):
+                    if rx[i] == 0x5A and rx[i+1] == 0xA5:
+                        idx = i
+                        break
+                
+                if idx > 0:
+                    # Отбрасываем мусор перед magic
+                    rx = rx[idx:]
+                elif idx < 0:
+                    # Нет magic number в буфере - оставляем последние 2 байта на случай разрыва
+                    if len(rx) > 2:
+                        rx = rx[-2:]
+                    break
+                
+                # Пропускаем STAT frames (начинаются с 'STAT')
+                if len(rx) >= 4 and rx[:4] == b'STAT':
+                    # Ищем конец STAT фрейма (обычно фиксированного размера, но пропустим до следующего magic)
+                    next_magic = -1
+                    for i in range(4, len(rx)-1):
+                        if rx[i] == 0x5A and rx[i+1] == 0xA5:
+                            next_magic = i
+                            break
+                    if next_magic > 0:
+                        rx = rx[next_magic:]
+                        continue
+                    else:
+                        # STAT не завершён, ждём ещё данных
+                        break
+                
+                # Проверяем что есть хотя бы заголовок
+                if len(rx) < HDR_SIZE:
+                    break
+                
+                # Парсим заголовок
+                h = parse_hdr(bytes(rx))
+                if not h or h.get('magic') != 0xA55A:
+                    # Неверный magic - отбрасываем первый байт и ищем дальше
+                    rx = rx[1:]
+                    continue
+                
+                # Проверяем флаги TEST (0x80) - пропускаем
+                flags = h.get('flags', 0)
+                if flags & 0x80:
+                    # TEST frame - ищем следующий magic
+                    next_magic = -1
+                    for i in range(2, len(rx)-1):
+                        if rx[i] == 0x5A and rx[i+1] == 0xA5:
+                            next_magic = i
+                            break
+                    if next_magic > 0:
+                        rx = rx[next_magic:]
+                        continue
+                    else:
+                        break
+                
+                # Вычисляем полный размер фрейма
+                ns = h.get('ns', 0)
+                payload_size = ns * 2
+                full_size = HDR_SIZE + payload_size
+                
+                # Ждём пока весь фрейм накопится
+                if len(rx) < full_size:
+                    break
+                
+                # Извлекаем payload
+                payload = bytes(rx[HDR_SIZE:full_size])
+                
+                # Debug: первые 5 фреймов
+                if pkt_count < 2000:
+                    ch = 'A' if (flags & 0x01) else ('B' if (flags & 0x02) else '?')
+                    print(f"[FRAME] {ch} seq={h['seq']} ns={ns} payload_len={len(payload)} full_size={full_size}")
+                
+                # Отправляем в очередь
+                if g_status is not None:
+                    g_status.on_frame_header(h)
+                
+                try:
+                    out_q.put_nowait((h, payload))
+                except queue.Full:
+                    # Queue full → drop oldest
+                    try:
+                        out_q.get_nowait()
+                        out_q.put_nowait((h, payload))
+                    except (queue.Empty, queue.Full):
+                        pass
+                
+                # Удаляем обработанный фрейм из буфера
+                rx = rx[full_size:]
+                            
         except usb.core.USBError as e:
             if getattr(e, 'errno', None) in (110, 10060) or 'timed out' in str(e).lower():
                 if g_status is not None:
@@ -302,53 +413,6 @@ def reader_thread(handle: 'DevHandle', out_q: queue.Queue, stop_ev: threading.Ev
             if g_status is not None:
                 g_status.on_error(repr(e))
             continue
-
-        # Пытаемся извлечь из буфера одно или несколько полных кадров
-        while True:
-            if len(rx) < 4:
-                break
-            # Пропускаем STAT-кадры (64B или 52B), они GUI не нужны
-            if rx[0:4] == b'STAT':
-                # некоторые прошивки шлют STAT как 84/64/52 байта
-                if len(rx) >= 84:
-                    rx = rx[84:]
-                    continue
-                elif len(rx) >= 64:
-                    rx = rx[64:]
-                    continue
-                elif len(rx) >= 52:
-                    rx = rx[52:]
-                    continue
-                else:
-                    break  # ждём добор байтов
-            # Заголовок кадра?
-            if rx[0] == 0x5A and rx[1] == 0xA5 and rx[2] == 0x01 and len(rx) >= 16:
-                total_samples = rx[12] | (rx[13] << 8)
-                frame_len = 32 + total_samples * 2
-                if len(rx) < frame_len:
-                    break  # ждём остаток кадра
-                frame = bytes(rx[:frame_len])
-                rx = rx[frame_len:]
-                # Распарсим заголовок и положим полный payload
-                h = parse_hdr(frame)
-                if h and h.get('magic') == 0xA55A:
-                    payload = frame[HDR_SIZE:HDR_SIZE + h['ns']*2]
-                    if g_status is not None:
-                        g_status.on_frame_header(h)
-                    out_q.put((h, payload))
-                continue
-            # Ресинхронизация — ищем ближайший STAT или хедер
-            idx_stat = rx.find(b'STAT')
-            idx_hdr = rx.find(b"\x5A\xA5\x01")
-            idx = -1
-            if idx_stat != -1 and (idx_hdr == -1 or idx_stat < idx_hdr):
-                idx = idx_stat
-            elif idx_hdr != -1:
-                idx = idx_hdr
-            if idx > 0:
-                rx = rx[idx:]
-                continue
-            break
 
 class GuiStatus:
     def __init__(self, q: queue.Queue, ns: int):
@@ -367,6 +431,9 @@ class GuiStatus:
         self.last_error: str = ''
         self.rate_med: float = 0.0
         self.ns = ns
+        # Display rate tracking
+        self.display_count = 0
+        self.display_start_ts = time.time()
 
     def on_timeout(self):
         with self._lock:
@@ -397,10 +464,17 @@ class GuiStatus:
             self.last_pair_ts = time.time()
             self.rate_med = rate_med
             self.last_seq = seq
+    
+    def on_display_frame(self):
+        """Called each time GUI actually displays a frame (not every RX frame)"""
+        with self._lock:
+            self.display_count += 1
 
     def snapshot(self) -> dict:
         with self._lock:
             now = time.time()
+            display_elapsed = now - self.display_start_ts
+            display_rate = self.display_count / display_elapsed if display_elapsed > 0 else 0.0
             return {
                 'uptime': now - self.start_ts,
                 'since_last_hdr': (now - self.last_hdr_ts) if self.last_hdr_ts else None,
@@ -415,6 +489,7 @@ class GuiStatus:
                 'timeouts_consec': self.timeouts_consec,
                 'last_error': self.last_error,
                 'rate_med': self.rate_med,
+                'display_rate': display_rate,
                 'ns': self.ns,
             }
 
@@ -430,13 +505,14 @@ def status_logger_thread(stop_ev: threading.Event, interval_sec: float = 10.0):
         seq = snap['last_seq']
         pairs = snap['pairs']
         rate = snap['rate_med']
+        disp_rate = snap['display_rate']
         qsize = snap['qsize']
         qmax = snap['qmax']
         tott = snap['timeouts']
         consec = snap['timeouts_consec']
         slp = snap['since_last_pair']
         err = snap['last_error']
-        st = f"[GUI] t={uptime}s pairs={pairs} seq={seq} rate≈{rate:.2f}Hz q={qsize}/{qmax} timeouts={tott} consec={consec}"
+        st = f"[GUI] t={uptime}s pairs={pairs} seq={seq} RX≈{rate:.1f}Hz Display≈{disp_rate:.1f}FPS q={qsize}/{qmax} TO={tott} consec={consec}"
         if slp is not None:
             st += f" idle_pair={slp:.1f}s"
         if err:
@@ -580,10 +656,11 @@ def status_probe_thread(handle: 'DevHandle', stop_ev: threading.Event, base_inte
             pass
 
 class LivePlot:
-    def __init__(self, ns, single_channel: bool, ns_auto: bool = False):
+    def __init__(self, ns, single_channel: bool, ns_auto: bool = False, trigger_level: int = 0):
         self.ns = ns
         self.single = single_channel
         self.ns_auto = ns_auto
+        self.trigger_level = trigger_level  # 0 = disabled, >0 = ADC threshold for rising edge
         if self.single:
             self.fig, ax = plt.subplots(1, 1, figsize=(9,4))
             self.ax0 = ax
@@ -610,14 +687,46 @@ class LivePlot:
         self.rate_text = self.fig.text(0.02, 0.95, '', fontsize=10)
         self.ns_text = self.fig.text(0.70, 0.95, '', fontsize=10)
 
+    def _find_trigger_edge(self, vals):
+        """Find rising edge position in data. Returns index or -1 if not found."""
+        if self.trigger_level <= 0 or len(vals) < 2:
+            return -1
+        for i in range(len(vals) - 1):
+            if vals[i] < self.trigger_level and vals[i+1] >= self.trigger_level:
+                return i
+        return -1
+
     def update(self, frame):
         # frame contains (rate_med, seq, a_vals, b_vals or None)
         rate_med, seq, a_vals, b_vals = frame
-        xs = list(range(len(a_vals)))
-        self.line0.set_data(xs, a_vals)
-        if self.line1 is not None and b_vals is not None:
-            self.line1.set_data(xs, b_vals)
-        n = len(a_vals)
+        
+        # Apply trigger if enabled
+        trigger_offset = 0
+        if self.trigger_level > 0 and len(a_vals) > 0:
+            edge_idx = self._find_trigger_edge(a_vals)
+            if edge_idx >= 0:
+                trigger_offset = edge_idx
+                # Shift data so edge is at position 0
+                a_vals = a_vals[trigger_offset:]
+                if b_vals is not None and len(b_vals) > trigger_offset:
+                    b_vals = b_vals[trigger_offset:]
+        
+        # Handle empty A-channel (dual mode: B arrived without A)
+        if len(a_vals) == 0 and b_vals is not None and len(b_vals) > 0:
+            # Show B data on both channels (or skip A update)
+            xs_b = list(range(len(b_vals)))
+            self.line0.set_data([], [])  # Clear A
+            if self.line1 is not None:
+                self.line1.set_data(xs_b, b_vals)
+            n = len(b_vals)
+        else:
+            # Normal path: A has data
+            xs = list(range(len(a_vals)))
+            self.line0.set_data(xs, a_vals)
+            if self.line1 is not None and b_vals is not None:
+                xs_b = list(range(len(b_vals)))
+                self.line1.set_data(xs_b, b_vals)
+            n = len(a_vals)
         # Авто-ось X по фактическому числу сэмплов, если включён авто-режим
         if self.ns_auto and n > 0:
             for ax in (self.ax0,) if self.ax1 is None else (self.ax0, self.ax1):
@@ -626,7 +735,9 @@ class LivePlot:
                     ax.set_xlim(0, n)
         # Оверлей с ns и каналами
         ch = 'A' if self.single else ('A+B' if b_vals is not None else 'A+…')
-        self.rate_text.set_text(f"seq={seq} | rate≈{rate_med:.2f} Hz")
+        # Show both RX rate (from device) and Display rate (GUI FPS)
+        disp_rate = g_status.snapshot()['display_rate'] if g_status else 0.0
+        self.rate_text.set_text(f"seq={seq} | RX≈{rate_med:.1f} Hz | Display≈{disp_rate:.1f} FPS")
         self.ns_text.set_text(f"ns={n} ({'auto' if self.ns_auto else 'fixed'}) | ch={ch}")
         if self.line1 is not None:
             return self.line0, self.line1, self.rate_text, self.ns_text
@@ -647,7 +758,8 @@ def main():
     ap.add_argument('--log', type=str, default=os.path.join(os.path.dirname(__file__), 'gui_oscilloscope.log'), help='Path to log file')
     ap.add_argument('--status-log-interval', type=float, default=10.0, help='Seconds between GUI status lines')
     ap.add_argument('--pkt-log-interval', type=float, default=0.0, help='Seconds between [PKT] log lines (<=0 to disable)')
-    ap.add_argument('--fps', type=int, default=60, help='Target GUI refresh FPS (display only)')
+    ap.add_argument('--fps', type=int, default=20, help='Target GUI refresh FPS (display only, device RX @ 200Hz)')
+    ap.add_argument('--trigger', type=int, default=0, help='Trigger level for edge sync (0=disabled, >0=threshold ADC value)')
     args = ap.parse_args()
 
     # init logger early
@@ -739,7 +851,9 @@ def main():
         time.sleep(0.30)
         _try_ctrl_status_once(600)
 
-    q = queue.Queue(maxsize=1000)
+    # CRITICAL: Queue size=1 for real-time display (always show LATEST frame)
+    # GUI displays at ~20 FPS, device sends at 200 Hz → drop intermediate frames
+    q = queue.Queue(maxsize=1)
     stop_ev = threading.Event()
     # Глобальный статус и логгер
     global g_status
@@ -754,7 +868,10 @@ def main():
     tprobe = threading.Thread(target=status_probe_thread, args=(handle, stop_ev, 1.5), daemon=True)
     tprobe.start()
 
-    plot = LivePlot(args.ns if args.ns>0 else 1360, args.single, ns_auto=(args.ns<=0))
+    plot = LivePlot(args.ns if args.ns>0 else 1360, args.single, ns_auto=(args.ns<=0), trigger_level=args.trigger)
+
+    # DEBUG: Глобальная переменная для проверки лестницы
+    _last_ladder_check = [0.0]  # используем список для mutable state в closure
 
     # generator of frames for animation
     def gen():
@@ -795,8 +912,23 @@ def main():
                             ns_limit = args.ns if args.ns and args.ns>0 else hdr_ns
                             ns = min(ns_limit, len(p)//2)
                             a_vals = [p[2*i] | (p[2*i+1]<<8) for i in range(ns)]
+                            
+                            # DEBUG: Проверка лестницы отключена — маркеры убраны
+                            if False:  # ОТКЛЮЧЕНО
+                                now = time.time()
+                                if now - _last_ladder_check[0] >= 1.0:
+                                    _last_ladder_check[0] = now
+                                    # Проверяем первые 5 ступеней: [0]=0, [100]=500, [200]=1000, [300]=1500, [400]=2000
+                                    s0 = a_vals[0] if len(a_vals) > 0 else -1
+                                    s100 = a_vals[100] if len(a_vals) > 100 else -1
+                                    s200 = a_vals[200] if len(a_vals) > 200 else -1
+                                    s300 = a_vals[300] if len(a_vals) > 300 else -1
+                                    s400 = a_vals[400] if len(a_vals) > 400 else -1
+                                    print(f"[HOST_RX] Ladder A (ns={len(a_vals)}): [0]={s0} [100]={s100} [200]={s200} [300]={s300} [400]={s400}")
+                            
                             if g_status is not None:
                                 g_status.on_pair_done(rate_med, h['seq'])
+                                g_status.on_display_frame()
                             yield (rate_med, h['seq'], a_vals, None)
                             break
                         else:
@@ -804,8 +936,8 @@ def main():
                             a_seq = h['seq']
                             a_buf = p
                             a_buf_t0 = time.time()
-                    elif not args.single and h['flags'] == 0x02 and a_buf is not None:
-                        # got B (pair with the latest A regardless of exact seq; device seq often alternates A/B)
+                    elif not args.single and h['flags'] == 0x02:
+                        # B-канал: обрабатываем независимо от A (асинхронная отрисовка)
                         # rate measurement by device timestamp (A-only)
                         ts_list.append(h['ts'])
                         if len(ts_list) > args.pairs:
@@ -818,20 +950,42 @@ def main():
                             rate_med = 1000.0/md if md>0 else 0.0
                         else:
                             rate_med = 0.0
-                        # unpack a,b as u16 LE
+                        # unpack B as u16 LE
                         hdr_ns = h['ns']
                         ns_limit = args.ns if args.ns and args.ns>0 else hdr_ns
-                        ns = min(ns_limit, (len(a_buf)//2) if a_buf is not None else 0, len(p)//2)
-                        a_vals = [a_buf[2*i] | (a_buf[2*i+1]<<8) for i in range(ns)] if a_buf is not None else []
-                        b_vals = [p[2*i] | (p[2*i+1]<<8) for i in range(ns)]
-                        # обновим статус по завершённой паре
-                        if g_status is not None:
-                            g_status.on_pair_done(rate_med, a_seq if a_seq is not None else h['seq'])
-                        yield (rate_med, a_seq if a_seq is not None else h['seq'], a_vals, b_vals)
-                        a_buf = None
-                        a_seq = None
+                        ns_b = min(ns_limit, len(p)//2)
+                        b_vals = [p[2*i] | (p[2*i+1]<<8) for i in range(ns_b)]
+                        # Если есть последний A с совместимым размером — выводим пару, иначе только B
+                        if a_buf is not None:
+                            ns_a = min(ns_limit, len(a_buf)//2)
+                            a_vals = [a_buf[2*i] | (a_buf[2*i+1]<<8) for i in range(ns_a)]
+                            ns = min(ns_a, ns_b)
+                            # DEBUG: Проверка лестницы B отключена
+                            if False:  # ОТКЛЮЧЕНО
+                                now_b = time.time()
+                                if now_b - _last_ladder_check[0] < 1.0:  # В течение 1 сек после A
+                                    s0_b = b_vals[0] if len(b_vals) > 0 else -1
+                                    s100_b = b_vals[100] if len(b_vals) > 100 else -1
+                                    s200_b = b_vals[200] if len(b_vals) > 200 else -1
+                                    s300_b = b_vals[300] if len(b_vals) > 300 else -1
+                                    s400_b = b_vals[400] if len(b_vals) > 400 else -1
+                                    print(f"[HOST_RX] Ladder B (ns={len(b_vals)}): [0]={s0_b} [100]={s100_b} [200]={s200_b} [300]={s300_b} [400]={s400_b}")
+                            
+                            # обновим статус по завершённой паре
+                            if g_status is not None:
+                                g_status.on_pair_done(rate_med, h['seq'])
+                                g_status.on_display_frame()
+                            yield (rate_med, h['seq'], a_vals[:ns], b_vals[:ns])
+                            a_buf = None
+                            a_seq = None
+                        else:
+                            # B пришёл без A — показываем только B (второй график пустой)
+                            if g_status is not None:
+                                g_status.on_pair_done(rate_med, h['seq'])
+                                g_status.on_display_frame()
+                            yield (rate_med, h['seq'], [], b_vals)
                         break
-                    # Фолбэк: если получили A, но B не пришёл быстро — выводим A-кадр одиночно
+                    # Фолбэк: если получили A, но B не пришёл быстро — выводим A-кадр одиночно (асинхронная отрисовка)
                     if not args.single and a_buf is not None and (time.time() - a_buf_t0) > pair_timeout:
                         # оценка частоты по A-меткам, если доступно
                         if last_a_ts is not None:
@@ -850,6 +1004,7 @@ def main():
                         a_vals = [a_buf[2*i] | (a_buf[2*i+1]<<8) for i in range(ns)]
                         if g_status is not None:
                             g_status.on_pair_done(rate_med, a_seq if a_seq is not None else (h['seq'] if 'seq' in h else 0))
+                            g_status.on_display_frame()
                         yield (rate_med, a_seq if a_seq is not None else (h['seq'] if 'seq' in h else 0), a_vals, None)
                         a_buf = None
                         a_seq = None

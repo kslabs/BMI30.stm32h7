@@ -1,0 +1,50 @@
+# Артефакты сборки (Make/STM32CubeIDE)
+Debug/**/*.o
+Debug/**/*.d
+Debug/**/*.su
+Debug/**/*.elf
+Debug/**/*.map
+Debug/**/*.list
+Debug/**/*.bin
+Debug/**/*.hex
+Debug/**/*.log
+Debug/*.txt
+Debug/*.out
+
+# Локальные логи/выводы VS Code
+.vscode/*.log
+.vscode/*stdout*.log
+.vscode/*stderr*.log
+.vscode/*summary*.json
+.vscode/serial_raw.log
+.vscode/quick_status_last.log
+.vscode/last-3x5-run.log
+.vscode/com*_*.txt
+.vscode/serial-monitor.pid
+
+# Артефакты HostTools
+HostTools/*.log
+HostTools/__pycache__/
+HostTools/*.pyc
+HostTools/*.png
+HostTools/host_smoke_summary.txt
+HostTools/dc_offset_samples.npz
+HostTools/dc_offset_samples.npz.bak
+HostTools/logs/
+HostTools/bmi30_config.json
+HostTools/bmi30_sel.json
+
+# Автогенерация (дата/время сборки)
+Core/Inc/build_autogen.h
+
+# Python кэш
+__pycache__/
+*.pyc
+
+# Локальные картинки (захваты/плоты)
+adc_waveforms.png
+
+# Локальные текстовые логи (не для коммитов)
+boot_log_latest.txt
+gui_debug.txt
+host_spike_log.txt

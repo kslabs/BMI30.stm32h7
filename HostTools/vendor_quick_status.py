@@ -105,7 +105,7 @@ def find_dev():
     try:
         cfg = dev.get_active_configuration()
         for intf in cfg:
-            if intf.bInterfaceNumber == 2:
+            if intf.bInterfaceNumber == 2 and intf.bAlternateSetting == 1:
                 eps = [ep.bEndpointAddress for ep in intf]
                 break
     except Exception:
@@ -116,7 +116,20 @@ def find_dev():
             dev.set_configuration()
             usb.util.claim_interface(dev, 2)
             dev.set_interface_altsetting(interface=2, alternate_setting=1)
-            print("[OK] IF#2 alt=1 set after retry")
+            # Re-check after retry
+            eps = []
+            try:
+                cfg = dev.get_active_configuration()
+                for intf in cfg:
+                    if intf.bInterfaceNumber == 2 and intf.bAlternateSetting == 1:
+                        eps = [ep.bEndpointAddress for ep in intf]
+                        break
+            except Exception:
+                pass
+            if EP_IN in eps and EP_OUT in eps:
+                print("[OK] IF#2 alt=1 set after retry")
+            else:
+                print(f"[ERR] IF#2 alt=1 enabled but endpoints still missing; eps={eps}")
         except Exception as e:
             print(f"[ERR] Unable to enable IF#2 alt=1: {e}")
     

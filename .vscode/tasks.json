@@ -48,7 +48,7 @@
 			"group": "build"
 		},
 		{
-			"label": "Serial: Start COM4 @115200",
+			"label": "Serial: Start COM11 @115200",
 			"type": "shell",
 			"command": "powershell.exe",
 			"args": [
@@ -58,7 +58,7 @@
 				"-File",
 				".vscode/serial-monitor.ps1",
 				"-Port",
-				"COM4",
+				"COM11",
 				"-Baud",
 				"115200"
 			],
@@ -90,7 +90,7 @@
 			}
 		},
 		{
-			"label": "Serial: VND_* monitor (COM4)",
+			"label": "Serial: VND_* monitor (COM11)",
 			"type": "shell",
 			"command": "powershell.exe",
 			"args": [
@@ -100,7 +100,7 @@
 				"-File",
 				".vscode/serial-monitor.ps1",
 				"-Port",
-				"COM4",
+				"COM11",
 				"-Baud",
 				"115200",
 				"-FilterRegex",
@@ -113,7 +113,7 @@
 			"group": "none"
 		},
 		{
-			"label": "Serial: Monitor COM4 (raw)",
+			"label": "Serial: DC monitor (COM11)",
 			"type": "shell",
 			"command": "powershell.exe",
 			"args": [
@@ -123,7 +123,31 @@
 				"-File",
 				".vscode/serial-monitor.ps1",
 				"-Port",
-				"COM4",
+				"COM11",
+				"-Baud",
+				"115200",
+				"-FilterRegex",
+				"^\\[DC\\]",
+				"-LogPath",
+				".vscode/dc.log"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "none",
+			"presentation": { "reveal": "always", "panel": "dedicated" }
+		},
+		{
+			"label": "Serial: Monitor COM11 (raw)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/serial-monitor.ps1",
+				"-Port",
+				"COM11",
 				"-Baud",
 				"115200"
 			],
@@ -155,7 +179,7 @@
 			"presentation": { "reveal": "always", "panel": "shared" }
 		},
 		{
-			"label": "Serial: Monitor COM4 (raw to file)",
+			"label": "Serial: Monitor COM11 (raw to file)",
 			"type": "shell",
 			"command": "powershell.exe",
 			"args": [
@@ -165,7 +189,7 @@
 				"-File",
 				".vscode/serial-monitor.ps1",
 				"-Port",
-				"COM4",
+				"COM11",
 				"-Baud",
 				"115200",
 				"-LogPath",
@@ -479,6 +503,66 @@
 			"presentation": {"reveal": "always", "panel": "shared"}
 		},
 		{
+			"label": "Host: Verify LOSSLESS (seq) 60s",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"HostTools/vendor_stream_read.py",
+				"--stream-mode","1",
+				"--chmode","2",
+				"--ab-strict",
+				"--seq-strict",
+				"--warmup-pairs","50",
+				"--status-interval","0",
+				"--secs","60",
+				"--quiet"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"}
+		},
+		{
+			"label": "Host: Verify LOSSLESS (seq) 10s",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"HostTools/vendor_stream_read.py",
+				"--stream-mode","1",
+				"--chmode","2",
+				"--ab-strict",
+				"--seq-strict",
+				"--warmup-pairs","50",
+				"--status-interval","0",
+				"--secs","10",
+				"--quiet"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"}
+		},
+		{
+			"label": "Host: Verify LOSSLESS A-only (seq) 60s",
+			"type": "shell",
+			"command": "py",
+			"args": [
+				"-3",
+				"HostTools/vendor_stream_read.py",
+				"--verify","mono",
+				"--stream-mode","1",
+				"--chmode","0",
+				"--seq-strict",
+				"--warmup-pairs","200",
+				"--status-interval","0",
+				"--secs","60",
+				"--quiet"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"}
+		},
+		{
 			"label": "Host: Stream 30s (run #1)",
 			"type": "shell",
 			"command": "powershell",
@@ -597,7 +681,7 @@
 		{
 			"label": "Run full host test",
 			"dependsOn": [
-				"Serial: Monitor COM4 (raw)",
+				"Serial: Monitor COM11 (raw)",
 				"Host: START+READ (robust)"
 			],
 			"dependsOrder": "sequence",
@@ -677,7 +761,7 @@
 			"group": "build"
 		},
 		{
-			"label": "Build+Flash",
+			"label": "Build+Flash (inline)",
 			"type": "shell",
 			"command": "powershell",
 			"args": [
@@ -738,27 +822,35 @@
 		{
 			"label": "Run quick status",
 			"type": "shell",
-			"command": "quick_status.cmd",
+			"command": ".\\quick_status.cmd",
 			"args": [],
+			"options": { "cwd": "${workspaceFolder}" },
 			"isBackground": false,
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true
+			},
 			"group": "none"
 		},
 		{
 			"label": "Run quick status (30s)",
 			"type": "shell",
-			"command": "quick_status.cmd",
+			"command": ".\\quick_status.cmd",
 			"args": ["--secs", "30"],
+			"options": { "cwd": "${workspaceFolder}" },
 			"isBackground": false,
 			"group": "none",
 			"presentation": {
 				"reveal": "always",
-				"panel": "shared"
+				"panel": "dedicated",
+				"clear": true
 			}
 		},
 		{
 			"label": "Catch stall: raw log + quick (30s)",
 			"dependsOn": [
-				"Serial: Monitor COM4 (raw to file)",
+				"Serial: Monitor COM11 (raw to file)",
 				"Run quick status (30s)"
 			],
 			"dependsOrder": "sequence",
@@ -811,12 +903,53 @@
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope.py\" --ns 0 --profile 0 --watchdog" 
+				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope_optimized.py\" --ns 0 --profile 0 --watchdog" 
 			],
 			"isBackground": false,
 			"group": "none",
 			"presentation": {"reveal": "always", "panel": "shared"},
-			"detail": "Dual-channel auto ns (profile 0 full buffer); remove --single to show оба канала"
+			"detail": "Optimized oscilloscope (4 lines: A_even/A_odd/B_even/B_odd)"
+		},
+		{
+			"label": "Run GUI oscilloscope (optimized)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope_optimized.py\" --ns 0 --profile 0 --watchdog" 
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"},
+			"detail": "Optimized version - better performance"
+		},
+		{
+			"label": "Run GUI oscilloscope (AVG_ROI mode=2)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope_optimized.py\" --profile 0 --stream-mode 2 --avg-n 20 --roi-start 280 --roi-len 200 --watchdog"
+			],
+			"isBackground": false,
+			"group": "none",
+			"presentation": {"reveal": "always", "panel": "shared"},
+			"detail": "Oscilloscope in config=2: AVG_ROI (stream_mode=2), avg_n=20, ROI=280..480, paired mode"
+		},
+		{
+			"label": "USB: Reset + Run GUI (AVG_ROI mode=2)",
+			"dependsOn": [
+				"USB: Reset sequence (soft→deep→bulk→port)",
+				"Run GUI oscilloscope (AVG_ROI mode=2)"
+			],
+			"dependsOrder": "sequence",
+			"group": "none"
 		},
 		{
 			"label": "Locate GUI oscilloscope (path)",
@@ -992,7 +1125,8 @@
 			"id": "cdcPort",
 			"type": "promptString",
 			"description": "CDC COM port (не ST-LINK, посмотрите в Диспетчере устройств)",
-			"default": "COM4"
+			"default": "COM11"
 		}
 	]
 }
+

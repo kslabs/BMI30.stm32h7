@@ -89,6 +89,7 @@ void Error_Handler(void);
 // Экспорт дескрипторов периферии для модулей
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
+extern TIM_HandleTypeDef htim16;
 // Экспорт системного счётчика SysTick тиков
 extern volatile uint32_t systick_heartbeat;
 /* USER CODE END EFP */
@@ -119,6 +120,12 @@ extern volatile uint32_t systick_heartbeat;
 #define LCD_RST_Pin GPIO_PIN_15
 #define LCD_RST_GPIO_Port GPIOE
 
+// Синхронизация: вход (slave) и выход (master)
+#define SYNC_IN_Pin GPIO_PIN_5
+#define SYNC_IN_GPIO_Port GPIOD
+#define SYNC_OUT_Pin GPIO_PIN_8
+#define SYNC_OUT_GPIO_Port GPIOB
+
 // --- Профили потоков ADC (буфер/частота) ---
 // Профиль B (default): f_buf=300 Гц, N=912 (Fs=273600 Гц)
 // Профиль C (high):    f_buf=300 Гц, N=944 (Fs=283200 Гц)
@@ -132,7 +139,7 @@ typedef struct {
 } adc_stream_profile_t;
 
 enum {
-  ADC_PROFILE_A_200HZ = 0,       /* 1360 @ 200Hz (Fs≈272kHz) */
+  ADC_PROFILE_A_200HZ = 0,       /* 1200 @ 200Hz (Fs≈240kHz) */
   ADC_PROFILE_B_DEFAULT = 1,     /*  912 @ 300Hz (Fs≈273.6kHz) */
   ADC_PROFILE_C_HIGH    = 2,     /*  944 @ 300Hz (Fs≈283.2kHz) */
   ADC_PROFILE_D_MAX     = 3,     /*  976 @ 300Hz (Fs≈292.8kHz) */
@@ -144,7 +151,7 @@ enum {
 #define FIFO_FRAMES       32u     // Глубина FIFO: увеличена с 8 до 32 для диагностики и предобработки (16 бит ADC)
 
 // Компиляционный дефолт (будет заменён рантайм профилем)
-#define FRAME_SAMPLES_DEFAULT 912u
+#define FRAME_SAMPLES_DEFAULT 1200u
 
 // Текущий активный профиль (обновляется вызовом set)
 uint8_t adc_stream_get_profile(void);
