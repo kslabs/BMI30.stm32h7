@@ -57,8 +57,9 @@ def parse_frame_header(data: bytes):
     
     ver, flags, seq, ts = struct.unpack_from('<BBII', data, 2)
     total_samples, zone_cnt = struct.unpack_from('<HH', data, 12)
-    zone1_offset, zone1_len = struct.unpack_from('<HH', data, 16)
-    zone2_offset, zone2_len = struct.unpack_from('<HH', data, 20)
+    # ИСПРАВЛЕНО: zone1_offset/zone1_len/zone2_offset/zone2_len - это uint32
+    zone1_offset, zone1_len = struct.unpack_from('<II', data, 16)
+    zone2_offset, zone2_len = struct.unpack_from('<II', data, 24)
     
     return {
         'ver': ver,

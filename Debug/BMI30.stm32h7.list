@@ -35,15 +35,15 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  15 .debug_macro  0003e408  00000000  00000000  0007711d  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_line   0003c120  00000000  00000000  000b5525  2**0
+ 16 .debug_line   0003c123  00000000  00000000  000b5525  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_str    00177f07  00000000  00000000  000f1645  2**0
+ 17 .debug_str    00177f07  00000000  00000000  000f1648  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .comment      00000043  00000000  00000000  0026954c  2**0
+ 18 .comment      00000043  00000000  00000000  0026954f  2**0
                   CONTENTS, READONLY
- 19 .debug_frame  0000c0c8  00000000  00000000  00269590  2**2
+ 19 .debug_frame  0000c0c8  00000000  00000000  00269594  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 20 .debug_line_str 00000073  00000000  00000000  00275658  2**0
+ 20 .debug_line_str 00000073  00000000  00000000  0027565c  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -18061,10 +18061,10 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
  8008d18:	08009b05 	.word	0x08009b05
  8008d1c:	08009b97 	.word	0x08009b97
  8008d20:	080097ad 	.word	0x080097ad
- 8008d24:	08009887 	.word	0x08009887
+ 8008d24:	08009889 	.word	0x08009889
  8008d28:	08009eeb 	.word	0x08009eeb
- 8008d2c:	0800993f 	.word	0x0800993f
- 8008d30:	080098d5 	.word	0x080098d5
+ 8008d2c:	08009941 	.word	0x08009941
+ 8008d30:	080098d7 	.word	0x080098d7
  8008d34:	08009f65 	.word	0x08009f65
  8008d38:	08008d89 	.word	0x08008d89
  8008d3c:	0800930d 	.word	0x0800930d
@@ -19544,7 +19544,8 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
 
                 /* Для требуемого режима "lossless ROI" выставляем дефолтное окно 200 семплов
                    со сдвигом по частоте (база 200 Гц -> старт 280).
-                   Хост всё равно может переопределить через SET_WINDOWS. */
+                   Хост всё равно может переопределить через SET_WINDOWS.
+                   Не перезаписываем ROI, если хост уже установил его (win_auto==0). */
                 if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI){
  8009862:	4b4e      	ldr	r3, [pc, #312]	@ (800999c <USBD_VND_DataReceived+0xcec>)
  8009864:	781b      	ldrb	r3, [r3, #0]
@@ -19555,155 +19556,156 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
  800986e:	781b      	ldrb	r3, [r3, #0]
  8009870:	b2db      	uxtb	r3, r3
  8009872:	2b02      	cmp	r3, #2
- 8009874:	d104      	bne.n	8009880 <USBD_VND_DataReceived+0xbd0>
-                    win_auto = 1;
+ 8009874:	d105      	bne.n	8009882 <USBD_VND_DataReceived+0xbd2>
+                    if(win_auto != 0){
  8009876:	4b48      	ldr	r3, [pc, #288]	@ (8009998 <USBD_VND_DataReceived+0xce8>)
- 8009878:	2201      	movs	r2, #1
- 800987a:	701a      	strb	r2, [r3, #0]
-                    vnd_apply_auto_roi_window();
- 800987c:	f7f7 fd84 	bl	8001388 <vnd_apply_auto_roi_window>
+ 8009878:	781b      	ldrb	r3, [r3, #0]
+ 800987a:	2b00      	cmp	r3, #0
+ 800987c:	d001      	beq.n	8009882 <USBD_VND_DataReceived+0xbd2>
+                        vnd_apply_auto_roi_window();
+ 800987e:	f7f7 fd83 	bl	8001388 <vnd_apply_auto_roi_window>
+                    }
                 }
                 vnd_update_lcd_params();
- 8009880:	f7fa f848 	bl	8003914 <vnd_update_lcd_params>
+ 8009882:	f7fa f847 	bl	8003914 <vnd_update_lcd_params>
             }
             break;
- 8009884:	e37c      	b.n	8009f80 <USBD_VND_DataReceived+0x12d0>
+ 8009886:	e37b      	b.n	8009f80 <USBD_VND_DataReceived+0x12d0>
 
         case VND_CMD_SET_DC_ADAPT:
             /* Управление адаптацией DC: 0x00=заморозить, 0x01=включить
                При детекции сигнала на RPI можно заморозить обучение DC,
                оставив вычитание текущих значений. */
             if(len >= 2)
- 8009886:	683b      	ldr	r3, [r7, #0]
- 8009888:	2b01      	cmp	r3, #1
- 800988a:	f240 837b 	bls.w	8009f84 <USBD_VND_DataReceived+0x12d4>
+ 8009888:	683b      	ldr	r3, [r7, #0]
+ 800988a:	2b01      	cmp	r3, #1
+ 800988c:	f240 837a 	bls.w	8009f84 <USBD_VND_DataReceived+0x12d4>
             {
                 uint8_t enable = data[1];
- 800988e:	687b      	ldr	r3, [r7, #4]
- 8009890:	3301      	adds	r3, #1
- 8009892:	781b      	ldrb	r3, [r3, #0]
- 8009894:	f887 3083 	strb.w	r3, [r7, #131]	@ 0x83
+ 8009890:	687b      	ldr	r3, [r7, #4]
+ 8009892:	3301      	adds	r3, #1
+ 8009894:	781b      	ldrb	r3, [r3, #0]
+ 8009896:	f887 3083 	strb.w	r3, [r7, #131]	@ 0x83
                 vnd_dc_adapt_enabled = (enable != 0) ? 1 : 0;
- 8009898:	f897 3083 	ldrb.w	r3, [r7, #131]	@ 0x83
- 800989c:	2b00      	cmp	r3, #0
- 800989e:	bf14      	ite	ne
- 80098a0:	2301      	movne	r3, #1
- 80098a2:	2300      	moveq	r3, #0
- 80098a4:	b2db      	uxtb	r3, r3
- 80098a6:	461a      	mov	r2, r3
- 80098a8:	4b44      	ldr	r3, [pc, #272]	@ (80099bc <USBD_VND_DataReceived+0xd0c>)
- 80098aa:	701a      	strb	r2, [r3, #0]
+ 800989a:	f897 3083 	ldrb.w	r3, [r7, #131]	@ 0x83
+ 800989e:	2b00      	cmp	r3, #0
+ 80098a0:	bf14      	ite	ne
+ 80098a2:	2301      	movne	r3, #1
+ 80098a4:	2300      	moveq	r3, #0
+ 80098a6:	b2db      	uxtb	r3, r3
+ 80098a8:	461a      	mov	r2, r3
+ 80098aa:	4b44      	ldr	r3, [pc, #272]	@ (80099bc <USBD_VND_DataReceived+0xd0c>)
+ 80098ac:	701a      	strb	r2, [r3, #0]
                 printf("[CMD_IND] SET_DC_ADAPT %s\r\n", vnd_dc_adapt_enabled ? "ACTIVE" : "FREEZE");
- 80098ac:	4b43      	ldr	r3, [pc, #268]	@ (80099bc <USBD_VND_DataReceived+0xd0c>)
- 80098ae:	781b      	ldrb	r3, [r3, #0]
- 80098b0:	b2db      	uxtb	r3, r3
- 80098b2:	2b00      	cmp	r3, #0
- 80098b4:	d001      	beq.n	80098ba <USBD_VND_DataReceived+0xc0a>
- 80098b6:	4b42      	ldr	r3, [pc, #264]	@ (80099c0 <USBD_VND_DataReceived+0xd10>)
- 80098b8:	e000      	b.n	80098bc <USBD_VND_DataReceived+0xc0c>
- 80098ba:	4b42      	ldr	r3, [pc, #264]	@ (80099c4 <USBD_VND_DataReceived+0xd14>)
- 80098bc:	4619      	mov	r1, r3
- 80098be:	4842      	ldr	r0, [pc, #264]	@ (80099c8 <USBD_VND_DataReceived+0xd18>)
- 80098c0:	f01c fa9c 	bl	8025dfc <iprintf>
+ 80098ae:	4b43      	ldr	r3, [pc, #268]	@ (80099bc <USBD_VND_DataReceived+0xd0c>)
+ 80098b0:	781b      	ldrb	r3, [r3, #0]
+ 80098b2:	b2db      	uxtb	r3, r3
+ 80098b4:	2b00      	cmp	r3, #0
+ 80098b6:	d001      	beq.n	80098bc <USBD_VND_DataReceived+0xc0c>
+ 80098b8:	4b41      	ldr	r3, [pc, #260]	@ (80099c0 <USBD_VND_DataReceived+0xd10>)
+ 80098ba:	e000      	b.n	80098be <USBD_VND_DataReceived+0xc0e>
+ 80098bc:	4b41      	ldr	r3, [pc, #260]	@ (80099c4 <USBD_VND_DataReceived+0xd14>)
+ 80098be:	4619      	mov	r1, r3
+ 80098c0:	4841      	ldr	r0, [pc, #260]	@ (80099c8 <USBD_VND_DataReceived+0xd18>)
+ 80098c2:	f01c fa9b 	bl	8025dfc <iprintf>
                 cdc_logf("EVT SET_DC_ADAPT %u", (unsigned)vnd_dc_adapt_enabled);
- 80098c4:	4b3d      	ldr	r3, [pc, #244]	@ (80099bc <USBD_VND_DataReceived+0xd0c>)
- 80098c6:	781b      	ldrb	r3, [r3, #0]
- 80098c8:	b2db      	uxtb	r3, r3
- 80098ca:	4619      	mov	r1, r3
- 80098cc:	483f      	ldr	r0, [pc, #252]	@ (80099cc <USBD_VND_DataReceived+0xd1c>)
- 80098ce:	f7fa f871 	bl	80039b4 <cdc_logf>
+ 80098c6:	4b3d      	ldr	r3, [pc, #244]	@ (80099bc <USBD_VND_DataReceived+0xd0c>)
+ 80098c8:	781b      	ldrb	r3, [r3, #0]
+ 80098ca:	b2db      	uxtb	r3, r3
+ 80098cc:	4619      	mov	r1, r3
+ 80098ce:	483f      	ldr	r0, [pc, #252]	@ (80099cc <USBD_VND_DataReceived+0xd1c>)
+ 80098d0:	f7fa f870 	bl	80039b4 <cdc_logf>
             }
             break;
- 80098d2:	e357      	b.n	8009f84 <USBD_VND_DataReceived+0x12d4>
+ 80098d4:	e356      	b.n	8009f84 <USBD_VND_DataReceived+0x12d4>
             
         case VND_CMD_CALIB_DC_FAST:
             /* Запустить быструю адаптацию DC на N кадров (например 50-100) */
             if(len >= 2)
- 80098d4:	683b      	ldr	r3, [r7, #0]
- 80098d6:	2b01      	cmp	r3, #1
- 80098d8:	f240 8356 	bls.w	8009f88 <USBD_VND_DataReceived+0x12d8>
+ 80098d6:	683b      	ldr	r3, [r7, #0]
+ 80098d8:	2b01      	cmp	r3, #1
+ 80098da:	f240 8355 	bls.w	8009f88 <USBD_VND_DataReceived+0x12d8>
             {
                 uint16_t frames = (uint16_t)data[1];
- 80098dc:	687b      	ldr	r3, [r7, #4]
- 80098de:	3301      	adds	r3, #1
- 80098e0:	781b      	ldrb	r3, [r3, #0]
- 80098e2:	f8a7 30c0 	strh.w	r3, [r7, #192]	@ 0xc0
+ 80098de:	687b      	ldr	r3, [r7, #4]
+ 80098e0:	3301      	adds	r3, #1
+ 80098e2:	781b      	ldrb	r3, [r3, #0]
+ 80098e4:	f8a7 30c0 	strh.w	r3, [r7, #192]	@ 0xc0
                 if (len >= 3) frames |= ((uint16_t)data[2] << 8); // allow 16-bit
- 80098e6:	683b      	ldr	r3, [r7, #0]
- 80098e8:	2b02      	cmp	r3, #2
- 80098ea:	d90b      	bls.n	8009904 <USBD_VND_DataReceived+0xc54>
- 80098ec:	687b      	ldr	r3, [r7, #4]
- 80098ee:	3302      	adds	r3, #2
- 80098f0:	781b      	ldrb	r3, [r3, #0]
- 80098f2:	b21b      	sxth	r3, r3
- 80098f4:	021b      	lsls	r3, r3, #8
- 80098f6:	b21a      	sxth	r2, r3
- 80098f8:	f9b7 30c0 	ldrsh.w	r3, [r7, #192]	@ 0xc0
- 80098fc:	4313      	orrs	r3, r2
- 80098fe:	b21b      	sxth	r3, r3
- 8009900:	f8a7 30c0 	strh.w	r3, [r7, #192]	@ 0xc0
+ 80098e8:	683b      	ldr	r3, [r7, #0]
+ 80098ea:	2b02      	cmp	r3, #2
+ 80098ec:	d90b      	bls.n	8009906 <USBD_VND_DataReceived+0xc56>
+ 80098ee:	687b      	ldr	r3, [r7, #4]
+ 80098f0:	3302      	adds	r3, #2
+ 80098f2:	781b      	ldrb	r3, [r3, #0]
+ 80098f4:	b21b      	sxth	r3, r3
+ 80098f6:	021b      	lsls	r3, r3, #8
+ 80098f8:	b21a      	sxth	r2, r3
+ 80098fa:	f9b7 30c0 	ldrsh.w	r3, [r7, #192]	@ 0xc0
+ 80098fe:	4313      	orrs	r3, r2
+ 8009900:	b21b      	sxth	r3, r3
+ 8009902:	f8a7 30c0 	strh.w	r3, [r7, #192]	@ 0xc0
                 
                 if (frames > 1000) frames = 1000;
- 8009904:	f8b7 30c0 	ldrh.w	r3, [r7, #192]	@ 0xc0
- 8009908:	f5b3 7f7a 	cmp.w	r3, #1000	@ 0x3e8
- 800990c:	d903      	bls.n	8009916 <USBD_VND_DataReceived+0xc66>
- 800990e:	f44f 737a 	mov.w	r3, #1000	@ 0x3e8
- 8009912:	f8a7 30c0 	strh.w	r3, [r7, #192]	@ 0xc0
+ 8009906:	f8b7 30c0 	ldrh.w	r3, [r7, #192]	@ 0xc0
+ 800990a:	f5b3 7f7a 	cmp.w	r3, #1000	@ 0x3e8
+ 800990e:	d903      	bls.n	8009918 <USBD_VND_DataReceived+0xc68>
+ 8009910:	f44f 737a 	mov.w	r3, #1000	@ 0x3e8
+ 8009914:	f8a7 30c0 	strh.w	r3, [r7, #192]	@ 0xc0
                 vnd_dc_fast_frames = frames;
- 8009916:	4a2e      	ldr	r2, [pc, #184]	@ (80099d0 <USBD_VND_DataReceived+0xd20>)
- 8009918:	f8b7 30c0 	ldrh.w	r3, [r7, #192]	@ 0xc0
- 800991c:	8013      	strh	r3, [r2, #0]
+ 8009918:	4a2d      	ldr	r2, [pc, #180]	@ (80099d0 <USBD_VND_DataReceived+0xd20>)
+ 800991a:	f8b7 30c0 	ldrh.w	r3, [r7, #192]	@ 0xc0
+ 800991e:	8013      	strh	r3, [r2, #0]
                 
                 // Ensure adapt is enabled so it actually runs
                 vnd_dc_adapt_enabled = 1;
- 800991e:	4b27      	ldr	r3, [pc, #156]	@ (80099bc <USBD_VND_DataReceived+0xd0c>)
- 8009920:	2201      	movs	r2, #1
- 8009922:	701a      	strb	r2, [r3, #0]
+ 8009920:	4b26      	ldr	r3, [pc, #152]	@ (80099bc <USBD_VND_DataReceived+0xd0c>)
+ 8009922:	2201      	movs	r2, #1
+ 8009924:	701a      	strb	r2, [r3, #0]
                 
                 printf("[CMD_IND] CALIB_DC_FAST frames=%u\r\n", (unsigned)frames);
- 8009924:	f8b7 30c0 	ldrh.w	r3, [r7, #192]	@ 0xc0
- 8009928:	4619      	mov	r1, r3
- 800992a:	482a      	ldr	r0, [pc, #168]	@ (80099d4 <USBD_VND_DataReceived+0xd24>)
- 800992c:	f01c fa66 	bl	8025dfc <iprintf>
+ 8009926:	f8b7 30c0 	ldrh.w	r3, [r7, #192]	@ 0xc0
+ 800992a:	4619      	mov	r1, r3
+ 800992c:	4829      	ldr	r0, [pc, #164]	@ (80099d4 <USBD_VND_DataReceived+0xd24>)
+ 800992e:	f01c fa65 	bl	8025dfc <iprintf>
                 cdc_logf("EVT CALIB_DC_FAST %u", (unsigned)frames);
- 8009930:	f8b7 30c0 	ldrh.w	r3, [r7, #192]	@ 0xc0
- 8009934:	4619      	mov	r1, r3
- 8009936:	4828      	ldr	r0, [pc, #160]	@ (80099d8 <USBD_VND_DataReceived+0xd28>)
- 8009938:	f7fa f83c 	bl	80039b4 <cdc_logf>
+ 8009932:	f8b7 30c0 	ldrh.w	r3, [r7, #192]	@ 0xc0
+ 8009936:	4619      	mov	r1, r3
+ 8009938:	4827      	ldr	r0, [pc, #156]	@ (80099d8 <USBD_VND_DataReceived+0xd28>)
+ 800993a:	f7fa f83b 	bl	80039b4 <cdc_logf>
             }
             break;
- 800993c:	e324      	b.n	8009f88 <USBD_VND_DataReceived+0x12d8>
+ 800993e:	e323      	b.n	8009f88 <USBD_VND_DataReceived+0x12d8>
 
         case VND_CMD_SET_SYNC_MODE:
             if(len >= 2)
- 800993e:	683b      	ldr	r3, [r7, #0]
- 8009940:	2b01      	cmp	r3, #1
- 8009942:	f240 8323 	bls.w	8009f8c <USBD_VND_DataReceived+0x12dc>
+ 8009940:	683b      	ldr	r3, [r7, #0]
+ 8009942:	2b01      	cmp	r3, #1
+ 8009944:	f240 8322 	bls.w	8009f8c <USBD_VND_DataReceived+0x12dc>
             {
                 uint8_t mode = data[1];
- 8009946:	687b      	ldr	r3, [r7, #4]
- 8009948:	3301      	adds	r3, #1
- 800994a:	781b      	ldrb	r3, [r3, #0]
- 800994c:	f887 30bf 	strb.w	r3, [r7, #191]	@ 0xbf
+ 8009948:	687b      	ldr	r3, [r7, #4]
+ 800994a:	3301      	adds	r3, #1
+ 800994c:	781b      	ldrb	r3, [r3, #0]
+ 800994e:	f887 30bf 	strb.w	r3, [r7, #191]	@ 0xbf
                 if(mode > VND_SYNC_MODE_OFF) mode = VND_SYNC_MODE_MASTER;
- 8009950:	f897 30bf 	ldrb.w	r3, [r7, #191]	@ 0xbf
- 8009954:	2b02      	cmp	r3, #2
- 8009956:	d902      	bls.n	800995e <USBD_VND_DataReceived+0xcae>
- 8009958:	2300      	movs	r3, #0
- 800995a:	f887 30bf 	strb.w	r3, [r7, #191]	@ 0xbf
+ 8009952:	f897 30bf 	ldrb.w	r3, [r7, #191]	@ 0xbf
+ 8009956:	2b02      	cmp	r3, #2
+ 8009958:	d902      	bls.n	8009960 <USBD_VND_DataReceived+0xcb0>
+ 800995a:	2300      	movs	r3, #0
+ 800995c:	f887 30bf 	strb.w	r3, [r7, #191]	@ 0xbf
                 vnd_sync_apply_mode(mode);
- 800995e:	f897 30bf 	ldrb.w	r3, [r7, #191]	@ 0xbf
- 8009962:	4618      	mov	r0, r3
- 8009964:	f7f7 fd70 	bl	8001448 <vnd_sync_apply_mode>
+ 8009960:	f897 30bf 	ldrb.w	r3, [r7, #191]	@ 0xbf
+ 8009964:	4618      	mov	r0, r3
+ 8009966:	f7f7 fd6f 	bl	8001448 <vnd_sync_apply_mode>
                 printf("[CMD_IND] SET_SYNC_MODE %u\r\n", (unsigned)mode);
- 8009968:	f897 30bf 	ldrb.w	r3, [r7, #191]	@ 0xbf
- 800996c:	4619      	mov	r1, r3
- 800996e:	481b      	ldr	r0, [pc, #108]	@ (80099dc <USBD_VND_DataReceived+0xd2c>)
- 8009970:	f01c fa44 	bl	8025dfc <iprintf>
+ 800996a:	f897 30bf 	ldrb.w	r3, [r7, #191]	@ 0xbf
+ 800996e:	4619      	mov	r1, r3
+ 8009970:	481a      	ldr	r0, [pc, #104]	@ (80099dc <USBD_VND_DataReceived+0xd2c>)
+ 8009972:	f01c fa43 	bl	8025dfc <iprintf>
             }
             break;
- 8009974:	e30a      	b.n	8009f8c <USBD_VND_DataReceived+0x12dc>
- 8009976:	bf00      	nop
+ 8009976:	e309      	b.n	8009f8c <USBD_VND_DataReceived+0x12dc>
  8009978:	24000000 	.word	0x24000000
  800997c:	58020000 	.word	0x58020000
  8009980:	58020400 	.word	0x58020400

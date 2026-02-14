@@ -74,10 +74,10 @@
 ../USB_DEVICE/App/usb_vendor_app.c:4002:6:HAL_TIM_IC_CaptureCallback	40	static
 ../USB_DEVICE/App/usb_vendor_app.c:4030:6:USBD_VND_TxCplt	232	static
 ../USB_DEVICE/App/usb_vendor_app.c:4299:6:USBD_VND_DataReceived	240	static
-../USB_DEVICE/App/usb_vendor_app.c:4954:10:vnd_get_last_txcplt_ms	4	static
-../USB_DEVICE/App/usb_vendor_app.c:4960:10:vnd_get_total_tx_bytes	4	static
-../USB_DEVICE/App/usb_vendor_app.c:4966:10:vnd_get_total_tx_samples	4	static
-../USB_DEVICE/App/usb_vendor_app.c:4974:24:tick_diff32	16	static
-../USB_DEVICE/App/usb_vendor_app.c:4978:6:vnd_diag_log_possible_stall	224	static
-../USB_DEVICE/App/usb_vendor_app.c:5042:6:adc_stream_on_new_frames	16	static
-../USB_DEVICE/App/usb_vendor_app.c:5050:6:vnd_get_adc_minmax	88	static
+../USB_DEVICE/App/usb_vendor_app.c:4956:10:vnd_get_last_txcplt_ms	4	static
+../USB_DEVICE/App/usb_vendor_app.c:4962:10:vnd_get_total_tx_bytes	4	static
+../USB_DEVICE/App/usb_vendor_app.c:4968:10:vnd_get_total_tx_samples	4	static
+../USB_DEVICE/App/usb_vendor_app.c:4976:24:tick_diff32	16	static
+../USB_DEVICE/App/usb_vendor_app.c:4980:6:vnd_diag_log_possible_stall	224	static
+../USB_DEVICE/App/usb_vendor_app.c:5044:6:adc_stream_on_new_frames	16	static
+../USB_DEVICE/App/usb_vendor_app.c:5052:6:vnd_get_adc_minmax	88	static

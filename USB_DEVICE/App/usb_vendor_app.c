@@ -4706,10 +4706,12 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
 
                 /* Для требуемого режима "lossless ROI" выставляем дефолтное окно 200 семплов
                    со сдвигом по частоте (база 200 Гц -> старт 280).
-                   Хост всё равно может переопределить через SET_WINDOWS. */
+                   Хост всё равно может переопределить через SET_WINDOWS.
+                   Не перезаписываем ROI, если хост уже установил его (win_auto==0). */
                 if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI){
-                    win_auto = 1;
-                    vnd_apply_auto_roi_window();
+                    if(win_auto != 0){
+                        vnd_apply_auto_roi_window();
+                    }
                 }
                 vnd_update_lcd_params();
             }
