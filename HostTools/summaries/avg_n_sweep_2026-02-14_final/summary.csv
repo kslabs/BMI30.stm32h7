@@ -1,0 +1,9 @@
+avg_n,expected_pairs_fps,actual_pairs_fps,ratio,seq_gaps,seq_dupes,in_errors,timeouts,log_file
+8,25,15.8,0.632,0,0,0,0,HostTools\summaries\avg_n_sweep_2026-02-14_final\avg_n_8.log
+16,12.5,8.1,0.648,0,0,0,0,HostTools\summaries\avg_n_sweep_2026-02-14_final\avg_n_16.log
+24,8.333,5.5,0.66,0,0,0,0,HostTools\summaries\avg_n_sweep_2026-02-14_final\avg_n_24.log
+32,6.25,461.5,73.84,0,0,12,0,HostTools\summaries\avg_n_sweep_2026-02-14_final\avg_n_32.log
+40,5,0.0,0,0,0,12,0,HostTools\summaries\avg_n_sweep_2026-02-14_final\avg_n_40.log
+48,4.167,0.0,0,0,0,12,0,HostTools\summaries\avg_n_sweep_2026-02-14_final\avg_n_48.log
+56,3.571,0.0,0,0,0,12,0,HostTools\summaries\avg_n_sweep_2026-02-14_final\avg_n_56.log
+64,3.125,0.0,0,0,0,12,0,HostTools\summaries\avg_n_sweep_2026-02-14_final\avg_n_64.log

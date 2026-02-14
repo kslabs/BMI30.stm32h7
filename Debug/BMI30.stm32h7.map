@@ -8194,7 +8194,7 @@ Discarded input sections
  .debug_macro   0x00000000       0x16 ./Drivers/BSP/ST7735/board.o
  .debug_macro   0x00000000       0x1c ./Drivers/BSP/ST7735/board.o
  .debug_line    0x00000000      0x920 ./Drivers/BSP/ST7735/board.o
- .debug_str     0x00000000   0x163713 ./Drivers/BSP/ST7735/board.o
+ .debug_str     0x00000000   0x163706 ./Drivers/BSP/ST7735/board.o
  .comment       0x00000000       0x44 ./Drivers/BSP/ST7735/board.o
  .debug_frame   0x00000000       0x50 ./Drivers/BSP/ST7735/board.o
  .ARM.attributes
@@ -10449,7 +10449,7 @@ Discarded input sections
  .debug_macro   0x00000000       0x22 ./Core/Src/usb_descriptors_tusb.o
  .debug_macro   0x00000000       0x16 ./Core/Src/usb_descriptors_tusb.o
  .debug_line    0x00000000      0x904 ./Core/Src/usb_descriptors_tusb.o
- .debug_str     0x00000000   0x1635e4 ./Core/Src/usb_descriptors_tusb.o
+ .debug_str     0x00000000   0x1635d7 ./Core/Src/usb_descriptors_tusb.o
  .comment       0x00000000       0x44 ./Core/Src/usb_descriptors_tusb.o
  .ARM.attributes
                 0x00000000       0x32 ./Core/Src/usb_descriptors_tusb.o
@@ -10703,7 +10703,7 @@ Discarded input sections
  .debug_macro   0x00000000      0x20f ./Core/Src/usbd_cdc.o
  .debug_macro   0x00000000       0x95 ./Core/Src/usbd_cdc.o
  .debug_line    0x00000000      0xabf ./Core/Src/usbd_cdc.o
- .debug_str     0x00000000   0x164ad5 ./Core/Src/usbd_cdc.o
+ .debug_str     0x00000000   0x164ac8 ./Core/Src/usbd_cdc.o
  .comment       0x00000000       0x44 ./Core/Src/usbd_cdc.o
  .ARM.attributes
                 0x00000000       0x32 ./Core/Src/usbd_cdc.o
@@ -10892,7 +10892,7 @@ Discarded input sections
  .debug_macro   0x00000000       0x16 ./Core/Src/vnd_testgen.o
  .debug_macro   0x00000000       0x8e ./Core/Src/vnd_testgen.o
  .debug_line    0x00000000      0xa0a ./Core/Src/vnd_testgen.o
- .debug_str     0x00000000   0x163a22 ./Core/Src/vnd_testgen.o
+ .debug_str     0x00000000   0x163a15 ./Core/Src/vnd_testgen.o
  .comment       0x00000000       0x44 ./Core/Src/vnd_testgen.o
  .debug_frame   0x00000000       0x58 ./Core/Src/vnd_testgen.o
  .ARM.attributes
@@ -15073,16 +15073,16 @@ LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
 
 .debug_str      0x00000000   0x177f07
  .debug_str     0x00000000   0x177f07 ./USB_DEVICE/Target/usbd_conf.o
-                             0x166804 (size before relaxing)
- .debug_str     0x00177f07   0x165120 ./USB_DEVICE/App/usb_device.o
- .debug_str     0x00177f07   0x1697cf ./USB_DEVICE/App/usb_vendor_app.o
- .debug_str     0x00177f07   0x165c72 ./USB_DEVICE/App/usbd_cdc_custom.o
- .debug_str     0x00177f07   0x1659b9 ./USB_DEVICE/App/usbd_cdc_if.o
- .debug_str     0x00177f07   0x164cd5 ./USB_DEVICE/App/usbd_desc.o
- .debug_str     0x00177f07   0x16574a ./Middlewares/USB_Device_Library/usbd_cdc.o
- .debug_str     0x00177f07   0x165058 ./Middlewares/USB_Device_Library/usbd_core.o
- .debug_str     0x00177f07   0x164e83 ./Middlewares/USB_Device_Library/usbd_ctlreq.o
- .debug_str     0x00177f07   0x164d58 ./Middlewares/USB_Device_Library/usbd_ioreq.o
+                             0x1667f7 (size before relaxing)
+ .debug_str     0x00177f07   0x165113 ./USB_DEVICE/App/usb_device.o
+ .debug_str     0x00177f07   0x1697c2 ./USB_DEVICE/App/usb_vendor_app.o
+ .debug_str     0x00177f07   0x165c65 ./USB_DEVICE/App/usbd_cdc_custom.o
+ .debug_str     0x00177f07   0x1659ac ./USB_DEVICE/App/usbd_cdc_if.o
+ .debug_str     0x00177f07   0x164cc8 ./USB_DEVICE/App/usbd_desc.o
+ .debug_str     0x00177f07   0x16573d ./Middlewares/USB_Device_Library/usbd_cdc.o
+ .debug_str     0x00177f07   0x16504b ./Middlewares/USB_Device_Library/usbd_core.o
+ .debug_str     0x00177f07   0x164e76 ./Middlewares/USB_Device_Library/usbd_ctlreq.o
+ .debug_str     0x00177f07   0x164d4b ./Middlewares/USB_Device_Library/usbd_ioreq.o
  .debug_str     0x00177f07   0x1646fc ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal.o
  .debug_str     0x00177f07   0x164721 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_adc.o
  .debug_str     0x00177f07   0x164641 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_adc_ex.o
@@ -15104,20 +15104,20 @@ LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
  .debug_str     0x00177f07   0x1645e0 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart.o
  .debug_str     0x00177f07   0x163ba0 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart_ex.o
  .debug_str     0x00177f07   0x163d69 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_ll_usb.o
- .debug_str     0x00177f07     0x3ef0 ./Drivers/BSP/ST7735/font.o
- .debug_str     0x00177f07   0x163d68 ./Drivers/BSP/ST7735/lcd.o
- .debug_str     0x00177f07   0x1641cc ./Drivers/BSP/ST7735/st7735.o
+ .debug_str     0x00177f07     0x3ee3 ./Drivers/BSP/ST7735/font.o
+ .debug_str     0x00177f07   0x163d5b ./Drivers/BSP/ST7735/lcd.o
+ .debug_str     0x00177f07   0x1641bf ./Drivers/BSP/ST7735/st7735.o
  .debug_str     0x00177f07       0x8f ./Core/Startup/startup_stm32h723vgtx.o
- .debug_str     0x00177f07   0x166971 ./Core/Src/adc_stream.o
+ .debug_str     0x00177f07   0x166964 ./Core/Src/adc_stream.o
  .debug_str     0x00177f07   0x169661 ./Core/Src/main.o
  .debug_str     0x00177f07     0x2fd4 ./Core/Src/build_info.o
- .debug_str     0x00177f07   0x165559 ./Core/Src/stm32h7xx_hal_msp.o
- .debug_str     0x00177f07   0x165286 ./Core/Src/stm32h7xx_it.o
- .debug_str     0x00177f07   0x16632e ./Core/Src/syscalls.o
+ .debug_str     0x00177f07   0x16554c ./Core/Src/stm32h7xx_hal_msp.o
+ .debug_str     0x00177f07   0x165279 ./Core/Src/stm32h7xx_it.o
+ .debug_str     0x00177f07   0x166321 ./Core/Src/syscalls.o
  .debug_str     0x00177f07     0x77d3 ./Core/Src/sysmem.o
  .debug_str     0x00177f07   0x163678 ./Core/Src/system_stm32h7xx.o
- .debug_str     0x00177f07   0x164ba6 ./Core/Src/usb_cdc_ll_st.o
- .debug_str     0x00177f07   0x1646fc ./Core/Src/usb_cdc_proto.o
+ .debug_str     0x00177f07   0x164b99 ./Core/Src/usb_cdc_ll_st.o
+ .debug_str     0x00177f07   0x1646ef ./Core/Src/usb_cdc_proto.o
 
 .comment        0x00000000       0x43
  .comment       0x00000000       0x43 ./USB_DEVICE/Target/usbd_conf.o
