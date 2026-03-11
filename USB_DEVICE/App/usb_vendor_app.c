@@ -254,7 +254,7 @@ static volatile uint32_t vnd_sync_last_capture_ms = 0;
 volatile uint16_t vnd_dc_fast_frames = 0;   /* Countdown for fast calibration mode */
 
 /* Public status for LCD */
-volatile uint8_t  vnd_sync_mode_public = VND_SYNC_MODE_MASTER;
+volatile uint8_t  vnd_sync_mode_public = VND_SYNC_MODE_SLAVE;
 volatile uint8_t  vnd_sync_ok_public = 1u;
 
 void vnd_sync_on_edge(void)

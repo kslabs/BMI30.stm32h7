@@ -859,6 +859,32 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     /* USER CODE END USART1_MspInit 1 */
 
   }
+  else if(huart->Instance==USART2)
+  {
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART2;
+    PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_RCC_USART2_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+
+    GPIO_InitStruct.Pin = GPIO_PIN_5;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
+    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_6;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+    HAL_NVIC_SetPriority(USART2_IRQn, 6, 0);
+    HAL_NVIC_EnableIRQ(USART2_IRQn);
+  }
 
 }
 
@@ -887,6 +913,12 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
     /* USER CODE BEGIN USART1_MspDeInit 1 */
 
     /* USER CODE END USART1_MspDeInit 1 */
+  }
+  else if(huart->Instance==USART2)
+  {
+    __HAL_RCC_USART2_CLK_DISABLE();
+    HAL_GPIO_DeInit(GPIOD, GPIO_PIN_5|GPIO_PIN_6);
+    HAL_NVIC_DisableIRQ(USART2_IRQn);
   }
 
 }

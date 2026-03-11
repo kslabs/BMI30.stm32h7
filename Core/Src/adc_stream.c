@@ -335,11 +335,9 @@ static inline void adc_marker_pa3_toggle(void)
 #endif
 }
 
-/* Привязка чет/нечет к счетчику буферов после restart.
-   После каждого restart (синхронизация по PD5) первый буфер всегда НЕЧЕТНЫЙ.
-   Каждый следующий буфер меняет четность: ODD -> EVEN -> ODD -> EVEN...
-   s_pb8_state = 0 (LOW) соответствует ODD, s_pb8_state = 1 (HIGH) соответствует EVEN.
-   Возвращаем parity bit: 0=even, 1=odd. */
+/* Привязка чет/нечет к счетчику буферов.
+    s_pb8_state теперь используется только как внутренний маркер четности,
+    без выдачи синхросигнала на отдельный GPIO. */
 static inline uint8_t adc_parity_from_pa3(void)
 {
     /* Просто читаем текущее состояние, которое инвертируется при каждом toggle */
@@ -1202,7 +1200,7 @@ HAL_StatusTypeDef adc_stream_restart(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a
     return adc_stream_apply_profile();
 }
 
-/* Перезапуск ADC/DMA для синхронизации по PD5 (вызывается из EXTI в режиме SLAVE) */
+/* Legacy helper: перезапуск ADC/DMA для старой схемы синхронизации. В новой RS-485 схеме не используется. */
 void adc_stream_restart_sync(void) {
     extern TIM_HandleTypeDef htim15;
     extern ADC_HandleTypeDef hadc1;
@@ -1220,8 +1218,7 @@ void adc_stream_restart_sync(void) {
     htim15.Instance->CNT = 0;
     htim15.Instance->EGR = TIM_EGR_UG;
     
-    /* Устанавливаем выходные сигналы в исходное состояние (LOW) */
-    HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);  // PB8 -> LOW
+    /* Сбрасываем только внутренние маркеры четности/буфера */
     s_pb8_state = 0u;  // PB8=LOW -> ODD parity
     s_buffers_since_restart = 0u;  // Сброс счетчика для детерминированной последовательности parity
     s_global_buffer_counter = 0u;  // ВАЖНО: Сброс глобального счетчика для детерминированного запуска захвата
@@ -1984,8 +1981,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
         s_tc_mask = 0;
         s_both_ready++;
         
-        /* SYNC_OUT (PB8) переключается при завершении обоих ADC */
-        HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, (s_pb8_state) ? GPIO_PIN_RESET : GPIO_PIN_SET);
+        /* Внутренний маркер четности буфера: отдельный GPIO sync больше не используется */
         s_pb8_state ^= 1u;
         
         /* HARDWARE FORCE: Update PA2 IMMEDIATELY after PB8 to minimize skew */
@@ -2030,6 +2026,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
             
             /* ВСЕГДА инкрементируем счетчик буферов (для статистики) */
             adc_stream_total_buffer_count++;
+            rs485_sync_on_buffer_complete();
             
             /* Интегральный регулятор фазы (фильтр джиттера) */
             // NON-BLOCKING IMPLEMENTATION
@@ -2041,12 +2038,27 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
             if (now_ms >= sync_last_edge_ms) time_since_edge = now_ms - sync_last_edge_ms;
             else time_since_edge = 0; // overflow safety
             
-            bool signal_present = (time_since_edge < 2000u) && (sync_last_edge_ms != 0);
+            bool signal_present = (time_since_edge < 120u) && (sync_last_edge_ms != 0u);
             
             extern volatile uint8_t vnd_sync_mode_public;
             extern volatile uint8_t vnd_sync_ok_public;
             static uint8_t sync_locked = 0;
             static uint8_t sync_loop_reset_req = 0;
+            static uint16_t signal_present_stable = 0u;
+            static uint16_t signal_lost_stable = 0u;
+            static uint32_t signal_lost_since_ms = 0xFFFFFFFFu;
+
+            if (signal_present) {
+                if (signal_present_stable < 1000u) signal_present_stable++;
+                signal_lost_stable = 0u;
+                signal_lost_since_ms = 0xFFFFFFFFu;
+            } else {
+                if (signal_lost_stable < 1000u) signal_lost_stable++;
+                signal_present_stable = 0u;
+                if (signal_lost_since_ms == 0xFFFFFFFFu) {
+                    signal_lost_since_ms = now_ms;
+                }
+            }
 
             if (signal_present) {
                 // Signal IS present -> SLAVE MODE CANDIDATE
@@ -2082,9 +2094,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                         lock_stable_cnt = 0;
                     }
                 }
-                vnd_sync_ok_public = sync_locked;
+                vnd_sync_ok_public = 1u;
                 
-                if (!g_auto_freq_sync_enable) {
+                if (!g_auto_freq_sync_enable && (signal_present_stable >= 8u)) {
                     // Switch MASTER -> SLAVE
                     g_auto_freq_sync_enable = 1;
                     vnd_sync_mode_public = 1; // SLAVE
@@ -2093,14 +2105,23 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                 }
             } else {
                 // Signal Lost -> MASTER MODE
-                vnd_sync_ok_public = 0; // RED (No Signal)
+                uint32_t signal_lost_age_ms = 0u;
+                uint32_t master_claim_delay_ms = rs485_get_master_claim_delay_ms();
+
+                if (signal_lost_since_ms != 0xFFFFFFFFu) {
+                    signal_lost_age_ms = now_ms - signal_lost_since_ms;
+                }
+
+                vnd_sync_ok_public = 1u; // MASTER локально генерирует valid sync, поэтому индикатор не должен краснеть
                 sync_locked = 0;
                 
-                if (g_auto_freq_sync_enable) {
+                if (g_auto_freq_sync_enable && (signal_lost_stable >= 20u) && (signal_lost_age_ms >= master_claim_delay_ms)) {
                     // Switch SLAVE -> MASTER
                     g_auto_freq_sync_enable = 0;
                     vnd_sync_mode_public = 0; // MASTER
-                    ADC_LOGF("[SYNC] Signal lost -> MASTER mode enabled\r\n");
+                    ADC_LOGF("[SYNC] Signal lost %lums -> MASTER mode enabled after claim delay %lums\r\n",
+                             (unsigned long)signal_lost_age_ms,
+                             (unsigned long)master_claim_delay_ms);
                 }
             }
             

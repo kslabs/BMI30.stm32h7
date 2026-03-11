@@ -31,16 +31,15 @@
 		{
 			"label": "Flash (OpenOCD)",
 			"type": "shell",
-			"command": "c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\xpack-openocd-0.12.0-2-win32-x64\\xpack-openocd-0.12.0-2\\bin\\openocd.exe",
+			"command": "powershell.exe",
 			"args": [
-				"-s",
-				"c:/Users/TEST/Documents/Work/BMI20/STM32/xpack-openocd-0.12.0-2-win32-x64/xpack-openocd-0.12.0-2/scripts",
-				"-f",
-				"interface/stlink.cfg",
-				"-f",
-				"target/stm32h7x.cfg",
-				"-c",
-				"program {${workspaceFolder}/Debug/BMI30.stm32h7.elf} verify reset exit"
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/flash-openocd.ps1",
+				"-Elf",
+				"${workspaceFolder}/Debug/BMI30.stm32h7.elf"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}"
@@ -748,11 +747,13 @@
 		{
 			"label": "Rebuild + Flash + Run diag reader",
 			"type": "shell",
-			"command": "powershell",
+			"command": "powershell.exe",
 			"args": [
 				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
 				"-Command",
-				"make -C Debug all; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\xpack-openocd-0.12.0-2-win32-x64\\xpack-openocd-0.12.0-2\\bin\\openocd.exe -s c:/Users/TEST/Documents/Work/BMI20/STM32/xpack-openocd-0.12.0-2-win32-x64/xpack-openocd-0.12.0-2/scripts -f interface/stlink.cfg -f target/stm32h7x.cfg -c 'program {C:\\\\Users\\\\TEST\\\\Documents\\\\Work\\\\BMI20\\\\STM32\\\\BMI30.stm32h7/Debug/BMI30.stm32h7.elf} verify reset exit'; py -3 HostTools/vendor_enable_diag_and_read.py"
+				"& .vscode/make-task.ps1 -Target all; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; & .vscode/flash-openocd.ps1 -Elf '${workspaceFolder}/Debug/BMI30.stm32h7.elf'; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; py -3 '${workspaceFolder}/HostTools/vendor_enable_diag_and_read.py'"
 			],
 			"isBackground": false,
 			"problemMatcher": [
@@ -763,11 +764,13 @@
 		{
 			"label": "Build+Flash (inline)",
 			"type": "shell",
-			"command": "powershell",
+			"command": "powershell.exe",
 			"args": [
 				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
 				"-Command",
-				"make -C Debug all; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\xpack-openocd-0.12.0-2-win32-x64\\xpack-openocd-0.12.0-2\\bin\\openocd.exe -s c:/Users/TEST/Documents/Work/BMI20/STM32/xpack-openocd-0.12.0-2-win32-x64/xpack-openocd-0.12.0-2/scripts -f interface/stlink.cfg -f target/stm32h7x.cfg -c 'program {C:\\\\Users\\\\TEST\\\\Documents\\\\Work\\\\BMI20\\\\STM32\\\\BMI30.stm32h7/Debug/BMI30.stm32h7.elf} verify reset exit'"
+				"& .vscode/make-task.ps1 -Target all; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; & .vscode/flash-openocd.ps1 -Elf '${workspaceFolder}/Debug/BMI30.stm32h7.elf'"
 			],
 			"isBackground": false,
 			"problemMatcher": [
@@ -808,13 +811,13 @@
 		{
 			"label": "Run host diag reader",
 			"type": "shell",
-			"command": "powershell",
+			"command": "powershell.exe",
 			"args": [
 				"-NoProfile",
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/vendor_enable_diag_and_read.py\""
+				"py -3 '${workspaceFolder}/HostTools/vendor_enable_diag_and_read.py'"
 			],
 			"isBackground": false,
 			"group": "none"
@@ -859,13 +862,13 @@
 		{
 			"label": "Run diag via py launcher",
 			"type": "shell",
-			"command": "powershell",
+			"command": "powershell.exe",
 			"args": [
 				"-NoProfile",
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/vendor_enable_diag_and_read.py\""
+				"py -3 '${workspaceFolder}/HostTools/vendor_enable_diag_and_read.py'"
 			],
 			"isBackground": false,
 			"group": "none"
@@ -897,13 +900,13 @@
 		{
 			"label": "Run GUI oscilloscope",
 			"type": "shell",
-			"command": "powershell",
+			"command": "powershell.exe",
 			"args": [
 				"-NoProfile",
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope_optimized.py\" --ns 0 --profile 0 --watchdog" 
+				"py -3 '${workspaceFolder}/HostTools/gui_oscilloscope_optimized.py' --ns 0 --profile 0 --watchdog" 
 			],
 			"isBackground": false,
 			"group": "none",
@@ -913,13 +916,13 @@
 		{
 			"label": "Run GUI oscilloscope (optimized)",
 			"type": "shell",
-			"command": "powershell",
+			"command": "powershell.exe",
 			"args": [
 				"-NoProfile",
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope_optimized.py\" --ns 0 --profile 0 --watchdog" 
+				"py -3 '${workspaceFolder}/HostTools/gui_oscilloscope_optimized.py' --ns 0 --profile 0 --watchdog" 
 			],
 			"isBackground": false,
 			"group": "none",
@@ -929,13 +932,13 @@
 		{
 			"label": "Run GUI oscilloscope (AVG_ROI mode=2)",
 			"type": "shell",
-			"command": "powershell",
+			"command": "powershell.exe",
 			"args": [
 				"-NoProfile",
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"py -3 \"c:/Users/TEST/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/gui_oscilloscope_optimized.py\" --profile 0 --stream-mode 2 --avg-n 20 --roi-start 280 --roi-len 200 --watchdog"
+				"py -3 '${workspaceFolder}/HostTools/gui_oscilloscope_optimized.py' --profile 0 --stream-mode 2 --avg-n 20 --roi-start 280 --roi-len 200 --watchdog"
 			],
 			"isBackground": false,
 			"group": "none",
@@ -1001,13 +1004,13 @@
 		{
 			"label": "Build BMI30 Debug (make)",
 			"type": "shell",
-			"command": "powershell",
+			"command": "powershell.exe",
 			"args": [
 				"-NoProfile",
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"cd 'c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\Debug'; if (Test-Path makefile) { $env:PATH; make -j4 all } else { Write-Error 'makefile not found in Debug' }"
+				"Set-Location '${workspaceFolder}/Debug'; if (Test-Path makefile) { make -j4 all } else { Write-Error 'makefile not found in Debug' }"
 			],
 			"problemMatcher": [
 				"$gcc"
@@ -1058,13 +1061,13 @@
 		{
 			"label": "Clone BMI30 repo from GitHub",
 			"type": "shell",
-			"command": "powershell",
+			"command": "powershell.exe",
 			"args": [
 				"-NoProfile",
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"$parent='C:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32'; if(!(Test-Path $parent)) { mkdir $parent }; cd $parent; git clone https://github.com/kslabs/BMI30.stm32h7.git; cd BMI30.stm32h7; Write-Host 'Cloned successfully to:' (Get-Location)"
+				"$parent = Split-Path -Parent '${workspaceFolder}'; if(!(Test-Path $parent)) { New-Item -ItemType Directory -Path $parent | Out-Null }; Set-Location $parent; git clone https://github.com/kslabs/BMI30.stm32h7.git; Set-Location BMI30.stm32h7; Write-Host 'Cloned successfully to:' (Get-Location)"
 			],
 			"isBackground": false,
 			"group": "build",
@@ -1073,13 +1076,13 @@
 		{
 			"label": "Clone + Build + Flash",
 			"type": "shell",
-			"command": "powershell",
+			"command": "powershell.exe",
 			"args": [
 				"-NoProfile",
 				"-ExecutionPolicy",
 				"Bypass",
 				"-Command",
-				"$target='C:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7'; if(!(Test-Path $target)) { git clone https://github.com/kslabs/BMI30.stm32h7.git $target; Write-Host 'Cloned to' $target } else { Write-Host 'Directory exists, using existing repo' }; cd $target; Write-Host 'Building...'; make -C Debug all; if($LASTEXITCODE -ne 0) { Write-Error 'Build failed'; exit 1 }; Write-Host 'Flashing...'; c:\\Users\\TEST\\Documents\\Work\\BMI20\\STM32\\xpack-openocd-0.12.0-2-win32-x64\\xpack-openocd-0.12.0-2\\bin\\openocd.exe -s c:/Users/TEST/Documents/Work/BMI20/STM32/xpack-openocd-0.12.0-2-win32-x64/xpack-openocd-0.12.0-2/scripts -f interface/stlink.cfg -f target/stm32h7x.cfg -c 'program {' ($target + '/Debug/BMI30.stm32h7.elf') '} verify reset exit'; if($LASTEXITCODE -eq 0) { Write-Host 'Clone + Build + Flash completed successfully!' } else { Write-Error 'Flash failed'; exit 1 }"
+				"$target='${workspaceFolder}'; if(!(Test-Path $target)) { git clone https://github.com/kslabs/BMI30.stm32h7.git $target; Write-Host 'Cloned to' $target } else { Write-Host 'Directory exists, using existing repo' }; Set-Location $target; Write-Host 'Building...'; & .vscode/make-task.ps1 -Target all; if($LASTEXITCODE -ne 0) { Write-Error 'Build failed'; exit 1 }; Write-Host 'Flashing...'; & .vscode/flash-openocd.ps1 -Elf "$target/Debug/BMI30.stm32h7.elf"; if($LASTEXITCODE -eq 0) { Write-Host 'Clone + Build + Flash completed successfully!' } else { Write-Error 'Flash failed'; exit 1 }"
 			],
 			"isBackground": false,
 			"group": "build",
