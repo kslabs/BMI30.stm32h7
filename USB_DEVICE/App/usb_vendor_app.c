@@ -241,7 +241,7 @@ static volatile uint32_t cmd_start_count = 0;       /* счётчик приня
 static volatile uint32_t cmd_stop_count = 0;        /* счётчик принятых STOP */
 
 /* Sync master/slave via TIM16 CH1 */
-static volatile uint8_t  vnd_sync_mode = VND_SYNC_MODE_MASTER; /* 0=master, 1=slave, 2=off */
+static volatile uint8_t  vnd_sync_mode = VND_SYNC_MODE_SLAVE; /* 0=master, 1=slave, 2=off */
 static volatile uint16_t vnd_sync_pending_hz = 0;
 static volatile uint16_t vnd_sync_last_hz = 0;
 static volatile uint32_t vnd_sync_last_apply_ms = 0;
@@ -256,6 +256,7 @@ volatile uint16_t vnd_dc_fast_frames = 0;   /* Countdown for fast calibration mo
 /* Public status for LCD */
 volatile uint8_t  vnd_sync_mode_public = VND_SYNC_MODE_SLAVE;
 volatile uint8_t  vnd_sync_ok_public = 1u;
+static volatile uint8_t  vnd_sync_mode_host_forced = 0u;
 
 void vnd_sync_on_edge(void)
 {
@@ -593,14 +594,10 @@ static void vnd_sync_set_slave(void)
 
 static void vnd_sync_apply_mode(uint8_t mode)
 {
+    extern volatile uint8_t g_arr_manual_mode;
+
     if(mode > VND_SYNC_MODE_OFF) mode = VND_SYNC_MODE_MASTER;
     vnd_sync_mode = mode;
-    /* Всегда работаем в режиме авто-синхронизации: если есть импульсы PD5 — подстраиваемся,
-       если импульсов нет — работаем в свободном режиме. SYNC_OUT остаётся активным всегда. */
-    vnd_sync_mode_public = VND_SYNC_MODE_SLAVE;
-    vnd_sync_set_slave();
-    vnd_sync_ok_public = 0u;
-    vnd_sync_start_tim5_base();
     {
         extern volatile uint8_t sync_edge_seen;
         extern volatile uint32_t sync_last_edge_ms;
@@ -612,17 +609,55 @@ static void vnd_sync_apply_mode(uint8_t mode)
         sync_edge_seen = 0u;
         sync_last_edge_ms = 0u;
         htim5.Instance->CNT = 0u;
-        sync_align_pending = 1u;
-        sync_phase_lock_armed = 1u;
+        sync_align_pending = 0u;
+        sync_phase_lock_armed = 0u;
         sync_phase_lock_active = 0u;
-        sync_restart_on_edge = 1u;
+        sync_restart_on_edge = 0u;
+    }
+    if(mode == VND_SYNC_MODE_MASTER){
+        vnd_sync_mode_public = VND_SYNC_MODE_MASTER;
+        vnd_sync_set_master(0u);
+        vnd_sync_ok_public = 1u;
+    } else if(mode == VND_SYNC_MODE_SLAVE){
+        extern volatile uint8_t sync_align_pending;
+        extern volatile uint8_t sync_phase_lock_armed;
+        extern volatile uint8_t sync_restart_on_edge;
+        vnd_sync_mode_public = VND_SYNC_MODE_SLAVE;
+        vnd_sync_set_slave();
+        vnd_sync_ok_public = 0u;
+        vnd_sync_start_tim5_base();
+        if (g_arr_manual_mode) {
+            sync_align_pending = 0u;
+            sync_phase_lock_armed = 0u;
+            sync_restart_on_edge = 0u;
+        } else {
+            sync_align_pending = 1u;
+            sync_phase_lock_armed = 1u;
+            sync_restart_on_edge = 1u;
+        }
+    } else {
+        vnd_sync_mode_public = VND_SYNC_MODE_OFF;
+        vnd_sync_ok_public = 0u;
     }
     vnd_sync_pending_hz = 0u;
     vnd_sync_last_capture_ms = 0u;
     vnd_sync_last_apply_ms = 0u;
     HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
     vnd_adc_restart_request = 1u;
-    cdc_logf("EVT SYNC_MODE AUTO (requested=%u)", (unsigned)mode);
+    cdc_logf("EVT SYNC_MODE APPLY mode=%u", (unsigned)mode);
+}
+
+void vnd_sync_set_mode_auto(uint8_t mode)
+{
+    if (vnd_sync_mode_host_forced) {
+        return;
+    }
+    vnd_sync_apply_mode(mode);
+}
+
+uint8_t vnd_sync_is_mode_host_forced(void)
+{
+    return vnd_sync_mode_host_forced;
 }
 
 __attribute__((unused))
@@ -4364,7 +4399,8 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 /* Синхронизация всегда активна и не должна сбрасываться при START */
                 if(vnd_sync_mode_public == VND_SYNC_MODE_SLAVE){
                     extern volatile uint8_t sync_restart_on_edge;
-                    sync_restart_on_edge = 1u; /* перезапуск ADC/DMA по первому фронту после START */
+                    extern volatile uint8_t g_arr_manual_mode;
+                    sync_restart_on_edge = g_arr_manual_mode ? 0u : 1u; /* В ручном ARR-режиме запрещаем жёсткий перезапуск по первому фронту */
                     HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
                     vnd_sync_start_tim5_base();
                 }
@@ -4753,6 +4789,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             {
                 uint8_t mode = data[1];
                 if(mode > VND_SYNC_MODE_OFF) mode = VND_SYNC_MODE_MASTER;
+                vnd_sync_mode_host_forced = 1u;
                 vnd_sync_apply_mode(mode);
                 printf("[CMD_IND] SET_SYNC_MODE %u\r\n", (unsigned)mode);
             }

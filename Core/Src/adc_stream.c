@@ -323,14 +323,24 @@ static inline uint32_t adc_addr_to_index(uint32_t addr, uint16_t buf[FIFO_FRAMES
 #define ADC_MARKER_PA3_ENABLE 1
 #endif
 
+#ifndef ADC_MARKER_PA3_DIV
+#define ADC_MARKER_PA3_DIV 1u
+#endif
+
 static inline void adc_marker_pa3_toggle(void)
 {
 #if ADC_MARKER_PA3_ENABLE
-    /* Atomic toggle via BSRR: safe even inside ISR */
-    if (GPIOA->ODR & GPIO_PIN_3) {
-        GPIOA->BSRR = ((uint32_t)GPIO_PIN_3 << 16);
-    } else {
-        GPIOA->BSRR = (uint32_t)GPIO_PIN_3;
+    static uint32_t pa3_divider = 0;
+
+    pa3_divider++;
+    if (pa3_divider >= ADC_MARKER_PA3_DIV) {
+        pa3_divider = 0;
+        /* Atomic toggle via BSRR: safe even inside ISR */
+        if (GPIOA->ODR & GPIO_PIN_3) {
+            GPIOA->BSRR = ((uint32_t)GPIO_PIN_3 << 16);
+        } else {
+            GPIOA->BSRR = (uint32_t)GPIO_PIN_3;
+        }
     }
 #endif
 }
@@ -343,10 +353,13 @@ static inline uint8_t adc_parity_from_pa3(void)
     /* Просто читаем текущее состояние, которое инвертируется при каждом toggle */
     return s_pb8_state ? 0u : 1u;
 }
+extern volatile uint32_t sync_tim5_cnt_at_buffer;
+extern volatile uint32_t sync_tim5_buffer_phase_seq;
 
 /* Отметить готовность канала и, если пара на очередном индексе готова, опубликовать её */
 static inline void adc_mark_ready_and_publish(uint8_t ch_bit)
 {
+    extern TIM_HandleTypeDef htim5;
     /* Попробуем публиковать подряд готовые пары (в правильном порядке) */
     while (s_pair_ready_mask[s_pair_ready_idx] == READY_MASK_FULL) {
         /* Очередная пара полностью готова */
@@ -362,6 +375,8 @@ static inline void adc_mark_ready_and_publish(uint8_t ch_bit)
         frame_wr_seq += 1u;
         adc_publish_count++;
         adc_last_publish_ms = HAL_GetTick();
+        sync_tim5_cnt_at_buffer = htim5.Instance->CNT;
+        sync_tim5_buffer_phase_seq++;
         adc_marker_pa3_toggle();
         uint32_t backlog = frame_wr_seq - frame_rd_seq;
         if (backlog > frame_backlog_max) frame_backlog_max = backlog;
@@ -503,6 +518,9 @@ static int32_t g_arr_fine_offset = 0;  // По умолчанию БЕЗ кор�
 // Периодическое применение offset: применять на 1 буфер каждые N буферов (0 = постоянно)
 static uint32_t g_arr_fine_period = 1000;  // 1 раз на 1000 буферов (~5 сек) → очень медленная коррекция
 
+// Флаг: отключить автоматическое переопределение ARR (для ручного тестирования)
+volatile uint8_t g_arr_manual_mode = 1;  // ВКЛЮЧЕНО: не переписывать ARR в apply_timing
+
 // Автоматическая подстройка частоты по sync_buffers_between_edges (0=откл, 1=вкл)
 static uint8_t g_auto_freq_sync_enable = 1;  // ВКЛЮЧЕНО: фазовая синхронизация
 
@@ -558,9 +576,6 @@ void adc_stream_setup_tim15_arr_dma(void)
 void adc_stream_push_tim15_phase(int32_t correction_ticks)
 {
     extern TIM_HandleTypeDef htim15;
-    
-    // Toggle LED to indicate correction
-    HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_3);
 
     /* Коррекция без DMA и без новых прерываний:
        1 период ARR +/- correction_ticks, затем возврат ARR.
@@ -621,6 +636,8 @@ volatile uint32_t adc_stream_total_buffer_count = 0;
 volatile uint32_t sync_buffer_count_at_edge = 0;
 volatile uint32_t sync_buffers_between_edges = 0;  /* Реальное количество буферов между спадами PD5 */
 volatile uint32_t sync_tim15_cnt_at_pd5 = 0;        /* TIM15->CNT при спаде PD5 (фаза внутри семпла) */
+volatile uint32_t sync_tim5_cnt_at_buffer = 0;      /* TIM5->CNT в момент локального завершения буфера */
+volatile uint32_t sync_tim5_buffer_phase_seq = 0;   /* Счетчик обновлений локальной фазовой выборки */
 
 /* Диагностика: индекс сэмпла TIM15 на конце буфера */
 volatile uint16_t adc_sync_dbg_last_idx = 0;
@@ -822,6 +839,13 @@ static void adc_stream_apply_timing(void)
     uint32_t tim15_arr = (tick_hz / sample_rate);
     if (tim15_arr == 0u) tim15_arr = 1u;
     tim15_arr -= 1u;
+
+    /* ПРОПУСКАЕМ переписывание ARR если включен ручной режим тестирования */
+    extern volatile uint8_t g_arr_manual_mode;
+    if (g_arr_manual_mode) {
+        // Ручной режим - не переписываем ARR, используем значение из main loop
+        return;
+    }
 
     /* Применяем тонкую подстройку ARR (только если включен ручной режим) */
     if (!g_auto_freq_sync_enable && g_arr_fine_offset != 0) {
@@ -2043,11 +2067,27 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
             extern volatile uint8_t vnd_sync_mode_public;
             extern volatile uint8_t vnd_sync_ok_public;
             static uint8_t sync_locked = 0;
+            extern volatile uint8_t g_arr_manual_mode;
             static uint8_t sync_loop_reset_req = 0;
             static uint16_t signal_present_stable = 0u;
             static uint16_t signal_lost_stable = 0u;
             static uint32_t signal_lost_since_ms = 0xFFFFFFFFu;
 
+
+            if (g_arr_manual_mode) {
+                if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+                    g_auto_freq_sync_enable = 0;
+                    vnd_sync_ok_public = 1u;
+                } else if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+                    g_auto_freq_sync_enable = 1;
+                } else {
+                    g_auto_freq_sync_enable = 0;
+                    vnd_sync_ok_public = 0u;
+                }
+                signal_present_stable = 0u;
+                signal_lost_stable = 0u;
+                signal_lost_since_ms = 0xFFFFFFFFu;
+            } else
             if (signal_present) {
                 if (signal_present_stable < 1000u) signal_present_stable++;
                 signal_lost_stable = 0u;
@@ -2247,7 +2287,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                             
                              // Threshold must be tolerable
                         
-                        int32_t correction = 0;
+                        int32_t correction = 0;  // ОТКЛЮЧЕНО: фазовые коррекции отключены для поиска частоты
                         
                         // Check User Button (PC13)
                         // Active HIGH (Pressed = 1) via PULLDOWN
@@ -2256,6 +2296,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                         // Heartbeat REMOVED (User requested OFF by default)
                         // HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_3); 
 
+                        // ФАЗОВЫЕ КОРРЕКЦИИ ПОЛНОСТЬЮ ОТКЛЮЧЕНЫ
+                        // Система просто сохраняет фиксированный ARR до уточнения частоты
+                        #if 0  // DISABLE ALL PHASE CORRECTIONS
                         if (btn_state == GPIO_PIN_SET) {
                             // User pressed button: DISABLE CORRECTION & LED ON
                             correction = 0;
@@ -2314,6 +2357,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                                 correction = 0;
                             }
                         }
+                        #endif  // PHASE CORRECTIONS DISABLED
+                        
+                        // correction остаётся 0 - никаких изменений ARR
                         
                         if (correction != 0) {
                             extern TIM_HandleTypeDef htim15;
@@ -2382,12 +2428,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
         /* ОТКЛЮЧЕНО: Старая подстройка по фазе - убрана для чистого режима частотной синхронизации */
         /* adc_sync_phase_on_buffer(); */
 
-        /* Если видели фронт PD5 — запросим выравнивание TIM15 в main loop */
+        /* В ручном поиске частоты не делаем жёсткого выравнивания по sync-фронту,
+           иначе фаза движется рывками из-за принудительных подхватов. */
         extern volatile uint8_t sync_edge_seen;
-        extern volatile uint8_t sync_align_pending;
         if (sync_edge_seen) {
             sync_edge_seen = 0u;
-            sync_align_pending = 1u;
         }
 
 /* PA2 update moved to early execution (near PB8 toggle) to minimize skew */
@@ -2663,6 +2708,10 @@ void adc_stream_watchdog(void)
     uint32_t now_ms = HAL_GetTick();
     if(s_adc1 == NULL || (!DIAG_SINGLE_ADC1 && s_adc2 == NULL)) return; /* ещё не инициализированы */
     if(adc_stream_static_mode_enabled()) return; /* статический режим: DMA не запускается */
+    {
+        extern volatile uint8_t g_arr_manual_mode;
+        if (g_arr_manual_mode) return; /* В ручном ARR-режиме запрещаем watchdog-рестарты */
+    }
 
     /* LOSSLESS/backpressure: при паузе из-за заполненного FIFO не делаем рестарт,
        а возобновляем захват, когда хост «разгрузит» очередь. */

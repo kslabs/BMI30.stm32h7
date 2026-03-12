@@ -19,6 +19,7 @@
 /* Includes: восстановление базовых заголовков и прототипов */
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "main.h"
 #include "build_info.h"
@@ -83,6 +84,11 @@ volatile uint8_t sync_restart_on_edge = 0;
 volatile uint32_t sync_edge_count = 0;
 /* Измерение периода PD5 через TIM5 (275 MHz) */
 volatile uint32_t sync_tim5_period_ticks = 0;
+#define SYNC_TARGET_PHASE_AUTO 0xFFFFFFFFu
+static volatile uint32_t g_sync_target_phase_ticks = SYNC_TARGET_PHASE_AUTO;
+static volatile uint8_t tim15_arr_pulse_stage = 0u;
+static volatile uint32_t tim15_arr_pulse_nominal = 0u;
+static volatile uint32_t tim15_arr_pulse_count = 0u;
 
 static uint8_t rs485_rx_byte = 0;
 static uint8_t rs485_tx_byte = RS485_SYNC_BYTE;
@@ -121,6 +127,11 @@ static void rs485_discovery_reset_master_scan(void);
 static uint32_t rs485_compute_uid_mix(void);
 static uint8_t rs485_compute_local_node_id(void);
 static uint32_t rs485_compute_master_claim_delay_ms(void);
+static void rs485_sync_auto_role_service(uint32_t now_ms);
+static void arr_auto_tune_service(void);
+static uint8_t tim15_schedule_arr_pulse(int32_t arr_delta);
+static void phase_micro_adjust_service(void);
+static void tune_led_service(uint32_t now_ms);
 static uint8_t rs485_count_bits_u32(uint32_t value);
 static void rs485_tx_queue_push(uint8_t value);
 static uint8_t rs485_tx_queue_pop(uint8_t *value);
@@ -601,7 +612,8 @@ static void rs485_discovery_on_request(uint8_t value)
     rs485_local_node_id = request_id;
   }
 
-  rs485_reply_pending_id = rs485_local_node_id;
+  rs485_tx_queue_push((uint8_t)(RS485_DISCOVERY_ACK_BASE | rs485_local_node_id));
+  rs485_tx_kick();
 }
 
 static void rs485_discovery_on_response(uint8_t value)
@@ -628,18 +640,310 @@ static void rs485_discovery_on_response(uint8_t value)
 
 static void rs485_discovery_on_sync_received(void)
 {
-  extern volatile uint8_t vnd_sync_mode_public;
-
-  if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) && (rs485_reply_pending_id != 0u)) {
-    rs485_tx_queue_push((uint8_t)(RS485_DISCOVERY_ACK_BASE | rs485_reply_pending_id));
-    rs485_tx_kick();
-    rs485_reply_pending_id = 0u;
-  }
+  /* ACK теперь отправляется сразу при приёме discovery-запроса. */
 }
 
 static void rs485_sync_service_tx(void)
 {
   rs485_tx_kick();
+}
+
+static void rs485_sync_auto_role_service(uint32_t now_ms)
+{
+  extern void vnd_sync_set_mode_auto(uint8_t mode);
+  extern uint8_t vnd_sync_is_mode_host_forced(void);
+  extern volatile uint8_t vnd_sync_mode_public;
+  static uint8_t auto_init_done = 0u;
+  static uint32_t auto_start_ms = 0u;
+
+  if (vnd_sync_is_mode_host_forced()) {
+    return;
+  }
+
+  if (!auto_init_done) {
+    auto_init_done = 1u;
+    auto_start_ms = now_ms;
+    vnd_sync_set_mode_auto(VND_SYNC_MODE_SLAVE);
+    rs485_last_rx_ms = 0u;
+    rs485_local_node_id = 0u;
+    rs485_reply_pending_id = 0u;
+    rs485_slave_count_estimate = 0u;
+    rs485_discovery_seen_mask = 0u;
+    rs485_discovery_reset_master_scan();
+    printf("[RS485] AUTO_ROLE init -> SLAVE, claim in %lums if no sync\r\n",
+           (unsigned long)rs485_master_claim_delay_ms);
+    return;
+  }
+
+  if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+    return;
+  }
+
+  if (rs485_last_rx_ms != 0u) {
+    return;
+  }
+
+  if ((now_ms - auto_start_ms) < rs485_master_claim_delay_ms) {
+    return;
+  }
+
+  vnd_sync_set_mode_auto(VND_SYNC_MODE_MASTER);
+  rs485_local_node_id = rs485_local_uid_hint;
+  rs485_reply_pending_id = 0u;
+  rs485_slave_count_estimate = 0u;
+  rs485_discovery_seen_mask = 0u;
+  rs485_discovery_reset_master_scan();
+  printf("[RS485] AUTO_ROLE claim -> MASTER node=%u after %lums\r\n",
+         (unsigned)rs485_local_node_id,
+         (unsigned long)(now_ms - auto_start_ms));
+}
+
+typedef struct {
+  uint32_t arr;
+  int32_t avg_delta;
+  uint8_t valid;
+} arr_auto_measure_t;
+
+static volatile uint8_t g_arr_auto_ready = 0u;
+static volatile uint32_t g_arr_auto_selected = 1144u;
+static volatile uint8_t g_arr_auto_rescan_request = 0u;
+static volatile uint8_t g_tune_led_freq_active = 0u;
+
+static void arr_auto_apply_tim15(uint32_t arr)
+{
+  extern TIM_HandleTypeDef htim15;
+
+  htim15.Instance->ARR = arr;
+  __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, (arr + 1u) / 2u);
+}
+
+static int32_t arr_auto_abs_i32(int32_t value)
+{
+  return (value < 0) ? -value : value;
+}
+
+static uint8_t tim15_schedule_arr_pulse(int32_t arr_delta)
+{
+  uint32_t current_arr = TIM15->ARR;
+  int32_t pulse_arr = (int32_t)current_arr + arr_delta;
+
+  if (tim15_arr_pulse_stage != 0u) {
+    return 0u;
+  }
+
+  if (pulse_arr < 2) {
+    return 0u;
+  }
+
+  tim15_arr_pulse_nominal = current_arr;
+  tim15_arr_pulse_stage = 1u;
+
+  __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+  TIM15->ARR = (uint32_t)pulse_arr;
+  __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
+
+  return 1u;
+}
+
+__attribute__((unused)) static uint32_t arr_auto_choose_best(const arr_auto_measure_t *samples, uint32_t count)
+{
+  uint32_t best_idx = 0u;
+  int32_t best_score = 0x7FFFFFFF;
+  uint8_t have_bracket = 0u;
+  uint32_t index = 0u;
+
+  for (index = 0u; (index + 1u) < count; index++) {
+    int32_t left = 0;
+    int32_t right = 0;
+    int32_t pair_score = 0;
+    uint32_t candidate_idx = 0u;
+
+    if (!samples[index].valid || !samples[index + 1u].valid) {
+      continue;
+    }
+
+    left = samples[index].avg_delta;
+    right = samples[index + 1u].avg_delta;
+    if ((left == 0) || (right == 0) || ((left < 0) != (right < 0))) {
+      pair_score = arr_auto_abs_i32(left) + arr_auto_abs_i32(right);
+      candidate_idx = (arr_auto_abs_i32(left) <= arr_auto_abs_i32(right)) ? index : (index + 1u);
+      if (!have_bracket || (pair_score < best_score)) {
+        have_bracket = 1u;
+        best_score = pair_score;
+        best_idx = candidate_idx;
+      }
+    }
+  }
+
+  if (have_bracket) {
+    return best_idx;
+  }
+
+  for (index = 0u; index < count; index++) {
+    int32_t score = 0;
+    if (!samples[index].valid) {
+      continue;
+    }
+    score = arr_auto_abs_i32(samples[index].avg_delta);
+    if (score < best_score) {
+      best_score = score;
+      best_idx = index;
+    }
+  }
+
+  return best_idx;
+}
+
+static void arr_auto_tune_service(void)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  static uint8_t prev_mode = 0xFFu;
+  static uint8_t fixed_arr_applied = 0u;
+  const uint32_t fixed_arr = 1144u;
+
+  if (vnd_sync_mode_public != prev_mode) {
+    prev_mode = vnd_sync_mode_public;
+    if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+      fixed_arr_applied = 0u;
+      g_arr_auto_ready = 0u;
+      g_arr_auto_rescan_request = 0u;
+      g_tune_led_freq_active = 0u;
+    }
+  }
+
+  if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+    g_tune_led_freq_active = 0u;
+    return;
+  }
+
+  if (!fixed_arr_applied || (g_arr_auto_selected != fixed_arr)) {
+    g_arr_auto_selected = fixed_arr;
+    arr_auto_apply_tim15(g_arr_auto_selected);
+    fixed_arr_applied = 1u;
+    printf("[ARR_FIXED] ARR=%lu\r\n", (unsigned long)g_arr_auto_selected);
+  }
+
+  g_arr_auto_rescan_request = 0u;
+  g_arr_auto_ready = 1u;
+  g_tune_led_freq_active = 0u;
+}
+
+static void phase_micro_adjust_service(void)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  extern volatile uint32_t sync_last_edge_ms;
+  extern volatile uint32_t sync_tim5_cnt_at_buffer;
+  extern volatile uint32_t sync_tim5_buffer_phase_seq;
+  static uint32_t last_phase_seq_seen = 0u;
+  static uint8_t settle_buffers = 0u;
+  static int8_t last_correction_sign = 0;
+  static uint8_t same_sign_corrections = 0u;
+  uint32_t period_ticks = 0u;
+  uint32_t raw_phase_ticks = 0u;
+  uint32_t target_phase_ticks = 0u;
+  int32_t phase_error_ticks = 0;
+  int8_t correction_sign = 0;
+  int32_t correction_step = 0;
+  const uint32_t rx_comp_ticks = 24000u;
+  const int32_t phase_deadband_ticks = 16;
+  const uint8_t max_dynamic_step = 255u;
+  uint32_t now_ms = HAL_GetTick();
+  const uint32_t sync_timeout_ms = 250u;
+
+  if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+    last_phase_seq_seen = sync_tim5_buffer_phase_seq;
+    settle_buffers = 0u;
+    last_correction_sign = 0;
+    same_sign_corrections = 0u;
+    return;
+  }
+
+  if ((sync_last_edge_ms == 0u) || ((now_ms - sync_last_edge_ms) > sync_timeout_ms)) {
+    last_phase_seq_seen = sync_tim5_buffer_phase_seq;
+    settle_buffers = 0u;
+    last_correction_sign = 0;
+    same_sign_corrections = 0u;
+    return;
+  }
+
+  if (!g_arr_auto_ready) {
+    settle_buffers = 0u;
+    last_phase_seq_seen = sync_tim5_buffer_phase_seq;
+    last_correction_sign = 0;
+    same_sign_corrections = 0u;
+    return;
+  }
+
+  if (sync_tim5_buffer_phase_seq == last_phase_seq_seen) {
+    return;
+  }
+
+  last_phase_seq_seen = sync_tim5_buffer_phase_seq;
+  if (settle_buffers != 0u) {
+    settle_buffers--;
+    return;
+  }
+
+  period_ticks = sync_tim5_period_ticks;
+  if (period_ticks < 1000u) {
+    return;
+  }
+
+  raw_phase_ticks = sync_tim5_cnt_at_buffer % period_ticks;
+  if (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO) {
+    target_phase_ticks = (period_ticks > rx_comp_ticks) ? (period_ticks - rx_comp_ticks) : 0u;
+  } else {
+    target_phase_ticks = g_sync_target_phase_ticks % period_ticks;
+  }
+
+  phase_error_ticks = (int32_t)raw_phase_ticks - (int32_t)target_phase_ticks;
+  if (phase_error_ticks > (int32_t)(period_ticks / 2u)) {
+    phase_error_ticks -= (int32_t)period_ticks;
+  } else if (phase_error_ticks < -(int32_t)(period_ticks / 2u)) {
+    phase_error_ticks += (int32_t)period_ticks;
+  }
+
+  if (arr_auto_abs_i32(phase_error_ticks) <= phase_deadband_ticks) {
+    last_correction_sign = 0;
+    same_sign_corrections = 0u;
+    return;
+  }
+
+  correction_sign = (phase_error_ticks < 0) ? 1 : -1;
+  if (correction_sign != last_correction_sign) {
+    same_sign_corrections = 1u;
+    last_correction_sign = correction_sign;
+  } else if (same_sign_corrections < max_dynamic_step) {
+    same_sign_corrections++;
+  }
+
+  correction_step = (int32_t)same_sign_corrections * (int32_t)correction_sign;
+
+  if (!tim15_schedule_arr_pulse(correction_step)) {
+    return;
+  }
+
+  settle_buffers = 0u;
+  tim15_arr_pulse_count++;
+  printf("[PHASE] ARR pulse raw=%lu target=%lu err=%ld step=%ld streak=%u total=%lu\r\n",
+      (unsigned long)raw_phase_ticks,
+      (unsigned long)target_phase_ticks,
+      (long)phase_error_ticks,
+      (long)correction_step,
+      (unsigned)same_sign_corrections,
+      (unsigned long)tim15_arr_pulse_count);
+}
+
+static void tune_led_service(uint32_t now_ms)
+{
+  (void)now_ms;
+
+  if (g_tune_led_freq_active) {
+    LED_ON();
+    return;
+  }
+
+  LED_OFF();
 }
 
 void rs485_sync_on_buffer_complete(void)
@@ -650,23 +954,16 @@ void rs485_sync_on_buffer_complete(void)
 
   rs485_sync_buf_div4 = completed_buffers;
 
-  /* Sync-пакет должен уходить строго по фронту внутреннего маркера,
-     что в текущей схеме соответствует нечётному номеру завершённого буфера. */
-  if ((completed_buffers & 1u) == 0u) {
-    return;
-  }
-
-  /* Один sync на каждые 4 периода even/odd = на каждый 8-й завершённый буфер:
-     1, 9, 17, ... */
-  if ((completed_buffers & 0x07u) != 1u) {
-    return;
-  }
+  /* Sync-пакет должен уходить на каждом фронте внутреннего маркера.
+     В текущей схеме rs485_sync_on_buffer_complete() вызывается на каждом
+     завершённом опубликованном буфере, поэтому дополнительное прореживание
+     здесь недопустимо. */
   if (vnd_sync_mode_public != VND_SYNC_MODE_MASTER) {
     rs485_discovery_reset_master_scan();
     return;
   }
 
-  if (rs485_discovery_phase_wait_response && rs485_discovery_window_open) {
+  if (rs485_discovery_phase_wait_response) {
     if (!rs485_discovery_response_seen && (rs485_discovery_wait_id >= 1u) && (rs485_discovery_wait_id <= RS485_DISCOVERY_MAX_ID)) {
       rs485_discovery_scan_mask &= ~(1u << (rs485_discovery_wait_id - 1u));
     }
@@ -680,13 +977,12 @@ void rs485_sync_on_buffer_complete(void)
     }
     rs485_discovery_wait_id = 0u;
     rs485_discovery_response_seen = 0u;
-    rs485_discovery_window_open = 0u;
     rs485_discovery_phase_wait_response = 0u;
   }
 
   rs485_tx_queue_push(RS485_SYNC_BYTE);
 
-  if (!rs485_discovery_phase_wait_response) {
+  {
     uint8_t request_id = rs485_discovery_next_id;
     if ((request_id == 0u) || (request_id > RS485_DISCOVERY_MAX_ID)) {
       request_id = 1u;
@@ -694,10 +990,7 @@ void rs485_sync_on_buffer_complete(void)
     rs485_tx_queue_push((uint8_t)(RS485_DISCOVERY_REQ_BASE | request_id));
     rs485_discovery_wait_id = request_id;
     rs485_discovery_response_seen = 0u;
-    rs485_discovery_window_open = 0u;
     rs485_discovery_phase_wait_response = 1u;
-  } else {
-    rs485_discovery_window_open = 1u;
   }
 
   rs485_tx_kick();
@@ -1023,7 +1316,6 @@ int main(void)
   printf("[TIM15][CFG] PSC=%lu ARR=%lu → f_counter=275MHz/(PSC+1)=275MHz, f_UPDATE=275MHz/(ARR+1)=%lu kHz\r\n",
          (unsigned long)TIM15->PSC, (unsigned long)TIM15->ARR, 
          (unsigned long)(275000 / (TIM15->ARR + 1)));
-  printf("[TIM15][CFG] CH1 PWM enabled on PE5 for frequency measurement (f_PWM = f_UPDATE)\r\n");
     {
       const unsigned long ext_sel = (unsigned long)((ADC1->CFGR >> ADC_CFGR_EXTSEL_Pos) & 0x1FUL);
       const unsigned long ext_en  = (unsigned long)((ADC1->CFGR >> ADC_CFGR_EXTEN_Pos)  & 0x3UL);
@@ -1241,6 +1533,9 @@ int main(void)
       err_code = 1002;
       Error_Handler();
     }
+
+    HAL_NVIC_SetPriority(TIM15_IRQn, 3, 0);
+    HAL_NVIC_EnableIRQ(TIM15_IRQn);
     
     // Ждём первого UPDATE от TIM2 (TRGO->ITR1->RESET TIM15) для полной синхронизации
     // TIM2 @ 200 Hz = 5 мс период, максимальное ожидание ~5 мс
@@ -1258,10 +1553,6 @@ int main(void)
   uint32_t cnt_after = TIM15->CNT;
   printf("[TIM15][TEST] Counter increment test: before=%lu after=%lu delta=%ld (expected ~275)\r\n",
          (unsigned long)cnt_before, (unsigned long)cnt_after, (long)(cnt_after - cnt_before));
-
-  
-  // Запускаем PWM канал TIM15_CH1 (PE5) для наблюдения на осциллографе
-  HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
   STAGE(22,"TRGON");
   
   // ТЕПЕРЬ запускаем TIM2 CH1 с прерыванием (ПОСЛЕ инициализации ADC!)
@@ -1301,7 +1592,6 @@ int main(void)
   HAL_NVIC_EnableIRQ(TIM15_IRQn);
   
   CHECK(HAL_TIM_Base_Start(&htim15), 1102);
-  HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
 #else
   // SAFE_MINIMAL: ничего не запускаем из ADC/TIM15
 #endif
@@ -1353,6 +1643,9 @@ int main(void)
            (unsigned long)TIM2->ARR, (unsigned long)TIM2->SR, (unsigned long)TIM2->DIER);
   }
 #endif
+
+  arr_auto_tune_service();
+  phase_micro_adjust_service();
 
   // Ежесекундный вывод периода PD5 измеренного через TIM5 (32-битный счетчик @ 275 MHz)
   {
@@ -1538,6 +1831,7 @@ int main(void)
     }
   }
   #endif
+  rs485_sync_auto_role_service(now);
   /* Подстройка частоты TIM15 по фазе (TIM16 счётчик, PD5 reset) */
   {
     extern void adc_sync_pd5_apply_adjustment(void);
@@ -1645,6 +1939,7 @@ int main(void)
     LED_OFF();
     uart1_led_off_tick = 0;
   }
+  tune_led_service(now);
   /* Обработка приёма по UART1: сбор строки и разбор команд (вне ISR) */
   while(uart1_rx_ring_rd != uart1_rx_ring_wr){
     uint8_t ch = uart1_rx_ring[uart1_rx_ring_rd & (UART1_RX_RING_SZ-1)];
@@ -1663,6 +1958,7 @@ int main(void)
           printf("\r\n=== DEBUG COMMANDS (UART1) ===\r\n");
           printf("VER     - firmware version (git commit, build date)\r\n");
           printf("STATUS  - current state (streaming, counters, fps)\r\n");
+          printf("PHASE [AUTO|ticks] - show/set sync target phase\r\n");
           printf("PERF    - performance stats (prepare/tx/interval timings)\r\n");
           printf("FPS     - FPS statistics only\r\n");
           printf("RESET   - software reset (reboot device)\r\n");
@@ -1678,8 +1974,36 @@ int main(void)
         } else if(strncmp(uart1_cmd_buf, "STATUS", 6) == 0){
           printf("\r\n=== DEVICE STATUS (UART1) ===\r\n");
           printf("Uptime: %lu ms\r\n", HAL_GetTick());
+          if (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO) {
+            printf("Sync target phase: AUTO\r\n");
+          } else {
+            printf("Sync target phase: %lu ticks\r\n", (unsigned long)g_sync_target_phase_ticks);
+          }
           printf("Use 'PERF' or 'FPS' for detailed statistics\r\n");
           printf("==============================\r\n");
+        } else if(strncmp(uart1_cmd_buf, "PHASE", 5) == 0){
+          char *arg = uart1_cmd_buf + 5;
+          while(*arg == ' ') arg++;
+          if(*arg == 0){
+            if (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO) {
+              printf("[UART] PHASE=AUTO\r\n");
+            } else {
+              printf("[UART] PHASE=%lu ticks\r\n", (unsigned long)g_sync_target_phase_ticks);
+            }
+          } else if(strcmp(arg, "AUTO") == 0){
+            g_sync_target_phase_ticks = SYNC_TARGET_PHASE_AUTO;
+            printf("[UART] PHASE=AUTO\r\n");
+          } else {
+            char *end_ptr = NULL;
+            unsigned long phase_ticks = strtoul(arg, &end_ptr, 10);
+            while (end_ptr && *end_ptr == ' ') end_ptr++;
+            if ((end_ptr == arg) || (end_ptr && *end_ptr != 0)) {
+              printf("[UART] PHASE parse error: '%s'\r\n", arg);
+            } else {
+              g_sync_target_phase_ticks = (uint32_t)phase_ticks;
+              printf("[UART] PHASE=%lu ticks\r\n", phase_ticks);
+            }
+          }
         } else if(strncmp(uart1_cmd_buf, "FPS", 3) == 0){
           vnd_report_fps_stats();
         } else if(strncmp(uart1_cmd_buf, "PERF", 4) == 0){
@@ -2383,15 +2707,13 @@ static void MX_TIM15_Init(void)
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_SlaveConfigTypeDef sSlaveConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
 
   /* USER CODE BEGIN TIM15_Init 1 */
   /* USER CODE END TIM15_Init 1 */
   htim15.Instance = TIM15;
   htim15.Init.Prescaler = 0;     // Без предделителя: 275 MHz тактовая
   htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim15.Init.Period = 2145;     // 275 MHz / (2145+1) = 128.0 kHz UPDATE (fs_hz профиля; с небольшим запасом по N)
+  htim15.Init.Period = 4295;     // 275 MHz / (4295+1) ≈ 64 kHz UPDATE (примерно 200Hz PWM с делением)
   htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim15.Init.RepetitionCounter = 0;
   htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -2401,10 +2723,6 @@ static void MX_TIM15_Init(void)
   }
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
   if (HAL_TIM_ConfigClockSource(&htim15, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_Init(&htim15) != HAL_OK)
   {
     Error_Handler();
   }
@@ -2423,32 +2741,8 @@ static void MX_TIM15_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 572;  // 50% duty cycle @ ARR=1145 → для измерения частоты на PE5
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
-  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-  if (HAL_TIM_PWM_ConfigChannel(&htim15, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
-  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
-  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
-  sBreakDeadTimeConfig.DeadTime = 0;
-  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
-  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
-  sBreakDeadTimeConfig.BreakFilter = 0;
-  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
-  if (HAL_TIMEx_ConfigBreakDeadTime(&htim15, &sBreakDeadTimeConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
   /* USER CODE BEGIN TIM15_Init 2 */
   /* USER CODE END TIM15_Init 2 */
-  HAL_TIM_MspPostInit(&htim15);
 
 }
 
@@ -2770,6 +3064,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       extern void usb_vendor_periodic_tick(void);
       usb_vendor_periodic_tick();
     #endif
+  }
+  else if (htim->Instance == TIM15) {
+    if (tim15_arr_pulse_stage == 1u) {
+      TIM15->ARR = tim15_arr_pulse_nominal;
+      tim15_arr_pulse_stage = 2u;
+    } else if (tim15_arr_pulse_stage == 2u) {
+      tim15_arr_pulse_stage = 0u;
+      __HAL_TIM_DISABLE_IT(&htim15, TIM_IT_UPDATE);
+      __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+    }
   }
 }
 
