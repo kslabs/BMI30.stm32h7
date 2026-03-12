@@ -353,6 +353,30 @@ static inline uint8_t adc_parity_from_pa3(void)
     /* Просто читаем текущее состояние, которое инвертируется при каждом toggle */
     return s_pb8_state ? 0u : 1u;
 }
+
+void adc_stream_invert_phase_polarity(void)
+{
+    __disable_irq();
+
+    s_pb8_state ^= 1u;
+
+#if ADC_MARKER_PA3_ENABLE
+    if (GPIOA->ODR & GPIO_PIN_3) {
+        GPIOA->BSRR = ((uint32_t)GPIO_PIN_3 << 16);
+    } else {
+        GPIOA->BSRR = (uint32_t)GPIO_PIN_3;
+    }
+#endif
+
+    if (vnd_is_streaming() && vnd_is_tx_enabled()) {
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, s_pb8_state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    } else {
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+    }
+
+    __enable_irq();
+}
+
 extern volatile uint32_t sync_tim5_cnt_at_buffer;
 extern volatile uint32_t sync_tim5_buffer_phase_seq;
 

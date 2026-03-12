@@ -126,6 +126,9 @@ void adc_stream_get_debug(adc_stream_debug_t *out);
 // Получить parity (чётность) буфера по seq (0=even, 1=odd) для 400Hz режима
 uint8_t adc_get_buffer_parity(uint32_t seq);
 
+// Одноразово инвертировать локальную полярность фазы (PA3/паритет) без изменения DMA/USB логики
+void adc_stream_invert_phase_polarity(void);
+
 // DEBUG: вывести trace записей в s_buffer_parity[] (вызывать из non-ISR)
 void adc_dump_buffer_trace(void);
 
