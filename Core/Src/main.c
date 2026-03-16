@@ -139,6 +139,51 @@ static inline uint8_t rs485_sync_read_local_pa3_phase(void)
   return ((GPIOA->ODR & GPIO_PIN_3) != 0u) ? 1u : 0u;
 }
 
+static inline uint8_t rs485_sync_edge_kind_from_marker_level(uint8_t marker_level)
+{
+  return (uint8_t)((marker_level ^ 1u) & 1u);
+}
+
+static uint32_t rs485_sync_get_uart_packet_ticks(void)
+{
+  uint32_t tim_clk = HAL_RCC_GetPCLK1Freq();
+  uint32_t d2ppre1 = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1_Msk) >> RCC_D2CFGR_D2PPRE1_Pos;
+  uint32_t baud = huart2.Init.BaudRate;
+
+  if (d2ppre1 != 0u) {
+    tim_clk *= 2u;
+  }
+  if (baud == 0u) {
+    return 0u;
+  }
+
+  return (uint32_t)((((uint64_t)tim_clk * 10u) + ((uint64_t)baud / 2u)) / (uint64_t)baud);
+}
+
+static uint32_t rs485_sync_get_auto_target_phase_ticks(uint32_t period_ticks)
+{
+  extern uint16_t adc_stream_get_active_samples(void);
+  uint32_t uart_packet_ticks = rs485_sync_get_uart_packet_ticks();
+  uint32_t active_samples = adc_stream_get_active_samples();
+  uint32_t sample_ticks = 0u;
+  uint32_t rx_comp_ticks = 0u;
+
+  if (period_ticks == 0u) {
+    return 0u;
+  }
+
+  if (active_samples != 0u) {
+    sample_ticks = period_ticks / active_samples;
+  }
+
+  rx_comp_ticks = uart_packet_ticks;
+  if (sample_ticks < period_ticks) {
+    rx_comp_ticks += sample_ticks;
+  }
+
+  return (period_ticks > rx_comp_ticks) ? (period_ticks - rx_comp_ticks) : 0u;
+}
+
 static void rs485_sync_on_packet_received(uint8_t edge_kind);
 static void rs485_discovery_on_sync_received(void);
 static void rs485_discovery_on_request(uint8_t value);
@@ -504,7 +549,7 @@ static void rs485_sync_on_packet_received(uint8_t edge_kind)
   sync_tim15_cnt_at_pd5 = htim15.Instance->CNT;
   rs485_last_sync_edge_kind = (uint8_t)(edge_kind & 1u);
   if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
-    uint8_t local_edge_kind = rs485_sync_read_local_pa3_phase();
+    uint8_t local_edge_kind = rs485_sync_edge_kind_from_marker_level(rs485_sync_read_local_pa3_phase());
 
     if (local_edge_kind == rs485_last_sync_edge_kind) {
       if (rs485_sync_relation_score < 8) {
@@ -939,7 +984,6 @@ static void phase_micro_adjust_service(void)
   const uint32_t min_error_limited_step = 4u;
   uint32_t error_limited_step = min_error_limited_step;
   uint32_t correction_strength = 1u;
-  const uint32_t rx_comp_ticks = 24000u;
   const int32_t phase_deadband_ticks = 16;
   const int32_t phase_lock_release_ticks = 64;
   const int8_t relation_confirm_score = 3;
@@ -1019,7 +1063,7 @@ static void phase_micro_adjust_service(void)
   half_period_ticks = period_ticks / 2u;
 
   if (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO) {
-    target_phase_ticks = (period_ticks > rx_comp_ticks) ? (period_ticks - rx_comp_ticks) : 0u;
+    target_phase_ticks = rs485_sync_get_auto_target_phase_ticks(period_ticks);
   } else {
     target_phase_ticks = g_sync_target_phase_ticks % period_ticks;
   }
@@ -1032,6 +1076,7 @@ static void phase_micro_adjust_service(void)
   }
 
   phase_error_abs_ticks = arr_auto_abs_i32(phase_error_ticks);
+
   effective_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
   relation_score = rs485_sync_relation_score;
   if (relation_score >= relation_confirm_score) {
@@ -3101,7 +3146,7 @@ static void MX_USART2_UART_Init(void)
 {
 
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 240000;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
