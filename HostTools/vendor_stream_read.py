@@ -170,6 +170,8 @@ def main():
     ap.add_argument('--win1-len', type=int, default=200)
     ap.add_argument('--status-interval', type=float, default=0.5, help='Request GET_STATUS every N seconds (0=off)')
     ap.add_argument('--ctrl-status', action='store_true', help='Use control transfer for GET_STATUS (works even mid-pair)')
+    ap.add_argument('--status-print', action='store_true', help='Print periodic STAT lines even with --quiet')
+    ap.add_argument('--print-errors', action='store_true', help='Print USB read/control errors even with --quiet')
     ap.add_argument('--ab-strict', action='store_true', help='Fail if A→B ordering is violated or STAT appears mid-pair')
     ap.add_argument('--seq-strict', action='store_true', help='Verify that completed pairs have strictly consecutive seq (no gaps/dupes)')
     ap.add_argument('--warmup-pairs', type=int, default=0, help='Ignore ordering/seq checks for the first N completed pairs after sync')
@@ -186,6 +188,9 @@ def main():
     if verify_mode is None:
         # If host requests both channels, verify strict pairs; otherwise verify monotonic seq stream.
         verify_mode = 'pair' if args.chmode == 2 else 'mono'
+
+    status_verbose = (not args.quiet) or args.status_print
+    error_verbose = (not args.quiet) or args.print_errors
 
     dev = find_device(args.vid, args.pid)
     intf = claim_interface(dev, args.intf)
@@ -310,14 +315,14 @@ def main():
                         raw = dev.ctrl_transfer(0xC0, VND_CMD_GET_STATUS, 0, 0, STAT_LEN_V4, timeout=300)
                         buf = bytes(raw)
                         st = parse_stat(buf)
-                        if st and not args.quiet:
+                        if st and status_verbose:
                             print(f"STAT[vnd-ctl] v{st['ver']} f2=0x{st['flags2']:04X} cur={st['cur_samples']} seq={st['cur_stream_seq']} sentA/B={st['sent0']}/{st['sent1']} wr={st['wr']} dma0/1={st['dma0']}/{st['dma1']} lastTX={st['last_tx_len']} send={st['sending_ch']} pair fs={st['pair_idx']>>8}/{st['pair_idx']&0xFF}")
-                        elif not args.quiet:
+                        elif status_verbose:
                             print("STAT[vnd-ctl]", buf[:16].hex(), "len=", len(buf))
                     else:
                         send_cmd(dev, ep_out, bytes([VND_CMD_GET_STATUS]))
                 except usb.core.USBError as e:
-                    if not args.quiet:
+                    if status_verbose or error_verbose:
                         print("GET_STATUS err:", e)
                 last_status = now
 
@@ -329,12 +334,12 @@ def main():
                 chunk = b""
                 if getattr(e, 'errno', None) is None:
                     in_errors += 1
-                    if not args.quiet:
-                        print(f"IN error: {e}")
+                    if error_verbose:
+                        print(f"IN error @ {time.time()-t0:.3f}s: {e}")
                 else:
                     in_timeouts += 1
-                    if not args.quiet:
-                        print(f"IN timeout/err: {e}")
+                    if error_verbose:
+                        print(f"IN timeout/err @ {time.time()-t0:.3f}s: {e}")
             acc += bytes(chunk)
 
             # Парсинг acc: возможен leading мусор — сдвигаем до 'STAT' или 0x5A 0xA5
@@ -358,9 +363,9 @@ def main():
                         continue
                     if expect_b:
                         stat_midpair += 1
-                        if args.ab_strict and not args.quiet:
+                        if args.ab_strict and status_verbose:
                             print("[WARN] STAT received mid-pair while expecting B (allowed)")
-                    if not args.quiet:
+                    if status_verbose:
                         stp = parse_stat(st)
                         if stp:
                             extra = ""

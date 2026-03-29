@@ -323,32 +323,78 @@ static inline uint32_t adc_addr_to_index(uint32_t addr, uint16_t buf[FIFO_FRAMES
 #define ADC_MARKER_PA3_ENABLE 1
 #endif
 
+#ifndef ADC_MARKER_PA3_DIV
+#define ADC_MARKER_PA3_DIV 1u
+#endif
+
+#define ADC_MARKER_PORT_A GPIOA
+#define ADC_MARKER_PIN_A  GPIO_PIN_2
+#define ADC_MARKER_PORT_C GPIOC
+#define ADC_MARKER_PIN_C  GPIO_PIN_7
+
+static inline void adc_marker_set_level_a(uint8_t level_high)
+{
+    ADC_MARKER_PORT_A->BSRR = level_high ? (uint32_t)ADC_MARKER_PIN_A : ((uint32_t)ADC_MARKER_PIN_A << 16);
+}
+
+static inline void adc_marker_set_level_b(uint8_t level_high)
+{
+    ADC_MARKER_PORT_C->BSRR = level_high ? (uint32_t)ADC_MARKER_PIN_C : ((uint32_t)ADC_MARKER_PIN_C << 16);
+}
+
+static inline void adc_marker_set_level(uint8_t level_high)
+{
+    /* Текущий режим: зеркалим общий бит на оба канала. */
+    adc_marker_set_level_a(level_high);
+    adc_marker_set_level_b(level_high);
+}
+
 static inline void adc_marker_pa3_toggle(void)
 {
 #if ADC_MARKER_PA3_ENABLE
-    /* Atomic toggle via BSRR: safe even inside ISR */
-    if (GPIOA->ODR & GPIO_PIN_3) {
-        GPIOA->BSRR = ((uint32_t)GPIO_PIN_3 << 16);
-    } else {
-        GPIOA->BSRR = (uint32_t)GPIO_PIN_3;
+    static uint32_t pa3_divider = 0;
+
+    pa3_divider++;
+    if (pa3_divider >= ADC_MARKER_PA3_DIV) {
+        pa3_divider = 0;
+        /* Atomic toggle via BSRR: safe even inside ISR */
+        uint8_t next_level_high = ((ADC_MARKER_PORT_A->ODR & ADC_MARKER_PIN_A) == 0u) ? 1u : 0u;
+        adc_marker_set_level(next_level_high);
     }
 #endif
 }
 
-/* Привязка чет/нечет к счетчику буферов после restart.
-   После каждого restart (синхронизация по PD5) первый буфер всегда НЕЧЕТНЫЙ.
-   Каждый следующий буфер меняет четность: ODD -> EVEN -> ODD -> EVEN...
-   s_pb8_state = 0 (LOW) соответствует ODD, s_pb8_state = 1 (HIGH) соответствует EVEN.
-   Возвращаем parity bit: 0=even, 1=odd. */
+/* Привязка чет/нечет к счетчику буферов.
+    s_pb8_state теперь используется только как внутренний маркер четности,
+    без выдачи синхросигнала на отдельный GPIO. */
 static inline uint8_t adc_parity_from_pa3(void)
 {
     /* Просто читаем текущее состояние, которое инвертируется при каждом toggle */
     return s_pb8_state ? 0u : 1u;
 }
 
+void adc_stream_invert_phase_polarity(void)
+{
+    __disable_irq();
+
+    s_pb8_state ^= 1u;
+
+#if ADC_MARKER_PA3_ENABLE
+    /* Поведение как у legacy PA3: инвертируем уровень маркера атомарно. */
+    uint8_t next_level_high = ((ADC_MARKER_PORT_A->ODR & ADC_MARKER_PIN_A) == 0u) ? 1u : 0u;
+    adc_marker_set_level(next_level_high);
+#endif
+
+    __enable_irq();
+}
+
+extern volatile uint32_t sync_tim5_cnt_at_buffer;
+extern volatile uint32_t sync_tim5_buffer_phase_seq;
+
 /* Отметить готовность канала и, если пара на очередном индексе готова, опубликовать её */
 static inline void adc_mark_ready_and_publish(uint8_t ch_bit)
 {
+    extern TIM_HandleTypeDef htim5;
     /* Попробуем публиковать подряд готовые пары (в правильном порядке) */
     while (s_pair_ready_mask[s_pair_ready_idx] == READY_MASK_FULL) {
         /* Очередная пара полностью готова */
@@ -364,13 +410,19 @@ static inline void adc_mark_ready_and_publish(uint8_t ch_bit)
         frame_wr_seq += 1u;
         adc_publish_count++;
         adc_last_publish_ms = HAL_GetTick();
+        sync_tim5_cnt_at_buffer = htim5.Instance->CNT;
+        sync_tim5_buffer_phase_seq++;
         adc_marker_pa3_toggle();
         uint32_t backlog = frame_wr_seq - frame_rd_seq;
         if (backlog > frame_backlog_max) frame_backlog_max = backlog;
         if (backlog > FIFO_FRAMES) {
-            uint32_t excess = backlog - FIFO_FRAMES;
-            frame_overflow_drops += excess;
-            frame_rd_seq += excess;
+            /* LOSSLESS/BACKPRESSURE: не сдвигаем frame_rd_seq и не выбрасываем пары.
+               Когда очередь близка к переполнению, переводим захват в паузу; watchdog
+               позже возобновит его после разгрузки FIFO. */
+            if (!adc_stream_paused) {
+                adc_stream_paused = 1;
+                adc_stream_pause_events++;
+            }
         }
         adc_stream_on_new_frames(1u);
     }
@@ -505,6 +557,9 @@ static int32_t g_arr_fine_offset = 0;  // По умолчанию БЕЗ кор�
 // Периодическое применение offset: применять на 1 буфер каждые N буферов (0 = постоянно)
 static uint32_t g_arr_fine_period = 1000;  // 1 раз на 1000 буферов (~5 сек) → очень медленная коррекция
 
+// Флаг: отключить автоматическое переопределение ARR (для ручного тестирования)
+volatile uint8_t g_arr_manual_mode = 1;  // ВКЛЮЧЕНО: не переписывать ARR в apply_timing
+
 // Автоматическая подстройка частоты по sync_buffers_between_edges (0=откл, 1=вкл)
 static uint8_t g_auto_freq_sync_enable = 1;  // ВКЛЮЧЕНО: фазовая синхронизация
 
@@ -560,9 +615,6 @@ void adc_stream_setup_tim15_arr_dma(void)
 void adc_stream_push_tim15_phase(int32_t correction_ticks)
 {
     extern TIM_HandleTypeDef htim15;
-    
-    // Toggle LED to indicate correction
-    HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_3);
 
     /* Коррекция без DMA и без новых прерываний:
        1 период ARR +/- correction_ticks, затем возврат ARR.
@@ -623,6 +675,8 @@ volatile uint32_t adc_stream_total_buffer_count = 0;
 volatile uint32_t sync_buffer_count_at_edge = 0;
 volatile uint32_t sync_buffers_between_edges = 0;  /* Реальное количество буферов между спадами PD5 */
 volatile uint32_t sync_tim15_cnt_at_pd5 = 0;        /* TIM15->CNT при спаде PD5 (фаза внутри семпла) */
+volatile uint32_t sync_tim5_cnt_at_buffer = 0;      /* TIM5->CNT в момент локального завершения буфера */
+volatile uint32_t sync_tim5_buffer_phase_seq = 0;   /* Счетчик обновлений локальной фазовой выборки */
 
 /* Диагностика: индекс сэмпла TIM15 на конце буфера */
 volatile uint16_t adc_sync_dbg_last_idx = 0;
@@ -824,6 +878,13 @@ static void adc_stream_apply_timing(void)
     uint32_t tim15_arr = (tick_hz / sample_rate);
     if (tim15_arr == 0u) tim15_arr = 1u;
     tim15_arr -= 1u;
+
+    /* ПРОПУСКАЕМ переписывание ARR если включен ручной режим тестирования */
+    extern volatile uint8_t g_arr_manual_mode;
+    if (g_arr_manual_mode) {
+        // Ручной режим - не переписываем ARR, используем значение из main loop
+        return;
+    }
 
     /* Применяем тонкую подстройку ARR (только если включен ручной режим) */
     if (!g_auto_freq_sync_enable && g_arr_fine_offset != 0) {
@@ -1202,7 +1263,7 @@ HAL_StatusTypeDef adc_stream_restart(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a
     return adc_stream_apply_profile();
 }
 
-/* Перезапуск ADC/DMA для синхронизации по PD5 (вызывается из EXTI в режиме SLAVE) */
+/* Legacy helper: перезапуск ADC/DMA для старой схемы синхронизации. В новой RS-485 схеме не используется. */
 void adc_stream_restart_sync(void) {
     extern TIM_HandleTypeDef htim15;
     extern ADC_HandleTypeDef hadc1;
@@ -1220,12 +1281,11 @@ void adc_stream_restart_sync(void) {
     htim15.Instance->CNT = 0;
     htim15.Instance->EGR = TIM_EGR_UG;
     
-    /* Устанавливаем выходные сигналы в исходное состояние (LOW) */
-    HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);  // PB8 -> LOW
+    /* Сбрасываем только внутренние маркеры четности/буфера */
     s_pb8_state = 0u;  // PB8=LOW -> ODD parity
     s_buffers_since_restart = 0u;  // Сброс счетчика для детерминированной последовательности parity
     s_global_buffer_counter = 0u;  // ВАЖНО: Сброс глобального счетчика для детерминированного запуска захвата
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);                  // PA2 -> LOW (ODD parity)
+    adc_marker_set_level(0u);                                               // PA2/PC7 -> LOW (начальная фаза маркера)
     
     /* Сбрасываем маски готовности для синхронного старта обоих ADC */
     extern volatile uint8_t s_pair_ready_mask[FIFO_FRAMES];
@@ -1367,6 +1427,8 @@ uint8_t adc_get_frame_pair(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, ui
         return 0;
     }
     uint32_t seq = frame_rd_seq++;
+    if (adc_ch_rd_seq[0] == seq) { adc_ch_rd_seq[0]++; }
+    if (adc_ch_rd_seq[1] == seq) { adc_ch_rd_seq[1]++; }
     __enable_irq();
     if (seq_out) { *seq_out = seq; }
 
@@ -1394,6 +1456,8 @@ uint8_t adc_get_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *sample
         return 0;
     }
     uint32_t seq = frame_rd_seq++;
+    if (adc_ch_rd_seq[0] == seq) { adc_ch_rd_seq[0]++; }
+    if (adc_ch_rd_seq[1] == seq) { adc_ch_rd_seq[1]++; }
     __enable_irq();
     if (seq_out) { *seq_out = seq; }
 
@@ -1402,6 +1466,42 @@ uint8_t adc_get_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *sample
     *ch2 = adc2_buffers[index];
     *samples = g_active_samples;
     return 1;
+}
+
+uint8_t adc_peek_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, uint32_t *seq_out)
+{
+    if (!ch1 || !ch2 || !samples) {
+        ADC_LOGF("[ADC][PEEK_FRAME_PAIR_FIFO] ERROR: ch1/ch2/samples NULL\r\n");
+        return 0;
+    }
+    __disable_irq();
+    if (frame_rd_seq == frame_wr_seq) {
+        __enable_irq();
+        return 0;
+    }
+    uint32_t seq = frame_rd_seq;
+    __enable_irq();
+    if (seq_out) { *seq_out = seq; }
+
+    uint32_t index = seq & (FIFO_FRAMES - 1u);
+    *ch1 = adc1_buffers[index];
+    *ch2 = adc2_buffers[index];
+    *samples = g_active_samples;
+    return 1;
+}
+
+uint8_t adc_consume_frame_pair_fifo(uint32_t seq)
+{
+    uint8_t ok = 0;
+    __disable_irq();
+    if (frame_rd_seq != frame_wr_seq && frame_rd_seq == seq) {
+        frame_rd_seq++;
+        if (adc_ch_rd_seq[0] == seq) { adc_ch_rd_seq[0]++; }
+        if (adc_ch_rd_seq[1] == seq) { adc_ch_rd_seq[1]++; }
+        ok = 1;
+    }
+    __enable_irq();
+    return ok;
 }
 
 // Peek последнего опубликованного кадра (FIFO), НЕ потребляя FIFO.
@@ -1984,17 +2084,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
         s_tc_mask = 0;
         s_both_ready++;
         
-        /* SYNC_OUT (PB8) переключается при завершении обоих ADC */
-        HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, (s_pb8_state) ? GPIO_PIN_RESET : GPIO_PIN_SET);
+        /* Внутренний маркер четности буфера: отдельный GPIO sync больше не используется */
         s_pb8_state ^= 1u;
         
-        /* HARDWARE FORCE: Update PA2 IMMEDIATELY after PB8 to minimize skew */
-        if (vnd_is_streaming() && vnd_is_tx_enabled()) {
-            /* Строгая синхронизация: PA2 повторяет состояние PB8 (In-Phase) */
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, (s_pb8_state) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-        } else {
-             HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
-        }
+         /* PA2/PC7 больше не форсируются от parity: маркером управляет только adc_marker_pa3_toggle(). */
         extern TIM_HandleTypeDef htim15;
         
 
@@ -2030,6 +2123,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
             
             /* ВСЕГДА инкрементируем счетчик буферов (для статистики) */
             adc_stream_total_buffer_count++;
+            rs485_sync_on_buffer_complete();
             
             /* Интегральный регулятор фазы (фильтр джиттера) */
             // NON-BLOCKING IMPLEMENTATION
@@ -2041,40 +2135,82 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
             if (now_ms >= sync_last_edge_ms) time_since_edge = now_ms - sync_last_edge_ms;
             else time_since_edge = 0; // overflow safety
             
-            bool signal_present = (time_since_edge < 2000u) && (sync_last_edge_ms != 0);
+            bool signal_present = (time_since_edge < 120u) && (sync_last_edge_ms != 0u);
             
             extern volatile uint8_t vnd_sync_mode_public;
             extern volatile uint8_t vnd_sync_ok_public;
             static uint8_t sync_locked = 0;
+            static uint32_t lock_stable_cnt = 0;
+            static uint32_t unlock_stable_cnt = 0;
+            static uint8_t sync_lock_eval_div = 0u;
+            extern volatile uint8_t g_arr_manual_mode;
             static uint8_t sync_loop_reset_req = 0;
+            static uint16_t signal_present_stable = 0u;
+            static uint16_t signal_lost_stable = 0u;
+            static uint32_t signal_lost_since_ms = 0xFFFFFFFFu;
+
+
+            if (g_arr_manual_mode) {
+                if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+                    g_auto_freq_sync_enable = 0;
+                    vnd_sync_ok_public = 1u;
+                } else if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+                    g_auto_freq_sync_enable = 1;
+                    vnd_sync_ok_public = 0u;
+                } else {
+                    g_auto_freq_sync_enable = 0;
+                    vnd_sync_ok_public = 0u;
+                }
+                sync_locked = 0;
+                lock_stable_cnt = 0u;
+                unlock_stable_cnt = 0u;
+                sync_lock_eval_div = 0u;
+                signal_present_stable = 0u;
+                signal_lost_stable = 0u;
+                signal_lost_since_ms = 0xFFFFFFFFu;
+            } else
+            if (signal_present) {
+                if (signal_present_stable < 1000u) signal_present_stable++;
+                signal_lost_stable = 0u;
+                signal_lost_since_ms = 0xFFFFFFFFu;
+            } else {
+                if (signal_lost_stable < 1000u) signal_lost_stable++;
+                signal_present_stable = 0u;
+                if (signal_lost_since_ms == 0xFFFFFFFFu) {
+                    signal_lost_since_ms = now_ms;
+                }
+            }
 
             if (signal_present) {
                 // Signal IS present -> SLAVE MODE CANDIDATE
-                
-                static uint32_t lock_stable_cnt = 0;
-                static uint32_t unlock_stable_cnt = 0;
+                uint8_t evaluate_lock = 0u;
 
-                if (sync_locked) {
+                if (++sync_lock_eval_div >= 8u) {
+                    sync_lock_eval_div = 0u;
+                    evaluate_lock = 1u;
+                }
+
+                if (sync_locked && evaluate_lock) {
                     // Already locked: check if we lost it (very wide window)
                     bool bad_phase = (g_tim5_avg_phase <= -20000 || g_tim5_avg_phase >= 20000);
                     if (bad_phase) {
                         unlock_stable_cnt++;
-                        // Require continuous failure for ~1 second (200 checks @ 5ms)
-                        // This prevents blinking "S" due to short noise bursts
-                        if(unlock_stable_cnt > 200) {
+                        // Require continuous failure for ~1 second on the averaged phase updates.
+                        if(unlock_stable_cnt > 25) {
                             sync_locked = 0;
                             unlock_stable_cnt = 0;
                         }
                     } else {
                         unlock_stable_cnt = 0;
                     }
-                } else {
-                    // Not locked: check if we found it (tight window)
-                    bool good_phase = (g_tim5_avg_phase > -2000 && g_tim5_avg_phase < 2000);
+                } else if (!sync_locked && evaluate_lock) {
+                    // Not locked: green only after the averaged phase enters a narrow window
+                    // and keeps holding there on repeated averaged updates.
+                    bool good_phase = (g_tim5_avg_phase > -40 && g_tim5_avg_phase < 40);
                     if (good_phase) {
                         lock_stable_cnt++;
-                        // Require stability for ~250ms (50 checks @ 5ms) before Green
-                        if(lock_stable_cnt > 50) {
+                        // Require about 1 second of stable averaged phase before Green.
+                        if(lock_stable_cnt > 25) {
                             sync_locked = 1;
                             lock_stable_cnt = 0;
                         }
@@ -2084,23 +2220,39 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                 }
                 vnd_sync_ok_public = sync_locked;
                 
-                if (!g_auto_freq_sync_enable) {
+                if (!g_auto_freq_sync_enable && (signal_present_stable >= 8u)) {
                     // Switch MASTER -> SLAVE
                     g_auto_freq_sync_enable = 1;
                     vnd_sync_mode_public = 1; // SLAVE
                     sync_locked = 0; // Reset lock state on mode switch
+                    vnd_sync_ok_public = 0u;
+                    lock_stable_cnt = 0u;
+                    unlock_stable_cnt = 0u;
+                    sync_lock_eval_div = 0u;
                     sync_loop_reset_req = 1; // Request reset of PLL integrator
                 }
             } else {
                 // Signal Lost -> MASTER MODE
-                vnd_sync_ok_public = 0; // RED (No Signal)
+                uint32_t signal_lost_age_ms = 0u;
+                uint32_t master_claim_delay_ms = rs485_get_master_claim_delay_ms();
+
+                if (signal_lost_since_ms != 0xFFFFFFFFu) {
+                    signal_lost_age_ms = now_ms - signal_lost_since_ms;
+                }
+
                 sync_locked = 0;
+                vnd_sync_ok_public = 0u;
+                lock_stable_cnt = 0u;
+                unlock_stable_cnt = 0u;
+                sync_lock_eval_div = 0u;
                 
-                if (g_auto_freq_sync_enable) {
+                if (g_auto_freq_sync_enable && (signal_lost_stable >= 20u) && (signal_lost_age_ms >= master_claim_delay_ms)) {
                     // Switch SLAVE -> MASTER
                     g_auto_freq_sync_enable = 0;
                     vnd_sync_mode_public = 0; // MASTER
-                    ADC_LOGF("[SYNC] Signal lost -> MASTER mode enabled\r\n");
+                    ADC_LOGF("[SYNC] Signal lost %lums -> MASTER mode enabled after claim delay %lums\r\n",
+                             (unsigned long)signal_lost_age_ms,
+                             (unsigned long)master_claim_delay_ms);
                 }
             }
             
@@ -2226,7 +2378,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                             
                              // Threshold must be tolerable
                         
-                        int32_t correction = 0;
+                        int32_t correction = 0;  // ОТКЛЮЧЕНО: фазовые коррекции отключены для поиска частоты
                         
                         // Check User Button (PC13)
                         // Active HIGH (Pressed = 1) via PULLDOWN
@@ -2235,6 +2387,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                         // Heartbeat REMOVED (User requested OFF by default)
                         // HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_3); 
 
+                        // ФАЗОВЫЕ КОРРЕКЦИИ ПОЛНОСТЬЮ ОТКЛЮЧЕНЫ
+                        // Система просто сохраняет фиксированный ARR до уточнения частоты
+                        #if 0  // DISABLE ALL PHASE CORRECTIONS
                         if (btn_state == GPIO_PIN_SET) {
                             // User pressed button: DISABLE CORRECTION & LED ON
                             correction = 0;
@@ -2293,6 +2448,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                                 correction = 0;
                             }
                         }
+                        #endif  // PHASE CORRECTIONS DISABLED
+                        
+                        // correction остаётся 0 - никаких изменений ARR
                         
                         if (correction != 0) {
                             extern TIM_HandleTypeDef htim15;
@@ -2361,12 +2519,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
         /* ОТКЛЮЧЕНО: Старая подстройка по фазе - убрана для чистого режима частотной синхронизации */
         /* adc_sync_phase_on_buffer(); */
 
-        /* Если видели фронт PD5 — запросим выравнивание TIM15 в main loop */
+        /* В ручном поиске частоты не делаем жёсткого выравнивания по sync-фронту,
+           иначе фаза движется рывками из-за принудительных подхватов. */
         extern volatile uint8_t sync_edge_seen;
-        extern volatile uint8_t sync_align_pending;
         if (sync_edge_seen) {
             sync_edge_seen = 0u;
-            sync_align_pending = 1u;
         }
 
 /* PA2 update moved to early execution (near PB8 toggle) to minimize skew */
@@ -2640,8 +2797,13 @@ void adc_stream_watchdog(void)
 {
     /* Локальный захват текущего тика (исключаем рассинхронизацию перед вызовом) */
     uint32_t now_ms = HAL_GetTick();
+    uint8_t arr_manual_mode = 0u;
     if(s_adc1 == NULL || (!DIAG_SINGLE_ADC1 && s_adc2 == NULL)) return; /* ещё не инициализированы */
     if(adc_stream_static_mode_enabled()) return; /* статический режим: DMA не запускается */
+    {
+        extern volatile uint8_t g_arr_manual_mode;
+        arr_manual_mode = g_arr_manual_mode;
+    }
 
     /* LOSSLESS/backpressure: при паузе из-за заполненного FIFO не делаем рестарт,
        а возобновляем захват, когда хост «разгрузит» очередь. */
@@ -2669,6 +2831,7 @@ void adc_stream_watchdog(void)
         }
         return;
     }
+    if (arr_manual_mode) return; /* В ручном ARR-режиме запрещаем только watchdog-рестарты */
     uint32_t lastA = adc_last_full0_ms;
     uint32_t lastB = adc_last_full1_ms;
     if(lastA == 0) return; /* поток ещё не стартовал (нет ни одного полного завершения) */

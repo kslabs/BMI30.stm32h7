@@ -117,6 +117,13 @@ uint8_t adc_get_frame_pair(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, ui
 // игнорирует ADC_USB_STAGE_ENABLE (usb_stage_bufA). Нужен для lossless ROI/AVG.
 uint8_t adc_get_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, uint32_t *seq_out);
 
+// LOSSLESS: peek текущей пары FIFO без продвижения frame_rd_seq.
+// Используйте вместе с adc_consume_frame_pair_fifo() после успешной обработки кадра.
+uint8_t adc_peek_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, uint32_t *seq_out);
+
+// LOSSLESS: подтвердить (consume) пару FIFO, ранее полученную через adc_peek_frame_pair_fifo.
+uint8_t adc_consume_frame_pair_fifo(uint32_t seq);
+
 // НОВОЕ: peek последнего опубликованного кадра (FIFO), НЕ двигает frame_rd_seq.
 // Возвращает самый свежий кадр: seq = frame_wr_seq-1.
 // ВАЖНО: указатели валидны пока соответствующий FIFO слот не будет перезаписан.
@@ -125,6 +132,9 @@ void adc_stream_get_debug(adc_stream_debug_t *out);
 
 // Получить parity (чётность) буфера по seq (0=even, 1=odd) для 400Hz режима
 uint8_t adc_get_buffer_parity(uint32_t seq);
+
+// Одноразово инвертировать локальную полярность фазы (PA3/паритет) без изменения DMA/USB логики
+void adc_stream_invert_phase_polarity(void);
 
 // DEBUG: вывести trace записей в s_buffer_parity[] (вызывать из non-ISR)
 void adc_dump_buffer_trace(void);

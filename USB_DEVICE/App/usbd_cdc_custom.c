@@ -33,6 +33,7 @@
 
 /* Максимальный размер одного кадра Vendor (32 байта заголовок + до 1360 выборок *2) */
 #define VND_MAX_FRAME_SIZE             (32u + 1360u*2u) /* =2752 */
+#define VND_TX_BUFFER_SLOTS            2u
 
 /*
  * Конфигурационный дескриптор: добавляем Vendor IF#2 с двумя alt-setting:
@@ -72,11 +73,26 @@ void USBD_VND_ForceTxIdle(void);
 
 /* Простейшие буферы Vendor (нужны до VND_Class_*Reset) */
 static uint8_t vnd_rx_buf[VND_DATA_HS_MAX_PACKET_SIZE];
-static uint8_t vnd_tx_buf[VND_MAX_FRAME_SIZE];
+static uint8_t vnd_tx_buf[VND_TX_BUFFER_SLOTS][VND_MAX_FRAME_SIZE];
 static volatile uint32_t vnd_rx_len = 0;
 static volatile uint8_t vnd_tx_busy = 0;
 static volatile uint8_t vnd_last_tx_rc = 0xFF; /* последний rc из USBD_LL_Transmit */
 static volatile uint16_t vnd_last_tx_len = 0;
+static volatile uint8_t vnd_tx_active_slot = 0xFFu;
+static volatile uint8_t vnd_tx_next_slot = 0u;
+
+static void vnd_clean_dcache_range(const void *buf, uint16_t len)
+{
+#if defined (SCB_CleanDCache_by_Addr)
+  uintptr_t addr = (uintptr_t)buf;
+  uint32_t clean_addr = (uint32_t)(addr & ~((uintptr_t)31U));
+  uint32_t clean_len = (uint32_t)(((addr + len + 31U) & ~((uintptr_t)31U)) - clean_addr);
+  SCB_CleanDCache_by_Addr((uint32_t*)clean_addr, (int32_t)clean_len);
+#else
+  (void)buf;
+  (void)len;
+#endif
+}
 
 /* Запросить soft/deep reset откуда угодно (в т.ч. из приложения) */
 void USBD_VND_RequestSoftReset(void){ g_req_soft_reset = 1; }
@@ -158,7 +174,10 @@ __weak void USBD_VND_TxCplt(void) {}
 /* API для передачи по Vendor */
 uint8_t USBD_VND_Transmit(USBD_HandleTypeDef *pdev, const uint8_t *data, uint16_t len)
 {
-  if (len > (uint16_t)sizeof(vnd_tx_buf)) return (uint8_t)USBD_FAIL; /* недопустимо: кадр больше ожидаемого */
+  uint8_t slot;
+  uint8_t *tx_buf;
+
+  if (len > (uint16_t)VND_MAX_FRAME_SIZE) return (uint8_t)USBD_FAIL; /* недопустимо: кадр больше ожидаемого */
   /* Сначала проверяем занятость; при BUSY — минимальный лог без засорения основного [VND_TX] */
   if (vnd_tx_busy) {
     if (len >= 4) {
@@ -169,22 +188,17 @@ uint8_t USBD_VND_Transmit(USBD_HandleTypeDef *pdev, const uint8_t *data, uint16_
     }
     return (uint8_t)USBD_BUSY;
   }
-  memcpy(vnd_tx_buf, data, len);
+  slot = vnd_tx_next_slot;
+  tx_buf = vnd_tx_buf[slot];
+  memcpy(tx_buf, data, len);
   /* ВАЖНО (STM32H7, включён D-Cache): очистить кэш перед DMA/USB IN,
      иначе хост увидит старые/нулевые данные в памяти. Выравниваем адрес/длину на 32 байта. */
-#if defined (SCB_CleanDCache_by_Addr)
-  {
-    uintptr_t addr = (uintptr_t)vnd_tx_buf;
-    uint32_t  clean_addr = (uint32_t)(addr & ~((uintptr_t)31U));
-    uint32_t  clean_len  = (uint32_t)(((addr + len + 31U) & ~((uintptr_t)31U)) - clean_addr);
-    SCB_CleanDCache_by_Addr((uint32_t*)clean_addr, (int32_t)clean_len);
-  }
-#endif
+  vnd_clean_dcache_range(tx_buf, len);
   /* Жёсткий запрет STAT mid-stream: если это не рабочий кадр (не 0x5A 0xA5) и идёт стрим, разрешаем только при явном разрешении */
   extern uint8_t streaming; /* из usb_vendor_app.c */
   extern volatile uint8_t vnd_status_permit_once; /* одноразовое разрешение STAT */
   if (streaming) {
-    if (!(len >= 2 && vnd_tx_buf[0]==0x5A && vnd_tx_buf[1]==0xA5)) {
+    if (!(len >= 2 && tx_buf[0]==0x5A && tx_buf[1]==0xA5)) {
       if (vnd_status_permit_once) {
         vnd_status_permit_once = 0; /* использовать разрешение один раз */
       } else {
@@ -192,7 +206,7 @@ uint8_t USBD_VND_Transmit(USBD_HandleTypeDef *pdev, const uint8_t *data, uint16_
         /* Лёгкая диагностика блокировки */
         if (len >= 4) {
           VND_LOGF("[VND_BLOCK] ep=0x%02X len=%u head=%02X %02X %02X %02X\r\n", (unsigned)VND_IN_EP, (unsigned)len,
-                 (unsigned)vnd_tx_buf[0], (unsigned)vnd_tx_buf[1], (unsigned)vnd_tx_buf[2], (unsigned)vnd_tx_buf[3]);
+                 (unsigned)tx_buf[0], (unsigned)tx_buf[1], (unsigned)tx_buf[2], (unsigned)tx_buf[3]);
         } else {
           VND_LOGF("[VND_BLOCK] ep=0x%02X len=%u\r\n", (unsigned)VND_IN_EP, (unsigned)len);
         }
@@ -201,10 +215,11 @@ uint8_t USBD_VND_Transmit(USBD_HandleTypeDef *pdev, const uint8_t *data, uint16_
     }
   }
   vnd_tx_busy = 1U;
+  vnd_tx_active_slot = slot;
   /* Восстанавливаем total_length для корректной ZLP логики в DataIn callback */
   pdev->ep_in[VND_IN_EP & 0x0FU].total_length = len;
   vnd_last_tx_len = len;
-    vnd_last_tx_rc = (uint8_t)USBD_LL_Transmit(pdev, VND_IN_EP, vnd_tx_buf, len);
+    vnd_last_tx_rc = (uint8_t)USBD_LL_Transmit(pdev, VND_IN_EP, tx_buf, len);
     
     /* КРИТИЧЕСКИ ВАЖНО: memory barrier через volatile read USB регистра.
        Без этого компилятор может переупорядочить операции и HAL ISR не увидит
@@ -214,18 +229,20 @@ uint8_t USBD_VND_Transmit(USBD_HandleTypeDef *pdev, const uint8_t *data, uint16_
         (void)usb_reg->GINTSTS; /* volatile read для memory barrier */
     }  /* Логируем только реально поставленные в LL передачи как [VND_TX] */
   if (vnd_last_tx_rc == (uint8_t)USBD_OK) {
+    vnd_tx_next_slot = (uint8_t)((slot + 1u) % VND_TX_BUFFER_SLOTS);
     if (len >= 4) {
       VND_LOGF("[VND_TX] ep=0x%02X len=%u head=%02X %02X %02X %02X\r\n", (unsigned)VND_IN_EP, (unsigned)len,
-             (unsigned)vnd_tx_buf[0], (unsigned)vnd_tx_buf[1], (unsigned)vnd_tx_buf[2], (unsigned)vnd_tx_buf[3]);
+             (unsigned)tx_buf[0], (unsigned)tx_buf[1], (unsigned)tx_buf[2], (unsigned)tx_buf[3]);
     } else {
       VND_LOGF("[VND_TX] ep=0x%02X len=%u\r\n", (unsigned)VND_IN_EP, (unsigned)len);
     }
   } else {
     /* Если LL вернул BUSY/FAIL — снимаем флаг занятости и логируем как FAIL */
     vnd_tx_busy = 0U;
+    vnd_tx_active_slot = 0xFFu;
     if (len >= 4) {
       VND_LOGF("[VND_FAIL] ep=0x%02X rc=%u len=%u head=%02X %02X %02X %02X\r\n", (unsigned)VND_IN_EP, (unsigned)vnd_last_tx_rc, (unsigned)len,
-             (unsigned)vnd_tx_buf[0], (unsigned)vnd_tx_buf[1], (unsigned)vnd_tx_buf[2], (unsigned)vnd_tx_buf[3]);
+             (unsigned)tx_buf[0], (unsigned)tx_buf[1], (unsigned)tx_buf[2], (unsigned)tx_buf[3]);
     } else {
       VND_LOGF("[VND_FAIL] ep=0x%02X rc=%u len=%u\r\n", (unsigned)VND_IN_EP, (unsigned)vnd_last_tx_rc, (unsigned)len);
     }
@@ -450,8 +467,11 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
     /* Принимаем IN GET_STATUS вне зависимости от получателя и номера интерфейса (wIndex),
        чтобы упростить жизнь хостам, где CTRL к Interface может быть ограничен. */
     if ( (req->bmRequest & 0x80U) && req->bRequest == VND_CMD_GET_STATUS ) {
-      uint8_t buf[64];
-      uint16_t l = vnd_build_status(buf, sizeof(buf));
+      uint8_t buf[VND_STATUS_MAX];
+      uint16_t max_len = (req->wLength != 0U && req->wLength < (uint16_t)sizeof(buf))
+                       ? req->wLength
+                       : (uint16_t)sizeof(buf);
+      uint16_t l = vnd_build_status(buf, max_len);
       if(!l){ USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL; }
       VND_LOGF("[SETUP:VND] -> STAT %uB", (unsigned)l);
       USBD_CtlSendData(pdev, buf, l);
@@ -614,6 +634,7 @@ static uint8_t USBD_CDCVND_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
       VND_LOGF("[VND_DataIn] ep=%u total=%u -> COMPLETE (TxCplt) cnt=%lu\r\n", (unsigned)epnum, (unsigned)tl, (unsigned long)vnd_dataIn_counter);
       pdev->ep_in[epnum].total_length = 0U; /* очистить остаток для надёжности */
       vnd_tx_busy = 0U;
+      vnd_tx_active_slot = 0xFFu;
       USBD_VND_TxCplt();
     }
   }
