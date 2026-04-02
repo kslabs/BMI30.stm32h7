@@ -19,6 +19,7 @@
 /* Includes: восстановление базовых заголовков и прототипов */
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "main.h"
 #include "build_info.h"
@@ -45,10 +46,12 @@ TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim15;
 IWDG_HandleTypeDef hiwdg1;
 UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart2;
 DAC_HandleTypeDef  hdac1;
 DMA_HandleTypeDef  hdma_adc1;
 DMA_HandleTypeDef  hdma_adc2;
 DMA_HandleTypeDef  hdma_tim15_up;  // DMA для автоматической записи ARR
+DMA_HandleTypeDef  hdma_tim1_up;   // DMA для аппаратной огибающей оптического TX
 
 /* Экспорт переменной устройства USB (определена в usb_device.c) */
 extern USBD_HandleTypeDef hUsbDeviceHS;
@@ -82,6 +85,133 @@ volatile uint8_t sync_restart_on_edge = 0;
 volatile uint32_t sync_edge_count = 0;
 /* Измерение периода PD5 через TIM5 (275 MHz) */
 volatile uint32_t sync_tim5_period_ticks = 0;
+#define SYNC_TARGET_PHASE_AUTO 0xFFFFFFFFu
+static volatile uint32_t g_sync_target_phase_ticks = SYNC_TARGET_PHASE_AUTO;
+static volatile uint8_t tim15_arr_pulse_stage = 0u;
+static volatile uint32_t tim15_arr_pulse_nominal = 0u;
+static volatile uint32_t tim15_arr_pulse_count = 0u;
+static volatile int32_t tim15_arr_hold_offset = 0;
+static volatile int32_t tim15_arr_hold_target_offset = 0;
+static volatile uint8_t optic_sensor_state_public = 0u;
+static volatile uint32_t optic_last_pulse_ms = 0u;
+static volatile uint32_t optic_pulse_window_start_ms = 0u;
+static volatile uint8_t optic_pulse_window_count = 0u;
+
+static uint8_t rs485_rx_byte = 0;
+static uint8_t rs485_tx_byte = 0xA5u;
+static volatile uint32_t rs485_last_rx_ms = 0;
+static volatile uint32_t rs485_rx_packets = 0;
+static volatile uint32_t rs485_tx_packets = 0;
+static volatile uint8_t rs485_tx_busy = 0;
+static volatile uint8_t rs485_last_sync_edge_kind = 0u;
+static volatile uint8_t rs485_sync_phase_relation = 0u;
+static volatile uint8_t rs485_sync_locked = 0u;
+static volatile uint8_t rs485_sync_led_active = 0u;
+static volatile uint8_t rs485_slave_led_pulse_pending = 0u;
+static volatile uint8_t rs485_slave_led_dark_latched = 0u;
+static volatile uint32_t rs485_slave_led_invert_until_ms = 0u;
+static volatile int8_t rs485_sync_relation_score = 0;
+static volatile int8_t rs485_anti_phase_drive_sign = 1;
+static volatile uint8_t rs485_anti_phase_recovery_active = 0u;
+static volatile uint8_t rs485_anti_phase_recovery_packets = 0u;
+static volatile uint32_t rs485_sync_buf_div4 = 0;
+static volatile uint8_t rs485_slave_count_estimate = 0;
+static uint8_t rs485_local_node_id = 0u;
+static uint8_t rs485_local_uid_hint = 1u;
+static uint32_t rs485_master_claim_delay_ms = 750u;
+static volatile uint8_t rs485_tx_queue[4] = {0};
+static volatile uint8_t rs485_tx_queue_head = 0u;
+static volatile uint8_t rs485_tx_queue_tail = 0u;
+static volatile uint8_t rs485_tx_queue_count = 0u;
+static volatile uint8_t rs485_discovery_next_id = 1u;
+static volatile uint8_t rs485_discovery_wait_id = 0u;
+static volatile uint8_t rs485_discovery_response_seen = 0u;
+static volatile uint8_t rs485_discovery_window_open = 0u;
+static volatile uint8_t rs485_discovery_phase_wait_response = 0u;
+static volatile uint8_t rs485_reply_pending_id = 0u;
+static volatile uint32_t rs485_discovery_seen_mask = 0u;
+static volatile uint32_t rs485_discovery_scan_mask = 0u;
+
+#define RS485_DISCOVERY_REQ_BASE 0x40u
+#define RS485_DISCOVERY_ACK_BASE 0x80u
+#define RS485_DISCOVERY_ID_MASK  0x1Fu
+#define RS485_DISCOVERY_MAX_ID   31u
+#define RS485_SYNC7_BASE         0x25u
+#define RS485_SYNC_EDGE_BIT      0x80u
+#define RS485_SYNC_RELATION_UNKNOWN   0u
+#define RS485_SYNC_RELATION_IN_PHASE  1u
+#define RS485_SYNC_RELATION_ANTI_PHASE 2u
+
+static inline uint8_t rs485_sync_read_local_marker_phase(void)
+{
+  return ((GPIOA->ODR & GPIO_PIN_2) != 0u) ? 1u : 0u;
+}
+
+static inline uint8_t rs485_sync_edge_kind_from_marker_level(uint8_t marker_level)
+{
+  return (uint8_t)((marker_level ^ 1u) & 1u);
+}
+
+static uint32_t rs485_sync_get_uart_packet_ticks(void)
+{
+  uint32_t tim_clk = HAL_RCC_GetPCLK1Freq();
+  uint32_t d2ppre1 = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1_Msk) >> RCC_D2CFGR_D2PPRE1_Pos;
+  uint32_t baud = huart2.Init.BaudRate;
+
+  if (d2ppre1 != 0u) {
+    tim_clk *= 2u;
+  }
+  if (baud == 0u) {
+    return 0u;
+  }
+
+  return (uint32_t)((((uint64_t)tim_clk * 10u) + ((uint64_t)baud / 2u)) / (uint64_t)baud);
+}
+
+static uint32_t rs485_sync_get_auto_target_phase_ticks(uint32_t period_ticks)
+{
+  extern uint16_t adc_stream_get_active_samples(void);
+  uint32_t uart_packet_ticks = rs485_sync_get_uart_packet_ticks();
+  uint32_t active_samples = adc_stream_get_active_samples();
+  uint32_t sample_ticks = 0u;
+  uint32_t rx_comp_ticks = 0u;
+
+  if (period_ticks == 0u) {
+    return 0u;
+  }
+
+  if (active_samples != 0u) {
+    sample_ticks = period_ticks / active_samples;
+  }
+
+  rx_comp_ticks = uart_packet_ticks;
+  if (sample_ticks < period_ticks) {
+    rx_comp_ticks += sample_ticks;
+  }
+
+  return (period_ticks > rx_comp_ticks) ? (period_ticks - rx_comp_ticks) : 0u;
+}
+
+static void rs485_sync_on_packet_received(uint8_t edge_kind);
+static void rs485_discovery_on_sync_received(void);
+static void rs485_discovery_on_request(uint8_t value);
+static void rs485_discovery_on_response(uint8_t value);
+static void rs485_discovery_reset_master_scan(void);
+static uint32_t rs485_compute_uid_mix(void);
+static uint8_t rs485_compute_local_node_id(void);
+static uint32_t rs485_compute_master_claim_delay_ms(void);
+static void rs485_sync_auto_role_service(uint32_t now_ms);
+static void arr_auto_tune_service(void);
+static void tim15_request_hold_offset(int32_t arr_delta);
+static uint8_t tim15_schedule_arr_pulse(int32_t arr_delta);
+static void phase_micro_adjust_service(void);
+static void tune_led_service(uint32_t now_ms);
+static uint8_t rs485_count_bits_u32(uint32_t value);
+static void rs485_tx_queue_push(uint8_t value);
+static uint8_t rs485_tx_queue_pop(uint8_t *value);
+static void rs485_tx_kick(void);
+static void rs485_sync_start_tx_byte(uint8_t value);
+static void rs485_sync_service_tx(void);
 /* Охраняемая «флаг-структура» для need_recovery с сигнатурами по краям */
 typedef struct {
   uint32_t c1;                 /* 0xDEADBEEF */
@@ -290,6 +420,7 @@ static void MX_TIM5_Init(void);
 static void MX_TIM15_Init(void);
 static void MX_IWDG1_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 uint32_t tim2_apply_profile_window(void);
 void UpdateLCDStatus(void);
@@ -297,12 +428,23 @@ void DrawStarIndicator(void);
 static void __attribute__((unused)) UpdateUSBDebug(void); // теперь будет пустая заглушка
 void DrawUSBStatus(void);
 static const char* usb_state_str(uint8_t s) __attribute__((unused)); // пустая заглушка
+static uint32_t optic_tim1_get_input_clk_hz(void);
+static void optic_sensor_service(uint32_t now_ms);
+static HAL_StatusTypeDef optic_tx_dma_setup(void);
+static void optic_tx_prepare_burst_pattern(uint32_t carrier_compare);
+static void optic_tx_start(void);
 // Forward declaration to avoid implicit declaration and linkage mismatch
 static void lcd_print_padded_if_changed(int x, int y, const char* new_text,
                                         char *prev, size_t buf_sz,
                                         uint8_t max_len, uint8_t font_height,
                                         uint16_t fg, uint16_t bg,
                                         uint16_t *prev_fg, uint16_t *prev_bg);
+static void lcd_draw_badge_if_changed(int x, int y, const char* new_text,
+                                      char *prev, size_t buf_sz,
+                                      uint8_t max_len, uint8_t font_height,
+                                      uint8_t pad_x, uint8_t pad_y,
+                                      uint16_t fg, uint16_t bg,
+                                      uint16_t *prev_fg, uint16_t *prev_bg);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -374,6 +516,13 @@ static inline void LED_OFF(void){ HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test
 #ifndef FORCE_BL_GPIO
 #define FORCE_BL_GPIO 1
 #endif
+#define OPTIC_TX_PWM_TARGET_HZ 38000u
+#define OPTIC_INPUT_FILTER_MS  20u
+#define OPTIC_TX_BURST_ON_CYCLES  24u
+#define OPTIC_TX_BURST_OFF_CYCLES 24u
+#define OPTIC_TX_BURST_PATTERN_LEN (OPTIC_TX_BURST_ON_CYCLES + OPTIC_TX_BURST_OFF_CYCLES)
+#define OPTIC_PULSE_ACTIVE_TIMEOUT_MS 30u
+#define OPTIC_PULSE_LATCH_COUNT       2u
 // Полярность подсветки и макросы управления (используются в main и MX_GPIO_Init)
 #ifndef BL_ACTIVE_LOW
 /* Подсветка на аппаратной плате подключена active-low (PE10 через транзистор).
@@ -402,10 +551,1003 @@ static volatile uint16_t uart1_rx_ring_rd = 0;
 #define UART1_CMD_MAX 96
 static char uart1_cmd_buf[UART1_CMD_MAX];
 static uint16_t uart1_cmd_len = 0;
+static uint32_t optic_tx_dma_pattern[OPTIC_TX_BURST_PATTERN_LEN];
+static uint8_t optic_tx_dma_initialized = 0u;
 // Быстрый inline для установки LED (используем уже определённые макросы LED_ON/LED_OFF ниже)
 static inline void uart1_rx_led_pulse(void){
   LED_ON();
   uart1_led_off_tick = HAL_GetTick() + 100; // держим LED включённым 100мс после каждого байта
+}
+
+uint8_t optic_sensor_get_state(void)
+{
+  return optic_sensor_state_public;
+}
+
+static uint32_t optic_tim1_get_input_clk_hz(void)
+{
+  uint32_t tim_clk = HAL_RCC_GetPCLK2Freq();
+  uint32_t d2ppre2 = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE2_Msk) >> RCC_D2CFGR_D2PPRE2_Pos;
+
+  if (d2ppre2 != 0u) {
+    tim_clk *= 2u;
+  }
+  return tim_clk;
+}
+
+static void optic_sensor_service(uint32_t now_ms)
+{
+  if ((optic_sensor_state_public != 0u) &&
+      ((now_ms - optic_last_pulse_ms) > OPTIC_PULSE_ACTIVE_TIMEOUT_MS)) {
+    optic_sensor_state_public = 0u;
+    optic_pulse_window_count = 0u;
+    optic_pulse_window_start_ms = 0u;
+    need_usb_status_refresh = 1u;
+  }
+}
+
+static HAL_StatusTypeDef optic_tx_dma_setup(void)
+{
+  if (optic_tx_dma_initialized != 0u) {
+    return HAL_OK;
+  }
+
+  hdma_tim1_up.Instance = DMA1_Stream2;
+  hdma_tim1_up.Init.Request = DMA_REQUEST_TIM1_UP;
+  hdma_tim1_up.Init.Direction = DMA_MEMORY_TO_PERIPH;
+  hdma_tim1_up.Init.PeriphInc = DMA_PINC_DISABLE;
+  hdma_tim1_up.Init.MemInc = DMA_MINC_ENABLE;
+  hdma_tim1_up.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+  hdma_tim1_up.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+  hdma_tim1_up.Init.Mode = DMA_CIRCULAR;
+  hdma_tim1_up.Init.Priority = DMA_PRIORITY_MEDIUM;
+  hdma_tim1_up.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+
+  if (HAL_DMA_Init(&hdma_tim1_up) != HAL_OK) {
+    return HAL_ERROR;
+  }
+
+  __HAL_LINKDMA(&htim1, hdma[TIM_DMA_ID_UPDATE], hdma_tim1_up);
+  optic_tx_dma_initialized = 1u;
+  return HAL_OK;
+}
+
+static void optic_tx_prepare_burst_pattern(uint32_t carrier_compare)
+{
+  uint32_t index = 0u;
+
+  for (; index < OPTIC_TX_BURST_ON_CYCLES; index++) {
+    optic_tx_dma_pattern[index] = carrier_compare;
+  }
+  for (; index < OPTIC_TX_BURST_PATTERN_LEN; index++) {
+    optic_tx_dma_pattern[index] = 0u;
+  }
+}
+
+static void optic_tx_start(void)
+{
+  static uint8_t started = 0u;
+  uint32_t period_ticks;
+  uint32_t carrier_compare;
+  uint32_t tim_clk;
+
+  if (started != 0u) {
+    return;
+  }
+
+  period_ticks = __HAL_TIM_GET_AUTORELOAD(&htim1) + 1u;
+  if (period_ticks < 2u) {
+    period_ticks = 2u;
+  }
+
+  carrier_compare = period_ticks / 2u;
+  if (carrier_compare == 0u) {
+    carrier_compare = 1u;
+  }
+
+  optic_tx_prepare_burst_pattern(carrier_compare);
+
+  if (optic_tx_dma_setup() != HAL_OK) {
+    printf("[OPTIC][ERR] TIM1 update DMA init failed\r\n");
+    Error_Handler();
+  }
+
+  __HAL_TIM_DISABLE_DMA(&htim1, TIM_DMA_UPDATE);
+  if (HAL_DMA_Start(&hdma_tim1_up,
+                    (uint32_t)optic_tx_dma_pattern,
+                    (uint32_t)&TIM1->CCR3,
+                    OPTIC_TX_BURST_PATTERN_LEN) != HAL_OK) {
+    printf("[OPTIC][ERR] TIM1 update DMA start failed\r\n");
+    Error_Handler();
+  }
+
+  __HAL_TIM_SET_COUNTER(&htim1, 0u);
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, optic_tx_dma_pattern[0]);
+  __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
+  __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_UPDATE);
+  __HAL_TIM_MOE_ENABLE(&htim1);
+
+  if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3) != HAL_OK) {
+    printf("[OPTIC][ERR] TIM1 CH3 start failed\r\n");
+    Error_Handler();
+  }
+
+  if ((TIM1->CR1 & TIM_CR1_CEN) == 0u) {
+    if (HAL_TIM_Base_Start(&htim1) != HAL_OK) {
+      printf("[OPTIC][ERR] TIM1 base start failed\r\n");
+      Error_Handler();
+    }
+  }
+
+  tim_clk = optic_tim1_get_input_clk_hz();
+  started = 1u;
+  printf("[OPTIC] TIM1 CH3 burst mode on PA10: carrier=%lu Hz, burst=%lu on / %lu off cycles\r\n",
+         (unsigned long)((period_ticks != 0u) ? (tim_clk / period_ticks) : 0u),
+         (unsigned long)OPTIC_TX_BURST_ON_CYCLES,
+         (unsigned long)OPTIC_TX_BURST_OFF_CYCLES);
+}
+
+static void rs485_sync_on_packet_received(uint8_t edge_kind)
+{
+  extern volatile uint32_t sync_buffer_count_at_edge;
+  extern volatile uint32_t sync_buffers_between_edges;
+  extern volatile uint32_t adc_stream_total_buffer_count;
+  extern volatile uint32_t sync_tim15_cnt_at_pd5;
+  extern volatile uint8_t vnd_sync_mode_public;
+
+  uint32_t prev_count = sync_buffer_count_at_edge;
+  sync_buffer_count_at_edge = adc_stream_total_buffer_count;
+  sync_buffers_between_edges = adc_stream_total_buffer_count - prev_count;
+
+  sync_tim5_period_ticks = htim5.Instance->CNT;
+  htim5.Instance->CNT = 0u;
+
+  sync_tim15_cnt_at_pd5 = htim15.Instance->CNT;
+  rs485_last_sync_edge_kind = (uint8_t)(edge_kind & 1u);
+  if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+    uint8_t local_edge_kind = rs485_sync_edge_kind_from_marker_level(rs485_sync_read_local_marker_phase());
+
+    if (local_edge_kind == rs485_last_sync_edge_kind) {
+      if (rs485_sync_relation_score < 8) {
+        rs485_sync_relation_score++;
+      }
+    } else {
+      if (rs485_sync_relation_score > -8) {
+        rs485_sync_relation_score--;
+      }
+    }
+
+    if (rs485_sync_relation_score >= 3) {
+      rs485_sync_phase_relation = RS485_SYNC_RELATION_IN_PHASE;
+    } else if (rs485_sync_relation_score <= -3) {
+      rs485_sync_phase_relation = RS485_SYNC_RELATION_ANTI_PHASE;
+    } else {
+      rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+    }
+
+  } else {
+    rs485_sync_relation_score = 0;
+    rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+    rs485_anti_phase_recovery_active = 0u;
+    rs485_anti_phase_recovery_packets = 0u;
+  }
+
+  sync_last_edge_ms = HAL_GetTick();
+  sync_edge_seen = 1u;
+  sync_edge_count++;
+  if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+    rs485_slave_led_pulse_pending = 1u;
+  }
+
+  rs485_last_rx_ms = sync_last_edge_ms;
+  rs485_rx_packets++;
+  vnd_sync_on_edge();
+}
+
+static uint32_t rs485_compute_uid_mix(void)
+{
+  uint32_t uid0 = *(const uint32_t *)(UID_BASE + 0x00u);
+  uint32_t uid1 = *(const uint32_t *)(UID_BASE + 0x04u);
+  uint32_t uid2 = *(const uint32_t *)(UID_BASE + 0x08u);
+
+  return uid0 ^ uid1 ^ uid2 ^ (uid0 >> 16) ^ (uid1 >> 11) ^ (uid2 >> 7);
+}
+
+static uint8_t rs485_compute_local_node_id(void)
+{
+  uint32_t mix = rs485_compute_uid_mix();
+  return (uint8_t)((mix % RS485_DISCOVERY_MAX_ID) + 1u);
+}
+
+static uint32_t rs485_compute_master_claim_delay_ms(void)
+{
+  uint32_t mix = rs485_compute_uid_mix();
+
+  return 250u + (mix % 1024u);
+}
+
+uint32_t rs485_get_master_claim_delay_ms(void)
+{
+  return rs485_master_claim_delay_ms;
+}
+
+static uint8_t rs485_count_bits_u32(uint32_t value)
+{
+  uint8_t count = 0u;
+  while (value != 0u) {
+    count = (uint8_t)(count + (uint8_t)(value & 1u));
+    value >>= 1;
+  }
+  return count;
+}
+
+static void rs485_discovery_reset_master_scan(void)
+{
+  rs485_discovery_next_id = 1u;
+  rs485_discovery_wait_id = 0u;
+  rs485_discovery_response_seen = 0u;
+  rs485_discovery_window_open = 0u;
+  rs485_discovery_phase_wait_response = 0u;
+  rs485_discovery_scan_mask = 0u;
+}
+
+static void rs485_tx_queue_push(uint8_t value)
+{
+  if (rs485_tx_queue_count >= (uint8_t)(sizeof(rs485_tx_queue) / sizeof(rs485_tx_queue[0]))) {
+    return;
+  }
+
+  rs485_tx_queue[rs485_tx_queue_tail] = value;
+  rs485_tx_queue_tail = (uint8_t)((rs485_tx_queue_tail + 1u) % (uint8_t)(sizeof(rs485_tx_queue) / sizeof(rs485_tx_queue[0])));
+  rs485_tx_queue_count++;
+}
+
+static uint8_t rs485_tx_queue_pop(uint8_t *value)
+{
+  if ((value == NULL) || (rs485_tx_queue_count == 0u)) {
+    return 0u;
+  }
+
+  *value = rs485_tx_queue[rs485_tx_queue_head];
+  rs485_tx_queue_head = (uint8_t)((rs485_tx_queue_head + 1u) % (uint8_t)(sizeof(rs485_tx_queue) / sizeof(rs485_tx_queue[0])));
+  rs485_tx_queue_count--;
+  return 1u;
+}
+
+static void rs485_sync_start_tx_byte(uint8_t value)
+{
+  if (rs485_tx_busy) {
+    return;
+  }
+
+  rs485_tx_byte = value;
+  rs485_tx_busy = 1u;
+  HAL_GPIO_WritePin(RS485_RDE_GPIO_Port, RS485_RDE_Pin, GPIO_PIN_SET);
+  if (HAL_UART_Transmit_IT(&huart2, &rs485_tx_byte, 1u) != HAL_OK) {
+    rs485_tx_busy = 0u;
+    HAL_GPIO_WritePin(RS485_RDE_GPIO_Port, RS485_RDE_Pin, GPIO_PIN_RESET);
+  }
+}
+
+static void rs485_tx_kick(void)
+{
+  uint8_t value = 0u;
+
+  if (rs485_tx_busy) {
+    return;
+  }
+  if (!rs485_tx_queue_pop(&value)) {
+    return;
+  }
+
+  rs485_sync_start_tx_byte(value);
+}
+
+static void rs485_discovery_on_request(uint8_t value)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint8_t request_id = (uint8_t)(value & RS485_DISCOVERY_ID_MASK);
+
+  if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+    return;
+  }
+  if (request_id == 0u) {
+    return;
+  }
+
+  if ((rs485_local_node_id == 0u) && (request_id != 1u)) {
+    return;
+  }
+
+  if ((rs485_local_node_id != 0u) && (request_id != rs485_local_node_id)) {
+    return;
+  }
+
+  if (rs485_local_node_id == 0u) {
+    rs485_local_node_id = request_id;
+  }
+
+  rs485_tx_queue_push((uint8_t)(RS485_DISCOVERY_ACK_BASE | rs485_local_node_id));
+  rs485_tx_kick();
+}
+
+static void rs485_discovery_on_response(uint8_t value)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint8_t response_id = (uint8_t)(value & RS485_DISCOVERY_ID_MASK);
+  uint32_t updated_mask = 0u;
+
+  if (vnd_sync_mode_public != VND_SYNC_MODE_MASTER) {
+    return;
+  }
+  if (!rs485_discovery_phase_wait_response) {
+    return;
+  }
+  if ((response_id == 0u) || (response_id != rs485_discovery_wait_id)) {
+    return;
+  }
+
+  rs485_discovery_scan_mask |= (1u << (response_id - 1u));
+  updated_mask = rs485_discovery_seen_mask | rs485_discovery_scan_mask;
+  rs485_slave_count_estimate = rs485_count_bits_u32(updated_mask);
+  rs485_discovery_response_seen = 1u;
+}
+
+static void rs485_discovery_on_sync_received(void)
+{
+  /* ACK теперь отправляется сразу при приёме discovery-запроса. */
+}
+
+static void rs485_sync_service_tx(void)
+{
+  rs485_tx_kick();
+}
+
+static void rs485_sync_auto_role_service(uint32_t now_ms)
+{
+  extern void vnd_sync_set_mode_auto(uint8_t mode);
+  extern uint8_t vnd_sync_is_mode_host_forced(void);
+  extern volatile uint8_t vnd_sync_mode_public;
+  static uint8_t auto_init_done = 0u;
+  static uint32_t auto_start_ms = 0u;
+  static uint8_t prev_mode = 0xFFu;
+
+  if (vnd_sync_mode_public != prev_mode) {
+    prev_mode = vnd_sync_mode_public;
+    rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+    rs485_sync_relation_score = 0;
+    rs485_anti_phase_recovery_active = 0u;
+    rs485_anti_phase_recovery_packets = 0u;
+    rs485_anti_phase_drive_sign = 1;
+    tim15_request_hold_offset(0);
+  }
+
+  if (vnd_sync_is_mode_host_forced()) {
+    return;
+  }
+
+  if (!auto_init_done) {
+    auto_init_done = 1u;
+    auto_start_ms = now_ms;
+    vnd_sync_set_mode_auto(VND_SYNC_MODE_SLAVE);
+    rs485_last_rx_ms = 0u;
+    rs485_local_node_id = 0u;
+    rs485_reply_pending_id = 0u;
+    rs485_slave_count_estimate = 0u;
+    rs485_discovery_seen_mask = 0u;
+    rs485_discovery_reset_master_scan();
+    printf("[RS485] AUTO_ROLE init -> SLAVE, claim in %lums if no sync\r\n",
+           (unsigned long)rs485_master_claim_delay_ms);
+    return;
+  }
+
+  if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+    return;
+  }
+
+  if (rs485_last_rx_ms != 0u) {
+    return;
+  }
+
+  if ((now_ms - auto_start_ms) < rs485_master_claim_delay_ms) {
+    return;
+  }
+
+  vnd_sync_set_mode_auto(VND_SYNC_MODE_MASTER);
+  rs485_local_node_id = rs485_local_uid_hint;
+  rs485_reply_pending_id = 0u;
+  rs485_slave_count_estimate = 0u;
+  rs485_discovery_seen_mask = 0u;
+  rs485_discovery_reset_master_scan();
+  printf("[RS485] AUTO_ROLE claim -> MASTER node=%u after %lums\r\n",
+         (unsigned)rs485_local_node_id,
+         (unsigned long)(now_ms - auto_start_ms));
+}
+
+typedef struct {
+  uint32_t arr;
+  int32_t avg_delta;
+  uint8_t valid;
+} arr_auto_measure_t;
+
+static volatile uint8_t g_arr_auto_ready = 0u;
+static volatile uint32_t g_arr_auto_selected = 1144u;
+static volatile uint8_t g_arr_auto_rescan_request = 0u;
+static volatile uint8_t g_tune_led_freq_active = 0u;
+
+static void arr_auto_apply_tim15(uint32_t arr)
+{
+  extern TIM_HandleTypeDef htim15;
+
+  htim15.Instance->ARR = arr;
+  __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, (arr + 1u) / 2u);
+}
+
+static int32_t arr_auto_abs_i32(int32_t value)
+{
+  return (value < 0) ? -value : value;
+}
+static void tim15_apply_hold_target_if_possible(void)
+{
+  uint32_t current_arr = TIM15->ARR;
+  int32_t nominal_arr = (int32_t)current_arr - tim15_arr_hold_offset;
+  int32_t target_arr = nominal_arr + tim15_arr_hold_target_offset;
+
+  if (tim15_arr_pulse_stage != 0u) {
+    return;
+  }
+
+  if (target_arr < 2) {
+    return;
+  }
+
+  tim15_arr_hold_offset = tim15_arr_hold_target_offset;
+  TIM15->ARR = (uint32_t)target_arr;
+  __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, ((uint32_t)target_arr + 1u) / 2u);
+}
+
+static void tim15_request_hold_offset(int32_t arr_delta)
+{
+  tim15_arr_hold_target_offset = arr_delta;
+  tim15_apply_hold_target_if_possible();
+}
+
+static uint8_t tim15_schedule_arr_pulse(int32_t arr_delta)
+{
+  uint32_t current_arr = TIM15->ARR;
+  int32_t pulse_arr = (int32_t)current_arr + arr_delta;
+
+  if (tim15_arr_pulse_stage != 0u) {
+    return 0u;
+  }
+
+  if (pulse_arr < 2) {
+    return 0u;
+  }
+
+  tim15_arr_pulse_nominal = current_arr;
+  tim15_arr_pulse_stage = 1u;
+
+  __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+  TIM15->ARR = (uint32_t)pulse_arr;
+  __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
+
+  return 1u;
+}
+
+__attribute__((unused)) static uint32_t arr_auto_choose_best(const arr_auto_measure_t *samples, uint32_t count)
+{
+  uint32_t best_idx = 0u;
+  int32_t best_score = 0x7FFFFFFF;
+  uint8_t have_bracket = 0u;
+  uint32_t index = 0u;
+
+  for (index = 0u; (index + 1u) < count; index++) {
+    int32_t left = 0;
+    int32_t right = 0;
+    int32_t pair_score = 0;
+    uint32_t candidate_idx = 0u;
+
+    if (!samples[index].valid || !samples[index + 1u].valid) {
+      continue;
+    }
+
+    left = samples[index].avg_delta;
+    right = samples[index + 1u].avg_delta;
+    if ((left == 0) || (right == 0) || ((left < 0) != (right < 0))) {
+      pair_score = arr_auto_abs_i32(left) + arr_auto_abs_i32(right);
+      candidate_idx = (arr_auto_abs_i32(left) <= arr_auto_abs_i32(right)) ? index : (index + 1u);
+      if (!have_bracket || (pair_score < best_score)) {
+        have_bracket = 1u;
+        best_score = pair_score;
+        best_idx = candidate_idx;
+      }
+    }
+  }
+
+  if (have_bracket) {
+    return best_idx;
+  }
+
+  for (index = 0u; index < count; index++) {
+    int32_t score = 0;
+    if (!samples[index].valid) {
+      continue;
+    }
+    score = arr_auto_abs_i32(samples[index].avg_delta);
+    if (score < best_score) {
+      best_score = score;
+      best_idx = index;
+    }
+  }
+
+  return best_idx;
+}
+
+static void arr_auto_tune_service(void)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  static uint8_t prev_mode = 0xFFu;
+  static uint8_t fixed_arr_applied = 0u;
+  const uint32_t fixed_arr = 1144u;
+
+  if (vnd_sync_mode_public != prev_mode) {
+    prev_mode = vnd_sync_mode_public;
+    if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+      fixed_arr_applied = 0u;
+      g_arr_auto_ready = 0u;
+      g_arr_auto_rescan_request = 0u;
+      g_tune_led_freq_active = 0u;
+    }
+  }
+
+  if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+    g_tune_led_freq_active = 0u;
+    return;
+  }
+
+  if (!fixed_arr_applied || (g_arr_auto_selected != fixed_arr)) {
+    g_arr_auto_selected = fixed_arr;
+    arr_auto_apply_tim15(g_arr_auto_selected);
+    fixed_arr_applied = 1u;
+    printf("[ARR_FIXED] ARR=%lu\r\n", (unsigned long)g_arr_auto_selected);
+  }
+
+  g_arr_auto_rescan_request = 0u;
+  g_arr_auto_ready = 1u;
+  g_tune_led_freq_active = 0u;
+}
+
+static void phase_micro_adjust_service(void)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  extern volatile uint32_t sync_last_edge_ms;
+  extern volatile uint32_t sync_tim5_cnt_at_buffer;
+  extern volatile uint32_t sync_tim5_buffer_phase_seq;
+  static uint32_t last_phase_seq_seen = 0u;
+  static uint8_t settle_buffers = 0u;
+  static int8_t last_correction_sign = 0;
+  static uint8_t same_sign_corrections = 0u;
+  static uint8_t lock_good_count = 0u;
+  uint8_t effective_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+  uint32_t period_ticks = 0u;
+  uint32_t raw_phase_ticks = 0u;
+  uint32_t target_phase_ticks = 0u;
+  uint32_t half_period_ticks = 0u;
+  int32_t phase_error_ticks = 0;
+  int32_t phase_error_abs_ticks = 0;
+  int8_t correction_sign = 0;
+  int8_t relation_score = 0;
+  int32_t correction_step = 0;
+  const int32_t anti_phase_forced_step = 255;
+  const uint32_t min_error_limited_step = 4u;
+  uint32_t error_limited_step = min_error_limited_step;
+  uint32_t correction_strength = 1u;
+  const int32_t phase_deadband_ticks = 16;
+  const int32_t phase_lock_release_ticks = 64;
+  const int8_t relation_confirm_score = 3;
+  const uint8_t anti_phase_flip_packets = 6u;
+  const uint8_t phase_lock_confirm_count = 6u;
+  const uint8_t max_dynamic_step = 255u;
+  uint32_t now_ms = HAL_GetTick();
+  const uint32_t sync_timeout_ms = 250u;
+
+  if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+    last_phase_seq_seen = sync_tim5_buffer_phase_seq;
+    settle_buffers = 0u;
+    last_correction_sign = 0;
+    same_sign_corrections = 0u;
+    lock_good_count = 0u;
+    rs485_sync_locked = 0u;
+    rs485_sync_led_active = 0u;
+    rs485_sync_relation_score = 0;
+    rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+    rs485_anti_phase_recovery_active = 0u;
+    rs485_anti_phase_recovery_packets = 0u;
+    rs485_anti_phase_drive_sign = 1;
+    tim15_request_hold_offset(0);
+    return;
+  }
+
+  if ((sync_last_edge_ms == 0u) || ((now_ms - sync_last_edge_ms) > sync_timeout_ms)) {
+    last_phase_seq_seen = sync_tim5_buffer_phase_seq;
+    settle_buffers = 0u;
+    last_correction_sign = 0;
+    same_sign_corrections = 0u;
+    lock_good_count = 0u;
+    rs485_sync_locked = 0u;
+    rs485_sync_led_active = 0u;
+    rs485_sync_relation_score = 0;
+    rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+    rs485_anti_phase_recovery_active = 0u;
+    rs485_anti_phase_recovery_packets = 0u;
+    rs485_anti_phase_drive_sign = 1;
+    tim15_request_hold_offset(0);
+    return;
+  }
+
+  if (!g_arr_auto_ready) {
+    settle_buffers = 0u;
+    last_phase_seq_seen = sync_tim5_buffer_phase_seq;
+    last_correction_sign = 0;
+    same_sign_corrections = 0u;
+    lock_good_count = 0u;
+    rs485_sync_locked = 0u;
+    rs485_sync_led_active = 0u;
+    rs485_sync_relation_score = 0;
+    rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+    rs485_anti_phase_recovery_active = 0u;
+    rs485_anti_phase_recovery_packets = 0u;
+    rs485_anti_phase_drive_sign = 1;
+    tim15_request_hold_offset(0);
+    return;
+  }
+
+  if (sync_tim5_buffer_phase_seq == last_phase_seq_seen) {
+    return;
+  }
+
+  last_phase_seq_seen = sync_tim5_buffer_phase_seq;
+  if (settle_buffers != 0u) {
+    settle_buffers--;
+    return;
+  }
+
+  period_ticks = sync_tim5_period_ticks;
+  if (period_ticks < 1000u) {
+    return;
+  }
+
+  raw_phase_ticks = sync_tim5_cnt_at_buffer % period_ticks;
+  half_period_ticks = period_ticks / 2u;
+
+  if (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO) {
+    target_phase_ticks = rs485_sync_get_auto_target_phase_ticks(period_ticks);
+  } else {
+    target_phase_ticks = g_sync_target_phase_ticks % period_ticks;
+  }
+
+  phase_error_ticks = (int32_t)raw_phase_ticks - (int32_t)target_phase_ticks;
+  if (phase_error_ticks > (int32_t)half_period_ticks) {
+    phase_error_ticks -= (int32_t)period_ticks;
+  } else if (phase_error_ticks < -(int32_t)half_period_ticks) {
+    phase_error_ticks += (int32_t)period_ticks;
+  }
+
+  phase_error_abs_ticks = arr_auto_abs_i32(phase_error_ticks);
+
+  effective_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+  relation_score = rs485_sync_relation_score;
+  if (relation_score >= relation_confirm_score) {
+    effective_phase_relation = RS485_SYNC_RELATION_IN_PHASE;
+  } else if (relation_score <= -relation_confirm_score) {
+    effective_phase_relation = RS485_SYNC_RELATION_ANTI_PHASE;
+  }
+  rs485_sync_phase_relation = effective_phase_relation;
+
+  if ((rs485_sync_locked != 0u) ||
+      (phase_error_abs_ticks <= phase_lock_release_ticks) ||
+      (rs485_anti_phase_recovery_active != 0u)) {
+    rs485_sync_led_active = 1u;
+  } else {
+    rs485_sync_led_active = 0u;
+  }
+
+  if (effective_phase_relation == RS485_SYNC_RELATION_IN_PHASE) {
+    rs485_anti_phase_recovery_active = 0u;
+    rs485_anti_phase_recovery_packets = 0u;
+    tim15_request_hold_offset(0);
+
+    if (phase_error_abs_ticks <= phase_deadband_ticks) {
+      if (lock_good_count < phase_lock_confirm_count) {
+        lock_good_count++;
+      }
+      if (lock_good_count >= phase_lock_confirm_count) {
+        rs485_sync_locked = 1u;
+      }
+    } else if (phase_error_abs_ticks >= phase_lock_release_ticks) {
+      lock_good_count = 0u;
+      rs485_sync_locked = 0u;
+    }
+  } else {
+    lock_good_count = 0u;
+    rs485_sync_locked = 0u;
+
+    if (effective_phase_relation == RS485_SYNC_RELATION_ANTI_PHASE) {
+      if (rs485_anti_phase_recovery_active == 0u) {
+        rs485_anti_phase_recovery_active = 1u;
+        rs485_anti_phase_recovery_packets = 0u;
+        rs485_anti_phase_drive_sign = (phase_error_ticks < 0) ? 1 : -1;
+        if (rs485_anti_phase_drive_sign == 0) {
+          rs485_anti_phase_drive_sign = 1;
+        }
+      }
+
+      if (rs485_anti_phase_recovery_packets < 255u) {
+        rs485_anti_phase_recovery_packets++;
+      }
+      if (rs485_anti_phase_recovery_packets >= anti_phase_flip_packets) {
+        rs485_anti_phase_recovery_packets = 0u;
+        rs485_anti_phase_drive_sign = (int8_t)(-rs485_anti_phase_drive_sign);
+        printf("[ANTI] flip dir=%d raw=%lu target=%lu err=%ld score=%d\r\n",
+            (int)rs485_anti_phase_drive_sign,
+            (unsigned long)raw_phase_ticks,
+            (unsigned long)target_phase_ticks,
+            (long)phase_error_ticks,
+            (int)relation_score);
+      }
+
+      correction_step = (rs485_anti_phase_drive_sign >= 0) ? anti_phase_forced_step : -anti_phase_forced_step;
+      tim15_request_hold_offset(correction_step);
+      last_correction_sign = 0;
+      same_sign_corrections = 0u;
+      settle_buffers = 0u;
+      printf("[ANTI] hold=%ld raw=%lu target=%lu err=%ld score=%d packets=%u\r\n",
+          (long)correction_step,
+          (unsigned long)raw_phase_ticks,
+          (unsigned long)target_phase_ticks,
+          (long)phase_error_ticks,
+          (int)relation_score,
+          (unsigned)rs485_anti_phase_recovery_packets);
+      return;
+    }
+
+    if (rs485_anti_phase_recovery_active != 0u) {
+      tim15_request_hold_offset((rs485_anti_phase_drive_sign >= 0) ? anti_phase_forced_step : -anti_phase_forced_step);
+      rs485_sync_led_active = 1u;
+      return;
+    }
+
+    tim15_request_hold_offset(0);
+  }
+
+  if ((effective_phase_relation == RS485_SYNC_RELATION_IN_PHASE) &&
+      (phase_error_abs_ticks <= phase_deadband_ticks)) {
+    last_correction_sign = 0;
+    same_sign_corrections = 0u;
+    return;
+  }
+
+  correction_sign = (phase_error_ticks < 0) ? 1 : -1;
+  if (correction_sign != last_correction_sign) {
+    same_sign_corrections = 1u;
+    last_correction_sign = correction_sign;
+  } else if (same_sign_corrections < (uint8_t)(max_dynamic_step - 1u)) {
+    same_sign_corrections = (uint8_t)(same_sign_corrections + 2u);
+  } else {
+    same_sign_corrections = max_dynamic_step;
+  }
+
+  if ((half_period_ticks > (uint32_t)phase_deadband_ticks) &&
+      (phase_error_abs_ticks > phase_deadband_ticks)) {
+    uint32_t active_error_ticks = (uint32_t)(phase_error_abs_ticks - phase_deadband_ticks);
+    uint32_t active_error_span = half_period_ticks - (uint32_t)phase_deadband_ticks;
+    error_limited_step = min_error_limited_step +
+        (uint32_t)(((uint64_t)active_error_ticks * (uint64_t)(max_dynamic_step - min_error_limited_step)) /
+                   (uint64_t)active_error_span);
+    if (error_limited_step > max_dynamic_step) {
+      error_limited_step = max_dynamic_step;
+    }
+  }
+
+  correction_strength = (uint32_t)same_sign_corrections;
+  if (correction_strength > error_limited_step) {
+    correction_strength = (correction_strength + error_limited_step) / 2u;
+  }
+
+  correction_step = (int32_t)correction_strength * (int32_t)correction_sign;
+
+  if (!tim15_schedule_arr_pulse(correction_step)) {
+    return;
+  }
+
+  settle_buffers = 0u;
+  tim15_arr_pulse_count++;
+  printf("[PHASE] ARR pulse raw=%lu target=%lu err=%ld step=%ld streak=%u total=%lu\r\n",
+      (unsigned long)raw_phase_ticks,
+      (unsigned long)target_phase_ticks,
+      (long)phase_error_ticks,
+      (long)correction_step,
+      (unsigned)same_sign_corrections,
+      (unsigned long)tim15_arr_pulse_count);
+}
+
+static void tune_led_service(uint32_t now_ms)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+
+  /* Если только что был RX по UART1, держим LED включенным поверх фоновой анимации. */
+  if (uart1_led_off_tick && (now_ms < uart1_led_off_tick)) {
+    LED_ON();
+    return;
+  }
+
+  if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
+      (sync_last_edge_ms != 0u) &&
+      ((now_ms - sync_last_edge_ms) <= 250u) &&
+      (rs485_sync_led_active != 0u)) {
+    LED_ON();
+    return;
+  }
+
+  if (g_tune_led_freq_active) {
+    LED_ON();
+    return;
+  }
+
+  LED_OFF();
+}
+
+static void tim2_led_breathe_service(uint32_t now_ms)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  static const uint16_t led_breathe_lut[] = {
+      0u, 1u, 2u, 4u, 7u, 11u, 17u, 24u,
+      34u, 45u, 58u, 73u, 90u, 109u, 130u, 154u,
+      181u, 210u, 242u, 277u, 315u, 356u, 400u, 448u,
+      499u, 554u, 613u, 675u, 742u, 813u, 888u, 967u,
+      1024u
+  };
+
+  if (htim2.Instance != TIM2) {
+    return;
+  }
+
+  /* PA0 / TIM2_CH1: breathing через аппаратный PWM.
+     Частота PWM задаётся TIM2 (обычно 200 Гц), здесь меняем только скважность. */
+  {
+    const uint32_t tim2_ch1_base_ccer = TIM_CCER_CC1E;
+    const uint32_t tim2_ch1_invert_ccer = TIM_CCER_CC1E | TIM_CCER_CC1P;
+    const uint32_t breathe_period_ms = 2000u;
+    const uint32_t half_period_ms = breathe_period_ms / 2u;
+    const uint32_t slave_blink_hold_ms = 80u;
+    const uint32_t lut_scale = 1024u;
+    const uint32_t lut_segments = (sizeof(led_breathe_lut) / sizeof(led_breathe_lut[0])) - 1u;
+    uint32_t period_ticks = __HAL_TIM_GET_AUTORELOAD(&htim2) + 1u;
+    uint32_t t = now_ms % breathe_period_ms;
+    uint32_t ramp = (t < half_period_ms) ? t : (breathe_period_ms - t);
+    uint32_t lut_phase = (ramp * lut_segments * 256u) / half_period_ms;
+    uint32_t lut_index = lut_phase >> 8;
+    uint32_t lut_frac = lut_phase & 0xFFu;
+    uint32_t duty_lut = 0u;
+    uint32_t brightness_ticks = 0u;
+    uint32_t compare_ticks = 0u;
+    uint32_t dark_threshold_ticks = period_ticks / 10u;
+    uint32_t blink_active = 0u;
+
+    if (lut_index >= lut_segments) {
+      duty_lut = led_breathe_lut[lut_segments];
+    } else {
+      uint32_t lut_a = led_breathe_lut[lut_index];
+      uint32_t lut_b = led_breathe_lut[lut_index + 1u];
+      duty_lut = lut_a + (((lut_b - lut_a) * lut_frac + 127u) >> 8);
+    }
+
+    brightness_ticks = (period_ticks * duty_lut) / lut_scale;
+
+    if (brightness_ticks >= period_ticks) {
+      brightness_ticks = period_ticks - 1u;
+    }
+
+    if (dark_threshold_ticks == 0u) {
+      dark_threshold_ticks = 1u;
+    }
+
+    if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+      if (brightness_ticks <= dark_threshold_ticks) {
+        if (rs485_slave_led_dark_latched == 0u) {
+          rs485_slave_led_dark_latched = 1u;
+          if (rs485_slave_led_pulse_pending != 0u) {
+            rs485_slave_led_invert_until_ms = now_ms + slave_blink_hold_ms;
+            rs485_slave_led_pulse_pending = 0u;
+          }
+        }
+      } else {
+        rs485_slave_led_dark_latched = 0u;
+      }
+
+      if (now_ms < rs485_slave_led_invert_until_ms) {
+        blink_active = 1u;
+      }
+    } else {
+      rs485_slave_led_pulse_pending = 0u;
+      rs485_slave_led_dark_latched = 0u;
+      rs485_slave_led_invert_until_ms = 0u;
+    }
+
+    /* Фиксируем базовую полярность CH1: без runtime-инверсий для стабильной плавности. */
+    if (blink_active != 0u) {
+      htim2.Instance->CCER = (htim2.Instance->CCER & ~(TIM_CCER_CC1E | TIM_CCER_CC1P)) | tim2_ch1_invert_ccer;
+    } else {
+      htim2.Instance->CCER = (htim2.Instance->CCER & ~(TIM_CCER_CC1E | TIM_CCER_CC1P)) | tim2_ch1_base_ccer;
+    }
+
+    compare_ticks = period_ticks - brightness_ticks;
+    if (compare_ticks >= period_ticks) {
+      compare_ticks = period_ticks - 1u;
+    }
+
+    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, compare_ticks);
+  }
+}
+
+void rs485_sync_on_buffer_complete(void)
+{
+  extern volatile uint32_t adc_stream_total_buffer_count;
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint32_t completed_buffers = adc_stream_total_buffer_count;
+  uint8_t sync_byte = 0u;
+  uint32_t latest_frame_seq = 0u;
+  uint8_t sync_parity = 0u;
+
+  rs485_sync_buf_div4 = completed_buffers;
+
+    /* rs485_sync_on_buffer_complete() вызывается на каждом опубликованном буфере,
+      но опорный sync-пакет должен соответствовать только одному и тому же фронту
+      внутреннего маркера. Поэтому ниже оставляем только ODD-полупериод. */
+  if (vnd_sync_mode_public != VND_SYNC_MODE_MASTER) {
+    rs485_discovery_reset_master_scan();
+    return;
+  }
+
+    /* Один sync-байт на каждый опубликованный буфер.
+      Бит полярности берём из той же parity-метки, что уже используется в USB,
+      чтобы sync и USB опирались на один и тот же строгий even/odd источник. */
+    latest_frame_seq = frame_wr_seq ? (frame_wr_seq - 1u) : 0u;
+    sync_parity = (uint8_t)(adc_get_buffer_parity(latest_frame_seq) & 1u);
+    sync_byte = (uint8_t)(RS485_SYNC7_BASE | (sync_parity ? RS485_SYNC_EDGE_BIT : 0u));
+
+  if (rs485_discovery_phase_wait_response) {
+    if (!rs485_discovery_response_seen && (rs485_discovery_wait_id >= 1u) && (rs485_discovery_wait_id <= RS485_DISCOVERY_MAX_ID)) {
+      rs485_discovery_scan_mask &= ~(1u << (rs485_discovery_wait_id - 1u));
+    }
+    if (rs485_discovery_wait_id >= RS485_DISCOVERY_MAX_ID) {
+      rs485_discovery_seen_mask = rs485_discovery_scan_mask;
+      rs485_slave_count_estimate = rs485_count_bits_u32(rs485_discovery_seen_mask);
+      rs485_discovery_next_id = 1u;
+      rs485_discovery_scan_mask = 0u;
+    } else if (rs485_discovery_wait_id != 0u) {
+      rs485_discovery_next_id = (uint8_t)(rs485_discovery_wait_id + 1u);
+    }
+    rs485_discovery_wait_id = 0u;
+    rs485_discovery_response_seen = 0u;
+    rs485_discovery_phase_wait_response = 0u;
+  }
+
+  rs485_tx_queue_push(sync_byte);
+
+  {
+    uint8_t request_id = rs485_discovery_next_id;
+    if ((request_id == 0u) || (request_id > RS485_DISCOVERY_MAX_ID)) {
+      request_id = 1u;
+    }
+    rs485_tx_queue_push((uint8_t)(RS485_DISCOVERY_REQ_BASE | request_id));
+    rs485_discovery_wait_id = request_id;
+    rs485_discovery_response_seen = 0u;
+    rs485_discovery_phase_wait_response = 1u;
+  }
+
+  rs485_tx_kick();
 }
 /* USER CODE END 0 */
 
@@ -459,13 +1601,9 @@ uint32_t tim2_apply_profile_window(void){
 
 /**
   * @brief  The application entry point.
-  * @retval int
   */
 int main(void)
 {
-  /* TEST MARKER: Check if new code is running */
-  printf("[MARKER_MAIN] Entered main() function\r\n");
-
   /* USER CODE BEGIN 1 */
   static uint32_t early_rsr_raw = 0; // первое чтение до HAL_Init
   early_rsr_raw = RCC->RSR; /* читаем как можно раньше */
@@ -609,6 +1747,11 @@ int main(void)
   /* USER CODE BEGIN SysInit */
   /* РАННИЙ UART для диагностики: инициализация сразу после тактирования */
   MX_USART1_UART_Init();
+  MX_USART2_UART_Init();
+  rs485_local_uid_hint = rs485_compute_local_node_id();
+  rs485_master_claim_delay_ms = rs485_compute_master_claim_delay_ms();
+  rs485_local_node_id = 0u;
+  rs485_discovery_reset_master_scan();
   setvbuf(stdout, NULL, _IONBF, 0);
   static uint32_t build_counter __attribute__((section(".noinit"))) = 0;
   build_counter++;
@@ -620,6 +1763,8 @@ int main(void)
   printf("[BOOT] FW_VERSION=%s DATE=%s TIME=%s HASH=%s\r\n", fw_version, fw_build_date, fw_build_time, fw_git_hash);
   printf("[BOOT] %s\r\n", fw_build_full);
   printf("[UART] USART1=115200 8N1 ready\r\n");
+  printf("[RS485] NODE_ID=AUTO UID_HINT=%u DISCOVERY=req 0x40|id ack 0x80|id\r\n", (unsigned)rs485_local_uid_hint);
+  printf("[RS485] MASTER_CLAIM_DELAY_MS=%lu\r\n", (unsigned long)rs485_master_claim_delay_ms);
 #if 1
   // Дополнительная диагностика debug и option bytes
   uint32_t dhcsr = CoreDebug->DHCSR;
@@ -721,7 +1866,6 @@ int main(void)
   printf("[TIM15][CFG] PSC=%lu ARR=%lu → f_counter=275MHz/(PSC+1)=275MHz, f_UPDATE=275MHz/(ARR+1)=%lu kHz\r\n",
          (unsigned long)TIM15->PSC, (unsigned long)TIM15->ARR, 
          (unsigned long)(275000 / (TIM15->ARR + 1)));
-  printf("[TIM15][CFG] CH1 PWM enabled on PE5 for frequency measurement (f_PWM = f_UPDATE)\r\n");
     {
       const unsigned long ext_sel = (unsigned long)((ADC1->CFGR >> ADC_CFGR_EXTSEL_Pos) & 0x1FUL);
       const unsigned long ext_en  = (unsigned long)((ADC1->CFGR >> ADC_CFGR_EXTEN_Pos)  & 0x3UL);
@@ -791,6 +1935,7 @@ int main(void)
   LCD_FillRect(0, 0, LCD_W, LCD_H, BLACK);
   /* Гарантированно включаем подсветку после инициализации LCD независимо от режима PWM/GPIO */
   BL_ON();
+  optic_tx_start();
 #if 1
   g_progress_flags |= BOOT_PROGRESS_AFTER_PWM;
 #endif
@@ -939,6 +2084,15 @@ int main(void)
       err_code = 1002;
       Error_Handler();
     }
+
+    if (HAL_TIM_OC_Start(&htim15, TIM_CHANNEL_1) != HAL_OK) {
+      printf("[TIM15][ERR] HAL_TIM_OC_Start CH1 failed\r\n");
+      err_code = 1003;
+      Error_Handler();
+    }
+
+    HAL_NVIC_SetPriority(TIM15_IRQn, 3, 0);
+    HAL_NVIC_EnableIRQ(TIM15_IRQn);
     
     // Ждём первого UPDATE от TIM2 (TRGO->ITR1->RESET TIM15) для полной синхронизации
     // TIM2 @ 200 Hz = 5 мс период, максимальное ожидание ~5 мс
@@ -956,10 +2110,6 @@ int main(void)
   uint32_t cnt_after = TIM15->CNT;
   printf("[TIM15][TEST] Counter increment test: before=%lu after=%lu delta=%ld (expected ~275)\r\n",
          (unsigned long)cnt_before, (unsigned long)cnt_after, (long)(cnt_after - cnt_before));
-
-  
-  // Запускаем PWM канал TIM15_CH1 (PE5) для наблюдения на осциллографе
-  HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
   STAGE(22,"TRGON");
   
   // ТЕПЕРЬ запускаем TIM2 CH1 с прерыванием (ПОСЛЕ инициализации ADC!)
@@ -972,8 +2122,8 @@ int main(void)
          TIM2_IRQn, (unsigned long)((nvic_iser0 & tim2_bit) ? 1 : 0));
   
       /* TIM2 не управляет DMA и не генерирует PWM на PA2.
-        Используем TIM2 только как счётчик/делитель. */
-      HAL_TIM_Base_Start(&htim2);
+        Используем TIM2 как счётчик/делитель и одновременно как PWM для LED на PA0 (CH1). */
+      HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   
   // ДИАГНОСТИКА: проверка после запуска
   nvic_iser0 = NVIC->ISER[TIM2_IRQn >> 5];
@@ -999,7 +2149,6 @@ int main(void)
   HAL_NVIC_EnableIRQ(TIM15_IRQn);
   
   CHECK(HAL_TIM_Base_Start(&htim15), 1102);
-  HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
 #else
   // SAFE_MINIMAL: ничего не запускаем из ADC/TIM15
 #endif
@@ -1038,6 +2187,7 @@ int main(void)
     main_loop_heartbeat++;
     last_heartbeat_ms = HAL_GetTick();
     uint32_t now = last_heartbeat_ms;
+  optic_sensor_service(now);
   static uint8_t first_loop=1; if(first_loop){ PROG('M'); first_loop=0; }
   PROG('A'); // loop start
 
@@ -1051,6 +2201,9 @@ int main(void)
            (unsigned long)TIM2->ARR, (unsigned long)TIM2->SR, (unsigned long)TIM2->DIER);
   }
 #endif
+
+  arr_auto_tune_service();
+  phase_micro_adjust_service();
 
   // Ежесекундный вывод периода PD5 измеренного через TIM5 (32-битный счетчик @ 275 MHz)
   {
@@ -1200,6 +2353,7 @@ int main(void)
         extern void vnd_pipeline_stop_reset(int deep);
         vnd_pipeline_stop_reset(0);
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
       }
     }
@@ -1236,11 +2390,23 @@ int main(void)
     }
   }
   #endif
+  rs485_sync_auto_role_service(now);
+  if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
+      (sync_last_edge_ms != 0u) &&
+      ((now - sync_last_edge_ms) > 250u)) {
+    rs485_sync_relation_score = 0;
+    rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+    rs485_anti_phase_recovery_active = 0u;
+    rs485_anti_phase_recovery_packets = 0u;
+    rs485_anti_phase_drive_sign = 1;
+    tim15_request_hold_offset(0);
+  }
   /* Подстройка частоты TIM15 по фазе (TIM16 счётчик, PD5 reset) */
   {
     extern void adc_sync_pd5_apply_adjustment(void);
     adc_sync_pd5_apply_adjustment();
   }
+  rs485_sync_service_tx();
   /* Выравнивание TIM15 по границе буфера — выполняем вне ISR */
   #ifndef SYNC_ACTIONS_ENABLE
   #define SYNC_ACTIONS_ENABLE 0u
@@ -1342,6 +2508,8 @@ int main(void)
     LED_OFF();
     uart1_led_off_tick = 0;
   }
+  tune_led_service(now);
+  tim2_led_breathe_service(now);
   /* Обработка приёма по UART1: сбор строки и разбор команд (вне ISR) */
   while(uart1_rx_ring_rd != uart1_rx_ring_wr){
     uint8_t ch = uart1_rx_ring[uart1_rx_ring_rd & (UART1_RX_RING_SZ-1)];
@@ -1360,6 +2528,7 @@ int main(void)
           printf("\r\n=== DEBUG COMMANDS (UART1) ===\r\n");
           printf("VER     - firmware version (git commit, build date)\r\n");
           printf("STATUS  - current state (streaming, counters, fps)\r\n");
+          printf("PHASE [AUTO|ticks] - show/set sync target phase\r\n");
           printf("PERF    - performance stats (prepare/tx/interval timings)\r\n");
           printf("FPS     - FPS statistics only\r\n");
           printf("RESET   - software reset (reboot device)\r\n");
@@ -1375,8 +2544,36 @@ int main(void)
         } else if(strncmp(uart1_cmd_buf, "STATUS", 6) == 0){
           printf("\r\n=== DEVICE STATUS (UART1) ===\r\n");
           printf("Uptime: %lu ms\r\n", HAL_GetTick());
+          if (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO) {
+            printf("Sync target phase: AUTO\r\n");
+          } else {
+            printf("Sync target phase: %lu ticks\r\n", (unsigned long)g_sync_target_phase_ticks);
+          }
           printf("Use 'PERF' or 'FPS' for detailed statistics\r\n");
           printf("==============================\r\n");
+        } else if(strncmp(uart1_cmd_buf, "PHASE", 5) == 0){
+          char *arg = uart1_cmd_buf + 5;
+          while(*arg == ' ') arg++;
+          if(*arg == 0){
+            if (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO) {
+              printf("[UART] PHASE=AUTO\r\n");
+            } else {
+              printf("[UART] PHASE=%lu ticks\r\n", (unsigned long)g_sync_target_phase_ticks);
+            }
+          } else if(strcmp(arg, "AUTO") == 0){
+            g_sync_target_phase_ticks = SYNC_TARGET_PHASE_AUTO;
+            printf("[UART] PHASE=AUTO\r\n");
+          } else {
+            char *end_ptr = NULL;
+            unsigned long phase_ticks = strtoul(arg, &end_ptr, 10);
+            while (end_ptr && *end_ptr == ' ') end_ptr++;
+            if ((end_ptr == arg) || (end_ptr && *end_ptr != 0)) {
+              printf("[UART] PHASE parse error: '%s'\r\n", arg);
+            } else {
+              g_sync_target_phase_ticks = (uint32_t)phase_ticks;
+              printf("[UART] PHASE=%lu ticks\r\n", phase_ticks);
+            }
+          }
         } else if(strncmp(uart1_cmd_buf, "FPS", 3) == 0){
           vnd_report_fps_stats();
         } else if(strncmp(uart1_cmd_buf, "PERF", 4) == 0){
@@ -1829,9 +3026,15 @@ static void MX_TIM1_Init(void)
   /* USER CODE BEGIN TIM1_Init 1 */
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 274;
+  {
+    uint32_t total_ticks = (optic_tim1_get_input_clk_hz() + (OPTIC_TX_PWM_TARGET_HZ / 2u)) / OPTIC_TX_PWM_TARGET_HZ;
+    if (total_ticks < 2u) {
+      total_ticks = 2u;
+    }
+    htim1.Init.Prescaler = 0;
+    htim1.Init.Period = total_ticks - 1u;
+  }
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 2499;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -1857,6 +3060,11 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
+  sConfigOC.Pulse = (htim1.Init.Period + 1u) / 2u;
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
   sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
   sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
   sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
@@ -1876,8 +3084,10 @@ static void MX_TIM1_Init(void)
   // Разрешаем автоматическое включение основного выхода (MOE) для надёжного старта CH2N
   sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_ENABLE;
   HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig);
-  printf("[PWM] TIM1 initialized: ARR=%lu, PSC=%lu\r\n",
-         (unsigned long)htim1.Init.Period, (unsigned long)htim1.Init.Prescaler);
+  printf("[OPTIC] TIM1 initialized: ARR=%lu, PSC=%lu -> %lu Hz on CH3\r\n",
+         (unsigned long)htim1.Init.Period,
+         (unsigned long)htim1.Init.Prescaler,
+         (unsigned long)(optic_tim1_get_input_clk_hz() / (htim1.Init.Period + 1u)));
   /* USER CODE END TIM1_Init 2 */
   HAL_TIM_MspPostInit(&htim1);
 
@@ -1934,8 +3144,9 @@ static void MX_TIM2_Init(void)
     /* Pulse = 4800 µs (из 5000 µs периода) → ADC работает ≈4.8ms, останавливается ~0.2ms.
       1200 samples @ ~275kHz ≈ 4.36ms — теперь точно помещаются без усечения. */
     sConfigOC.Pulse = 4800;
-  /* Инверсия TIM2_CH1 (PA0): раньше был инверсный уровень, вернём его через полярность. */
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
+    /* TIM2_CH1 (PA0): физически инверсный выход, поэтому яркость в коде считаем отдельно,
+      а в CCR1 подаём уже инвертированное значение. */
+    sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
@@ -2081,14 +3292,13 @@ static void MX_TIM15_Init(void)
   TIM_SlaveConfigTypeDef sSlaveConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
-  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
 
   /* USER CODE BEGIN TIM15_Init 1 */
   /* USER CODE END TIM15_Init 1 */
   htim15.Instance = TIM15;
   htim15.Init.Prescaler = 0;     // Без предделителя: 275 MHz тактовая
   htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim15.Init.Period = 2145;     // 275 MHz / (2145+1) = 128.0 kHz UPDATE (fs_hz профиля; с небольшим запасом по N)
+  htim15.Init.Period = 4295;     // 275 MHz / (4295+1) ≈ 64 kHz UPDATE (примерно 200Hz PWM с делением)
   htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim15.Init.RepetitionCounter = 0;
   htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -2101,7 +3311,7 @@ static void MX_TIM15_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_TIM_PWM_Init(&htim15) != HAL_OK)
+  if (HAL_TIM_OC_Init(&htim15) != HAL_OK)
   {
     Error_Handler();
   }
@@ -2120,31 +3330,20 @@ static void MX_TIM15_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 572;  // 50% duty cycle @ ARR=1145 → для измерения частоты на PE5
+  sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
+  sConfigOC.Pulse = (htim15.Init.Period + 1u) / 2u;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-  if (HAL_TIM_PWM_ConfigChannel(&htim15, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
-  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
-  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
-  sBreakDeadTimeConfig.DeadTime = 0;
-  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
-  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
-  sBreakDeadTimeConfig.BreakFilter = 0;
-  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
-  if (HAL_TIMEx_ConfigBreakDeadTime(&htim15, &sBreakDeadTimeConfig) != HAL_OK)
+  if (HAL_TIM_OC_ConfigChannel(&htim15, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM15_Init 2 */
   /* USER CODE END TIM15_Init 2 */
+
   HAL_TIM_MspPostInit(&htim15);
 
 }
@@ -2232,6 +3431,46 @@ static void MX_USART1_UART_Init(void)
   }
   /* USER CODE END USART1_Init 2 */
 
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 240000;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart2.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetTxFifoThreshold(&huart2, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetRxFifoThreshold(&huart2, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_DisableFifoMode(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UART_Receive_IT(&huart2, &rs485_rx_byte, 1) != HAL_OK) {
+    Error_Handler();
+  }
 }
 
 /**
@@ -2339,7 +3578,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
   
   /* USER CODE BEGIN MX_GPIO_Init_2 */
-  /* PA3: логический маркер (toggle на каждый опубликованный буфер/кадр) */
+  /* PA3: legacy выход, удерживаем в LOW */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_3, GPIO_PIN_RESET);
   GPIO_InitStruct.Pin = GPIO_PIN_3;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -2347,30 +3586,38 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /* PB8: синхровыход (master), по умолчанию LOW */
-  HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);
-  GPIO_InitStruct.Pin = SYNC_OUT_Pin;
+  /* PC7: зеркало битового маркера PA2 */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  HAL_GPIO_Init(SYNC_OUT_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /* PE2: принудительно LOW (больше не используется как SYNC_OUT) */
+  /* PD0: вход логического сигнала оптического датчика */
+  GPIO_InitStruct.Pin = OPTIC_RX_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(OPTIC_RX_GPIO_Port, &GPIO_InitStruct);
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+  /* PD3: RS-485 RDE, по умолчанию приём */
+  HAL_GPIO_WritePin(RS485_RDE_GPIO_Port, RS485_RDE_Pin, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = RS485_RDE_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(RS485_RDE_GPIO_Port, &GPIO_InitStruct);
+
+  /* PE2: принудительно LOW, отдельный legacy sync output больше не используется */
   HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_RESET);
   GPIO_InitStruct.Pin = GPIO_PIN_2;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
-  /* PD5: синхровход (slave) с EXTI по спаду */
-  GPIO_InitStruct.Pin = SYNC_IN_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  /* Защита от «плавающего» входа при отсутствии импульсов: подтяжка вниз */
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(SYNC_IN_GPIO_Port, &GPIO_InitStruct);
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
-  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
   // Настройка RST дисплея и подсветки как GPIO до старта PWM
   GPIO_InitStruct.Pin = LCD_RST_Pin;
@@ -2437,6 +3684,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
       usb_vendor_periodic_tick();
     #endif
   }
+  else if (htim->Instance == TIM15) {
+    if (tim15_arr_pulse_stage == 1u) {
+      TIM15->ARR = tim15_arr_pulse_nominal;
+      tim15_arr_pulse_stage = 2u;
+    } else if (tim15_arr_pulse_stage == 2u) {
+      tim15_arr_pulse_stage = 0u;
+      __HAL_TIM_DISABLE_IT(&htim15, TIM_IT_UPDATE);
+        tim15_apply_hold_target_if_possible();
+      __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+    }
+  }
 }
 
 /* Старый PWM Pulse Finished callback - не используется */
@@ -2469,6 +3727,54 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       HAL_Delay(1);
       HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1);
     }
+  } else if (huart->Instance == USART2) {
+    if ((rs485_rx_byte & (uint8_t)~RS485_SYNC_EDGE_BIT) == RS485_SYNC7_BASE) {
+      rs485_sync_on_packet_received((rs485_rx_byte & RS485_SYNC_EDGE_BIT) ? 1u : 0u);
+      rs485_discovery_on_sync_received();
+    } else if ((rs485_rx_byte & (uint8_t)~RS485_DISCOVERY_ID_MASK) == RS485_DISCOVERY_REQ_BASE) {
+      rs485_discovery_on_request(rs485_rx_byte);
+    } else if ((rs485_rx_byte & (uint8_t)~RS485_DISCOVERY_ID_MASK) == RS485_DISCOVERY_ACK_BASE) {
+      rs485_discovery_on_response(rs485_rx_byte);
+    }
+    if (HAL_UART_Receive_IT(&huart2, &rs485_rx_byte, 1) != HAL_OK) {
+      Error_Handler();
+    }
+  }
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == USART2) {
+    rs485_tx_packets++;
+    rs485_tx_busy = 0u;
+    if (rs485_tx_queue_count != 0u) {
+      rs485_tx_kick();
+      return;
+    }
+    HAL_GPIO_WritePin(RS485_RDE_GPIO_Port, RS485_RDE_Pin, GPIO_PIN_RESET);
+  }
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == OPTIC_RX_Pin) {
+    uint32_t now_ms = HAL_GetTick();
+
+    if ((optic_pulse_window_start_ms == 0u) ||
+        ((now_ms - optic_pulse_window_start_ms) > OPTIC_PULSE_ACTIVE_TIMEOUT_MS)) {
+      optic_pulse_window_start_ms = now_ms;
+      optic_pulse_window_count = 1u;
+    } else if (optic_pulse_window_count < 0xFFu) {
+      optic_pulse_window_count++;
+    }
+
+    optic_last_pulse_ms = now_ms;
+
+    if ((optic_sensor_state_public == 0u) &&
+        (optic_pulse_window_count >= OPTIC_PULSE_LATCH_COUNT)) {
+      optic_sensor_state_public = 1u;
+      need_usb_status_refresh = 1u;
+    }
   }
 }
 
@@ -2491,6 +3797,41 @@ static void lcd_print_padded_if_changed(int x, int y, const char* new_text,
     LCD_ShowString_Size((uint16_t)x, (uint16_t)y, line, font_height, fg, bg);
     strncpy(prev, new_text, buf_sz-1);
     prev[buf_sz-1] = 0;
+  if(prev_fg) *prev_fg = fg;
+  if(prev_bg) *prev_bg = bg;
+}
+
+static void lcd_draw_badge_if_changed(int x, int y, const char* new_text,
+                                      char *prev, size_t buf_sz,
+                                      uint8_t max_len, uint8_t font_height,
+                                      uint8_t pad_x, uint8_t pad_y,
+                                      uint16_t fg, uint16_t bg,
+                                      uint16_t *prev_fg, uint16_t *prev_bg)
+{
+  uint8_t char_width;
+  uint16_t badge_w;
+  uint16_t badge_h;
+  size_t text_len;
+  char text[32];
+
+  if(!new_text || !prev || buf_sz == 0) return;
+  if(strncmp(new_text, prev, buf_sz-1) == 0){
+    if(prev_fg && prev_bg && (*prev_fg == fg) && (*prev_bg == bg)) return;
+  }
+
+  char_width = (font_height == 12u) ? 6u : 8u;
+  badge_w = (uint16_t)(max_len * char_width + (2u * pad_x));
+  badge_h = (uint16_t)(font_height + (2u * pad_y));
+  text_len = strlen(new_text);
+  if(text_len > max_len) text_len = max_len;
+  memcpy(text, new_text, text_len);
+  text[text_len] = 0;
+
+  LCD_FillRect((uint16_t)x, (uint16_t)y, badge_w, badge_h, bg);
+  LCD_ShowString_Size((uint16_t)(x + pad_x), (uint16_t)(y + pad_y), text, font_height, fg, bg);
+
+  strncpy(prev, new_text, buf_sz-1);
+  prev[buf_sz-1] = 0;
   if(prev_fg) *prev_fg = fg;
   if(prev_bg) *prev_bg = bg;
 }
@@ -2605,23 +3946,103 @@ void DrawUSBStatus(void){
     static uint16_t prev_line2_fg = 0, prev_line2_bg = 0;
     static uint16_t prev_line3_fg = 0, prev_line3_bg = 0;
     static uint16_t prev_line4_fg = 0, prev_line4_bg = 0;
+    static uint16_t prev_optic_fg = 0, prev_optic_bg = 0;
+    static char prev_optic_line[8] = "";
     
     /* Первая строка (y=0): USB статус */
     lcd_print_padded_if_changed(0,0,text0, prev_line0, sizeof(prev_line0), 7, 16, color0, BLACK, &prev_line0_fg, &prev_line0_bg);
 
-    /* Индикатор SYNC рядом со звездочкой: M/S + цвет (зелёный=есть импульсы, красный=нет) */
+    /* Индикатор SYNC рядом со звездочкой: 2 цифры slave-count + M/S/O.
+       Сейчас достоверный slave-count ещё недоступен: текущий sync-протокол односторонний,
+       master передаёт 0xA5, но slave не отвечает. Поле зарезервировано под будущий опрос. */
     {
       static uint8_t prev_mode = 0xFF;
-      static uint8_t prev_ok = 0xFF;
+      static uint8_t prev_display_value = 0xFF;
+      static uint16_t prev_color = 0xFFFFu;
+      static uint8_t sync_color_locked = 0u;
+      static uint8_t sync_color_rise_count = 0u;
+      static uint8_t sync_color_fall_count = 0u;
+      static uint8_t prev_logic_mode = 0xFFu;
       char ch = 'M';
-      if(vnd_sync_mode_public == 1u) ch = 'S';
-      else if(vnd_sync_mode_public == 2u) ch = 'O';
-      uint16_t c = vnd_sync_ok_public ? GREEN : RED;
-      if(prev_mode != vnd_sync_mode_public || prev_ok != vnd_sync_ok_public){
+      char count_buf[3] = "  ";
+      uint8_t display_value = 0u;
+      uint8_t display_mode = vnd_sync_mode_public;
+      uint8_t sync_signal_alive = 0u;
+      uint8_t sync_ok_visual = 0u;
+      uint16_t c = RED;
+
+      if ((sync_last_edge_ms != 0u) && ((now - sync_last_edge_ms) <= 250u)) {
+        sync_signal_alive = 1u;
+      }
+      if ((display_mode == VND_SYNC_MODE_MASTER) && (rs485_slave_count_estimate != 0u)) {
+        sync_signal_alive = 1u;
+      }
+
+      if (!sync_signal_alive) {
+        display_mode = VND_SYNC_MODE_MASTER;
+        display_value = 0u;
+        sync_color_locked = 0u;
+        sync_color_rise_count = 0u;
+        sync_color_fall_count = 0u;
+        c = CYAN;
+      }
+
+      if ((prev_logic_mode != display_mode) && sync_signal_alive) {
+        prev_logic_mode = display_mode;
+        sync_color_locked = 0u;
+        sync_color_rise_count = 0u;
+        sync_color_fall_count = 0u;
+      } else if (!sync_signal_alive) {
+        prev_logic_mode = display_mode;
+      }
+
+      if(display_mode == 1u) ch = 'S';
+      else if(display_mode == 2u) ch = 'O';
+      if(display_mode == VND_SYNC_MODE_MASTER){
+        display_value = (uint8_t)(rs485_slave_count_estimate & 0x1Fu);
+        if (!sync_signal_alive) {
+          display_value = 0u;
+        }
+        snprintf(count_buf, sizeof(count_buf), "%02u", (unsigned)display_value);
+      } else if(display_mode == VND_SYNC_MODE_SLAVE){
+        display_value = (uint8_t)(rs485_local_node_id & 0x1Fu);
+        snprintf(count_buf, sizeof(count_buf), "%02u", (unsigned)display_value);
+      }
+
+      if (sync_signal_alive) {
+          sync_ok_visual = vnd_sync_ok_public;
+          if ((display_mode == VND_SYNC_MODE_MASTER) && (rs485_slave_count_estimate != 0u)) {
+            sync_ok_visual = 1u;
+          }
+        if (sync_ok_visual != 0u) {
+          sync_color_fall_count = 0u;
+          if (sync_color_rise_count < 8u) {
+            sync_color_rise_count++;
+          }
+          if (sync_color_rise_count >= 8u) {
+            sync_color_locked = 1u;
+          }
+        } else {
+          sync_color_rise_count = 0u;
+          if (sync_color_locked != 0u) {
+            if (sync_color_fall_count < 40u) {
+              sync_color_fall_count++;
+            }
+            if (sync_color_fall_count >= 40u) {
+              sync_color_locked = 0u;
+            }
+          }
+        }
+        c = (sync_color_locked != 0u) ? GREEN : RED;
+      }
+
+      if(prev_mode != display_mode || prev_display_value != display_value || prev_color != c){
+        LCD_ShowString_Size(132, 0, count_buf, 16, c, BLACK);
         char buf[2] = {ch, 0};
-        LCD_ShowString_Size(140, 0, buf, 16, c, BLACK);
-        prev_mode = vnd_sync_mode_public;
-        prev_ok = vnd_sync_ok_public;
+        LCD_ShowString_Size(124, 0, buf, 16, c, BLACK);
+        prev_mode = display_mode;
+        prev_display_value = display_value;
+        prev_color = c;
       }
     }
 
@@ -2632,6 +4053,12 @@ void DrawUSBStatus(void){
     char freq_buf[20];
     snprintf(freq_buf, sizeof(freq_buf), "%u Hz", (unsigned)marker_hz);
     lcd_print_padded_if_changed(0,14, freq_buf, prev_line1, sizeof(prev_line1), 10, 16, CYAN, BLACK, &prev_line1_fg, &prev_line1_bg);
+  }
+  {
+    uint8_t optic_active = optic_sensor_get_state();
+    uint16_t optic_bg = optic_active ? GREEN : RED;
+    lcd_draw_badge_if_changed(127,16, "Optic", prev_optic_line, sizeof(prev_optic_line), 5, 12,
+                              1, 1, BLACK, optic_bg, &prev_optic_fg, &prev_optic_bg);
   }
 
   /* Скорость обмена: считаем раз в ~500мс (байты/с и семплы/с) */
@@ -2751,21 +4178,21 @@ void DrawUSBStatus(void){
     }
   }
 
-  /* Диагностическая строка DC (нижняя строка текста y=56):
-     строго 20 символов (160px при шрифте 16), чтобы не было переноса.
-     Важно: показываем счётчики OK/FAIL и счётчик записи (из Flash blob),
-     чтобы однозначно понимать: была ли попытка записи и изменилось ли содержимое Flash. */
+  /* Пятая строка LCD: дата/время прошивки в формате Ver: dd.mm.yy hh:mm */
   {
-    char dc_buf[24];
-    uint16_t dc_color = WHITE;
-    if(vnd_dc_save_last_result == 1u) dc_color = GREEN;
-    else if(vnd_dc_save_last_result == 2u) dc_color = RED;
-    unsigned ok3 = (unsigned)(vnd_dc_save_ok_count % 1000u);
-    unsigned fl3 = (unsigned)(vnd_dc_save_fail_count % 1000u);
-    unsigned wc3 = (unsigned)(vnd_dc_write_counter_public % 1000u);
-    snprintf(dc_buf, sizeof(dc_buf), "DC o%03u f%03u c%03u",
-             ok3, fl3, wc3);
-    lcd_print_padded_if_changed(0,56, dc_buf, prev_line4, sizeof(prev_line4), 20, 16, dc_color, BLACK, &prev_line4_fg, &prev_line4_bg);
+    char ver_buf[24];
+    unsigned year = 0u, month = 0u, day = 0u;
+    unsigned hour = 0u, minute = 0u;
+
+    if((sscanf(fw_build_date, "%4u-%2u-%2u", &year, &month, &day) == 3) &&
+       (sscanf(fw_build_time, "%2u:%2u", &hour, &minute) == 2)){
+      snprintf(ver_buf, sizeof(ver_buf), "Ver: %02u.%02u.%02u %02u:%02u",
+               day, month, year % 100u, hour, minute);
+    } else {
+      snprintf(ver_buf, sizeof(ver_buf), "Ver: %.10s %.5s", fw_build_date, fw_build_time);
+    }
+
+    lcd_print_padded_if_changed(0,56, ver_buf, prev_line4, sizeof(prev_line4), 20, 16, WHITE, BLACK, &prev_line4_fg, &prev_line4_bg);
   }
   PROG('u');
 }

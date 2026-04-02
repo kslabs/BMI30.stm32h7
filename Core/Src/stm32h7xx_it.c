@@ -88,6 +88,7 @@ extern TIM_HandleTypeDef htim6;
 extern TIM_HandleTypeDef htim15;
 extern TIM_HandleTypeDef htim16;
 extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -218,61 +219,6 @@ void PendSV_Handler(void)
 /* TIM16 IRQHandler removed - now using TIM5 (32-bit) instead */
 
 /**
-  * @brief This function handles EXTI line[9:5] interrupts.
-  */
-void EXTI9_5_IRQHandler(void)
-{
-  /* USER CODE BEGIN EXTI9_5_IRQn 0 */
-
-  /* USER CODE END EXTI9_5_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(SYNC_IN_Pin);
-  /* USER CODE BEGIN EXTI9_5_IRQn 1 */
-
-  /* USER CODE END EXTI9_5_IRQn 1 */
-}
-
-/* Callback on GPIO EXTI interrupt */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-  if (GPIO_Pin == SYNC_IN_Pin) {
-    /* Спад PD5: только измеряем период через TIM5, никакого влияния на TIM15/ADC/DMA */
-    extern TIM_HandleTypeDef htim5;
-    extern volatile uint32_t sync_last_edge_ms;
-    extern volatile uint8_t sync_edge_seen;
-    extern volatile uint32_t sync_edge_count;
-    
-    /* Сохраняем счетчик буферов при спаде PD5 и вычисляем delta (для статистики) */
-    extern volatile uint32_t sync_buffer_count_at_edge;
-    extern volatile uint32_t sync_buffers_between_edges;
-    extern volatile uint32_t adc_stream_total_buffer_count;
-    
-    uint32_t prev_count = sync_buffer_count_at_edge;
-    sync_buffer_count_at_edge = adc_stream_total_buffer_count;
-    sync_buffers_between_edges = adc_stream_total_buffer_count - prev_count;
-    
-    /* Измеряем период через TIM5 (275 MHz) для частотной синхронизации */
-    extern volatile uint32_t sync_tim5_period_ticks;
-    sync_tim5_period_ticks = htim5.Instance->CNT;  // Сохраняем текущее значение TIM5 как период
-    htim5.Instance->CNT = 0u;  // Сбрасываем TIM5 для измерения следующего периода
-    
-    /* Измеряем фазу TIM15 для фазовой синхронизации */
-    extern TIM_HandleTypeDef htim15;
-    extern volatile uint32_t sync_tim15_cnt_at_pd5;
-    sync_tim15_cnt_at_pd5 = htim15.Instance->CNT;
-    
-    /* УБРАНО: htim15.Instance->CNT = 0u; - нет сброса TIM15 */
-    /* УБРАНО: adc_stream_restart_sync() - нет перезапуска ADC/DMA */
-    
-    sync_last_edge_ms = HAL_GetTick();
-    sync_edge_seen = 1u;
-    sync_edge_count++;
-    
-    /* Отметим наличие синхроимпульсов для LCD */
-    vnd_sync_on_edge();
-  }
-}
-
-/**
   * @brief This function handles System tick timer.
   */
 void SysTick_Handler(void)
@@ -299,6 +245,14 @@ void USART1_IRQHandler(void)
   HAL_UART_IRQHandler(&huart1);
   /* USER CODE BEGIN USART1_IRQn 1 */
   /* USER CODE END USART1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART2 global interrupt.
+  */
+void USART2_IRQHandler(void)
+{
+  HAL_UART_IRQHandler(&huart2);
 }
 /* Add here the Interrupt Handlers for the used peripherals.                  */
 /* For the available peripheral interrupt handler names,                      */
@@ -331,6 +285,20 @@ void DMA1_Stream1_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Stream1_IRQn 1 */
 
   /* USER CODE END DMA1_Stream1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles EXTI line0 interrupt.
+  */
+void EXTI0_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI0_IRQn 0 */
+
+  /* USER CODE END EXTI0_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(OPTIC_RX_Pin);
+  /* USER CODE BEGIN EXTI0_IRQn 1 */
+
+  /* USER CODE END EXTI0_IRQn 1 */
 }
 
 /**

@@ -111,6 +111,10 @@ extern volatile uint32_t systick_heartbeat;
 #define Data_ready_GPIO22_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
+#ifndef FORCE_BL_GPIO
+#define FORCE_BL_GPIO 1
+#endif
+
 // Совместимость: старые имена DATA_READY_*
 #ifndef DATA_READY_Pin
 #define DATA_READY_Pin        Data_ready_GPIO22_Pin
@@ -125,6 +129,22 @@ extern volatile uint32_t systick_heartbeat;
 #define SYNC_IN_GPIO_Port GPIOD
 #define SYNC_OUT_Pin GPIO_PIN_8
 #define SYNC_OUT_GPIO_Port GPIOB
+
+// RS-485 sync bus
+#define RS485_RDE_Pin GPIO_PIN_3
+#define RS485_RDE_GPIO_Port GPIOD
+
+// Optical sensor I/O
+#define OPTIC_RX_Pin GPIO_PIN_0
+#define OPTIC_RX_GPIO_Port GPIOD
+#define OPTIC_TX_Pin GPIO_PIN_10
+#define OPTIC_TX_GPIO_Port GPIOA
+
+#define RS485_SYNC_BYTE 0xA5u
+
+void rs485_sync_on_buffer_complete(void);
+uint32_t rs485_get_master_claim_delay_ms(void);
+uint8_t optic_sensor_get_state(void);
 
 // --- Профили потоков ADC (буфер/частота) ---
 // Профиль B (default): f_buf=300 Гц, N=912 (Fs=273600 Гц)

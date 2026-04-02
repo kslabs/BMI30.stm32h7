@@ -570,16 +570,27 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     /* USER CODE BEGIN TIM1_MspPostInit 0 */
 
     /* USER CODE END TIM1_MspPostInit 0 */
+    __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOE_CLK_ENABLE();
     /**TIM1 GPIO Configuration
+    PA10     ------> TIM1_CH3
     PE10     ------> TIM1_CH2N
     */
+    GPIO_InitStruct.Pin = OPTIC_TX_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF1_TIM1;
+    HAL_GPIO_Init(OPTIC_TX_GPIO_Port, &GPIO_InitStruct);
+
+#if !FORCE_BL_GPIO
     GPIO_InitStruct.Pin = LCD_Led_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF1_TIM1;
     HAL_GPIO_Init(LCD_Led_GPIO_Port, &GPIO_InitStruct);
+#endif
 
     /* USER CODE BEGIN TIM1_MspPostInit 1 */
 
@@ -593,12 +604,12 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
 
     __HAL_RCC_GPIOA_CLK_ENABLE();
     /**TIM2 GPIO Configuration
-    PA0     ------> TIM2_CH1
-    PA2     ------> TIM2_CH3
+    PA0     ------> TIM2_CH1 (Open-Drain для управления светодиодом 5V)
     (PA1 не используется как TIM2_CH2: удерживаем PA1 в GPIO low)
+    PA2 зарезервирован под битовый sync GPIO output
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_2;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pin = GPIO_PIN_0;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;  /* Open-Drain вместо Push-Pull */
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
@@ -859,6 +870,32 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     /* USER CODE END USART1_MspInit 1 */
 
   }
+  else if(huart->Instance==USART2)
+  {
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART2;
+    PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_RCC_USART2_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+
+    GPIO_InitStruct.Pin = GPIO_PIN_5;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
+    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_6;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+    HAL_NVIC_SetPriority(USART2_IRQn, 6, 0);
+    HAL_NVIC_EnableIRQ(USART2_IRQn);
+  }
 
 }
 
@@ -887,6 +924,12 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
     /* USER CODE BEGIN USART1_MspDeInit 1 */
 
     /* USER CODE END USART1_MspDeInit 1 */
+  }
+  else if(huart->Instance==USART2)
+  {
+    __HAL_RCC_USART2_CLK_DISABLE();
+    HAL_GPIO_DeInit(GPIOD, GPIO_PIN_5|GPIO_PIN_6);
+    HAL_NVIC_DisableIRQ(USART2_IRQn);
   }
 
 }
