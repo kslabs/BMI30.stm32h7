@@ -431,7 +431,12 @@ static const char* usb_state_str(uint8_t s) __attribute__((unused)); // пуст
 static uint32_t optic_tim1_get_input_clk_hz(void);
 static void optic_sensor_service(uint32_t now_ms);
 static HAL_StatusTypeDef optic_tx_dma_setup(void);
+static uint32_t optic_tx_compute_on_cycles(uint8_t power_level);
 static void optic_tx_prepare_burst_pattern(uint32_t carrier_compare);
+static void optic_tx_apply_runtime_pattern(void);
+static void optic_tx_button_service(uint32_t now_ms);
+static uint8_t optic_tx_power_to_percent(uint8_t power_level);
+static uint16_t optic_tx_power_badge_color(uint8_t power_level);
 static void optic_tx_start(void);
 // Forward declaration to avoid implicit declaration and linkage mismatch
 static void lcd_print_padded_if_changed(int x, int y, const char* new_text,
@@ -521,6 +526,8 @@ static inline void LED_OFF(void){ HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test
 #define OPTIC_TX_BURST_ON_CYCLES  24u
 #define OPTIC_TX_BURST_OFF_CYCLES 24u
 #define OPTIC_TX_BURST_PATTERN_LEN (OPTIC_TX_BURST_ON_CYCLES + OPTIC_TX_BURST_OFF_CYCLES)
+#define OPTIC_TX_POWER_MAX 255u
+#define OPTIC_TX_BUTTON_DEBOUNCE_MS 30u
 #define OPTIC_PULSE_ACTIVE_TIMEOUT_MS 30u
 #define OPTIC_PULSE_LATCH_COUNT       2u
 // Полярность подсветки и макросы управления (используются в main и MX_GPIO_Init)
@@ -553,6 +560,8 @@ static char uart1_cmd_buf[UART1_CMD_MAX];
 static uint16_t uart1_cmd_len = 0;
 static uint32_t optic_tx_dma_pattern[OPTIC_TX_BURST_PATTERN_LEN];
 static uint8_t optic_tx_dma_initialized = 0u;
+static volatile uint8_t optic_tx_power_level = OPTIC_TX_POWER_MAX;
+static volatile uint8_t optic_tx_started = 0u;
 // Быстрый inline для установки LED (используем уже определённые макросы LED_ON/LED_OFF ниже)
 static inline void uart1_rx_led_pulse(void){
   LED_ON();
@@ -612,11 +621,31 @@ static HAL_StatusTypeDef optic_tx_dma_setup(void)
   return HAL_OK;
 }
 
+static uint32_t optic_tx_compute_on_cycles(uint8_t power_level)
+{
+  uint32_t on_cycles;
+
+  if (power_level == 0u) {
+    return 0u;
+  }
+
+  on_cycles = (((uint32_t)power_level * OPTIC_TX_BURST_ON_CYCLES) +
+               (OPTIC_TX_POWER_MAX - 1u)) / OPTIC_TX_POWER_MAX;
+  if (on_cycles == 0u) {
+    on_cycles = 1u;
+  }
+  if (on_cycles > OPTIC_TX_BURST_ON_CYCLES) {
+    on_cycles = OPTIC_TX_BURST_ON_CYCLES;
+  }
+  return on_cycles;
+}
+
 static void optic_tx_prepare_burst_pattern(uint32_t carrier_compare)
 {
   uint32_t index = 0u;
+  uint32_t on_cycles = optic_tx_compute_on_cycles((uint8_t)optic_tx_power_level);
 
-  for (; index < OPTIC_TX_BURST_ON_CYCLES; index++) {
+  for (; index < on_cycles; index++) {
     optic_tx_dma_pattern[index] = carrier_compare;
   }
   for (; index < OPTIC_TX_BURST_PATTERN_LEN; index++) {
@@ -624,14 +653,115 @@ static void optic_tx_prepare_burst_pattern(uint32_t carrier_compare)
   }
 }
 
+static void optic_tx_apply_runtime_pattern(void)
+{
+  uint32_t period_ticks;
+  uint32_t carrier_compare;
+
+  period_ticks = __HAL_TIM_GET_AUTORELOAD(&htim1) + 1u;
+  if (period_ticks < 2u) {
+    period_ticks = 2u;
+  }
+
+  carrier_compare = period_ticks / 2u;
+  if (carrier_compare == 0u) {
+    carrier_compare = 1u;
+  }
+
+  optic_tx_prepare_burst_pattern(carrier_compare);
+
+  if ((optic_tx_started == 0u) || (optic_tx_dma_initialized == 0u)) {
+    return;
+  }
+
+  __HAL_TIM_DISABLE_DMA(&htim1, TIM_DMA_UPDATE);
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, optic_tx_dma_pattern[0]);
+  __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
+  __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_UPDATE);
+}
+
+static uint8_t optic_tx_power_to_percent(uint8_t power_level)
+{
+  return (uint8_t)((((uint32_t)power_level * 100u) + (OPTIC_TX_POWER_MAX / 2u)) / OPTIC_TX_POWER_MAX);
+}
+
+static uint16_t optic_tx_power_badge_color(uint8_t power_level)
+{
+  uint8_t percent = optic_tx_power_to_percent(power_level);
+
+  if (percent >= 88u) {
+    return GREEN;
+  }
+  if (percent >= 63u) {
+    return YELLOW;
+  }
+  if (percent >= 38u) {
+    return CYAN;
+  }
+  return ORANGE;
+}
+
+uint8_t optic_tx_set_power(uint8_t power)
+{
+  optic_tx_power_level = power;
+  optic_tx_apply_runtime_pattern();
+  return (uint8_t)optic_tx_power_level;
+}
+
+uint8_t optic_tx_get_power(void)
+{
+  return (uint8_t)optic_tx_power_level;
+}
+
+static void optic_tx_button_service(uint32_t now_ms)
+{
+  static const uint8_t optic_power_steps[] = { 64u, 128u, 191u, 255u };
+  static uint8_t raw_state = 0u;
+  static uint8_t stable_state = 0u;
+  static uint32_t last_change_ms = 0u;
+  uint8_t current_raw = (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET) ? 1u : 0u;
+
+  if (current_raw != raw_state) {
+    raw_state = current_raw;
+    last_change_ms = now_ms;
+  }
+
+  if ((stable_state != raw_state) &&
+      ((uint32_t)(now_ms - last_change_ms) >= OPTIC_TX_BUTTON_DEBOUNCE_MS)) {
+    stable_state = raw_state;
+
+    if (stable_state != 0u) {
+      uint8_t current_power = optic_tx_get_power();
+      uint32_t step_count = sizeof(optic_power_steps) / sizeof(optic_power_steps[0]);
+      uint32_t next_index = 0u;
+      uint32_t index;
+
+      for (index = 0u; index < step_count; index++) {
+        if (current_power < optic_power_steps[index]) {
+          next_index = index;
+          break;
+        }
+      }
+      if (index >= step_count) {
+        next_index = 0u;
+      }
+
+      current_power = optic_tx_set_power(optic_power_steps[next_index]);
+      printf("[OPTIC] Button power -> %u%% (%u/255)\r\n",
+             (unsigned)optic_tx_power_to_percent(current_power),
+             (unsigned)current_power);
+      UpdateLCDStatus();
+    }
+  }
+}
+
 static void optic_tx_start(void)
 {
-  static uint8_t started = 0u;
   uint32_t period_ticks;
   uint32_t carrier_compare;
   uint32_t tim_clk;
 
-  if (started != 0u) {
+  if (optic_tx_started != 0u) {
     return;
   }
 
@@ -680,11 +810,12 @@ static void optic_tx_start(void)
   }
 
   tim_clk = optic_tim1_get_input_clk_hz();
-  started = 1u;
-  printf("[OPTIC] TIM1 CH3 burst mode on PA10: carrier=%lu Hz, burst=%lu on / %lu off cycles\r\n",
+  optic_tx_started = 1u;
+  printf("[OPTIC] TIM1 CH3 burst mode on PA10: carrier=%lu Hz, burst=%lu/%lu active cycles, power=%u/255\r\n",
          (unsigned long)((period_ticks != 0u) ? (tim_clk / period_ticks) : 0u),
-         (unsigned long)OPTIC_TX_BURST_ON_CYCLES,
-         (unsigned long)OPTIC_TX_BURST_OFF_CYCLES);
+         (unsigned long)optic_tx_compute_on_cycles((uint8_t)optic_tx_power_level),
+         (unsigned long)OPTIC_TX_BURST_OFF_CYCLES,
+         (unsigned int)optic_tx_power_level);
 }
 
 static void rs485_sync_on_packet_received(uint8_t edge_kind)
@@ -2186,8 +2317,9 @@ int main(void)
     loop_count++;
     main_loop_heartbeat++;
     last_heartbeat_ms = HAL_GetTick();
-    uint32_t now = last_heartbeat_ms;
+  uint32_t now = last_heartbeat_ms;
   optic_sensor_service(now);
+  optic_tx_button_service(now);
   static uint8_t first_loop=1; if(first_loop){ PROG('M'); first_loop=0; }
   PROG('A'); // loop start
 
@@ -3597,7 +3729,7 @@ static void MX_GPIO_Init(void)
   /* PD0: вход логического сигнала оптического датчика */
   GPIO_InitStruct.Pin = OPTIC_RX_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(OPTIC_RX_GPIO_Port, &GPIO_InitStruct);
   HAL_NVIC_SetPriority(EXTI0_IRQn, 5, 0);
@@ -3947,7 +4079,9 @@ void DrawUSBStatus(void){
     static uint16_t prev_line3_fg = 0, prev_line3_bg = 0;
     static uint16_t prev_line4_fg = 0, prev_line4_bg = 0;
     static uint16_t prev_optic_fg = 0, prev_optic_bg = 0;
+    static uint16_t prev_optic_power_fg = 0, prev_optic_power_bg = 0;
     static char prev_optic_line[8] = "";
+    static char prev_optic_power_line[8] = "";
     
     /* Первая строка (y=0): USB статус */
     lcd_print_padded_if_changed(0,0,text0, prev_line0, sizeof(prev_line0), 7, 16, color0, BLACK, &prev_line0_fg, &prev_line0_bg);
@@ -4059,6 +4193,15 @@ void DrawUSBStatus(void){
     uint16_t optic_bg = optic_active ? GREEN : RED;
     lcd_draw_badge_if_changed(127,16, "Optic", prev_optic_line, sizeof(prev_optic_line), 5, 12,
                               1, 1, BLACK, optic_bg, &prev_optic_fg, &prev_optic_bg);
+  }
+  {
+    char optic_power_buf[8];
+    uint8_t optic_power = optic_tx_get_power();
+    uint8_t optic_power_pct = optic_tx_power_to_percent(optic_power);
+    uint16_t optic_power_bg = optic_tx_power_badge_color(optic_power);
+    snprintf(optic_power_buf, sizeof(optic_power_buf), "%3u%%", (unsigned)optic_power_pct);
+    lcd_draw_badge_if_changed(92,16, optic_power_buf, prev_optic_power_line, sizeof(prev_optic_power_line), 4, 12,
+                              1, 1, BLACK, optic_power_bg, &prev_optic_power_fg, &prev_optic_power_bg);
   }
 
   /* Скорость обмена: считаем раз в ~500мс (байты/с и семплы/с) */

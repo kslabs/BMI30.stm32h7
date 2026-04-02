@@ -145,6 +145,8 @@ extern volatile uint32_t systick_heartbeat;
 void rs485_sync_on_buffer_complete(void);
 uint32_t rs485_get_master_claim_delay_ms(void);
 uint8_t optic_sensor_get_state(void);
+uint8_t optic_tx_set_power(uint8_t power);
+uint8_t optic_tx_get_power(void);
 
 // --- Профили потоков ADC (буфер/частота) ---
 // Профиль B (default): f_buf=300 Гц, N=912 (Fs=273600 Гц)

@@ -353,6 +353,8 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
       case 0x20u: // VND_CMD_START_STREAM
       case 0x21u: // VND_CMD_STOP_STREAM
       case 0x30u: // VND_CMD_GET_STATUS
+      case 0x33u: // VND_CMD_SET_TX_ENABLE
+      case 0x34u: // VND_CMD_SET_OPTIC_POWER
         USBD_VND_DataReceived(Buf, *Len);
         vendor_forwarded = 1;
         break;

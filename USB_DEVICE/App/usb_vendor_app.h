@@ -8,6 +8,8 @@ extern "C" {
 #define VND_CMD_START_STREAM    0x20u
 #define VND_CMD_STOP_STREAM     0x21u
 #define VND_CMD_GET_STATUS      0x30u
+#define VND_CMD_SET_TX_ENABLE   0x33u /* 1 байт: 0=выкл, 1=вкл */
+#define VND_CMD_SET_OPTIC_POWER 0x34u /* 1 байт: 0..255, мощность оптического TX */
 /* Дополнение из спецификации */
 #define VND_CMD_SET_FULL_MODE   0x13u /* 1 байт: 0=ROI, 1=FULL */
 #define VND_CMD_SET_PROFILE     0x14u /* 1 байт profile */
@@ -34,6 +36,8 @@ extern "C" {
 #define VND_STFLAG_DIAG_ACTIVE    0x0002u  /* активен диагностический режим */
 #define VND_STFLAG_PENDING_INIT   0x0004u  /* после START ещё нет ни одного кадра A/B (ожидание инициализации) */
 #define VND_STFLAG_STREAM_ACTIVE  0x0008u  /* поток действительно активен (есть переданные A/B) */
+#define VND_STFLAG_TX_ENABLED     0x0010u  /* внешний TX разрешён командой/кнопкой */
+#define VND_STFLAG_OPTIC_ACTIVE   0x0020u  /* оптический датчик на PD0 активен */
 
 /* Общие константы формата кадров/параметров (централизовано) */
 #ifndef VND_MAX_SAMPLES

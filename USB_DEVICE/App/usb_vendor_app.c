@@ -71,6 +71,7 @@ extern TIM_HandleTypeDef htim5;
 /* Forward declaration (реализация ниже) для предотвращения implicit-function-warning при раннем вызове */
 void vnd_diag_log_possible_stall(void);
 static void cdc_logf(const char *fmt, ...);
+static void vnd_apply_tx_enable_outputs(void);
 
 /* Управление дублированием данных кадров в CDC (COM-порт):
  *  0 — отключено (оставляем только события START/STOP и 1 Гц статистику)
@@ -117,7 +118,12 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #define VND_CMD_GET_STATUS_IMM 0x31u
 /* Отладка фаз/буферов: инверсия тестового выхода PA2 (TIM2_CH3) */
 #define VND_CMD_TOGGLE_TIM2CH3_INV 0x32u
+#ifndef VND_CMD_SET_TX_ENABLE
 #define VND_CMD_SET_TX_ENABLE   0x33u /* payload: u8 0/1 (внешний передатчик) */
+#endif
+#ifndef VND_CMD_SET_OPTIC_POWER
+#define VND_CMD_SET_OPTIC_POWER 0x34u /* payload: u8 0..255 (мощность оптического TX) */
+#endif
 /* ДОБАВЛЕНО: управление окнами/частотой */
 #define VND_CMD_SET_WINDOWS    0x10u /* payload: start0,len0,start1,len1 (LE, u16) */
 #define VND_CMD_SET_BUF_RATE_FINE 0x1Cu /* payload: marker_hz (<=350) или buf_rate_hz (>350), fine 180-250 Hz */
@@ -160,7 +166,7 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 /* ---------------- Глобальные переменные состояния (централизовано) ---------------- */
 /* Видимая снаружи (CDC) метка стриминга */
 volatile uint8_t streaming = 0;
-static volatile uint8_t vnd_tx_enable = 1; /* 1=передатчик включён (PA1=0), 0=выкл (PA1=1) */
+static volatile uint8_t vnd_tx_enable = 0; /* 1=передатчик включён (PA1=0), 0=выкл (PA1=1); по умолчанию выключен */
 /* Последовательность пар (инкремент только после успешного завершения B) */
 volatile uint32_t stream_seq = 0;
 /* Фактически зафиксированный размер кадров и ожидаемый размер байт */
@@ -2339,6 +2345,8 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
     if(diag_mode_active) g_status.flags_runtime |= VND_STFLAG_DIAG_ACTIVE;
     if(vnd_pending_init) g_status.flags_runtime |= VND_STFLAG_PENDING_INIT;
     if(vnd_stream_active) g_status.flags_runtime |= VND_STFLAG_STREAM_ACTIVE;
+    if(vnd_tx_enable) g_status.flags_runtime |= VND_STFLAG_TX_ENABLED;
+    if(optic_sensor_get_state()) g_status.flags_runtime |= VND_STFLAG_OPTIC_ACTIVE;
     /* Новые поля диагностики */
     uint16_t f2 = 0;
     /* Бит0 = занятость IN EP: локальная (vnd_ep_busy) ИЛИ низкоуровневая (LL vnd_tx_busy) */
@@ -2426,6 +2434,20 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
 
 uint8_t vnd_is_streaming(void){ return streaming; }
 uint8_t vnd_is_tx_enabled(void){ return vnd_tx_enable; }
+
+static void vnd_apply_tx_enable_outputs(void)
+{
+    if(vnd_tx_enable){
+        /* Разрешаем внешний передатчик; PA2 продолжает жить своей стриминговой логикой. */
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+    } else {
+        /* Запрещённый TX должен удерживать оба физических вывода передачи в LOW. */
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);
+    }
+}
 
 /* функция vnd_generate_test_sawtooth() реализована в vnd_testgen.c */
 
@@ -4588,9 +4610,10 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     cur_samples_per_frame = 0; /* снять lock, чтобы применилось немедленно */
                     cur_expected_frame_size = 0;
                 }
-                /* Начальные уровни синхронизации: PA2=0, PA1=0 (передача включена). */
+                /* Начальные уровни передачи: PA2/PC7=0, состояние TX берём из последней команды 0x33. */
                 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
+                vnd_apply_tx_enable_outputs();
                 /* Синхронизация всегда активна и не должна сбрасываться при START */
                 if(vnd_sync_mode_public == VND_SYNC_MODE_SLAVE){
                     extern volatile uint8_t sync_restart_on_edge;
@@ -4739,8 +4762,9 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 vnd_tx_ready = 1;
                 /* ADC/DMA продолжают работать в фоне, STOP только выключает передачу по USB */
                 HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_RESET);
-                /* Остановка синхросигналов: PA2=0, PA1=1 */
+                /* Остановка сигналов передачи: PA2/PC7=0, PA1=1 */
                 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
                 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
                 HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);
                 {
@@ -4788,8 +4812,9 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 /* async_mode должен остаться 1 после первого START */
                 
                 HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_RESET);
-                /* Остановка синхросигналов: PA2=0, PA1=1 */
+                /* Остановка сигналов передачи: PA2/PC7=0, PA1=1 */
                 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
                 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
                 HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);
                 cdc_logf("EVT STOP t=%lu async=%d full=%d ep_busy=%d", 
@@ -4871,16 +4896,17 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             if(len >= 2){
                 uint8_t en = (data[1] != 0u) ? 1u : 0u;
                 vnd_tx_enable = en;
-                if(en){
-                    /* Передатчик включён: PA1=0, PA2 остаётся под управлением DMA */
-                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
-                } else {
-                    /* Передатчик выключён: PA1=1, PA2 принудительно в 0 */
-                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
-                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
-                    HAL_GPIO_WritePin(SYNC_OUT_GPIO_Port, SYNC_OUT_Pin, GPIO_PIN_RESET);
-                }
+                vnd_apply_tx_enable_outputs();
                 cdc_logf("EVT TX_ENABLE=%u", (unsigned)en);
+            }
+        }
+        break;
+
+        case VND_CMD_SET_OPTIC_POWER:
+        {
+            if(len >= 2){
+                uint8_t applied = optic_tx_set_power(data[1]);
+                cdc_logf("EVT OPTIC_POWER=%u", (unsigned)applied);
             }
         }
         break;

@@ -21,6 +21,8 @@ VND_CMD_SET_PROFILE       = 0x14
 VND_CMD_SET_ASYNC         = 0x18
 VND_CMD_SET_CHMODE        = 0x19
 VND_CMD_SET_STREAM_MODE   = 0x1A
+VND_CMD_SET_TX_ENABLE     = 0x33
+VND_CMD_SET_OPTIC_POWER   = 0x34
 
 MAGIC = 0xA55A
 
@@ -181,6 +183,8 @@ def main():
     ap.add_argument('--avg-n', type=int, default=1, help='AVG_ROI parameter (1..32), used when --stream-mode=2')
     ap.add_argument('--async-mode', dest='async_mode', type=int, choices=[0, 1], default=None, help='Set ASYNC mode (0/1). In LOSSLESS_ROI firmware may force 0.')
     ap.add_argument('--chmode', type=int, choices=[0, 1, 2, 3], default=None, help='Set channel mode (firmware-defined).')
+    ap.add_argument('--tx-enable', type=int, choices=[0, 1], default=None, help='Set external TX gate (0=disable, 1=enable) via CMD 0x33.')
+    ap.add_argument('--optic-power', type=int, default=None, help='Set optical TX power (0..255) via CMD 0x34.')
     ap.add_argument('--quiet', action='store_true', help='Reduce per-frame prints, show only summary and warnings')
     args = ap.parse_args()
 
@@ -237,6 +241,21 @@ def main():
     try:
         if args.chmode is not None:
             send_cmd(dev, ep_out, bytes([VND_CMD_SET_CHMODE, int(args.chmode) & 0xFF]))
+    except Exception:
+        pass
+    try:
+        if args.tx_enable is not None:
+            send_cmd(dev, ep_out, bytes([VND_CMD_SET_TX_ENABLE, int(args.tx_enable) & 0xFF]))
+    except Exception:
+        pass
+    try:
+        if args.optic_power is not None:
+            optic_power = int(args.optic_power)
+            if optic_power < 0:
+                optic_power = 0
+            if optic_power > 255:
+                optic_power = 255
+            send_cmd(dev, ep_out, bytes([VND_CMD_SET_OPTIC_POWER, optic_power & 0xFF]))
     except Exception:
         pass
 

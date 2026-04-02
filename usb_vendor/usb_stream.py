@@ -43,6 +43,7 @@ CMD_SET_SYNC_MODE = 0x1D
 CMD_START_STREAM = 0x20
 CMD_STOP_STREAM = 0x21
 CMD_GET_STATUS = 0x30
+CMD_SET_OPTIC_POWER = 0x34
 CMD_SET_ALT = 0x31
 CMD_SOFT_RESET = 0x7E
 CMD_DEEP_RESET = 0x7F
@@ -230,6 +231,14 @@ class USBStream:
         if hz_i < 200 or hz_i > 210:
             raise ValueError(f"buf_rate_fine must be 200..210 Hz, got {hz_i}")
         self.send_cmd(CMD_SET_BUF_RATE_FINE, int(hz_i).to_bytes(2, "little", signed=False))
+
+    def set_optic_power(self, level: int):
+        level_i = int(level)
+        if level_i < 0:
+            level_i = 0
+        if level_i > 255:
+            level_i = 255
+        self.send_cmd(CMD_SET_OPTIC_POWER, bytes([level_i]))
 
     def soft_reset(self):
         # vendor control OUT without data

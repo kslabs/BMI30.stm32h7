@@ -491,7 +491,8 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
       return (uint8_t)USBD_OK;
     } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 &&
                 (req->bRequest == VND_CMD_SET_ASYNC_MODE || req->bRequest == VND_CMD_SET_CHMODE ||
-                 req->bRequest == VND_CMD_SET_FULL_MODE  || req->bRequest == VND_CMD_SET_PROFILE) ) {
+                 req->bRequest == VND_CMD_SET_FULL_MODE  || req->bRequest == VND_CMD_SET_PROFILE ||
+                 req->bRequest == VND_CMD_SET_TX_ENABLE || req->bRequest == VND_CMD_SET_OPTIC_POWER) ) {
       /* Альтернативный путь: принять параметр через wValue (без data stage) */
       uint8_t tmp[2];
       tmp[0] = (uint8_t)req->bRequest;
@@ -511,7 +512,8 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
       return (uint8_t)USBD_OK;
     } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength > 0 &&
                 (req->bRequest == VND_CMD_SET_ASYNC_MODE || req->bRequest == VND_CMD_SET_CHMODE ||
-                 req->bRequest == VND_CMD_SET_FULL_MODE  || req->bRequest == VND_CMD_SET_PROFILE) ) {
+                 req->bRequest == VND_CMD_SET_FULL_MODE  || req->bRequest == VND_CMD_SET_PROFILE ||
+                 req->bRequest == VND_CMD_SET_TX_ENABLE || req->bRequest == VND_CMD_SET_OPTIC_POWER) ) {
       /* Принимаем небольшие конфиги по control OUT с телом данных, доставляем в Vendor как будто по Bulk OUT */
       hcdc->CmdOpCode = req->bRequest;
       hcdc->CmdLength = (uint8_t)req->wLength;
@@ -690,7 +692,9 @@ static uint8_t USBD_CDCVND_EP0_RxReady(USBD_HandleTypeDef *pdev)
     if (op == VND_CMD_SET_ASYNC_MODE ||
         op == VND_CMD_SET_CHMODE    ||
         op == VND_CMD_SET_FULL_MODE ||
-        op == VND_CMD_SET_PROFILE) {
+        op == VND_CMD_SET_PROFILE   ||
+        op == VND_CMD_SET_TX_ENABLE ||
+        op == VND_CMD_SET_OPTIC_POWER) {
       uint32_t tot = (uint32_t)len + 1U;
       if (tot > sizeof(vnd_rx_buf)) tot = sizeof(vnd_rx_buf); /* страхуемся от выхода за границы */
       vnd_rx_buf[0] = op;
