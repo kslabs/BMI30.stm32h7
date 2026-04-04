@@ -10,6 +10,7 @@ extern "C" {
 #define VND_CMD_GET_STATUS      0x30u
 #define VND_CMD_SET_TX_ENABLE   0x33u /* 1 байт: 0=выкл, 1=вкл */
 #define VND_CMD_SET_OPTIC_POWER 0x34u /* 1 байт: 0..255, мощность оптического TX */
+#define VND_CMD_LED_EVENT       0x35u /* payload: u8 event, u16 duration_ms */
 /* Дополнение из спецификации */
 #define VND_CMD_SET_FULL_MODE   0x13u /* 1 байт: 0=ROI, 1=FULL */
 #define VND_CMD_SET_PROFILE     0x14u /* 1 байт profile */
@@ -30,6 +31,10 @@ extern "C" {
 #define VND_SYNC_MODE_SLAVE  1u
 #define VND_SYNC_MODE_OFF    2u
 #endif
+
+#define VND_LED_EVENT_NONE       0u
+#define VND_LED_EVENT_CHANNEL_B  1u
+#define VND_LED_EVENT_CHANNEL_A  2u
 
 /* Флаги статуса времени выполнения */
 #define VND_STFLAG_STREAMING      0x0001u  /* streaming включён (после START) */

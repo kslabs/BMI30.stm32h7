@@ -11,6 +11,7 @@
 #include <math.h>
 #include "adc_stream.h"
 #include "main.h"
+#include "ws2812_spi.h"
 #include <stddef.h> /* offsetof для отладочного вывода */
 #include "stm32h7xx_hal.h" /* SCB_* cache maintenance (may HardFault if MPU/cache config incomplete) */
 
@@ -123,6 +124,9 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #endif
 #ifndef VND_CMD_SET_OPTIC_POWER
 #define VND_CMD_SET_OPTIC_POWER 0x34u /* payload: u8 0..255 (мощность оптического TX) */
+#endif
+#ifndef VND_CMD_LED_EVENT
+#define VND_CMD_LED_EVENT       0x35u /* payload: u8 event, u16 duration_ms */
 #endif
 /* ДОБАВЛЕНО: управление окнами/частотой */
 #define VND_CMD_SET_WINDOWS    0x10u /* payload: start0,len0,start1,len1 (LE, u16) */
@@ -4907,6 +4911,29 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             if(len >= 2){
                 uint8_t applied = optic_tx_set_power(data[1]);
                 cdc_logf("EVT OPTIC_POWER=%u", (unsigned)applied);
+            }
+        }
+        break;
+
+        case VND_CMD_LED_EVENT:
+        {
+            if (len >= 4) {
+                uint8_t event = data[1];
+                uint16_t duration_ms = (uint16_t)(data[2] | (data[3] << 8));
+                ws2812_event_t led_event = WS2812_EVENT_NONE;
+
+                if (event == VND_LED_EVENT_CHANNEL_B) {
+                    led_event = WS2812_EVENT_CHANNEL_B;
+                } else if (event == VND_LED_EVENT_CHANNEL_A) {
+                    led_event = WS2812_EVENT_CHANNEL_A;
+                }
+
+                if (duration_ms == 0u) {
+                    duration_ms = 1600u;
+                }
+
+                ws2812_spi_trigger_event(led_event, duration_ms);
+                cdc_logf("EVT LED_EVENT event=%u dur=%u", (unsigned)event, (unsigned)duration_ms);
             }
         }
         break;

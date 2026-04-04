@@ -32,11 +32,13 @@
 /* Для ранних CDC-тестов (COM4) */
 #include "usbd_cdc_if.h"
 #include "adc_stream.h"
+#include "ws2812_spi.h"
 
 /* Глобальные хэндлы периферии (стандарт для CubeMX, ранее отсутствовали в файле) */
 ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 SPI_HandleTypeDef hspi2;
+SPI_HandleTypeDef hspi3;
 SPI_HandleTypeDef hspi4;
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
@@ -50,6 +52,7 @@ UART_HandleTypeDef huart2;
 DAC_HandleTypeDef  hdac1;
 DMA_HandleTypeDef  hdma_adc1;
 DMA_HandleTypeDef  hdma_adc2;
+DMA_HandleTypeDef  hdma_spi3_tx;
 DMA_HandleTypeDef  hdma_tim15_up;  // DMA для автоматической записи ARR
 DMA_HandleTypeDef  hdma_tim1_up;   // DMA для аппаратной огибающей оптического TX
 
@@ -212,6 +215,7 @@ static uint8_t rs485_tx_queue_pop(uint8_t *value);
 static void rs485_tx_kick(void);
 static void rs485_sync_start_tx_byte(uint8_t value);
 static void rs485_sync_service_tx(void);
+uint8_t ws2812_onboard_slave_blue_active(uint8_t dark_phase, uint32_t now_ms);
 /* Охраняемая «флаг-структура» для need_recovery с сигнатурами по краям */
 typedef struct {
   uint32_t c1;                 /* 0xDEADBEEF */
@@ -408,6 +412,7 @@ static void MPU_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_SPI4_Init(void);
+static void MX_SPI3_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_TIM6_Init(void);
@@ -430,6 +435,10 @@ void DrawUSBStatus(void);
 static const char* usb_state_str(uint8_t s) __attribute__((unused)); // пустая заглушка
 static uint32_t optic_tim1_get_input_clk_hz(void);
 static void optic_sensor_service(uint32_t now_ms);
+static void ws2812_status_service(uint32_t now_ms);
+static void pb2_spi3_direct_test_service(uint32_t now_ms);
+static void ws2812_gpio_test_init(void);
+static void ws2812_gpio_test_service(uint32_t now_ms);
 static HAL_StatusTypeDef optic_tx_dma_setup(void);
 static uint32_t optic_tx_compute_on_cycles(uint8_t power_level);
 static void optic_tx_prepare_burst_pattern(uint32_t carrier_compare);
@@ -469,6 +478,26 @@ static void lcd_draw_badge_if_changed(int x, int y, const char* new_text,
 // Управление периодическим UART-хартбитом [HB]: 0=выкл (по умолчанию)
 #ifndef ENABLE_UART_HEARTBEAT
 #define ENABLE_UART_HEARTBEAT 0
+#endif
+
+#ifndef PB2_SPI3_DIRECT_TEST_MODE
+#define PB2_SPI3_DIRECT_TEST_MODE 0
+#endif
+
+#ifndef WS2812_SPI_SCOPE_TEST_MODE
+#define WS2812_SPI_SCOPE_TEST_MODE 0
+#endif
+
+#ifndef WS2812_BLUE_TEST_MODE
+#define WS2812_BLUE_TEST_MODE 0
+#endif
+
+#ifndef WS2812_COLOR_CYCLE_TEST_MODE
+#define WS2812_COLOR_CYCLE_TEST_MODE 0
+#endif
+
+#ifndef WS2812_GPIO_BITBANG_TEST_MODE
+#define WS2812_GPIO_BITBANG_TEST_MODE 0
 #endif
 // --- Диагностика перезагрузок ---
 // Определите DIAG_HALT_BEFORE_LOOP чтобы остановить МК перед входом в while(1)
@@ -1531,95 +1560,207 @@ static void tune_led_service(uint32_t now_ms)
 
 static void tim2_led_breathe_service(uint32_t now_ms)
 {
-  extern volatile uint8_t vnd_sync_mode_public;
-  static const uint16_t led_breathe_lut[] = {
-      0u, 1u, 2u, 4u, 7u, 11u, 17u, 24u,
-      34u, 45u, 58u, 73u, 90u, 109u, 130u, 154u,
-      181u, 210u, 242u, 277u, 315u, 356u, 400u, 448u,
-      499u, 554u, 613u, 675u, 742u, 813u, 888u, 967u,
-      1024u
-  };
+  (void)now_ms;
 
   if (htim2.Instance != TIM2) {
     return;
   }
 
-  /* PA0 / TIM2_CH1: breathing через аппаратный PWM.
-     Частота PWM задаётся TIM2 (обычно 200 Гц), здесь меняем только скважность. */
-  {
-    const uint32_t tim2_ch1_base_ccer = TIM_CCER_CC1E;
-    const uint32_t tim2_ch1_invert_ccer = TIM_CCER_CC1E | TIM_CCER_CC1P;
-    const uint32_t breathe_period_ms = 2000u;
-    const uint32_t half_period_ms = breathe_period_ms / 2u;
-    const uint32_t slave_blink_hold_ms = 80u;
-    const uint32_t lut_scale = 1024u;
-    const uint32_t lut_segments = (sizeof(led_breathe_lut) / sizeof(led_breathe_lut[0])) - 1u;
-    uint32_t period_ticks = __HAL_TIM_GET_AUTORELOAD(&htim2) + 1u;
-    uint32_t t = now_ms % breathe_period_ms;
-    uint32_t ramp = (t < half_period_ms) ? t : (breathe_period_ms - t);
-    uint32_t lut_phase = (ramp * lut_segments * 256u) / half_period_ms;
-    uint32_t lut_index = lut_phase >> 8;
-    uint32_t lut_frac = lut_phase & 0xFFu;
-    uint32_t duty_lut = 0u;
-    uint32_t brightness_ticks = 0u;
-    uint32_t compare_ticks = 0u;
-    uint32_t dark_threshold_ticks = period_ticks / 10u;
-    uint32_t blink_active = 0u;
+  /* PA0 / TIM2_CH1 больше не используется как штатный breathing LED.
+     Оставляем канал в постоянном "выкл", а сервисную индикацию переносим на onboard WS2812. */
+  htim2.Instance->CCER = (htim2.Instance->CCER & ~(TIM_CCER_CC1E | TIM_CCER_CC1P)) | TIM_CCER_CC1E;
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, __HAL_TIM_GET_AUTORELOAD(&htim2));
+}
 
-    if (lut_index >= lut_segments) {
-      duty_lut = led_breathe_lut[lut_segments];
-    } else {
-      uint32_t lut_a = led_breathe_lut[lut_index];
-      uint32_t lut_b = led_breathe_lut[lut_index + 1u];
-      duty_lut = lut_a + (((lut_b - lut_a) * lut_frac + 127u) >> 8);
-    }
+uint8_t ws2812_onboard_slave_blue_active(uint8_t dark_phase, uint32_t now_ms)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  const uint32_t slave_blink_hold_ms = 90u;
 
-    brightness_ticks = (period_ticks * duty_lut) / lut_scale;
-
-    if (brightness_ticks >= period_ticks) {
-      brightness_ticks = period_ticks - 1u;
-    }
-
-    if (dark_threshold_ticks == 0u) {
-      dark_threshold_ticks = 1u;
-    }
-
-    if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
-      if (brightness_ticks <= dark_threshold_ticks) {
-        if (rs485_slave_led_dark_latched == 0u) {
-          rs485_slave_led_dark_latched = 1u;
-          if (rs485_slave_led_pulse_pending != 0u) {
-            rs485_slave_led_invert_until_ms = now_ms + slave_blink_hold_ms;
-            rs485_slave_led_pulse_pending = 0u;
-          }
-        }
-      } else {
-        rs485_slave_led_dark_latched = 0u;
-      }
-
-      if (now_ms < rs485_slave_led_invert_until_ms) {
-        blink_active = 1u;
-      }
-    } else {
-      rs485_slave_led_pulse_pending = 0u;
-      rs485_slave_led_dark_latched = 0u;
-      rs485_slave_led_invert_until_ms = 0u;
-    }
-
-    /* Фиксируем базовую полярность CH1: без runtime-инверсий для стабильной плавности. */
-    if (blink_active != 0u) {
-      htim2.Instance->CCER = (htim2.Instance->CCER & ~(TIM_CCER_CC1E | TIM_CCER_CC1P)) | tim2_ch1_invert_ccer;
-    } else {
-      htim2.Instance->CCER = (htim2.Instance->CCER & ~(TIM_CCER_CC1E | TIM_CCER_CC1P)) | tim2_ch1_base_ccer;
-    }
-
-    compare_ticks = period_ticks - brightness_ticks;
-    if (compare_ticks >= period_ticks) {
-      compare_ticks = period_ticks - 1u;
-    }
-
-    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, compare_ticks);
+  if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+    rs485_slave_led_pulse_pending = 0u;
+    rs485_slave_led_dark_latched = 0u;
+    rs485_slave_led_invert_until_ms = 0u;
+    return 0u;
   }
+
+  if (dark_phase != 0u) {
+    if (rs485_slave_led_dark_latched == 0u) {
+      rs485_slave_led_dark_latched = 1u;
+      if (rs485_slave_led_pulse_pending != 0u) {
+        rs485_slave_led_invert_until_ms = now_ms + slave_blink_hold_ms;
+        rs485_slave_led_pulse_pending = 0u;
+      }
+    }
+  } else {
+    rs485_slave_led_dark_latched = 0u;
+  }
+
+  if ((dark_phase != 0u) && (now_ms < rs485_slave_led_invert_until_ms)) {
+    return 1u;
+  }
+
+  return 0u;
+}
+
+static void ws2812_status_service(uint32_t now_ms)
+{
+#if WS2812_GPIO_BITBANG_TEST_MODE
+  (void)now_ms;
+  return;
+#elif PB2_SPI3_DIRECT_TEST_MODE
+  (void)now_ms;
+  return;
+#else
+  ws2812_pattern_t pattern = WS2812_PATTERN_OFF;
+
+#if WS2812_SPI_SCOPE_TEST_MODE
+  (void)now_ms;
+  pattern = WS2812_PATTERN_TEST_SCOPE_RGB;
+#elif WS2812_BLUE_TEST_MODE
+  (void)now_ms;
+  pattern = WS2812_PATTERN_TEST_BLUE;
+#elif WS2812_COLOR_CYCLE_TEST_MODE
+  (void)now_ms;
+  pattern = WS2812_PATTERN_TEST_COLOR_CYCLE;
+#else
+  extern volatile uint8_t vnd_sync_mode_public;
+
+  if (need_recovery != 0u) {
+    pattern = WS2812_PATTERN_RECOVERY;
+  } else if (need_hard_reset != 0u) {
+    pattern = WS2812_PATTERN_HARD_RESET;
+  } else if (uart1_led_off_tick && (now_ms < uart1_led_off_tick)) {
+    pattern = WS2812_PATTERN_UART_RX;
+  } else if (g_tune_led_freq_active) {
+    pattern = WS2812_PATTERN_TUNE;
+  } else if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
+             (sync_last_edge_ms != 0u) &&
+             ((now_ms - sync_last_edge_ms) <= 250u) &&
+             (rs485_sync_led_active != 0u)) {
+    pattern = WS2812_PATTERN_SYNC_PULSE;
+  } else if (vnd_is_streaming() && vnd_is_tx_enabled()) {
+    pattern = WS2812_PATTERN_STREAMING;
+  } else {
+    pattern = WS2812_PATTERN_IDLE_BREATHE;
+  }
+#endif
+  ws2812_spi_set_pattern(pattern);
+#endif
+}
+
+static void ws2812_gpio_test_init(void)
+{
+#if WS2812_GPIO_BITBANG_TEST_MODE
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  HAL_SPI_DeInit(&hspi3);
+
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIOB->BSRR = ((uint32_t)GPIO_PIN_2 << 16);
+#endif
+}
+
+static void ws2812_gpio_test_wait_cycles(uint32_t cycles)
+{
+  uint32_t start = DWT->CYCCNT;
+  while ((uint32_t)(DWT->CYCCNT - start) < cycles) {
+    __NOP();
+  }
+}
+
+static void ws2812_gpio_test_send_byte(uint8_t value)
+{
+  uint8_t bit = 0u;
+  const uint32_t t0h = 96u;   /* ~350 ns @ 275 MHz */
+  const uint32_t t0l = 220u;  /* ~800 ns */
+  const uint32_t t1h = 193u;  /* ~700 ns */
+  const uint32_t t1l = 165u;  /* ~600 ns */
+
+  for (bit = 0u; bit < 8u; ++bit) {
+    if ((value & 0x80u) != 0u) {
+      GPIOB->BSRR = GPIO_PIN_2;
+      ws2812_gpio_test_wait_cycles(t1h);
+      GPIOB->BSRR = ((uint32_t)GPIO_PIN_2 << 16);
+      ws2812_gpio_test_wait_cycles(t1l);
+    } else {
+      GPIOB->BSRR = GPIO_PIN_2;
+      ws2812_gpio_test_wait_cycles(t0h);
+      GPIOB->BSRR = ((uint32_t)GPIO_PIN_2 << 16);
+      ws2812_gpio_test_wait_cycles(t0l);
+    }
+    value <<= 1;
+  }
+}
+
+static void ws2812_gpio_test_send_rgb(uint8_t r, uint8_t g, uint8_t b)
+{
+  __disable_irq();
+  ws2812_gpio_test_send_byte(g);
+  ws2812_gpio_test_send_byte(r);
+  ws2812_gpio_test_send_byte(b);
+  __enable_irq();
+  HAL_Delay(1);
+}
+
+static void ws2812_gpio_test_service(uint32_t now_ms)
+{
+#if WS2812_GPIO_BITBANG_TEST_MODE
+  static uint32_t last_push_ms = 0u;
+  static uint8_t phase = 0u;
+  uint8_t r = 0u;
+  uint8_t g = 0u;
+  uint8_t b = 0u;
+
+  if ((now_ms - last_push_ms) < 700u) {
+    return;
+  }
+
+  switch (phase) {
+    case 1u:
+      r = 24u;
+      break;
+    case 3u:
+      g = 24u;
+      break;
+    case 5u:
+      b = 24u;
+      break;
+    default:
+      break;
+  }
+
+  ws2812_gpio_test_send_rgb(r, g, b);
+  last_push_ms = now_ms;
+  phase = (uint8_t)((phase + 1u) % 6u);
+#else
+  (void)now_ms;
+#endif
+}
+
+static void pb2_spi3_direct_test_service(uint32_t now_ms)
+{
+#if PB2_SPI3_DIRECT_TEST_MODE
+  static uint32_t last_tx_ms = 0u;
+  static const uint8_t pattern[] = {
+    0xAAu, 0x55u, 0xF0u, 0x0Fu, 0xCCu, 0x33u, 0x96u, 0x69u
+  };
+
+  if ((now_ms - last_tx_ms) < 1u) {
+    return;
+  }
+
+  if (HAL_SPI_Transmit(&hspi3, (uint8_t *)pattern, (uint16_t)sizeof(pattern), 10u) == HAL_OK) {
+    last_tx_ms = now_ms;
+  }
+#else
+  (void)now_ms;
+#endif
 }
 
 void rs485_sync_on_buffer_complete(void)
@@ -1982,6 +2123,9 @@ int main(void)
   MX_SPI4_Init();
   MX_TIM1_Init();
   MX_SPI2_Init();
+  MX_SPI3_Init();
+  ws2812_spi_init();
+  ws2812_gpio_test_init();
   MX_TIM6_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
@@ -2642,6 +2786,10 @@ int main(void)
   }
   tune_led_service(now);
   tim2_led_breathe_service(now);
+  ws2812_gpio_test_service(now);
+  pb2_spi3_direct_test_service(now);
+  ws2812_status_service(now);
+  ws2812_spi_service(now);
   /* Обработка приёма по UART1: сбор строки и разбор команд (вне ISR) */
   while(uart1_rx_ring_rd != uart1_rx_ring_wr){
     uint8_t ch = uart1_rx_ring[uart1_rx_ring_rd & (UART1_RX_RING_SZ-1)];
@@ -2830,7 +2978,15 @@ void PeriphCommonClock_Config(void)
   PeriphClkInitStruct.PLL2.PLL2RGE = RCC_PLL2VCIRANGE_2;
   PeriphClkInitStruct.PLL2.PLL2VCOSEL = RCC_PLL2VCOWIDE;
   PeriphClkInitStruct.PLL2.PLL2FRACN = 0;
-  PeriphClkInitStruct.Spi123ClockSelection = RCC_SPI123CLKSOURCE_PLL2;
+  PeriphClkInitStruct.PLL3.PLL3M = 5;
+  PeriphClkInitStruct.PLL3.PLL3N = 80;
+  PeriphClkInitStruct.PLL3.PLL3P = 4;
+  PeriphClkInitStruct.PLL3.PLL3Q = 8;
+  PeriphClkInitStruct.PLL3.PLL3R = 8;
+  PeriphClkInitStruct.PLL3.PLL3RGE = RCC_PLL3VCIRANGE_2;
+  PeriphClkInitStruct.PLL3.PLL3VCOSEL = RCC_PLL3VCOWIDE;
+  PeriphClkInitStruct.PLL3.PLL3FRACN = 0;
+  PeriphClkInitStruct.Spi123ClockSelection = RCC_SPI123CLKSOURCE_PLL3;
   PeriphClkInitStruct.Spi45ClockSelection = RCC_SPI45CLKSOURCE_PLL2;
   PeriphClkInitStruct.AdcClockSelection = RCC_ADCCLKSOURCE_PLL2;
   PeriphClkInitStruct.TIMPresSelection = RCC_TIMPRES_ACTIVATED;
@@ -3092,6 +3248,51 @@ static void MX_SPI2_Init(void)
   }
   /* USER CODE BEGIN SPI2_Init 2 */
   /* USER CODE END SPI2_Init 2 */
+
+}
+
+/**
+  * @brief SPI3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI3_Init(void)
+{
+
+  /* USER CODE BEGIN SPI3_Init 0 */
+  /* USER CODE END SPI3_Init 0 */
+
+  /* USER CODE BEGIN SPI3_Init 1 */
+  /* USER CODE END SPI3_Init 1 */
+  /* SPI3 parameter configuration*/
+  hspi3.Instance = SPI3;
+  hspi3.Init.Mode = SPI_MODE_MASTER;
+  hspi3.Init.Direction = SPI_DIRECTION_1LINE;
+  hspi3.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi3.Init.NSS = SPI_NSS_SOFT;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi3.Init.CRCPolynomial = 0x0;
+  hspi3.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
+  hspi3.Init.NSSPolarity = SPI_NSS_POLARITY_LOW;
+  hspi3.Init.FifoThreshold = SPI_FIFO_THRESHOLD_01DATA;
+  hspi3.Init.TxCRCInitializationPattern = SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN;
+  hspi3.Init.RxCRCInitializationPattern = SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN;
+  hspi3.Init.MasterSSIdleness = SPI_MASTER_SS_IDLENESS_00CYCLE;
+  hspi3.Init.MasterInterDataIdleness = SPI_MASTER_INTERDATA_IDLENESS_00CYCLE;
+  hspi3.Init.MasterReceiverAutoSusp = SPI_MASTER_RX_AUTOSUSP_DISABLE;
+  hspi3.Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_DISABLE;
+  hspi3.Init.IOSwap = SPI_IO_SWAP_DISABLE;
+  if (HAL_SPI_Init(&hspi3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI3_Init 2 */
+  /* USER CODE END SPI3_Init 2 */
 
 }
 
@@ -3624,6 +3825,9 @@ static void MX_DMA_Init(void)
   /* Enable DMA1_Stream5 IRQ for TIM15 ARR auto-update (Half Transfer callback) */
   HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+  /* Low-priority DMA for SPI3 WS2812 output */
+  HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 12, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream7_IRQn);
 
 }
 
