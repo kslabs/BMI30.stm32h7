@@ -1,0 +1,5 @@
+=== rpi host reader start ===
+[HOST] SetInterface(IF#2, alt=1) OK
+[HOST] START written: 1 bytes to EP 0x03
+[HOST_RX][ERR] [Errno None] b'libusb0-dll:err [_usb_reap_async] timeout error\n'
+[HOST] STOP written: 1 bytes

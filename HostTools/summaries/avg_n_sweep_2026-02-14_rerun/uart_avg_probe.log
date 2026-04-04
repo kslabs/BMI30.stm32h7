@@ -1,0 +1,75 @@
+﻿[TIM5] PD5_period=1385410 ticks ( us,  Hz) | mode=1 ARR=1144 phase=341
+[SYNC] edges=356539 age=4294967292ms mode=1 bufs_between_pd5=2 total_bufs=217
+[TIM5] PD5_period=1386606 ticks ( us,  Hz) | mode=1 ARR=1144 phase=521
+[SYNC] edges=356761 age=4294967289ms mode=1 bufs_between_pd5=2 total_bufs=660
+[TIM5] PD5_period=1386530 ticks ( us,  Hz) | mode=1 ARR=1144 phase=30
+[SYNC] edges=356978 age=4294967293ms mode=1 bufs_between_pd5=2 total_bufs=95
+[TIM5] PD5_period=1385412 ticks ( us,  Hz) | mode=1 ARR=1144 phase=142
+[SYNC] edges=357195 age=4294967294ms mode=1 bufs_between_pd5=2 total_bufs=529
+[TIM5] PD5_period=1385418 ticks ( us,  Hz) | mode=1 ARR=1144 phase=648
+[SYNC] edges=357411 age=4294967294ms mode=1 bufs_between_pd5=2 total_bufs=961
+[TIM5] PD5_period=1385400 ticks ( us,  Hz) | mode=1 ARR=1144 phase=175
+[SYNC] edges=357626 age=4294967291ms mode=1 bufs_between_pd5=2 total_bufs=390
+[TIM5] PD5_period=1385424 ticks ( us,  Hz) | mode=1 ARR=1144 phase=163
+[SYNC] edges=357846 age=4294967292ms mode=1 bufs_between_pd5=2 total_bufs=830
+[TIM5] PD5_period=1385426 ticks ( us,  Hz) | mode=1 ARR=1144 phase=962
+[SYNC] edges=358067 age=4294967293ms mode=1 bufs_between_pd5=2 total_bufs=273
+[TIM5] PD5_period=1385498 ticks ( us,  Hz) | mode=1 ARR=1144 phase=151
+[SYNC] edges=358289 age=4294967290ms mode=1 bufs_between_pd5=2 total_bufs=716
+[TIM5] PD5_period=1385424 ticks ( us,  Hz) | mode=1 ARR=1144 phase=173
+[SYNC] edges=358511 age=4294967290ms mode=1 bufs_between_pd5=2 total_bufs=160
+[TIM5] PD5_period=1385610 ticks ( us,  Hz) | mode=1 ARR=1145 phase=341
+[SYNC] edges=358732 age=4294967292ms mode=1 bufs_between_pd5=2 total_bufs=602
+[TIM5] PD5_period=1386554 ticks ( us,  Hz) | mode=1 ARR=1144 phase=196
+[SYNC] edges=358949 age=4294967293ms mode=1 bufs_between_pd5=2 total_bufs=37
+[TIM5] PD5_period=1385404 ticks ( us,  Hz) | mode=1 ARR=1144 phase=629
+[SYNC] edges=359165 age=4294967292ms mode=1 bufs_between_pd5=2 total_bufs=469
+[TIM5] PD5_period=1386550 ticks ( us,  Hz) | mode=1 ARR=[CMD] 0x1A len=3
+[VND_RCV] #199 CMD 0x1A len=3
+[CMD_IND] SET_STREAM_MODE m=2 len=3 avg_n=8
+[CMD] 0x10 len=9
+[VND_RCV] #200 CMD 0x10 len=9
+[CMD] 0x14 len=2
+[VND_RCV] #201 CMD 0x14 len=2
+[CMD] 0x11 len=3
+[VND_RCV] #202 CMD 0x11 len=3
+[CMD] 0x13 len=2
+[VND_RCV] #203 CMD 0x13 len=2
+[CMD] 0x19 len=2
+[VND_RCV] #204 CMD 0x19 len=2
+[CMD] 0x21 len=1
+[VND_RCV] #205 CMD 0x21 len=1
+[CMD_IND] STOP received #45 (at t=2285239 ms, 0 sec ago)
+[CMD] 0x20 len=1
+[VND_RCV] #206 CMD 0x20 len=1
+[CMD_IND] START received #1 (at t=2285507 ms, 0 sec ago)
+[CMD_IND] START cfg: stream_mode=2 avg_n=8 async=0 chmode=2
+[SYNC_TIMING] TIM5 (32-bit): PSC=0 ARR=0xFFFFFFFF ??? tick_rate=275000000 Hz
+[SYNC_TIMING] TIM5: per_ADC_sample=1145 ticks | per_buffer=687500 ticks ( ms)
+[SYNC_TIMING] TIM15: ARR=1144 sample_rate=240000 Hz | APB2=275 MHz
+[TIM2] marker apply: N=600 f_buf=400Hz f_marker=200Hz tick_hz=1000000 ARR=4999 CCR1=4600 guard=400us
+[TIM5] PD5_period=1386538 ticks ( us,  Hz) | mode=1 ARR=1144 phase=684
+[SYNC] edges=453762 age=4294967289ms mode=1 bufs_between_pd5=3 total_bufs=554
+[AVG] n=8 q=4 cnt0=0 cnt1=0 in=64(+64/s) out=8(+8/s) tx=4(+4/s) dsp=412us(avg) 477us(max) corr_eo=(,) corr_ab=(e=,o=)
+[TIM5] PD5_period=1385426 ticks ( us,  Hz) | mode=1 ARR=1144 phase=492
+[SYNC] edges=453966 age=4294967290ms mode=1 bufs_between_pd5=2 total_bufs=962
+[AVG] n=8 q=4 cnt0=1 cnt1=0 in=97(+33/s) out=12(+4/s) tx=8(+4/s) dsp=446us(avg) 470us(max) corr_eo=(,) corr_ab=(e=,o=)
+[TIM5] PD5_period=1385430 ticks ( us,  Hz) | mode=1 ARR=1144 phase=471
+[SYNC] edges=454165 age=4294967293ms mode=1 bufs_between_pd5=2 total_bufs=361
+[AVG] n=8 q=4 cnt0=0 cnt1=1 in=129(+32/s) out=16(+4/s) tx=12(+4/s) dsp=445us(avg) 468us(max) corr_eo=(,) corr_ab=(e=,o=)
+[TIM5] PD5_period=1386560 ticks ( us,  Hz) | mode=1 ARR=1144 phase=334
+[SYNC] edges=454365 age=4294967292ms mode=1 bufs_between_pd5=2 total_bufs=760
+[AVG] n=8 q=4 cnt0=0 cnt1=2 in=162(+33/s) out=20(+4/s) tx=16(+4/s) dsp=437us(avg) 443us(max) corr_eo=(,) corr_ab=(e=,o=)
+[TIM5] PD5_period=1386552 ticks ( us,  Hz) | mode=1 ARR=1144 phase=659
+[SYNC] edges=454569 age=4294967291ms mode=1 bufs_between_pd5=2 total_bufs=168
+[CMD] 0x21 len=1
+[VND_RCV] #207 CMD 0x21 len=1
+[CMD_IND] STOP received #46 (at t=2290494 ms, 0 sec ago)
+[TIM5] PD5_period=1385474 ticks ( us,  Hz) | mode=1 ARR=1144 phase=624
+[SYNC] edges=454790 age=4294967291ms mode=1 bufs_between_pd5=2 total_bufs=610
+[TIM5] PD5_period=1385446 ticks ( us,  Hz) | mode=1 ARR=1144 phase=935
+[SYNC] edges=455007 age=4294967292ms mode=1 bufs_between_pd5=2 total_bufs=45
+[TIM5] PD5_period=1386626 ticks ( us,  Hz) | mode=1 ARR=1144 phase=491
+[SYNC] edges=455222 age=4294967290ms mode=1 bufs_between_pd5=2 total_bufs=474
+[TIM5] PD5_period=1386598 ticks ( us,  Hz) | mode=1 ARR=1144 phase=941
+[SYNC] edges=455439 age=4294967294ms mode=1 bufs_between_pd5=2 total_bufs=909

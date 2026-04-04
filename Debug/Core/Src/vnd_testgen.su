@@ -1,0 +1,2 @@
+../Core/Src/vnd_testgen.c:16:5:vnd_testgen_try_consume_latest	32	static
+../Core/Src/vnd_testgen.c:30:6:vnd_generate_test_sawtooth	16	static

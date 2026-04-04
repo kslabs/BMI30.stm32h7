@@ -8,7 +8,7 @@ param(
   [int]$ProfileId = 0,
   [ValidateSet('ctrl','bulk')] [string]$StatusMode = 'ctrl',
   [int]$FrameSamples = 10,
-  [string]$DiagPort = 'COM4',
+  [string]$DiagPort = 'COM11',
   [int]$DiagBaud = 115200,
   [switch]$NoInterpreterDiag,
   [string]$PythonExe
@@ -206,3 +206,4 @@ try {
 finally {
   Pop-Location
 }
+

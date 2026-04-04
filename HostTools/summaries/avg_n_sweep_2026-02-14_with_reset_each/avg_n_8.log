@@ -1,0 +1,2 @@
+Opened VID=0xCAFE PID=0x4001 IF#2 IN=0x83 OUT=0x03
+Done. mode=pair A=479 B=478 TEST=0 time=10.01s pairs_fpsтЙИ50.2 timeouts=0 in_errors=0 missingA=0 missingB=0 seq_gaps=40 seq_dupes=40 seq_reorders=0 seq_unique=438 seq_range=0..477 stat_midpair=0 wrong_ch=0 pre_sync_b=0 pre_sync_stat=0

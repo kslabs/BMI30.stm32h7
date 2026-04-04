@@ -11,6 +11,58 @@ $DebugDir = Join-Path $ProjectRoot "Debug"
 $BuildInfoC = Join-Path $ProjectRoot "Core\Src\build_info.c"
 $ElfFile = Join-Path $DebugDir "BMI30.stm32h7.elf"
 $CubeProgrammer = "C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe"
+$MakeExeCandidates = @(
+    "C:\msys64\usr\bin\make.exe",
+    "C:\Program Files\Git\usr\bin\make.exe"
+)
+$BashExeCandidates = @(
+    "C:\msys64\usr\bin\bash.exe",
+    "C:\Program Files\Git\bin\bash.exe"
+)
+$MakeExe = $null
+foreach ($candidate in $MakeExeCandidates) {
+    if (Test-Path $candidate) {
+        $MakeExe = $candidate
+        break
+    }
+}
+if (-not $MakeExe) {
+    $MakeExe = "make"
+}
+$BashExe = $null
+foreach ($candidate in $BashExeCandidates) {
+    if (Test-Path $candidate) {
+        $BashExe = $candidate
+        break
+    }
+}
+
+function Convert-ToMsysPath([string]$winPath) {
+    $p = $winPath -replace '\\', '/'
+    return [regex]::Replace($p, '^([A-Za-z]):', { param($m) '/' + $m.Groups[1].Value.ToLower() })
+}
+
+function Invoke-Make {
+    param([string[]]$MakeArgs)
+    if ($BashExe) {
+        $projectRootMsys = Convert-ToMsysPath $ProjectRoot
+        $argsLine = ($MakeArgs -join ' ')
+        $armGcc = (Get-Command arm-none-eabi-gcc -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source)
+        $armPathMsys = ""
+        if ($armGcc) {
+            $armDir = Split-Path -Parent $armGcc
+            $armPathMsys = Convert-ToMsysPath $armDir
+        }
+        if ($armPathMsys) {
+            $cmd = 'export PATH="/c/Users/Admin/AppData/Local/Programs/Python/Launcher:' + $armPathMsys + ':$PATH"; cd ''' + $projectRootMsys + ''' && make ' + $argsLine
+        } else {
+            $cmd = 'export PATH="/c/Users/Admin/AppData/Local/Programs/Python/Launcher:$PATH"; cd ''' + $projectRootMsys + ''' && make ' + $argsLine
+        }
+        & $BashExe -lc $cmd
+    } else {
+        & $MakeExe @MakeArgs
+    }
+}
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "STM32 BUILD AND FLASH" -ForegroundColor Cyan
@@ -46,7 +98,7 @@ if ($CleanBuild) {
     Push-Location $ProjectRoot
     $oldEap = $ErrorActionPreference
     $ErrorActionPreference = "Continue"  # gcc пишет warning в stderr; не считаем это фатальным
-    make -C Debug clean 2>&1 | Out-Null
+    Invoke-Make -MakeArgs @("-C", "Debug", "clean") 2>&1 | Out-Null
     $ErrorActionPreference = $oldEap
     Pop-Location
     Write-Host "  [OK] Clean completed" -ForegroundColor Green
@@ -59,7 +111,7 @@ Write-Host "[3/4] Building..." -ForegroundColor Yellow
 Push-Location $ProjectRoot
 $oldEap = $ErrorActionPreference
 $ErrorActionPreference = "Continue"  # gcc warnings -> stderr, но сборка может быть успешной
-$buildOutput = make -C Debug all 2>&1 | Out-String
+$buildOutput = Invoke-Make -MakeArgs @("-C", "Debug", "all") 2>&1 | Out-String
 $buildExit = $LASTEXITCODE
 $ErrorActionPreference = $oldEap
 Pop-Location

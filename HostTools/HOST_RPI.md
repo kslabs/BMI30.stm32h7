@@ -236,6 +236,124 @@ PY
 
 ---
 
+## 9.3) Управление WS2812 паттернами с RPI host
+
+Сейчас у Raspberry Pi host есть два разных способа влиять на адресные светодиоды:
+
+- постоянный тестовый паттерн выбирается локально кнопкой `PC13` на устройстве
+- временный визуальный паттерн можно запустить с RPI через Vendor USB команду `0x35`
+
+Важно:
+- Через USB сейчас не выбирается постоянный тестовый режим `DRIP/RED_UP/RED_DOWN/RGB_SCOPE/RED_BLUE_SPLIT/COLOR_CYCLE`.
+- Эти режимы циклически переключаются только кнопкой `PC13`.
+- Хост по USB может запустить только временное событие поверх текущего фона.
+
+### Команда `0x35` (`VND_CMD_LED_EVENT`)
+
+Формат payload:
+
+```text
+byte0 = 0x35
+byte1 = event_id
+byte2 = duration_ms low byte
+byte3 = duration_ms high byte
+```
+
+Поддерживаемые `event_id`:
+
+- `0x01` = `CHANNEL_B` = красный паттерн вверх (`RED_UP`)
+- `0x02` = `CHANNEL_A` = красный паттерн вниз (`RED_DOWN`)
+
+Если `duration_ms = 0`, прошивка автоматически использует `1600 ms`.
+
+### Самый простой способ на RPi: готовый скрипт
+
+В репозитории есть [send_led_event.py](/d:/Users/Admin/Documents/Work/BMI20/STM32/BMI30.stm32h7/HostTools/send_led_event.py), который уже отправляет эту команду через Vendor IF#2.
+
+Примеры:
+
+```bash
+# Красный паттерн вверх
+python3 HostTools/send_led_event.py --event B --duration-ms 1600
+
+# Красный паттерн вниз
+python3 HostTools/send_led_event.py --event A --duration-ms 1600
+
+# Демонстрация: вверх, затем вниз
+python3 HostTools/send_led_event.py --event demo --duration-ms 1600 --gap-ms 500
+```
+
+Параметры по умолчанию у скрипта:
+
+- `VID = 0xCAFE`
+- `PID = 0x4001`
+- `IF = 2`
+- `EP_OUT = 0x03`
+
+### Прямой пример без helper script
+
+```bash
+python3 - <<'PY'
+import struct
+import usb.core
+import usb.util
+
+VID, PID = 0xCAFE, 0x4001
+INTF, EP_OUT = 2, 0x03
+VND_CMD_LED_EVENT = 0x35
+VND_LED_EVENT_CHANNEL_B = 0x01   # RED_UP
+VND_LED_EVENT_CHANNEL_A = 0x02   # RED_DOWN
+
+dev = usb.core.find(idVendor=VID, idProduct=PID)
+if dev is None:
+    raise SystemExit("Device not found")
+
+try:
+    dev.set_configuration()
+except Exception:
+    pass
+
+try:
+    if dev.is_kernel_driver_active(INTF):
+        dev.detach_kernel_driver(INTF)
+except Exception:
+    pass
+
+try:
+    usb.util.claim_interface(dev, INTF)
+except Exception:
+    pass
+
+try:
+    dev.set_interface_altsetting(interface=INTF, alternate_setting=1)
+except Exception:
+    pass
+
+payload = struct.pack("<BBH", VND_CMD_LED_EVENT, VND_LED_EVENT_CHANNEL_B, 1600)
+dev.write(EP_OUT, payload, timeout=1000)
+print("Sent RED_UP for 1600 ms")
+PY
+```
+
+### Как это сочетается с локальной кнопкой `PC13`
+
+- `PC13` переключает постоянный фон тестовых паттернов.
+- Команда `0x35` временно накладывает событие `RED_UP` или `RED_DOWN`.
+- После окончания таймера устройство возвращается к текущему локально выбранному паттерну.
+
+### Актуальный список локальных тестовых паттернов на устройстве
+
+Текущий цикл по `PC13` такой:
+
+- `DRIP`
+- `RED_UP`
+- `RED_DOWN`
+- `RGB_SCOPE`
+- `RED_BLUE_SPLIT`
+- `COLOR_CYCLE`
+
+Для `RED_UP` и `RED_DOWN` в текущей версии прошивки красный канал выставлен на максимальную яркость.
+
 Примечания
 - last‑buffer‑wins включён в прошивке для full‑mode: если хост отстаёт, устройство пропускает старые буферы и отправляет самый свежий, чтобы минимизировать задержку.
 - EP0 GET_STATUS доступен всегда и не нарушает A/B‑последовательность.

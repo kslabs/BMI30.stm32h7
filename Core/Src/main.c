@@ -443,7 +443,7 @@ static HAL_StatusTypeDef optic_tx_dma_setup(void);
 static uint32_t optic_tx_compute_on_cycles(uint8_t power_level);
 static void optic_tx_prepare_burst_pattern(uint32_t carrier_compare);
 static void optic_tx_apply_runtime_pattern(void);
-static void optic_tx_button_service(uint32_t now_ms);
+static void ws2812_test_button_service(uint32_t now_ms);
 static uint8_t optic_tx_power_to_percent(uint8_t power_level);
 static uint16_t optic_tx_power_badge_color(uint8_t power_level);
 static void optic_tx_start(void);
@@ -556,7 +556,7 @@ static inline void LED_OFF(void){ HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test
 #define OPTIC_TX_BURST_OFF_CYCLES 24u
 #define OPTIC_TX_BURST_PATTERN_LEN (OPTIC_TX_BURST_ON_CYCLES + OPTIC_TX_BURST_OFF_CYCLES)
 #define OPTIC_TX_POWER_MAX 255u
-#define OPTIC_TX_BUTTON_DEBOUNCE_MS 30u
+#define WS2812_TEST_BUTTON_DEBOUNCE_MS 30u
 #define OPTIC_PULSE_ACTIVE_TIMEOUT_MS 30u
 #define OPTIC_PULSE_LATCH_COUNT       2u
 // Полярность подсветки и макросы управления (используются в main и MX_GPIO_Init)
@@ -578,6 +578,7 @@ static volatile uint32_t uart1_led_off_tick = 0;          // таймаут вы
 static uint8_t uart1_rx_byte = 0;                         // одиночный байт приёмника
 static volatile uint32_t uart1_rx_count = 0;              // счётчик принятых байт
 static volatile uint32_t uart1_last_rx_ms = 0;            // время последнего приёма
+static volatile ws2812_pattern_t g_ws2812_test_pattern = WS2812_PATTERN_TEST_DRIP;
 // Кольцевой буфер для потенциального анализа команд (пока только индикация)
 #define UART1_RX_RING_SZ 128
 static uint8_t uart1_rx_ring[UART1_RX_RING_SZ];
@@ -742,12 +743,40 @@ uint8_t optic_tx_get_power(void)
   return (uint8_t)optic_tx_power_level;
 }
 
-static void optic_tx_button_service(uint32_t now_ms)
+static const char *ws2812_test_pattern_name(ws2812_pattern_t pattern)
 {
-  static const uint8_t optic_power_steps[] = { 64u, 128u, 191u, 255u };
+  switch (pattern) {
+    case WS2812_PATTERN_TEST_DRIP:
+      return "DRIP";
+    case WS2812_PATTERN_EVENT_B_UP:
+      return "RED_UP";
+    case WS2812_PATTERN_EVENT_A_DOWN:
+      return "RED_DOWN";
+    case WS2812_PATTERN_TEST_SCOPE_RGB:
+      return "RGB_SCOPE";
+    case WS2812_PATTERN_TEST_BLUE:
+      return "RED_BLUE_SPLIT";
+    case WS2812_PATTERN_TEST_COLOR_CYCLE:
+      return "COLOR_CYCLE";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+static void ws2812_test_button_service(uint32_t now_ms)
+{
+  static const ws2812_pattern_t test_patterns[] = {
+    WS2812_PATTERN_TEST_DRIP,
+    WS2812_PATTERN_EVENT_B_UP,
+    WS2812_PATTERN_EVENT_A_DOWN,
+    WS2812_PATTERN_TEST_SCOPE_RGB,
+    WS2812_PATTERN_TEST_BLUE,
+    WS2812_PATTERN_TEST_COLOR_CYCLE
+  };
   static uint8_t raw_state = 0u;
   static uint8_t stable_state = 0u;
   static uint32_t last_change_ms = 0u;
+  const uint32_t pattern_count = sizeof(test_patterns) / sizeof(test_patterns[0]);
   uint8_t current_raw = (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET) ? 1u : 0u;
 
   if (current_raw != raw_state) {
@@ -756,30 +785,26 @@ static void optic_tx_button_service(uint32_t now_ms)
   }
 
   if ((stable_state != raw_state) &&
-      ((uint32_t)(now_ms - last_change_ms) >= OPTIC_TX_BUTTON_DEBOUNCE_MS)) {
+      ((uint32_t)(now_ms - last_change_ms) >= WS2812_TEST_BUTTON_DEBOUNCE_MS)) {
     stable_state = raw_state;
 
     if (stable_state != 0u) {
-      uint8_t current_power = optic_tx_get_power();
-      uint32_t step_count = sizeof(optic_power_steps) / sizeof(optic_power_steps[0]);
       uint32_t next_index = 0u;
       uint32_t index;
 
-      for (index = 0u; index < step_count; index++) {
-        if (current_power < optic_power_steps[index]) {
-          next_index = index;
+      for (index = 0u; index < pattern_count; ++index) {
+        if (g_ws2812_test_pattern == test_patterns[index]) {
+          next_index = (uint32_t)((index + 1u) % pattern_count);
           break;
         }
       }
-      if (index >= step_count) {
+      if (index >= pattern_count) {
         next_index = 0u;
       }
 
-      current_power = optic_tx_set_power(optic_power_steps[next_index]);
-      printf("[OPTIC] Button power -> %u%% (%u/255)\r\n",
-             (unsigned)optic_tx_power_to_percent(current_power),
-             (unsigned)current_power);
-      UpdateLCDStatus();
+      g_ws2812_test_pattern = test_patterns[next_index];
+      printf("[WS2812] Button pattern -> %s\r\n",
+             ws2812_test_pattern_name(g_ws2812_test_pattern));
     }
   }
 }
@@ -1612,7 +1637,7 @@ static void ws2812_status_service(uint32_t now_ms)
   (void)now_ms;
   return;
 #else
-  ws2812_pattern_t pattern = WS2812_PATTERN_OFF;
+  ws2812_pattern_t pattern = g_ws2812_test_pattern;
 
 #if WS2812_SPI_SCOPE_TEST_MODE
   (void)now_ms;
@@ -1623,27 +1648,6 @@ static void ws2812_status_service(uint32_t now_ms)
 #elif WS2812_COLOR_CYCLE_TEST_MODE
   (void)now_ms;
   pattern = WS2812_PATTERN_TEST_COLOR_CYCLE;
-#else
-  extern volatile uint8_t vnd_sync_mode_public;
-
-  if (need_recovery != 0u) {
-    pattern = WS2812_PATTERN_RECOVERY;
-  } else if (need_hard_reset != 0u) {
-    pattern = WS2812_PATTERN_HARD_RESET;
-  } else if (uart1_led_off_tick && (now_ms < uart1_led_off_tick)) {
-    pattern = WS2812_PATTERN_UART_RX;
-  } else if (g_tune_led_freq_active) {
-    pattern = WS2812_PATTERN_TUNE;
-  } else if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
-             (sync_last_edge_ms != 0u) &&
-             ((now_ms - sync_last_edge_ms) <= 250u) &&
-             (rs485_sync_led_active != 0u)) {
-    pattern = WS2812_PATTERN_SYNC_PULSE;
-  } else if (vnd_is_streaming() && vnd_is_tx_enabled()) {
-    pattern = WS2812_PATTERN_STREAMING;
-  } else {
-    pattern = WS2812_PATTERN_IDLE_BREATHE;
-  }
 #endif
   ws2812_spi_set_pattern(pattern);
 #endif
@@ -2463,7 +2467,7 @@ int main(void)
     last_heartbeat_ms = HAL_GetTick();
   uint32_t now = last_heartbeat_ms;
   optic_sensor_service(now);
-  optic_tx_button_service(now);
+  ws2812_test_button_service(now);
   static uint8_t first_loop=1; if(first_loop){ PROG('M'); first_loop=0; }
   PROG('A'); // loop start
 

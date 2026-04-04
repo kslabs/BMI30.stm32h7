@@ -1,0 +1,2 @@
+../Drivers/BSP/ST7735/board.c:7:6:board_led_toggle	8	static
+../Drivers/BSP/ST7735/board.c:12:6:board_led_set	16	static

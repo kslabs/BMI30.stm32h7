@@ -1,9 +1,9 @@
 param(
-  [string]$Port = "COM4",
+  [string]$Port = "COM11",
   [int]$Baud = 115200,
   [string]$FilterRegex = "",
   [string]$LogPath = "",
-  [string[]]$Ports = @(), # optional list of candidate ports to auto-scan (e.g., COM4,COM5)
+  [string[]]$Ports = @(), # optional list of candidate ports to auto-scan (e.g., COM11,COM5)
   [int]$ReadTimeoutMs = 2000 # longer read timeout to avoid churn
 )
 
@@ -119,3 +119,4 @@ while ($true) {
 
   Start-Sleep -Seconds 2
 }
+

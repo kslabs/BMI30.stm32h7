@@ -34,6 +34,7 @@ enum {
   WS2812_UART_STEP_FRAMES = 8u,
   WS2812_TUNE_STEP_FRAMES = 20u,
   WS2812_ALERT_STEP_FRAMES = 20u,
+  WS2812_DRIP_STEP_FRAMES = 20u,
   WS2812_TEST_STEP_FRAMES = 200u,
   WS2812_SPI_CODE_0 = 0x8u, /* 1000 */
   WS2812_SPI_CODE_1 = 0xEu  /* 1110 */
@@ -148,6 +149,7 @@ static const ws2812_pattern_def_t s_pattern_defs[WS2812_PATTERN_COUNT] = {
   { s_pattern_tune, (uint8_t)(sizeof(s_pattern_tune) / sizeof(s_pattern_tune[0])) },
   { s_pattern_recovery, (uint8_t)(sizeof(s_pattern_recovery) / sizeof(s_pattern_recovery[0])) },
   { s_pattern_hard_reset, (uint8_t)(sizeof(s_pattern_hard_reset) / sizeof(s_pattern_hard_reset[0])) },
+  { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
   { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
   { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
   { s_pattern_test_scope_rgb, (uint8_t)(sizeof(s_pattern_test_scope_rgb) / sizeof(s_pattern_test_scope_rgb[0])) },
@@ -388,6 +390,8 @@ static uint16_t ws2812_pattern_step_frames(ws2812_pattern_t pattern)
     case WS2812_PATTERN_EVENT_B_UP:
     case WS2812_PATTERN_EVENT_A_DOWN:
       return 40u;
+    case WS2812_PATTERN_TEST_DRIP:
+      return WS2812_DRIP_STEP_FRAMES;
     case WS2812_PATTERN_IDLE_BREATHE:
     case WS2812_PATTERN_OFF:
     case WS2812_PATTERN_TEST_SCOPE_RGB:
@@ -423,8 +427,55 @@ static void ws2812_render_strip_moving_blocks(uint16_t anim_step, uint8_t toward
       : (uint16_t)((pos + phase_offset) % 8u);
 
     if (phase < 4u) {
-      ws2812_pixels_set_strip_led_rgb(pos, 56u, 0u, 0u);
+      ws2812_pixels_set_strip_led_rgb(pos, 255u, 0u, 0u);
     }
+  }
+}
+
+static uint8_t ws2812_drip_tail_visible(uint16_t anim_step)
+{
+  uint32_t value = (((uint32_t)anim_step + 1u) * 1103515245u) + 12345u;
+  return (uint8_t)((value >> 30) & 0x1u);
+}
+
+static void ws2812_render_strip_drip(uint16_t anim_step)
+{
+  static const uint8_t drip_rgb[4][3] = {
+    { 8u, 46u, 72u },
+    { 4u, 28u, 42u },
+    { 2u, 14u, 22u },
+    { 1u, 6u, 10u }
+  };
+  const uint16_t tail_len = 4u;
+  const uint16_t gap_len = 5u;
+  const uint16_t cycle_len = (uint16_t)(WS2812_STRIP_LED_COUNT + tail_len + gap_len);
+  uint16_t head = 0u;
+  uint16_t tail_idx = 0u;
+
+  if ((WS2812_STRIP_LED_COUNT == 0u) || (cycle_len == 0u)) {
+    return;
+  }
+
+  head = (uint16_t)(anim_step % cycle_len);
+  for (tail_idx = 0u; tail_idx < tail_len; ++tail_idx) {
+    uint16_t pos = 0u;
+
+    if ((tail_idx == (tail_len - 1u)) && (ws2812_drip_tail_visible(anim_step) == 0u)) {
+      continue;
+    }
+    if (head < tail_idx) {
+      continue;
+    }
+
+    pos = (uint16_t)(head - tail_idx);
+    if (pos >= WS2812_STRIP_LED_COUNT) {
+      continue;
+    }
+
+    ws2812_pixels_set_strip_led_rgb(pos,
+                                    drip_rgb[tail_idx][0],
+                                    drip_rgb[tail_idx][1],
+                                    drip_rgb[tail_idx][2]);
   }
 }
 
@@ -531,6 +582,10 @@ static void ws2812_render_pattern(ws2812_pattern_t pattern, uint16_t anim_step)
 
     case WS2812_PATTERN_EVENT_A_DOWN:
       ws2812_render_strip_moving_blocks(anim_step, 0u);
+      break;
+
+    case WS2812_PATTERN_TEST_DRIP:
+      ws2812_render_strip_drip(anim_step);
       break;
 
     case WS2812_PATTERN_TEST_SCOPE_RGB:

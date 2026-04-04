@@ -1,0 +1,5 @@
+# Custom make targets to keep build portable
+
+# Generate objects.list for the link step
+objects.list: $(OBJS)
+	@printf "%s\n" $(OBJS) > $@

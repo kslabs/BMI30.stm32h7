@@ -1,0 +1,7 @@
+../Core/Src/tinyusb_stubs.c:15:6:tud_cdc_n_connected	16	static
+../Core/Src/tinyusb_stubs.c:16:6:tud_mounted	4	static
+../Core/Src/tinyusb_stubs.c:18:10:tud_cdc_n_write	24	static
+../Core/Src/tinyusb_stubs.c:21:6:tud_cdc_n_write_flush	16	static
+../Core/Src/tinyusb_stubs.c:24:6:tud_rhport_init	16	static
+../Core/Src/tinyusb_stubs.c:27:6:tud_task_ext	16	static
+../Core/Src/tinyusb_stubs.c:30:6:dcd_int_handler	16	static
