@@ -55,6 +55,8 @@ except Exception:
 	CMD_SOFT_RESET = 0x7E
 	CMD_DEEP_RESET = 0x7F
 	CMD_SET_ALT = 0x31
+if 'CMD_SET_TX_ENABLE' not in globals():
+	CMD_SET_TX_ENABLE = 0x33
 
 # Qt/pyqtgraph bootstrap: enforce PyQt5 first to keep binding consistent
 PG_IMPORT_ERR = None
@@ -687,6 +689,7 @@ class ScopeWindow:
 		self._set_status("Нажмите кнопку 1 для запуска потока (200 Гц по умолчанию)")
 		# Флаг намерения пользователя: передача включена/выключена
 		self.stream_enabled = False
+		self.tx_enabled_desired = False
 		# Сохраним порт info для power cycle без stream
 		self.last_port_info = None
 		# timer
@@ -761,6 +764,7 @@ class ScopeWindow:
 			self.num_buttons[self.sel_saved].setChecked(True)
 		else:
 			self.num_buttons[0].setChecked(True)
+		self.tx_enabled_desired = (self.num_group.checkedId() != 0)
 		self.num_group.idClicked.connect(self._num_clicked)
 		self.win.closeEvent = self._on_close  # type: ignore
 		# slider signals
@@ -970,11 +974,7 @@ class ScopeWindow:
 			# Запуск потока
 			self.stream_enabled = True
 			self.stream.send_cmd(CMD_START_STREAM, b"")
-			# Включаем внешний передатчик
-			try:
-				self.stream.send_cmd(0x33, b"\x01")
-			except Exception:
-				pass
+			self._apply_tx_enable("switch_to_latest")
 			time.sleep(0.05)
 			print("[LATEST] START отправлен")
 			
@@ -1039,11 +1039,7 @@ class ScopeWindow:
 			# Запуск потока
 			self.stream_enabled = True
 			self.stream.send_cmd(CMD_START_STREAM, b"")
-			# Включаем внешний передатчик
-			try:
-				self.stream.send_cmd(0x33, b"\x01")
-			except Exception:
-				pass
+			self._apply_tx_enable("switch_to_lossless_roi")
 			time.sleep(0.05)
 			print("[LOSSLESS_ROI] START отправлен")
 			
@@ -1142,11 +1138,7 @@ class ScopeWindow:
 			# Запуск потока
 			self.stream_enabled = True
 			self.stream.send_cmd(CMD_START_STREAM, b"")
-			# Включаем внешний передатчик
-			try:
-				self.stream.send_cmd(0x33, b"\x01")
-			except Exception:
-				pass
+			self._apply_tx_enable("switch_to_avg_roi")
 			time.sleep(0.05)
 			print("[AVG_ROI] START отправлен")
 
@@ -1363,6 +1355,18 @@ class ScopeWindow:
 		except Exception as e:
 			print(f"[DC_REMOVAL] Ошибка загрузки DC offset: {e}")
 
+	def _apply_tx_enable(self, reason: str = "") -> bool:
+		if self.stream is None:
+			return False
+		en = 1 if bool(getattr(self, 'tx_enabled_desired', False)) else 0
+		try:
+			self.stream.send_cmd(CMD_SET_TX_ENABLE, bytes([en]))
+			print(f"[TX] {'ENABLE' if en else 'DISABLE'} ({reason or 'apply'})", flush=True)
+			return True
+		except Exception as e:
+			print(f"[TX] apply failed ({reason or 'apply'}): {e}", flush=True)
+			return False
+
 	def _set_dc_adapt_cmd(self, enable: bool, reason: str = ""):
 		"""Отправить CMD_SET_DC_ADAPT (FREEZE/ACTIVE) при смене состояния."""
 		try:
@@ -1405,6 +1409,7 @@ class ScopeWindow:
 	# --- numeric buttons persistence ---
 	def _num_clicked(self, idx: int):
 		if idx in (1, 2, 3):
+			self.tx_enabled_desired = True
 			mode_map = {1: 1, 2: 2, 3: 0}  # 1: канал 1, 2: канал 2, 3: оба
 			# Если поток не запущен - запустить его
 			if self.stream is None and not self._connecting:
@@ -1424,6 +1429,7 @@ class ScopeWindow:
 			self._set_view_mode(mode_map[idx])
 		elif idx == 4:
 			# Кнопка 4: переключение в LOSSLESS_ROI режим (STREAM_MODE=1), показ 2 каналов × 2 осциллограммы × 200 семплов
+			self.tx_enabled_desired = True
 			self.dc_removal_enabled = False  # Выключить DC removal
 			self.avg20_enabled = False
 			self._switch_to_lossless_roi()
@@ -1432,6 +1438,7 @@ class ScopeWindow:
 			# В прошивке DC (персистентный) гарантированно применяется в STREAM_MODE=2 (AVG_ROI).
 			# Поэтому на "5" переключаемся в AVG_ROI и выключаем host-side DC removal,
 			# чтобы не было двойной коррекции и путаницы "показывает/сохраняет не то".
+			self.tx_enabled_desired = True
 			self.dc_removal_enabled = False
 			self.avg20_enabled = False
 			self._switch_to_avg_roi(avg_n=20)
@@ -1440,30 +1447,17 @@ class ScopeWindow:
 			# Кнопка 6+: зарезервировано под будущие алгоритмы.
 			# (оставляем как "пустую" команду, чтобы не ломать сохранение sel)
 			self._set_status("Режим 6 зарезервирован под будущие алгоритмы", hold_sec=2.0)
-		elif self.stream is not None and idx not in (1, 2, 3, 4, 5):
+		elif idx == 0:
+			self.tx_enabled_desired = False
 			self.stream_enabled = False
-			try:
-				# выключаем только внешний передатчик, поток данных остаётся активным
-				self.stream.send_cmd(0x33, b"\x00")
-				print("[TX] DISABLE отправлен (idx=0)")
-			except Exception:
-				pass
-			self.stream = None
-			self.base_buf_len = None
-			self.base_buf_len_bytes = None
-			self.freq_hz = None
-			self.data0 = np.zeros(0, dtype=np.int16)
-			self.data1 = np.zeros(0, dtype=np.int16)
-			self.data0_even = self.data0
-			self.data1_even = self.data1
-			self.data0_odd = np.zeros(0, dtype=np.int16)
-			self.data1_odd = np.zeros(0, dtype=np.int16)
-			self.timestamps = np.zeros(0, dtype=np.float64)
-			self._last_sample_ts = None
-			self.view_len = 0
-			self.slider_start.setEnabled(False)
-			self.slider_len.setEnabled(False)
-			self._set_status("Поток остановлен (нажмите 1,2 или 3 для запуска)", hold_sec=2.0)
+			self.usb_retry_timer.stop()
+			self._apply_tx_enable("button_0")
+			self._set_status("Передача TX выключена", hold_sec=2.0)
+		elif self.stream is not None and idx not in (1, 2, 3, 4, 5, 6):
+			self.tx_enabled_desired = False
+			self.stream_enabled = False
+			self._apply_tx_enable(f"button_{idx}")
+			self._set_status("Передача TX выключена", hold_sec=2.0)
 		if idx == 0:
 			try:
 				if os.path.exists(self.state_file):
@@ -2853,6 +2847,7 @@ class ScopeWindow:
 			self.stream.send_cmd(CMD_START_STREAM, b"")
 		except Exception as e:
 			print("[initseq] START err", e)
+		self._apply_tx_enable("init_sequence")
 
  
 
@@ -2919,33 +2914,40 @@ class ScopeWindow:
 				self.btn_diag.setStyleSheet(style)
 			except Exception:
 				pass
-
-		def _on_toggle_sync_mode(self, enabled: bool):
-			"""Handler for SYNC master/slave button (TIM16)."""
 			try:
-				self.sync_mode = 0 if bool(enabled) else 1
-			except Exception:
-				self.sync_mode = 0
-			try:
-				if self.sync_mode == 0:
-					style = "QPushButton { background:#b6e0f0; color:#000; border:1px solid #6f9bb3; }"
-					self.btn_sync.setText("M")
-					self.btn_sync.setToolTip("SYNC: MASTER (TIM16 CH1 генерирует частоту буферов)")
-				else:
-					style = "QPushButton { background:#f0d0b6; color:#000; border:1px solid #b38f6f; }"
-					self.btn_sync.setText("S")
-					self.btn_sync.setToolTip("SYNC: SLAVE (TIM16 CH1 принимает частоту)")
-				self.btn_sync.setStyleSheet(style)
+				self._set_dc_adapt_cmd(self.dc_removal_enabled, "toggle_button")
 			except Exception:
 				pass
-			try:
-				self._set_sync_mode_cmd(self.sync_mode)
-			except Exception:
-				pass
-			# краткий статус
 			self._set_status(tt, hold_sec=2.0)
 		except Exception:
 			pass
+
+	def _on_toggle_sync_mode(self, enabled: bool):
+		"""Handler for SYNC master/slave button (TIM16)."""
+		tt = "SYNC"
+		try:
+			self.sync_mode = 0 if bool(enabled) else 1
+		except Exception:
+			self.sync_mode = 0
+		try:
+			if self.sync_mode == 0:
+				style = "QPushButton { background:#b6e0f0; color:#000; border:1px solid #6f9bb3; }"
+				tt = "SYNC: MASTER"
+				self.btn_sync.setText("M")
+				self.btn_sync.setToolTip("SYNC: MASTER (TIM16 CH1 генерирует частоту буферов)")
+			else:
+				style = "QPushButton { background:#f0d0b6; color:#000; border:1px solid #b38f6f; }"
+				tt = "SYNC: SLAVE"
+				self.btn_sync.setText("S")
+				self.btn_sync.setToolTip("SYNC: SLAVE (TIM16 CH1 принимает частоту)")
+			self.btn_sync.setStyleSheet(style)
+		except Exception:
+			pass
+		try:
+			self._set_sync_mode_cmd(self.sync_mode)
+		except Exception:
+			pass
+		self._set_status(tt, hold_sec=2.0)
 
 	def _copy_legend_from_btn(self, pos):
 		"""Handle right-click on `btn_power`: copy `legend_lbl` text to clipboard."""
@@ -3089,6 +3091,7 @@ class ScopeWindow:
 				pass
 			# старт
 			self.stream.send_cmd(CMD_START_STREAM, b"")
+			self._apply_tx_enable("soft_kick")
 		except Exception as e:
 			raise
 
@@ -3377,6 +3380,7 @@ class ScopeWindow:
 				print("[GUI] Reader thread started", flush=True)
 			else:
 				print("[GUI] Reader thread already running", flush=True)
+			self._apply_tx_enable("connect")
 		except SystemExit as se:
 			self.stream = None
 			print(f"[ERROR] SystemExit: {se}", flush=True)
@@ -3464,6 +3468,7 @@ class ScopeWindow:
 			except Exception:
 				pass
 			self.stream.send_cmd(CMD_START_STREAM, b"")
+			self._apply_tx_enable("freq_change")
 			self._set_status(f"Переключена частота {200 if idx==0 else 300} Гц, ожидание данных…", hold_sec=1.5)
 			self.base_buf_len = None
 			self.base_buf_len_bytes = None

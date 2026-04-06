@@ -11,6 +11,8 @@ extern "C" {
 #define VND_CMD_SET_TX_ENABLE   0x33u /* 1 байт: 0=выкл, 1=вкл */
 #define VND_CMD_SET_OPTIC_POWER 0x34u /* 1 байт: 0..255, мощность оптического TX */
 #define VND_CMD_LED_EVENT       0x35u /* payload: u8 event, u16 duration_ms */
+#define VND_CMD_HOST_RX_ACK     0x36u /* payload: u32 total host-received A/B frames */
+#define VND_CMD_HOST_RX_CLEAR   0x37u /* payload: none, clear host receive heartbeat */
 /* Дополнение из спецификации */
 #define VND_CMD_SET_FULL_MODE   0x13u /* 1 байт: 0=ROI, 1=FULL */
 #define VND_CMD_SET_PROFILE     0x14u /* 1 байт profile */
@@ -35,6 +37,9 @@ extern "C" {
 #define VND_LED_EVENT_NONE       0u
 #define VND_LED_EVENT_CHANNEL_B  1u
 #define VND_LED_EVENT_CHANNEL_A  2u
+#define VND_LED_EVENT_BOTH       3u
+#define VND_LED_EVENT_SPLIT_IN   4u
+#define VND_LED_EVENT_SPLIT_OUT  5u
 
 /* Флаги статуса времени выполнения */
 #define VND_STFLAG_STREAMING      0x0001u  /* streaming включён (после START) */
@@ -43,6 +48,7 @@ extern "C" {
 #define VND_STFLAG_STREAM_ACTIVE  0x0008u  /* поток действительно активен (есть переданные A/B) */
 #define VND_STFLAG_TX_ENABLED     0x0010u  /* внешний TX разрешён командой/кнопкой */
 #define VND_STFLAG_OPTIC_ACTIVE   0x0020u  /* оптический датчик на PD0 активен */
+#define VND_STFLAG_HOST_RX_ALIVE  0x0040u  /* хост недавно подтвердил чтение потока */
 
 /* Общие константы формата кадров/параметров (централизовано) */
 #ifndef VND_MAX_SAMPLES
@@ -147,6 +153,9 @@ void adc_stream_on_new_frames(uint32_t frames_added);
 uint64_t vnd_get_total_tx_bytes(void);
 uint64_t vnd_get_total_tx_samples(void);
 uint32_t vnd_get_last_txcplt_ms(void);
+uint32_t vnd_get_last_frame_txcplt_ms(void);
+uint32_t vnd_get_last_host_rx_ack_ms(void);
+uint32_t vnd_get_last_error(void);
 /* Получить частоту буферов профиля (Fs блоков/с): прокси к adc_stream */
 uint16_t adc_stream_get_buf_rate(void);
 

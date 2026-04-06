@@ -27,6 +27,8 @@ extern DMA_HandleTypeDef hdma_adc1;
 
 extern DMA_HandleTypeDef hdma_adc2;
 
+extern DMA_HandleTypeDef hdma_spi3_tx;
+
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
 
@@ -352,6 +354,57 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
 
     /* USER CODE END SPI2_MspInit 1 */
   }
+  else if(hspi->Instance==SPI3)
+  {
+    /* USER CODE BEGIN SPI3_MspInit 0 */
+
+    /* USER CODE END SPI3_MspInit 0 */
+    /* Peripheral clock enable */
+    __HAL_RCC_SPI3_CLK_ENABLE();
+
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    /**SPI3 GPIO Configuration
+    PB2     ------> SPI3_MOSI
+    PC10    ------> SPI3_SCK
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_2;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF7_SPI3;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_10;
+    GPIO_InitStruct.Alternate = GPIO_AF6_SPI3;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    /* SPI3 DMA Init */
+    hdma_spi3_tx.Instance = DMA1_Stream7;
+    hdma_spi3_tx.Init.Request = DMA_REQUEST_SPI3_TX;
+    hdma_spi3_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_spi3_tx.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_spi3_tx.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_spi3_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    hdma_spi3_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+    hdma_spi3_tx.Init.Mode = DMA_NORMAL;
+    hdma_spi3_tx.Init.Priority = DMA_PRIORITY_MEDIUM;
+    hdma_spi3_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    if (HAL_DMA_Init(&hdma_spi3_tx) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(hspi, hdmatx, hdma_spi3_tx);
+
+    /* SPI3 interrupt is required on STM32H7 to handle EOT after DMA transfer */
+    HAL_NVIC_SetPriority(SPI3_IRQn, 12, 1);
+    HAL_NVIC_EnableIRQ(SPI3_IRQn);
+
+    /* USER CODE BEGIN SPI3_MspInit 1 */
+
+    /* USER CODE END SPI3_MspInit 1 */
+  }
   else if(hspi->Instance==SPI4)
   {
     /* USER CODE BEGIN SPI4_MspInit 0 */
@@ -413,6 +466,30 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
     /* USER CODE BEGIN SPI2_MspDeInit 1 */
 
     /* USER CODE END SPI2_MspDeInit 1 */
+  }
+  else if(hspi->Instance==SPI3)
+  {
+    /* USER CODE BEGIN SPI3_MspDeInit 0 */
+
+    /* USER CODE END SPI3_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_SPI3_CLK_DISABLE();
+
+    /**SPI3 GPIO Configuration
+    PB2     ------> SPI3_MOSI
+    PC10    ------> SPI3_SCK
+    */
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_2);
+    HAL_GPIO_DeInit(GPIOC, GPIO_PIN_10);
+
+    /* SPI3 DMA DeInit */
+    HAL_DMA_DeInit(hspi->hdmatx);
+
+    HAL_NVIC_DisableIRQ(SPI3_IRQn);
+
+    /* USER CODE BEGIN SPI3_MspDeInit 1 */
+
+    /* USER CODE END SPI3_MspDeInit 1 */
   }
   else if(hspi->Instance==SPI4)
   {

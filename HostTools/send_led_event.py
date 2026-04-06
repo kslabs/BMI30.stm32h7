@@ -9,6 +9,9 @@ import usb.util
 VND_CMD_LED_EVENT = 0x35
 VND_LED_EVENT_CHANNEL_B = 0x01
 VND_LED_EVENT_CHANNEL_A = 0x02
+VND_LED_EVENT_BOTH = 0x03
+VND_LED_EVENT_SPLIT_IN = 0x04
+VND_LED_EVENT_SPLIT_OUT = 0x05
 
 
 def find_device(vid: int, pid: int) -> usb.core.Device:
@@ -52,7 +55,7 @@ def main() -> None:
     ap.add_argument("--pid", type=lambda x: int(x, 0), default=0x4001)
     ap.add_argument("--intf", type=int, default=2)
     ap.add_argument("--ep-out", type=lambda x: int(x, 0), default=0x03)
-    ap.add_argument("--event", choices=["B", "A", "demo"], default="demo")
+    ap.add_argument("--event", choices=["B", "A", "BOTH", "SPLIT_IN", "SPLIT_OUT", "demo"], default="demo")
     ap.add_argument("--duration-ms", type=int, default=1600)
     ap.add_argument("--gap-ms", type=int, default=500)
     args = ap.parse_args()
@@ -69,6 +72,15 @@ def main() -> None:
     elif args.event == "B":
         send_event(dev, args.ep_out, VND_LED_EVENT_CHANNEL_B, args.duration_ms)
         print(f"Sent B event for {args.duration_ms} ms")
+    elif args.event == "BOTH":
+        send_event(dev, args.ep_out, VND_LED_EVENT_BOTH, args.duration_ms)
+        print(f"Sent BOTH event for {args.duration_ms} ms")
+    elif args.event == "SPLIT_IN":
+        send_event(dev, args.ep_out, VND_LED_EVENT_SPLIT_IN, args.duration_ms)
+        print(f"Sent SPLIT_IN event for {args.duration_ms} ms")
+    elif args.event == "SPLIT_OUT":
+        send_event(dev, args.ep_out, VND_LED_EVENT_SPLIT_OUT, args.duration_ms)
+        print(f"Sent SPLIT_OUT event for {args.duration_ms} ms")
     else:
         send_event(dev, args.ep_out, VND_LED_EVENT_CHANNEL_A, args.duration_ms)
         print(f"Sent A event for {args.duration_ms} ms")

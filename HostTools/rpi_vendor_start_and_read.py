@@ -19,6 +19,7 @@ VID = int(os.getenv('VND_VID', '0xCAFE'), 16)
 PID = int(os.getenv('VND_PID', '0x4001'), 16)
 OUT_EP = 0x03
 IN_EP  = 0x83
+TX_ENABLE = os.getenv('VND_TX_ENABLE')
 READ_COUNT = int(os.getenv('VND_READ_COUNT', '6'))
 READ_TIMEOUT_MS = int(os.getenv('VND_READ_TIMEOUT', '1000'))
 LOG_PATH = os.getenv('VND_HOST_LOG', 'host_rx_rpi.log')
@@ -87,6 +88,10 @@ def main():
 
     # START
     try:
+        if TX_ENABLE is not None:
+            tx_val = 1 if int(TX_ENABLE) else 0
+            twlen = dev.write(OUT_EP, bytes([0x33, tx_val]), timeout=1000)
+            log(f"[HOST] TX_ENABLE written: {twlen} bytes, value={tx_val}")
         wlen = dev.write(OUT_EP, bytes([0x20]), timeout=1000)
         log(f"[HOST] START written: {wlen} bytes to EP 0x{OUT_EP:02X}")
     except Exception as e:

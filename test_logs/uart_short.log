@@ -1,0 +1,46 @@
+_RCV] #13 CMD 0x14 len=2
+[CMD] 0x11 len=3
+[VND_RCV] #14 CMD 0x11 len=3
+[CMD] 0x13 len=2
+[VND_RCV] #15 CMD 0x13 len=2
+[CMD] 0x18 len=2
+[VND_RCV] #16 CMD 0x18 len=2
+[CMD] 0x19 len=2
+[VND_RCV] #17 CMD 0x19 len=2
+[CMD] 0x21 len=1
+[VND_RCV] #18 CMD 0x21 len=1
+[CMD_IND] STOP received #3 (at t=43463 ms, 0 sec ago)
+[CMD] 0x20 len=1
+[VND_RCV] #19 CMD 0x20 len=1
+[CMD_IND] START received #1 (at t=43740 ms, 0 sec ago)
+[CMD_IND] START cfg: stream_mode=1 avg_n=20 async=0 chmode=2
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=182
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=579
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=976
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=373
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=770
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=167
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=564
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=961
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=358
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=755
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=152
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=549
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=946
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=343
+[TIM5] PD5_period=0 ticks ( us,  Hz) | mode=0 ARR=1144 phase=0
+[SYNC] edges=0 age=4294967295ms mode=0 bufs_between_pd5=0 total_bufs=740

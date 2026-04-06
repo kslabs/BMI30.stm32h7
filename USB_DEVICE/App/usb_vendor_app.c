@@ -128,6 +128,12 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #ifndef VND_CMD_LED_EVENT
 #define VND_CMD_LED_EVENT       0x35u /* payload: u8 event, u16 duration_ms */
 #endif
+#ifndef VND_CMD_HOST_RX_ACK
+#define VND_CMD_HOST_RX_ACK     0x36u /* payload: u32 total host-received A/B frames */
+#endif
+#ifndef VND_CMD_HOST_RX_CLEAR
+#define VND_CMD_HOST_RX_CLEAR   0x37u /* payload: none, clear host receive heartbeat */
+#endif
 /* ДОБАВЛЕНО: управление окнами/частотой */
 #define VND_CMD_SET_WINDOWS    0x10u /* payload: start0,len0,start1,len1 (LE, u16) */
 #define VND_CMD_SET_BUF_RATE_FINE 0x1Cu /* payload: marker_hz (<=350) или buf_rate_hz (>350), fine 180-250 Hz */
@@ -161,6 +167,7 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #define VND_STREAM_MODE_AVG_ROI       2u
 #define VND_AVG_MAX_N                 64u  /* Максимум 64 буфера для усреднения (шаг 8: 8/16/24/32/40/48/56/64) */
 #define VND_AVG_OUT_Q                 4u
+#define VND_HOST_RX_ACK_TIMEOUT_MS    1500u
 
 /* Параметры */
 #define VND_DEFAULT_TEST_SAMPLES   80u
@@ -212,6 +219,10 @@ static volatile uint32_t next_seq_to_assign = 0;
 /* Добавлено: счётчик ошибок и отметка последнего TXCPLT */
 static volatile uint32_t vnd_error_counter = 0;      /* ++ при BUSY/REJECT */
 static volatile uint32_t vnd_last_txcplt_ms = 0;      /* время последнего успешного завершения передачи */
+static volatile uint32_t vnd_last_frame_txcplt_ms = 0; /* время последнего успешного завершения рабочего кадра A/B */
+static volatile uint32_t vnd_last_host_rx_ack_ms = 0;  /* время последнего подтверждения чтения потока от хоста */
+static volatile uint32_t vnd_host_rx_last_counter = 0; /* последний принятый счётчик host-received frames */
+static volatile uint8_t  vnd_host_rx_counter_valid = 0;
 /* Счётчик переданных семплов (оба канала суммарно) */
 static volatile uint64_t vnd_total_tx_samples = 0ULL;
 /* Новые маркеры состояния запуска потока */
@@ -2149,6 +2160,7 @@ void vnd_pipeline_stop_reset(int deep)
     /* Очистить мета-FIFO и счётчики */
     vnd_tx_meta_head = vnd_tx_meta_tail = 0; meta_push_total = meta_pop_total = meta_empty_events = meta_overflow_events = 0;
     stream_seq = 0; next_seq_to_assign = 0; dbg_produced_seq = 0; first_pair_done = 0;
+    vnd_last_frame_txcplt_ms = 0; vnd_last_host_rx_ack_ms = 0; vnd_host_rx_last_counter = 0; vnd_host_rx_counter_valid = 0;
     cur_samples_per_frame = 0; cur_expected_frame_size = 0; dbg_any_valid_frame = 0;
     vnd_reset_buffers();
     /* Остановить источник данных/ADC DMA при глубоком сбросе */
@@ -2422,6 +2434,11 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
         g_status.now_ms = now_ms;
         g_status.last_full0_ms = adc_last_full0_ms;
         g_status.last_full1_ms = adc_last_full1_ms;
+        if (streaming &&
+            (vnd_last_host_rx_ack_ms != 0u) &&
+            ((uint32_t)(now_ms - vnd_last_host_rx_ack_ms) <= VND_HOST_RX_ACK_TIMEOUT_MS)) {
+            g_status.flags_runtime |= VND_STFLAG_HOST_RX_ALIVE;
+        }
     } while(0);
      /* Хак: инкремент dbg_skipped_frames отображаем в sent0/sent1 дельтах, но здесь добавим только
         косвенную диагностику: если skips растут, host увидит разницу produced_seq - sent*. Дополнительно
@@ -4315,6 +4332,9 @@ void USBD_VND_TxCplt(void)
         stop_stat_inflight = 0;
         stop_request = 0;
         if(streaming){ streaming = 0; VND_LOG("STOP_STREAM after STAT"); }
+        vnd_last_host_rx_ack_ms = 0;
+        vnd_host_rx_last_counter = 0;
+        vnd_host_rx_counter_valid = 0;
         diag_mode_active = 0;
         vnd_reset_buffers();
         sending_channel = 0xFF; pending_B = 0; test_sent = 0; test_in_flight = 0; vnd_inflight = 0;
@@ -4344,6 +4364,9 @@ void USBD_VND_TxCplt(void)
     /* Первая успешная рабочая передача (A или B): зафиксировать метку, если ещё не установлена */
     if(vnd_stage_first_frame_ms == 0 && eff_is_frame && (eff_flags == 0x01 || eff_flags == 0x02)){
         vnd_stage_first_frame_ms = HAL_GetTick();
+    }
+    if(eff_is_frame && (eff_flags == 0x01 || eff_flags == 0x02)){
+        vnd_last_frame_txcplt_ms = now_txcplt;
     }
     /* НЕМЕДЛЕННАЯ ПОПЫТКА ОТПРАВКИ: если есть данные и EP свободен — отправить сразу.
        Это обеспечивает максимальную скорость USB без ожидания periodic task. */
@@ -4587,6 +4610,10 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 start_stat_planned = 0; start_stat_inflight = 0; start_ack_done = 1; /* ACK считаем выполненным логически */
                 pending_status = 0; status_ack_pending = 0; /* не пытаться слать STAT через IN */
                 vnd_error_counter = 0;
+                vnd_last_frame_txcplt_ms = 0;
+                vnd_last_host_rx_ack_ms = 0;
+                vnd_host_rx_last_counter = 0;
+                vnd_host_rx_counter_valid = 1u;
                 /* Синхронизация последовательностей пар */
                 stream_seq = 0; next_seq_to_assign = 0; dbg_produced_seq = 0;
                 first_pair_done = 0;
@@ -4762,6 +4789,10 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 /* КРИТИЧНО: полный сброс состояния для возможности повторного START */
                 vnd_pending_init = 0;
                 vnd_stream_active = 0;
+                vnd_last_frame_txcplt_ms = 0;
+                vnd_last_host_rx_ack_ms = 0;
+                vnd_host_rx_last_counter = 0;
+                vnd_host_rx_counter_valid = 0;
                 vnd_ep_busy = 0;
                 vnd_tx_ready = 1;
                 /* ADC/DMA продолжают работать в фоне, STOP только выключает передачу по USB */
@@ -4802,6 +4833,10 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 /* Сброс состояния передачи для разрешения следующего START */
                 vnd_pending_init = 0;
                 vnd_stream_active = 0;
+                vnd_last_frame_txcplt_ms = 0;
+                vnd_last_host_rx_ack_ms = 0;
+                vnd_host_rx_last_counter = 0;
+                vnd_host_rx_counter_valid = 0;
                 vnd_ep_busy = 0;
                 vnd_tx_ready = 1;
                 vnd_inflight = 0;
@@ -4886,6 +4921,30 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
         }
         break;
 
+        case VND_CMD_HOST_RX_ACK:
+        {
+            if (len >= 5u) {
+                uint32_t host_frames = (uint32_t)data[1] |
+                                       ((uint32_t)data[2] << 8) |
+                                       ((uint32_t)data[3] << 16) |
+                                       ((uint32_t)data[4] << 24);
+                if ((!vnd_host_rx_counter_valid) || (host_frames != vnd_host_rx_last_counter)) {
+                    vnd_last_host_rx_ack_ms = HAL_GetTick();
+                }
+                vnd_host_rx_last_counter = host_frames;
+                vnd_host_rx_counter_valid = 1u;
+            }
+        }
+        break;
+
+        case VND_CMD_HOST_RX_CLEAR:
+        {
+            vnd_last_host_rx_ack_ms = 0;
+            vnd_host_rx_last_counter = 0;
+            vnd_host_rx_counter_valid = 0;
+        }
+        break;
+
         case VND_CMD_TOGGLE_TIM2CH3_INV:
         {
             /* Переключаем полярность CH3 на лету (PA2 = TIM2_CH3). */
@@ -4926,6 +4985,12 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     led_event = WS2812_EVENT_CHANNEL_B;
                 } else if (event == VND_LED_EVENT_CHANNEL_A) {
                     led_event = WS2812_EVENT_CHANNEL_A;
+                } else if (event == VND_LED_EVENT_BOTH) {
+                    led_event = WS2812_EVENT_CHANNEL_BOTH;
+                } else if (event == VND_LED_EVENT_SPLIT_IN) {
+                    led_event = WS2812_EVENT_SPLIT_IN;
+                } else if (event == VND_LED_EVENT_SPLIT_OUT) {
+                    led_event = WS2812_EVENT_SPLIT_OUT;
                 }
 
                 if (duration_ms == 0u) {
@@ -5241,6 +5306,21 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
 uint32_t vnd_get_last_txcplt_ms(void)
 {
     return vnd_last_txcplt_ms;
+}
+
+uint32_t vnd_get_last_frame_txcplt_ms(void)
+{
+    return vnd_last_frame_txcplt_ms;
+}
+
+uint32_t vnd_get_last_host_rx_ack_ms(void)
+{
+    return vnd_last_host_rx_ack_ms;
+}
+
+uint32_t vnd_get_last_error(void)
+{
+    return vnd_last_error;
 }
 
 /* Общее число переданных байт (все передачи) */

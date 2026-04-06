@@ -152,6 +152,9 @@ static const ws2812_pattern_def_t s_pattern_defs[WS2812_PATTERN_COUNT] = {
   { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
   { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
   { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
+  { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
+  { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
+  { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
   { s_pattern_test_scope_rgb, (uint8_t)(sizeof(s_pattern_test_scope_rgb) / sizeof(s_pattern_test_scope_rgb[0])) },
   { s_pattern_test_blue, (uint8_t)(sizeof(s_pattern_test_blue) / sizeof(s_pattern_test_blue[0])) },
   { s_pattern_test_color_cycle, (uint8_t)(sizeof(s_pattern_test_color_cycle) / sizeof(s_pattern_test_color_cycle[0])) }
@@ -389,6 +392,9 @@ static uint16_t ws2812_pattern_step_frames(ws2812_pattern_t pattern)
       return WS2812_ALERT_STEP_FRAMES;
     case WS2812_PATTERN_EVENT_B_UP:
     case WS2812_PATTERN_EVENT_A_DOWN:
+    case WS2812_PATTERN_EVENT_BOTH_ALT:
+    case WS2812_PATTERN_EVENT_SPLIT_IN:
+    case WS2812_PATTERN_EVENT_SPLIT_OUT:
       return 40u;
     case WS2812_PATTERN_TEST_DRIP:
       return WS2812_DRIP_STEP_FRAMES;
@@ -429,6 +435,49 @@ static void ws2812_render_strip_moving_blocks(uint16_t anim_step, uint8_t toward
     if (phase < 4u) {
       ws2812_pixels_set_strip_led_rgb(pos, 255u, 0u, 0u);
     }
+  }
+}
+
+static void ws2812_render_strip_moving_blocks_alternating(uint16_t anim_step)
+{
+  uint16_t cycle_step = (uint16_t)(anim_step % 16u);
+  uint8_t towards_high = (cycle_step >= 8u) ? 1u : 0u;
+  uint16_t local_step = (uint16_t)(cycle_step % 8u);
+
+  ws2812_render_strip_moving_blocks(local_step, towards_high);
+}
+
+static void ws2812_render_strip_split_moving_blocks(uint16_t anim_step,
+                                                    uint8_t upper_towards_high,
+                                                    uint8_t lower_towards_high)
+{
+  const uint16_t half_len = (uint16_t)(WS2812_STRIP_LED_COUNT / 2u);
+  const uint16_t block_len = 4u;
+  uint16_t travel = 0u;
+  uint16_t step = 0u;
+  uint16_t lower_start = 0u;
+  uint16_t upper_start = 0u;
+  uint16_t i = 0u;
+
+  if (half_len < block_len) {
+    ws2812_pixels_fill_strip_rgb(255u, 0u, 0u);
+    return;
+  }
+
+  travel = (uint16_t)(half_len - block_len + 1u);
+  if (travel == 0u) {
+    return;
+  }
+
+  step = (uint16_t)(anim_step % travel);
+  lower_start = (lower_towards_high != 0u) ? step : (uint16_t)(travel - 1u - step);
+  upper_start = (upper_towards_high != 0u)
+    ? (uint16_t)(half_len + step)
+    : (uint16_t)(half_len + (travel - 1u - step));
+
+  for (i = 0u; i < block_len; ++i) {
+    ws2812_pixels_set_strip_led_rgb((uint16_t)(lower_start + i), 255u, 0u, 0u);
+    ws2812_pixels_set_strip_led_rgb((uint16_t)(upper_start + i), 255u, 0u, 0u);
   }
 }
 
@@ -483,30 +532,56 @@ static void ws2812_apply_onboard_status_overlay(void)
 {
   extern volatile uint8_t vnd_sync_mode_public;
   extern uint8_t ws2812_onboard_slave_blue_active(uint8_t dark_phase, uint32_t now_ms);
+  extern volatile uint8_t need_recovery;
+  extern volatile uint8_t need_hard_reset;
+  enum {
+    WS2812_STATUS_TX_ACTIVE_MS = 500u,
+    WS2812_STATUS_HOST_ACK_MS = 1500u,
+    WS2812_STATUS_GREEN_MAX = 96u,
+    WS2812_STATUS_RED_MAX = 96u,
+    WS2812_STATUS_BLUE_MAX = 96u,
+    WS2812_STATUS_BLUE_PULSE = 120u
+  };
   const uint32_t breathe_phase = s_pattern_frame_counter % 800u;
   uint32_t ramp = 0u;
   uint8_t breathe_level = 0u;
   uint8_t dark_phase = 0u;
   uint32_t now_ms = HAL_GetTick();
+  uint32_t last_frame_txcplt_ms = vnd_get_last_frame_txcplt_ms();
+  uint32_t last_host_rx_ack_ms = vnd_get_last_host_rx_ack_ms();
+  uint32_t last_error = vnd_get_last_error();
+  uint8_t red = 0u;
+  uint8_t green = 0u;
+  uint8_t blue = 0u;
 
   if (breathe_phase < 400u) {
     ramp = (breathe_phase * 255u) / 399u;
   } else {
     ramp = ((799u - breathe_phase) * 255u) / 399u;
   }
-  breathe_level = (uint8_t)((ramp * ramp * 96u) / 65025u);
+  breathe_level = (uint8_t)((ramp * ramp * WS2812_STATUS_GREEN_MAX) / 65025u);
 
   if (breathe_level <= 5u) {
     dark_phase = 1u;
   }
 
-  if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
-      (ws2812_onboard_slave_blue_active(dark_phase, now_ms) != 0u)) {
-    ws2812_pixels_set_onboard_rgb(0u, 0u, 72u);
-    return;
+  if ((need_recovery != 0u) || (need_hard_reset != 0u) || (last_error != 0u)) {
+    red = (uint8_t)((ramp * ramp * WS2812_STATUS_RED_MAX) / 65025u);
+  } else if ((last_frame_txcplt_ms != 0u) &&
+             (last_host_rx_ack_ms != 0u) &&
+             ((uint32_t)(now_ms - last_host_rx_ack_ms) <= WS2812_STATUS_HOST_ACK_MS) &&
+             ((uint32_t)(now_ms - last_frame_txcplt_ms) <= WS2812_STATUS_TX_ACTIVE_MS)) {
+    green = breathe_level;
+  } else {
+    blue = (uint8_t)((ramp * ramp * WS2812_STATUS_BLUE_MAX) / 65025u);
+    if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
+        (ws2812_onboard_slave_blue_active(dark_phase, now_ms) != 0u) &&
+        (blue < WS2812_STATUS_BLUE_PULSE)) {
+      blue = WS2812_STATUS_BLUE_PULSE;
+    }
   }
 
-  ws2812_pixels_set_onboard_rgb(0u, breathe_level, 0u);
+  ws2812_pixels_set_onboard_rgb(red, green, blue);
 }
 
 static void ws2812_render_pattern(ws2812_pattern_t pattern, uint16_t anim_step)
@@ -582,6 +657,18 @@ static void ws2812_render_pattern(ws2812_pattern_t pattern, uint16_t anim_step)
 
     case WS2812_PATTERN_EVENT_A_DOWN:
       ws2812_render_strip_moving_blocks(anim_step, 0u);
+      break;
+
+    case WS2812_PATTERN_EVENT_BOTH_ALT:
+      ws2812_render_strip_moving_blocks_alternating(anim_step);
+      break;
+
+    case WS2812_PATTERN_EVENT_SPLIT_IN:
+      ws2812_render_strip_split_moving_blocks(anim_step, 0u, 1u);
+      break;
+
+    case WS2812_PATTERN_EVENT_SPLIT_OUT:
+      ws2812_render_strip_split_moving_blocks(anim_step, 1u, 0u);
       break;
 
     case WS2812_PATTERN_TEST_DRIP:
@@ -759,6 +846,18 @@ void ws2812_spi_trigger_event(ws2812_event_t event, uint16_t duration_ms)
 
     case WS2812_EVENT_CHANNEL_A:
       pattern = WS2812_PATTERN_EVENT_A_DOWN;
+      break;
+
+    case WS2812_EVENT_CHANNEL_BOTH:
+      pattern = WS2812_PATTERN_EVENT_BOTH_ALT;
+      break;
+
+    case WS2812_EVENT_SPLIT_IN:
+      pattern = WS2812_PATTERN_EVENT_SPLIT_IN;
+      break;
+
+    case WS2812_EVENT_SPLIT_OUT:
+      pattern = WS2812_PATTERN_EVENT_SPLIT_OUT;
       break;
 
     case WS2812_EVENT_NONE:

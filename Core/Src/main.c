@@ -578,7 +578,7 @@ static volatile uint32_t uart1_led_off_tick = 0;          // таймаут вы
 static uint8_t uart1_rx_byte = 0;                         // одиночный байт приёмника
 static volatile uint32_t uart1_rx_count = 0;              // счётчик принятых байт
 static volatile uint32_t uart1_last_rx_ms = 0;            // время последнего приёма
-static volatile ws2812_pattern_t g_ws2812_test_pattern = WS2812_PATTERN_TEST_DRIP;
+static volatile ws2812_pattern_t g_ws2812_test_pattern = WS2812_PATTERN_OFF;
 // Кольцевой буфер для потенциального анализа команд (пока только индикация)
 #define UART1_RX_RING_SZ 128
 static uint8_t uart1_rx_ring[UART1_RX_RING_SZ];
@@ -746,12 +746,20 @@ uint8_t optic_tx_get_power(void)
 static const char *ws2812_test_pattern_name(ws2812_pattern_t pattern)
 {
   switch (pattern) {
+    case WS2812_PATTERN_OFF:
+      return "OFF";
     case WS2812_PATTERN_TEST_DRIP:
       return "DRIP";
     case WS2812_PATTERN_EVENT_B_UP:
       return "RED_UP";
     case WS2812_PATTERN_EVENT_A_DOWN:
       return "RED_DOWN";
+    case WS2812_PATTERN_EVENT_BOTH_ALT:
+      return "RED_DOWN_UP_ALT";
+    case WS2812_PATTERN_EVENT_SPLIT_IN:
+      return "RED_SPLIT_IN";
+    case WS2812_PATTERN_EVENT_SPLIT_OUT:
+      return "RED_SPLIT_OUT";
     case WS2812_PATTERN_TEST_SCOPE_RGB:
       return "RGB_SCOPE";
     case WS2812_PATTERN_TEST_BLUE:
@@ -766,9 +774,13 @@ static const char *ws2812_test_pattern_name(ws2812_pattern_t pattern)
 static void ws2812_test_button_service(uint32_t now_ms)
 {
   static const ws2812_pattern_t test_patterns[] = {
+    WS2812_PATTERN_OFF,
     WS2812_PATTERN_TEST_DRIP,
     WS2812_PATTERN_EVENT_B_UP,
     WS2812_PATTERN_EVENT_A_DOWN,
+    WS2812_PATTERN_EVENT_BOTH_ALT,
+    WS2812_PATTERN_EVENT_SPLIT_IN,
+    WS2812_PATTERN_EVENT_SPLIT_OUT,
     WS2812_PATTERN_TEST_SCOPE_RGB,
     WS2812_PATTERN_TEST_BLUE,
     WS2812_PATTERN_TEST_COLOR_CYCLE

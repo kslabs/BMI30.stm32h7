@@ -44,7 +44,7 @@ Core/Src/stm32h7xx_it.o: ../Core/Src/stm32h7xx_it.c ../Core/Inc/main.h \
  C://Users//Admin//STM32Cube//Repository//STM32Cube_FW_H7_V1.12.1//Drivers//STM32H7xx_HAL_Driver//Inc/stm32h7xx_hal_pcd_ex.h \
  ../Drivers/BSP/ST7735/lcd.h ../Core/Inc/adc_stream.h ../Core/Inc/main.h \
  ../Core/Inc/stm32h7xx_it.h ../Core/Inc/adc_stream.h \
- ../USB_DEVICE/App/usb_vendor_app.h
+ ../USB_DEVICE/App/usb_vendor_app.h ../Core/Inc/ws2812_spi.h
 ../Core/Inc/main.h:
 C://Users//Admin//STM32Cube//Repository//STM32Cube_FW_H7_V1.12.1//Drivers//STM32H7xx_HAL_Driver//Inc/stm32h7xx_hal.h:
 ../Core/Inc/stm32h7xx_hal_conf.h:
@@ -95,3 +95,4 @@ C://Users//Admin//STM32Cube//Repository//STM32Cube_FW_H7_V1.12.1//Drivers//STM32
 ../Core/Inc/stm32h7xx_it.h:
 ../Core/Inc/adc_stream.h:
 ../USB_DEVICE/App/usb_vendor_app.h:
+../Core/Inc/ws2812_spi.h:

@@ -74,6 +74,77 @@ python3 HostTools/vendor_stream_read.py \
 python3 HostTools/vendor_stream_read.py --ctrl-status --status-interval 0.5 ...
 ```
 
+## 4.1) Подтверждение чтения потока на хосте (обязательно для зелёного LED)
+
+Начиная с текущей прошивки, STM32 различает два состояния:
+
+- `синий`:
+  STM32 может передавать USB-кадры, но приложение на хосте не подтвердило, что реально читает поток
+- `зелёный`:
+  хост не только получает USB-трафик на уровне шины, но и приложение на RPI подтверждает, что успешно распарсило кадры
+
+Для этого хост должен использовать две новые Vendor команды:
+
+- `0x36 = VND_CMD_HOST_RX_ACK`
+  payload: `u32 little-endian`
+  это монотонный счётчик реально прочитанных и распарсенных рабочих кадров `A/B`
+- `0x37 = VND_CMD_HOST_RX_CLEAR`
+  payload: отсутствует
+  сбрасывает host heartbeat
+
+Важно:
+
+- `HOST_RX_ACK` надо слать только после того, как хост действительно прочитал и распарсил рабочие кадры `A/B`
+- не надо слать `HOST_RX_ACK` по таймеру без роста счётчика
+- `STAT`, `TEST`, таймауты, пустые poll/read и просто факт открытого USB устройства не считаются подтверждением чтения потока
+- STM32 считает host reading alive, если последний валидный `HOST_RX_ACK` был не старше примерно `1.5 s`
+
+Рекомендуемый алгоритм на RPI:
+
+- при подключении или перед `START_STREAM` отправить `0x37`
+- после каждого успешно распарсенного кадра `A` или `B` увеличить локальный `host_rx_frames_total`
+- раз в `100..250 ms`, если счётчик вырос, отправлять `0x36 + le32(host_rx_frames_total)`
+- при `STOP_STREAM`, disconnect, reconnect, exception и shutdown отправлять `0x37`
+
+Минимальный пример на Python для bulk OUT `0x03`:
+
+```python
+import struct
+
+VND_CMD_HOST_RX_ACK = 0x36
+VND_CMD_HOST_RX_CLEAR = 0x37
+
+host_rx_frames_total = 0
+last_ack_sent = 0
+last_ack_count = 0
+
+def send_host_rx_clear(dev, ep_out):
+    dev.write(ep_out, bytes([VND_CMD_HOST_RX_CLEAR]), timeout=1000)
+
+def send_host_rx_ack(dev, ep_out, total_frames):
+    payload = bytes([VND_CMD_HOST_RX_ACK]) + struct.pack('<I', total_frames)
+    dev.write(ep_out, payload, timeout=1000)
+
+# перед START_STREAM / после reconnect:
+send_host_rx_clear(dev, 0x03)
+
+# после каждого успешно распарсенного A/B кадра:
+host_rx_frames_total += 1
+
+# периодически, только если count вырос:
+if host_rx_frames_total != last_ack_count:
+    send_host_rx_ack(dev, 0x03, host_rx_frames_total)
+    last_ack_count = host_rx_frames_total
+
+# при STOP / shutdown / exception:
+send_host_rx_clear(dev, 0x03)
+```
+
+Практическое правило:
+
+- если ваш RPI-скрипт реально читает и парсит поток, но не шлёт `0x36`, LED на STM32 будет `синим`, а не `зелёным`
+- это теперь ожидаемое поведение
+
 ## 5) DIAG режим (максимальный FPS, тестовые кадры)
 
 DIAG отправляет синтетические кадры, паддированные до 512 Б (HS MPS), чтобы убрать лишние накладные расходы. STAT по Bulk в DIAG блокируется, порядок A→B сохраняется.
@@ -263,6 +334,9 @@ byte3 = duration_ms high byte
 
 - `0x01` = `CHANNEL_B` = красный паттерн вверх (`RED_UP`)
 - `0x02` = `CHANNEL_A` = красный паттерн вниз (`RED_DOWN`)
+- `0x03` = `BOTH` = попеременное движение вниз/вверх четырёх красных сегментов (`RED_DOWN_UP_ALT`)
+- `0x04` = `SPLIT_IN` = верхняя половина вниз, нижняя вверх (`RED_SPLIT_IN`, движение к центру)
+- `0x05` = `SPLIT_OUT` = верхняя половина вверх, нижняя вниз (`RED_SPLIT_OUT`, движение от центра)
 
 Если `duration_ms = 0`, прошивка автоматически использует `1600 ms`.
 
@@ -278,6 +352,15 @@ python3 HostTools/send_led_event.py --event B --duration-ms 1600
 
 # Красный паттерн вниз
 python3 HostTools/send_led_event.py --event A --duration-ms 1600
+
+# Одновременное срабатывание двух каналов: попеременно вниз/вверх
+python3 HostTools/send_led_event.py --event BOTH --duration-ms 1600
+
+# Движение к центру: верхняя половина вниз, нижняя вверх
+python3 HostTools/send_led_event.py --event SPLIT_IN --duration-ms 1600
+
+# Движение от центра: верхняя половина вверх, нижняя вниз
+python3 HostTools/send_led_event.py --event SPLIT_OUT --duration-ms 1600
 
 # Демонстрация: вверх, затем вниз
 python3 HostTools/send_led_event.py --event demo --duration-ms 1600 --gap-ms 500
@@ -303,6 +386,9 @@ INTF, EP_OUT = 2, 0x03
 VND_CMD_LED_EVENT = 0x35
 VND_LED_EVENT_CHANNEL_B = 0x01   # RED_UP
 VND_LED_EVENT_CHANNEL_A = 0x02   # RED_DOWN
+VND_LED_EVENT_BOTH = 0x03        # RED_DOWN_UP_ALT
+VND_LED_EVENT_SPLIT_IN = 0x04    # RED_SPLIT_IN
+VND_LED_EVENT_SPLIT_OUT = 0x05   # RED_SPLIT_OUT
 
 dev = usb.core.find(idVendor=VID, idProduct=PID)
 if dev is None:
@@ -335,10 +421,43 @@ print("Sent RED_UP for 1600 ms")
 PY
 ```
 
+Пример именно для события "оба канала одновременно":
+
+```bash
+python3 - <<'PY'
+import struct
+import usb.core
+
+VID, PID = 0xCAFE, 0x4001
+INTF, EP_OUT = 2, 0x03
+VND_CMD_LED_EVENT = 0x35
+VND_LED_EVENT_BOTH = 0x03
+
+dev = usb.core.find(idVendor=VID, idProduct=PID)
+if dev is None:
+    raise SystemExit("Device not found")
+
+try:
+    dev.set_configuration()
+except Exception:
+    pass
+
+try:
+    dev.set_interface_altsetting(interface=INTF, alternate_setting=1)
+except Exception:
+    pass
+
+payload = struct.pack("<BBH", VND_CMD_LED_EVENT, VND_LED_EVENT_BOTH, 1600)
+dev.write(EP_OUT, payload, timeout=1000)
+print("Sent RED_DOWN_UP_ALT for 1600 ms")
+PY
+```
+
 ### Как это сочетается с локальной кнопкой `PC13`
 
 - `PC13` переключает постоянный фон тестовых паттернов.
-- Команда `0x35` временно накладывает событие `RED_UP` или `RED_DOWN`.
+- Команда `0x35` временно накладывает событие `RED_UP`, `RED_DOWN` или `RED_DOWN_UP_ALT`.
+- Команда `0x35` временно накладывает событие `RED_UP`, `RED_DOWN`, `RED_DOWN_UP_ALT`, `RED_SPLIT_IN` или `RED_SPLIT_OUT`.
 - После окончания таймера устройство возвращается к текущему локально выбранному паттерну.
 
 ### Актуальный список локальных тестовых паттернов на устройстве

@@ -342,8 +342,18 @@ static inline void adc_marker_set_level_b(uint8_t level_high)
     ADC_MARKER_PORT_C->BSRR = level_high ? (uint32_t)ADC_MARKER_PIN_C : ((uint32_t)ADC_MARKER_PIN_C << 16);
 }
 
+static inline uint8_t adc_marker_output_allowed(void)
+{
+    /* Потерянное после отката поведение:
+       маркер на PA2/PC7 должен жить только при активном стриме и разрешённом TX. */
+    return (uint8_t)((vnd_is_streaming() && vnd_is_tx_enabled()) ? 1u : 0u);
+}
+
 static inline void adc_marker_set_level(uint8_t level_high)
 {
+    if (!adc_marker_output_allowed()) {
+        level_high = 0u;
+    }
     /* Текущий режим: зеркалим общий бит на оба канала. */
     adc_marker_set_level_a(level_high);
     adc_marker_set_level_b(level_high);

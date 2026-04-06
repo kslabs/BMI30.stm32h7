@@ -23,6 +23,8 @@ VND_CMD_SET_CHMODE        = 0x19
 VND_CMD_SET_STREAM_MODE   = 0x1A
 VND_CMD_SET_TX_ENABLE     = 0x33
 VND_CMD_SET_OPTIC_POWER   = 0x34
+VND_CMD_HOST_RX_ACK       = 0x36
+VND_CMD_HOST_RX_CLEAR     = 0x37
 
 MAGIC = 0xA55A
 
@@ -171,6 +173,7 @@ def main():
     ap.add_argument('--win1-start', type=int, default=280)
     ap.add_argument('--win1-len', type=int, default=200)
     ap.add_argument('--status-interval', type=float, default=0.5, help='Request GET_STATUS every N seconds (0=off)')
+    ap.add_argument('--rx-ack-interval', type=float, default=0.25, help='Send HOST_RX_ACK every N seconds when new A/B frames were parsed (0=off)')
     ap.add_argument('--ctrl-status', action='store_true', help='Use control transfer for GET_STATUS (works even mid-pair)')
     ap.add_argument('--status-print', action='store_true', help='Print periodic STAT lines even with --quiet')
     ap.add_argument('--print-errors', action='store_true', help='Print USB read/control errors even with --quiet')
@@ -261,6 +264,10 @@ def main():
 
     # Stop any ongoing stream first, then flush IN to avoid stale buffered frames.
     try:
+        send_cmd(dev, ep_out, bytes([VND_CMD_HOST_RX_CLEAR]))
+    except Exception:
+        pass
+    try:
         send_cmd(dev, ep_out, bytes([VND_CMD_STOP_STREAM]))
         time.sleep(0.2)
     except Exception:
@@ -285,6 +292,8 @@ def main():
     got_a = got_b = tests = 0
     expect_b = False
     last_status = 0.0
+    last_rx_ack = 0.0
+    last_rx_ack_frames = 0
     last_seq = None
     first_seq = None
     first_pair_time = None
@@ -562,6 +571,18 @@ def main():
                         print(f"B seq={fr['seq']} ns={fr['ns']} len={fr['len']}")
                 progressed = True
 
+            total_host_frames = got_a + got_b
+            if (args.rx_ack_interval > 0 and
+                    total_host_frames > last_rx_ack_frames and
+                    (now - last_rx_ack) >= args.rx_ack_interval):
+                try:
+                    send_cmd(dev, ep_out, bytes([VND_CMD_HOST_RX_ACK]) + le32(total_host_frames))
+                    last_rx_ack = now
+                    last_rx_ack_frames = total_host_frames
+                except usb.core.USBError as e:
+                    if error_verbose:
+                        print("HOST_RX_ACK err:", e)
+
         dt = time.time() - t0
     # FPS by completed pairs (seq increments)
         fps = 0.0
@@ -586,6 +607,10 @@ def main():
             f"wrong_ch={wrong_channel} pre_sync_b={pre_sync_b} pre_sync_stat={pre_sync_stat}"
         )
     finally:
+        try:
+            send_cmd(dev, ep_out, bytes([VND_CMD_HOST_RX_CLEAR]))
+        except Exception:
+            pass
         try:
             send_cmd(dev, ep_out, bytes([VND_CMD_STOP_STREAM]))
         except Exception:

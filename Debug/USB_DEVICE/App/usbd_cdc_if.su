@@ -3,6 +3,6 @@ C:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/CMSIS/Includ
 ../USB_DEVICE/App/usbd_cdc_if.c:176:15:CDC_DeInit_HS	4	static
 ../USB_DEVICE/App/usbd_cdc_if.c:190:15:CDC_Control_HS	16	static
 ../USB_DEVICE/App/usbd_cdc_if.c:271:15:CDC_Receive_HS	24	static
-../USB_DEVICE/App/usbd_cdc_if.c:380:9:CDC_Transmit_HS	24	static
-../USB_DEVICE/App/usbd_cdc_if.c:406:15:CDC_TransmitCplt_HS	32	static
-../USB_DEVICE/App/usbd_cdc_if.c:420:6:CDC_LED_Process	8	static
+../USB_DEVICE/App/usbd_cdc_if.c:382:9:CDC_Transmit_HS	24	static
+../USB_DEVICE/App/usbd_cdc_if.c:408:15:CDC_TransmitCplt_HS	32	static
+../USB_DEVICE/App/usbd_cdc_if.c:422:6:CDC_LED_Process	8	static

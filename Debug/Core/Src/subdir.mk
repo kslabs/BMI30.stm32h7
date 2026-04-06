@@ -23,6 +23,7 @@ C_SRCS += \
 ../Core/Src/usb_stream.c \
 ../Core/Src/usb_tinyusb_bridge.c \
 ../Core/Src/usbd_cdc.c \
+../Core/Src/ws2812_spi.c \
 ../Core/Src/vnd_testgen.c
 
 OBJS += \
@@ -44,6 +45,7 @@ OBJS += \
 ./Core/Src/usb_stream.o \
 ./Core/Src/usb_tinyusb_bridge.o \
 ./Core/Src/usbd_cdc.o \
+./Core/Src/ws2812_spi.o \
 ./Core/Src/vnd_testgen.o
 
 C_DEPS += \
@@ -65,6 +67,7 @@ C_DEPS += \
 ./Core/Src/usb_stream.d \
 ./Core/Src/usb_tinyusb_bridge.d \
 ./Core/Src/usbd_cdc.d \
+./Core/Src/ws2812_spi.d \
 ./Core/Src/vnd_testgen.d
 
 
@@ -76,7 +79,7 @@ clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
 	-$(RM) ./Core/Src/adc_stream.cyclo ./Core/Src/adc_stream.d ./Core/Src/adc_stream.o ./Core/Src/adc_stream.su ./Core/Src/main.cyclo ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/spi2_fix.cyclo ./Core/Src/spi2_fix.d ./Core/Src/spi2_fix.o ./Core/Src/spi2_fix.su ./Core/Src/stm32h7xx_hal_msp.cyclo ./Core/Src/stm32h7xx_hal_msp.d ./Core/Src/stm32h7xx_hal_msp.o ./Core/Src/stm32h7xx_hal_msp.su ./Core/Src/stm32h7xx_it.cyclo ./Core/Src/stm32h7xx_it.d ./Core/Src/stm32h7xx_it.o ./Core/Src/stm32h7xx_it.su ./Core/Src/syscalls.cyclo ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.cyclo ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32h7xx.cyclo ./Core/Src/system_stm32h7xx.d ./Core/Src/system_stm32h7xx.o ./Core/Src/system_stm32h7xx.su ./Core/Src/tinyusb_all.cyclo ./Core/Src/tinyusb_all.d ./Core/Src/tinyusb_all.o ./Core/Src/tinyusb_all.su ./Core/Src/tinyusb_stubs.cyclo ./Core/Src/tinyusb_stubs.d ./Core/Src/tinyusb_stubs.o ./Core/Src/tinyusb_stubs.su ./Core/Src/usb_cdc_ll_st.cyclo ./Core/Src/usb_cdc_ll_st.d ./Core/Src/usb_cdc_ll_st.o ./Core/Src/usb_cdc_ll_st.su ./Core/Src/usb_cdc_proto.cyclo ./Core/Src/usb_cdc_proto.d ./Core/Src/usb_cdc_proto.o ./Core/Src/usb_cdc_proto.su ./Core/Src/usb_descriptors.cyclo ./Core/Src/usb_descriptors.d ./Core/Src/usb_descriptors.o ./Core/Src/usb_descriptors.su ./Core/Src/usb_descriptors_tusb.cyclo ./Core/Src/usb_descriptors_tusb.d ./Core/Src/usb_descriptors_tusb.o ./Core/Src/usb_descriptors_tusb.su ./Core/Src/usb_stream.cyclo ./Core/Src/usb_stream.d ./Core/Src/usb_stream.o ./Core/Src/usb_stream.su ./Core/Src/usb_tinyusb_bridge.cyclo ./Core/Src/usb_tinyusb_bridge.d ./Core/Src/usb_tinyusb_bridge.o ./Core/Src/usb_tinyusb_bridge.su ./Core/Src/usbd_cdc.cyclo ./Core/Src/usbd_cdc.d ./Core/Src/usbd_cdc.o ./Core/Src/usbd_cdc.su
-	-$(RM) ./Core/Src/vnd_testgen.cyclo ./Core/Src/vnd_testgen.d ./Core/Src/vnd_testgen.o ./Core/Src/vnd_testgen.su
+	-$(RM) ./Core/Src/vnd_testgen.cyclo ./Core/Src/vnd_testgen.d ./Core/Src/vnd_testgen.o ./Core/Src/vnd_testgen.su ./Core/Src/ws2812_spi.cyclo ./Core/Src/ws2812_spi.d ./Core/Src/ws2812_spi.o ./Core/Src/ws2812_spi.su
 
 .PHONY: clean-Core-2f-Src
 

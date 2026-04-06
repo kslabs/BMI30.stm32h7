@@ -27,6 +27,7 @@
 #include "lcd.h" // добавлено для вывода на экран при HardFault
 #include "adc_stream.h"
 #include "usb_vendor_app.h"
+#include "ws2812_spi.h"
 extern volatile uint32_t systick_heartbeat; // добавлено: глобальный счётчик из main.c
 /* Прототип низкоуровневого вывода UART1 из main.c */
 extern void uart1_raw_putc(char c);
@@ -82,7 +83,9 @@ void HardFault_Capture(uint32_t *stack_addr);
 extern PCD_HandleTypeDef hpcd_USB_OTG_HS;
 extern DMA_HandleTypeDef hdma_adc1;
 extern DMA_HandleTypeDef hdma_adc2;
+extern DMA_HandleTypeDef hdma_spi3_tx;
 extern DAC_HandleTypeDef hdac1;
+extern SPI_HandleTypeDef hspi3;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim6;
 extern TIM_HandleTypeDef htim15;
@@ -285,6 +288,34 @@ void DMA1_Stream1_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Stream1_IRQn 1 */
 
   /* USER CODE END DMA1_Stream1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA1 stream7 global interrupt.
+  */
+void DMA1_Stream7_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream7_IRQn 0 */
+  ws2812_spi_dma_irq_trace();
+  /* USER CODE END DMA1_Stream7_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_spi3_tx);
+  /* USER CODE BEGIN DMA1_Stream7_IRQn 1 */
+
+  /* USER CODE END DMA1_Stream7_IRQn 1 */
+}
+
+/**
+  * @brief This function handles SPI3 global interrupt.
+  */
+void SPI3_IRQHandler(void)
+{
+  /* USER CODE BEGIN SPI3_IRQn 0 */
+  ws2812_spi_spi_irq_trace();
+  /* USER CODE END SPI3_IRQn 0 */
+  HAL_SPI_IRQHandler(&hspi3);
+  /* USER CODE BEGIN SPI3_IRQn 1 */
+
+  /* USER CODE END SPI3_IRQn 1 */
 }
 
 /**

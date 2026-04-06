@@ -13,6 +13,7 @@ OUT_EP = 0x03
 IN_EP = 0x83
 
 CMD_GET_STATUS = 0x30
+VND_STFLAG_TX_ENABLED = 0x0010
 
 def main():
     dev = usb.core.find(idVendor=VID, idProduct=PID)
@@ -98,6 +99,7 @@ def main():
         print(f"DMA done A={dma_done0}, B={dma_done1}")
         print(f"frame_wr_seq: {frame_wr_seq}")
         print(f"flags_runtime: 0x{flags_runtime:04X}, flags2: 0x{flags2:04X}")
+        print(f"tx_enabled: {'yes' if (flags_runtime & VND_STFLAG_TX_ENABLED) else 'no'}")
         print(f"sending_ch: {sending_ch} (0=A,1=B,255=none)")
         print(f"last_tx_len: {last_tx_len}, cur_stream_seq: {cur_stream_seq}")
         

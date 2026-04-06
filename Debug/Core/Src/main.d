@@ -55,7 +55,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Core/Inc/usb_cdc_proto.h ../USB_DEVICE/App/usbd_cdc_if.h \
  C:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h \
  C:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
- ../Core/Inc/adc_stream.h
+ ../Core/Inc/adc_stream.h ../Core/Inc/ws2812_spi.h
 ../Core/Inc/main.h:
 C://Users//Admin//STM32Cube//Repository//STM32Cube_FW_H7_V1.12.1//Drivers//STM32H7xx_HAL_Driver//Inc/stm32h7xx_hal.h:
 ../Core/Inc/stm32h7xx_hal_conf.h:
@@ -119,3 +119,4 @@ C:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32
 C:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h:
 C:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h:
 ../Core/Inc/adc_stream.h:
+../Core/Inc/ws2812_spi.h:
