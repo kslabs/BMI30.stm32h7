@@ -2,7 +2,9 @@
 # Ensures build time is always current
 
 param(
-    [switch]$CleanBuild = $false
+    [switch]$CleanBuild = $false,
+    [switch]$NoFlash = $false,
+    [string]$StlinkSn = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -141,33 +143,47 @@ if (Test-Path $ElfFile) {
 }
 
 # Step 4: Flash
-Write-Host "[4/4] Flashing via STM32CubeProgrammer..." -ForegroundColor Yellow
-if (!(Test-Path $CubeProgrammer)) {
-    Write-Host "  [ERROR] STM32CubeProgrammer not found at: $CubeProgrammer" -ForegroundColor Red
-    exit 1
-}
-
-$oldEap = $ErrorActionPreference
-$ErrorActionPreference = "Continue"  # CubeCLI тоже может писать в stderr без фатального кода
-$flashOutput = & $CubeProgrammer -c port=SWD freq=4000 -w $ElfFile -v -rst 2>&1 | Out-String
-$flashExit = $LASTEXITCODE
-$ErrorActionPreference = $oldEap
-
-if ($flashOutput -match "Download verified successfully") {
-    Write-Host "  [OK] Flash verified successfully" -ForegroundColor Green
-    Write-Host "  [OK] MCU reset performed" -ForegroundColor Green
-} elseif ($flashExit -ne 0) {
-    Write-Host "  [ERROR] Flash failed (exit code $flashExit)!" -ForegroundColor Red
-    Write-Host "========== FULL FLASH OUTPUT ==========" -ForegroundColor Red
-    Write-Host $flashOutput -ForegroundColor Red
-    Write-Host "=======================================" -ForegroundColor Red
-    exit $flashExit
+if ($NoFlash) {
+    Write-Host "[4/4] Flash skipped (-NoFlash)" -ForegroundColor Yellow
 } else {
-    Write-Host "  [WARN] Flash completed but verification message not found" -ForegroundColor Yellow
-    Write-Host $flashOutput -ForegroundColor Yellow
+    Write-Host "[4/4] Flashing via STM32CubeProgrammer..." -ForegroundColor Yellow
+    if (!(Test-Path $CubeProgrammer)) {
+        Write-Host "  [ERROR] STM32CubeProgrammer not found at: $CubeProgrammer" -ForegroundColor Red
+        exit 1
+    }
+
+    $connectArgs = @("port=SWD", "freq=4000")
+    if ($StlinkSn) {
+        $connectArgs += "sn=$StlinkSn"
+        Write-Host "  [OK] Target ST-LINK: $StlinkSn" -ForegroundColor Cyan
+    }
+
+    $oldEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"  # CubeCLI тоже может писать в stderr без фатального кода
+    $flashOutput = & $CubeProgrammer -c @connectArgs -w $ElfFile -v -rst 2>&1 | Out-String
+    $flashExit = $LASTEXITCODE
+    $ErrorActionPreference = $oldEap
+
+    if ($flashOutput -match "Download verified successfully") {
+        Write-Host "  [OK] Flash verified successfully" -ForegroundColor Green
+        Write-Host "  [OK] MCU reset performed" -ForegroundColor Green
+    } elseif ($flashExit -ne 0) {
+        Write-Host "  [ERROR] Flash failed (exit code $flashExit)!" -ForegroundColor Red
+        Write-Host "========== FULL FLASH OUTPUT ==========" -ForegroundColor Red
+        Write-Host $flashOutput -ForegroundColor Red
+        Write-Host "=======================================" -ForegroundColor Red
+        exit $flashExit
+    } else {
+        Write-Host "  [WARN] Flash completed but verification message not found" -ForegroundColor Yellow
+        Write-Host $flashOutput -ForegroundColor Yellow
+    }
 }
 
 Write-Host "" 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "SUCCESS: Build $($elfInfo.LastWriteTime.ToString('HH:mm:ss')) flashed!" -ForegroundColor Green
+if ($NoFlash) {
+    Write-Host "SUCCESS: Build $($elfInfo.LastWriteTime.ToString('HH:mm:ss')) completed!" -ForegroundColor Green
+} else {
+    Write-Host "SUCCESS: Build $($elfInfo.LastWriteTime.ToString('HH:mm:ss')) flashed!" -ForegroundColor Green
+}
 Write-Host "========================================" -ForegroundColor Cyan

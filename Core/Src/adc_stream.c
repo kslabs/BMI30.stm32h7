@@ -405,6 +405,7 @@ extern volatile uint32_t sync_tim5_buffer_phase_seq;
 static inline void adc_mark_ready_and_publish(uint8_t ch_bit)
 {
     extern TIM_HandleTypeDef htim5;
+    extern volatile uint32_t adc_stream_total_buffer_count;
     /* Попробуем публиковать подряд готовые пары (в правильном порядке) */
     while (s_pair_ready_mask[s_pair_ready_idx] == READY_MASK_FULL) {
         /* Очередная пара полностью готова */
@@ -423,6 +424,10 @@ static inline void adc_mark_ready_and_publish(uint8_t ch_bit)
         sync_tim5_cnt_at_buffer = htim5.Instance->CNT;
         sync_tim5_buffer_phase_seq++;
         adc_marker_pa3_toggle();
+        /* Жёсткая привязка sync к моменту смены маркера: запускаем сразу после toggle,
+           а не позже из общего DMA callback, где набегает программный джиттер. */
+        adc_stream_total_buffer_count++;
+        rs485_sync_on_buffer_complete(adc_parity_from_pa3());
         uint32_t backlog = frame_wr_seq - frame_rd_seq;
         if (backlog > frame_backlog_max) frame_backlog_max = backlog;
         if (backlog > FIFO_FRAMES) {
@@ -568,7 +573,8 @@ static int32_t g_arr_fine_offset = 0;  // По умолчанию БЕЗ кор�
 static uint32_t g_arr_fine_period = 1000;  // 1 раз на 1000 буферов (~5 сек) → очень медленная коррекция
 
 // Флаг: отключить автоматическое переопределение ARR (для ручного тестирования)
-volatile uint8_t g_arr_manual_mode = 1;  // ВКЛЮЧЕНО: не переписывать ARR в apply_timing
+// По умолчанию ARR задаётся только из профиля в adc_stream_apply_timing().
+volatile uint8_t g_arr_manual_mode = 0;
 
 // Автоматическая подстройка частоты по sync_buffers_between_edges (0=откл, 1=вкл)
 static uint8_t g_auto_freq_sync_enable = 1;  // ВКЛЮЧЕНО: фазовая синхронизация
@@ -624,40 +630,8 @@ void adc_stream_setup_tim15_arr_dma(void)
 /* Запуск однократной коррекции: DMA передаст [ARR+1, ARR-1] через 2 периода TIM15 */
 void adc_stream_push_tim15_phase(int32_t correction_ticks)
 {
-    extern TIM_HandleTypeDef htim15;
-
-    /* Коррекция без DMA и без новых прерываний:
-       1 период ARR +/- correction_ticks, затем возврат ARR.
-       Используем флаги TIM_FLAG_UPDATE для точной синхронизации. */
-    uint32_t arr = htim15.Instance->ARR;
-
-    /* Очищаем старый флаг */
-    __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
-
-    /* 1. Задаем модифицированный ARR (Preload). Применится при следующем UEV. */
-    // Безопасное приведение и проверка переполнения не помешают, но предполагаем разумные значения
-    htim15.Instance->ARR = (uint32_t)((int32_t)arr + correction_ticks);
-    
-    /* Ждем окончания ТЕКУЩЕГО периода (UEV).
-       В этот момент Shadow ARR станет ARR+corr. Начнется измененный период. */
-    for (volatile uint32_t wait = 0; wait < 100000u; wait++) {
-        if (__HAL_TIM_GET_FLAG(&htim15, TIM_FLAG_UPDATE)) {
-            __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
-            break;
-        }
-    }
-
-    /* 2. Задаем исходный ARR (Preload). Применится при следующем UEV. */
-    htim15.Instance->ARR = arr;
-
-    /* Ждем окончания ИЗМЕНЕННОГО периода (UEV).
-       В этот момент Shadow ARR станет ARR. Фаза сместилась на correction_ticks. */
-    for (volatile uint32_t wait = 0; wait < 100000u; wait++) {
-        if (__HAL_TIM_GET_FLAG(&htim15, TIM_FLAG_UPDATE)) {
-            __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
-            break;
-        }
-    }
+    (void)correction_ticks;
+    /* Runtime phase push through TIM15->ARR is intentionally disabled. */
 }
 
 // Legacy wrapper used by old code
@@ -896,10 +870,7 @@ static void adc_stream_apply_timing(void)
         return;
     }
 
-    /* Применяем тонкую подстройку ARR (только если включен ручной режим) */
-    if (!g_auto_freq_sync_enable && g_arr_fine_offset != 0) {
-        tim15_arr = (uint32_t)((int32_t)tim15_arr + g_arr_fine_offset);
-    }
+    /* Runtime-смещение TIM15 ARR отключено: базовая частота только из профиля. */
 
     __HAL_TIM_SET_AUTORELOAD(&htim15, tim15_arr);
     __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, (tim15_arr + 1u) / 2u); /* 50% */
@@ -2102,38 +2073,12 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
         
 
         
-        /* Если автосинхронизация выключена - используем периодическое применение offset */
-        if (!g_auto_freq_sync_enable && g_arr_fine_period > 0 && g_arr_fine_offset != 0) {
-            static uint32_t fine_buf_count = 0;
-            extern TIM_HandleTypeDef htim15;
-            
-            fine_buf_count++;
-            
-            if ((fine_buf_count % g_arr_fine_period) == 0) {
-                // Применяем offset на этот буфер
-                uint32_t current_arr = htim15.Instance->ARR;
-                int32_t new_arr = (int32_t)current_arr + g_arr_fine_offset;
-                if (new_arr > 0) {
-                    htim15.Instance->ARR = (uint32_t)new_arr;
-                }
-            } else if ((fine_buf_count % g_arr_fine_period) == 1) {
-                // Возвращаем обратно на следующем буфере
-                uint32_t current_arr = htim15.Instance->ARR;
-                int32_t new_arr = (int32_t)current_arr - g_arr_fine_offset;
-                if (new_arr > 0) {
-                    htim15.Instance->ARR = (uint32_t)new_arr;
-                }
-            }
-        }
+        /* Runtime-подстройка TIM15->ARR отключена: базовая частота только из профиля. */
 
         /* Частотная синхронизация: корректируем TIM15 по TIM5 */
             extern TIM_HandleTypeDef htim5;
             extern TIM_HandleTypeDef htim15;
             //extern volatile uint8_t vnd_sync_mode_public;
-            
-            /* ВСЕГДА инкрементируем счетчик буферов (для статистики) */
-            adc_stream_total_buffer_count++;
-            rs485_sync_on_buffer_complete();
             
             /* Интегральный регулятор фазы (фильтр джиттера) */
             // NON-BLOCKING IMPLEMENTATION
@@ -2270,217 +2215,44 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
             if(g_auto_freq_sync_enable && vnd_sync_mode_public == 0) vnd_sync_mode_public = 1;
             if(!g_auto_freq_sync_enable && vnd_sync_mode_public == 1) vnd_sync_mode_public = 0;
             
-            if (g_auto_freq_sync_enable) {
+            {
                 static int32_t phase_integrator = 0;
-                static int32_t phase_abs_integrator = 0; // Для детекции неправильного захвата
                 static uint32_t samples_collected = 0;
-                static int32_t arr_restore_val = 0; 
-                static int32_t adapt_strength = 1;      // Adaptive correction step
-                static int8_t  last_correction_dir = 0; // Direction of last correction
-                static uint8_t s_parity_offset = 0;     // Сдвиг интерпретации чётности для разрешения неоднозначности 0/180
-                
-                // Reset logic if request pending
-                if(sync_loop_reset_req) {
+                enum { SYNC_CHECK_PERIOD_BUFFERS = 8 };
+
+                if (sync_loop_reset_req || !g_auto_freq_sync_enable) {
                     phase_integrator = 0;
-                    phase_abs_integrator = 0;
                     samples_collected = 0;
-                    arr_restore_val = 0;
-                    adapt_strength = 1;
-                    last_correction_dir = 0;
-                    s_parity_offset = 0;
-                    adapt_strength = 1;
-                    last_correction_dir = 0;
-                    g_tim5_avg_phase = 0; // Clear display
+                    g_tim5_avg_phase = 0;
                     sync_loop_reset_req = 0;
                 }
 
-                // Detect massive jump
-                if (phase_integrator > 20000000 || phase_integrator < -20000000) {
-                     phase_integrator = 0;
-                }
-                
-                // 1. Check for Pending Restore (from previous cycle)
-                if (arr_restore_val != 0) {
-                     // We applied a correction in the previous cycle.
-                     // The modified ARR is currently loaded in Shadow (or active).
-                     // We must now restore the original ARR (Base) for the next-next period.
-                     extern TIM_HandleTypeDef htim15;
-                     htim15.Instance->ARR = (uint32_t)arr_restore_val;
-                     arr_restore_val = 0;
-                     // Skip measurement this cycle while system settles
-                } 
-                else {
-                    // 2. Normal Measurement & Correction Logic
+                if (g_auto_freq_sync_enable) {
                     extern volatile uint32_t sync_tim5_period_ticks;
                     uint32_t period = sync_tim5_period_ticks;
-                    if (period < 1000000u) period = 1375000u;
-                    
                     uint32_t cnt = htim5.Instance->CNT;
                     int32_t current_phase = 0;
-                    
-                    // Normalize [-period/2 ... period/2]
-                    if (cnt <= (period / 2)) {
+
+                    if (period < 1000000u) period = 1375000u;
+
+                    if (cnt <= (period / 2u)) {
                         current_phase = (int32_t)cnt;
                     } else {
                         current_phase = (int32_t)cnt - (int32_t)period;
                     }
 
-                    // TIM15 is 90 deg leading (early) -> We want to DELAY it.
-                    // Delay means we target a positive phase (Lag).
-                    // Target: Phase 0 relative to PD5 edge.
-                    // If current_phase is positive (Lag), we are late -> Decrease ARR to catch up.
-                    // If current_phase is negative (Lead), we are early -> Increase ARR to slow down.
-                    // Update 06.02.2026: FORCE IN-PHASE (NEGATIVE ZONE).
-                    // Logic:
-                    // 1. Target = -90 deg (matches 270 deg / 0.75 Period).
-                    // 2. If Current > 0 (Positive Zone 0..180): We are Anti-Phase.
-                    //    FORCE push Negative (Decrease ARR) until we slide into Negative Zone.
-                    // 3. If Current <= 0 (Negative Zone -180..0): We are In-Phase.
-                    //    Normal PID lock to -90 deg.
-                    
-                    uint8_t current_buffer_parity = (uint8_t)(s_global_buffer_counter & 1);
-                    
-                    // Allow sync ONLY on ODD buffers (1, 3, 5...)
-                    if (current_buffer_parity != 0) {
-                        
-                        // Target: 270 degrees = -90 degrees in signed math
-                        int32_t target_phase = -(int32_t)(period / 4); 
-                        int32_t phase_error = 0;
-                        
-                        // ZONE CHECK
-                        if (current_phase > 0) {
-                             // BAD ZONE (Positive/Anti-Phase).
-                             // Force massive negative error to drive PLL to Negative Zone.
-                             // We want correction < 0 (Decrease ARR).
-                             // Logic below: if(avg_phase < -threshold) correction = -adapt.
-                             // So we inject a large negative "measured phase".
-                             phase_error = -(int32_t)(period / 2); // -180 deg error equivalent
-                        } else {
-                             // GOOD ZONE (Negative/In-Phase).
-                             // Normal Linear Lock.
-                             phase_error = current_phase - target_phase;
-                             
-                             // Circular wrap (standard)
-                             if (phase_error > (int32_t)(period/2)) {
-                                 phase_error -= (int32_t)period;
-                             } else if (phase_error < -(int32_t)(period/2)) {
-                                 phase_error += (int32_t)period;
-                             }
-                        }
-                        
-                        phase_integrator += phase_error;
-                        phase_abs_integrator += (phase_error < 0) ? -phase_error : phase_error;
+                    if (((uint8_t)(s_global_buffer_counter & 1u)) != 0u) {
+                        phase_integrator += current_phase;
                         samples_collected++;
                     }
-                    // Else: SKIP even buffers entirely for sync logic
-                    
-                    // Reduce fluctuation: Increase averaging window
-                    // 4 buffers -> 8 buffers (approx 40ms)
-                    #define SYNC_CHECK_PERIOD_BUFFERS 8
-                    
+
                     if (samples_collected >= SYNC_CHECK_PERIOD_BUFFERS) {
-                        int32_t avg_phase = phase_integrator / (int32_t)samples_collected;
-                        
-                        // Disable Ambiguity Parity Flip (Not needed with Zone Logic)
-                        s_parity_offset = 0; 
-                        
-                            g_tim5_avg_phase = avg_phase;
-                            
-                             // Threshold must be tolerable
-                        
-                        int32_t correction = 0;  // ОТКЛЮЧЕНО: фазовые коррекции отключены для поиска частоты
-                        
-                        // Check User Button (PC13)
-                        // Active HIGH (Pressed = 1) via PULLDOWN
-                        uint8_t btn_state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13); 
-                        
-                        // Heartbeat REMOVED (User requested OFF by default)
-                        // HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_3); 
-
-                        // ФАЗОВЫЕ КОРРЕКЦИИ ПОЛНОСТЬЮ ОТКЛЮЧЕНЫ
-                        // Система просто сохраняет фиксированный ARR до уточнения частоты
-                        #if 0  // DISABLE ALL PHASE CORRECTIONS
-                        if (btn_state == GPIO_PIN_SET) {
-                            // User pressed button: DISABLE CORRECTION & LED ON
-                            correction = 0;
-                            adapt_strength = 1;
-                            last_correction_dir = 0;
-                            HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
-                        }
-                        else {
-                            // Button not pressed: ENABLE CORRECTION & LED OFF
-                            HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
-                            
-                            // Adaptive Correction Logic
-                            // Deadband +/- 100 (Tight)
-                            #undef PHASE_THRESHOLD
-                            #define PHASE_THRESHOLD 100
-                            
-                            // Restore Max Strength 50 -> Relaxed to 30 (Better than 20 for pull-in, but stable)
-                            // User reported "large phase fluctuation"
-                            #define MAX_ADAPT_STRENGTH 30 
-                            
-                            // Force "Run Away" speed if in Bad Zone (avg_phase is huge negative)
-                            if (avg_phase < -(int32_t)(period/4)) {
-                                // If error is extremely negative, allow faster correction
-                                adapt_strength = MAX_ADAPT_STRENGTH; 
-                            }
-
-                            if (avg_phase > PHASE_THRESHOLD) {
-                                 // POSITIVE -> Need +Correction (Increase ARR -> Slow Down)
-                                 if (last_correction_dir == 1) {
-                                     // Consecutive correction -> Exponential ramp (*2)
-                                     // This provides the "stiff" holding force user requested
-                                     adapt_strength *= 2;
-                                     if(adapt_strength > MAX_ADAPT_STRENGTH) adapt_strength = MAX_ADAPT_STRENGTH;
-                                 } else {
-                                     // Direction changed or started
-                                     adapt_strength = 1;
-                                 }
-                                 last_correction_dir = 1;
-                                 correction = adapt_strength;
-                            } 
-                            else if (avg_phase < -PHASE_THRESHOLD) {
-                                 // NEGATIVE -> Need -Correction (Decrease ARR -> Speed Up)
-                                 if (last_correction_dir == -1) {
-                                     adapt_strength *= 2; // Exponential ramp
-                                     if(adapt_strength > MAX_ADAPT_STRENGTH) adapt_strength = MAX_ADAPT_STRENGTH;
-                                 } else {
-                                     adapt_strength = 1;
-                                 }
-                                 last_correction_dir = -1;
-                                 correction = -adapt_strength;
-                            }
-                            else {
-                                // Inside Deadband - Lock Achieved
-                                adapt_strength = 1;
-                                last_correction_dir = 0;
-                                correction = 0;
-                            }
-                        }
-                        #endif  // PHASE CORRECTIONS DISABLED
-                        
-                        // correction остаётся 0 - никаких изменений ARR
-                        
-                        if (correction != 0) {
-                            extern TIM_HandleTypeDef htim15;
-                            uint32_t current_arr = htim15.Instance->ARR;
-                            
-                            // Save original ARR for restoration next cycle
-                            arr_restore_val = (int32_t)current_arr;
-                            
-                            // Apply Phase Correction (Modify ARR for 1 cycle)
-                            // Note: Preload write applies at next Update
-                            htim15.Instance->ARR = (uint32_t)((int32_t)current_arr + correction);
-                        }
-                        
-                        // Reset Integrator
+                        g_tim5_avg_phase = phase_integrator / (int32_t)samples_collected;
                         phase_integrator = 0;
-                        phase_abs_integrator = 0;
                         samples_collected = 0;
                     }
                 }
-            }  
+            }
             
             // СТАРЫЙ МЕХАНИЗМ ОТКЛЮЧЕН (заменен на интегратор выше)
             #if 0
@@ -2981,6 +2753,27 @@ void adc_stream_set_buf_rate_external(uint16_t buf_rate_hz) {
     g_fine_buf_rate_override = buf_rate_hz;
     adc_stream_apply_timing();
     ADC_LOGF("[ADC][RATE] External sync: buf_rate=%u Hz\r\n", (unsigned)buf_rate_hz);
+}
+
+void adc_stream_clear_buf_rate_override(void) {
+    uint16_t prev = g_fine_buf_rate_override;
+
+    if (prev == 0u) {
+        return;
+    }
+
+    g_fine_buf_rate_override = 0u;
+
+    {
+        extern TIM_HandleTypeDef htim15;
+        if (htim15.Instance != NULL) {
+            adc_stream_apply_timing();
+        }
+    }
+
+    ADC_LOGF("[ADC][RATE] Cleared external override: %u Hz -> profile %u Hz\r\n",
+             (unsigned)prev,
+             (unsigned)g_profiles[g_active_profile].buf_rate_hz);
 }
 
 // Тестовые функции удалены - используем только реальный ADC+DMA

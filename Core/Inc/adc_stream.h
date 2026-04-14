@@ -164,6 +164,7 @@ void adc_stream_set_buf_rate_fine(uint16_t buf_rate_hz);
 
 // Внешняя синхронизация: установка buf_rate по входным импульсам (без ограничения marker_hz)
 void adc_stream_set_buf_rate_external(uint16_t buf_rate_hz);
+void adc_stream_clear_buf_rate_override(void);
 
 // Считывание 32-битного счетчика TIM5 (для точных измерений времени)
 static inline uint32_t adc_get_tim5_counter(void) {

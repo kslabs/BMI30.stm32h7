@@ -1121,6 +1121,37 @@
 			"isBackground": false,
 			"group": "build",
 			"problemMatcher": []
+		},
+		{
+			"label": "Flash BOTH ST-LINK (CubeProgrammer)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/build-and-flash-all.ps1"
+			],
+			"isBackground": false,
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "Flash BOTH ST-LINK (clean build)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/build-and-flash-all.ps1",
+				"-CleanBuild"
+			],
+			"isBackground": false,
+			"group": "build",
+			"problemMatcher": []
 		}
 	],
 	"inputs": [

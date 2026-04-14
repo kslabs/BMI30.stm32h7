@@ -142,7 +142,7 @@ extern volatile uint32_t systick_heartbeat;
 
 #define RS485_SYNC_BYTE 0xA5u
 
-void rs485_sync_on_buffer_complete(void);
+void rs485_sync_on_buffer_complete(uint8_t parity);
 uint32_t rs485_get_master_claim_delay_ms(void);
 uint8_t optic_sensor_get_state(void);
 uint8_t optic_tx_set_power(uint8_t power);

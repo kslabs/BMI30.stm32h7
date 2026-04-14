@@ -255,6 +255,13 @@ void USART1_IRQHandler(void)
   */
 void USART2_IRQHandler(void)
 {
+  if (((huart2.Instance->ISR & USART_ISR_TC) != 0u) &&
+      ((huart2.Instance->CR1 & USART_CR1_TCIE) != 0u)) {
+    huart2.Instance->ICR = USART_ICR_TCCF;
+    HAL_UART_TxCpltCallback(&huart2);
+    return;
+  }
+
   HAL_UART_IRQHandler(&huart2);
 }
 /* Add here the Interrupt Handlers for the used peripherals.                  */

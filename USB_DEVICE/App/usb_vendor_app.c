@@ -620,6 +620,11 @@ static void vnd_sync_apply_mode(uint8_t mode)
     extern volatile uint8_t g_arr_manual_mode;
 
     if(mode > VND_SYNC_MODE_OFF) mode = VND_SYNC_MODE_MASTER;
+
+    if (mode == VND_SYNC_MODE_MASTER || mode == VND_SYNC_MODE_SLAVE) {
+        adc_stream_clear_buf_rate_override();
+    }
+
     vnd_sync_mode = mode;
     {
         extern volatile uint8_t sync_edge_seen;
@@ -676,6 +681,19 @@ void vnd_sync_set_mode_auto(uint8_t mode)
         return;
     }
     vnd_sync_apply_mode(mode);
+}
+
+/* Принудительная установка режима (не блокируется флагом host_forced) */
+void vnd_sync_apply_mode_forced(uint8_t mode)
+{
+    vnd_sync_mode_host_forced = 1u;
+    vnd_sync_apply_mode(mode);
+}
+
+/* Снятие принудительного режима, возврат к автоматическому */
+void vnd_sync_release_host_forced(void)
+{
+    vnd_sync_mode_host_forced = 0u;
 }
 
 uint8_t vnd_sync_is_mode_host_forced(void)
@@ -3535,7 +3553,8 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
         vnd_dc_try_save_periodic();
     }
 
-    /* Sync master/slave: обновление частоты TIM16 и подстройка buf_rate по входу */
+    /* Sync master/slave: только наблюдаем входную частоту; локальный TIM15 остаётся
+       на профильной базе и не подстраивается автоматически у SLAVE. */
     {
         uint32_t now_ms = HAL_GetTick();
         if(vnd_sync_mode == VND_SYNC_MODE_MASTER){
@@ -3549,8 +3568,8 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
             if(hz != 0u && (now_ms - vnd_sync_last_apply_ms) > 200u){
                 vnd_sync_pending_hz = 0;
                 vnd_sync_last_apply_ms = now_ms;
-                adc_stream_set_buf_rate_external(hz);
-                vnd_sync_last_hz = hz;
+                /* Frequency capture kept for diagnostics only.
+                   Do not change buf_rate/TIM15 divider on slave automatically. */
                 if(win_auto && (vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI)){
                     uint16_t prev_start = win_start0;
                     vnd_apply_auto_roi_window();
