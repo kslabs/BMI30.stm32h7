@@ -53,6 +53,7 @@ DAC_HandleTypeDef  hdac1;
 DMA_HandleTypeDef  hdma_adc1;
 DMA_HandleTypeDef  hdma_adc2;
 DMA_HandleTypeDef  hdma_spi3_tx;
+DMA_HandleTypeDef  hdma_usart2_rx;
 DMA_HandleTypeDef  hdma_tim15_up;  // DMA для автоматической записи ARR
 DMA_HandleTypeDef  hdma_tim1_up;   // DMA для аппаратной огибающей оптического TX
 
@@ -100,14 +101,24 @@ static volatile uint32_t optic_last_pulse_ms = 0u;
 static volatile uint32_t optic_pulse_window_start_ms = 0u;
 static volatile uint8_t optic_pulse_window_count = 0u;
 
+#ifndef RS485_USART2_USE_DMA_RX
+/* DMA RX временно отключён: на текущем железе он срывал приём sync и обе платы уходили в MASTER. */
+#define RS485_USART2_USE_DMA_RX 0u
+#endif
+#define RS485_DMA_RX_BUFFER_SIZE 256u
+
 static uint8_t rs485_rx_byte = 0;
 static uint8_t rs485_tx_byte = 0xA5u;
+static uint8_t rs485_dma_rx_buf[RS485_DMA_RX_BUFFER_SIZE] = {0u};
+static volatile uint16_t rs485_dma_rx_rd = 0u;
+static volatile uint32_t rs485_dma_rx_overrun_count = 0u;
 static volatile uint32_t rs485_last_rx_ms = 0;
 static volatile uint32_t rs485_rx_packets = 0;
 static volatile uint32_t rs485_tx_packets = 0;
 /* boot_listen_ms: UID-стагированная задержка (200-2000ms), вычисляется при init */
 static uint32_t rs485_boot_listen_ms = 0u;
 static volatile uint8_t rs485_tx_busy = 0;
+static volatile uint32_t rs485_tx_start_ms = 0u;
 static volatile uint8_t rs485_last_sync_edge_kind = 0u;
 static volatile uint8_t rs485_sync_phase_relation = 0u;
 static volatile uint8_t rs485_sync_locked = 0u;
@@ -121,6 +132,32 @@ static volatile uint8_t rs485_anti_phase_recovery_active = 0u;
 static volatile uint8_t rs485_anti_phase_recovery_packets = 0u;
 static volatile uint32_t rs485_sync_buf_div4 = 0;
 static volatile uint8_t rs485_slave_count_estimate = 0;
+static volatile uint32_t rs485_status_window_ticks = 0u;
+static volatile uint32_t rs485_status_seen_mask = 0u;
+static volatile uint8_t rs485_status_current_window_phase = 0xFFu;
+static volatile uint8_t rs485_status_master_expected_phase = 0xFFu;
+static volatile uint8_t rs485_status_window_active = 0u;
+static volatile uint8_t rs485_status_window_after_tx = 0u;
+static volatile uint32_t rs485_status_tx_due_ticks = 0u;
+static volatile uint8_t rs485_status_tx_pending = 0u;
+static volatile uint8_t rs485_status_tx_sent = 0u;
+static volatile uint8_t rs485_status_slot_local_tx = 0u;
+static volatile uint8_t rs485_status_cycle_count = 0u;
+static volatile uint8_t rs485_status_slot_response_seen = 0u;
+static volatile uint8_t rs485_status_slot_response_byte = 0u;
+static volatile uint32_t rs485_uart_error_count = 0u;
+static volatile uint8_t rs485_status_peer_bytes[31] = {0u};
+static volatile uint32_t rs485_status_peer_last_ms[31] = {0u};
+static volatile uint32_t rs485_status_local_tx_count = 0u;
+static volatile uint32_t rs485_status_local_tx_complete_count = 0u;
+static volatile uint32_t rs485_status_peer_rx_count = 0u;
+static volatile uint32_t rs485_status_deferred_tx_count = 0u;
+static volatile uint32_t rs485_status_window_total_count = 0u;
+static volatile uint32_t rs485_status_window_ok_count = 0u;
+static volatile uint32_t rs485_status_window_miss_count = 0u;
+static volatile uint32_t rs485_status_local_slot_expected_count = 0u;
+static volatile uint32_t rs485_status_local_slot_miss_count = 0u;
+static volatile uint8_t rs485_status_local_slot_expected = 0u;
 static uint8_t rs485_local_node_id = 0u;
 static uint8_t rs485_local_uid_hint = 1u;
 static uint32_t rs485_master_claim_delay_ms = 1000u;
@@ -172,6 +209,16 @@ static uint8_t rs485_uid_rx_buf[13] = {0u};
 #define RS485_UID_SLOT_COUNT     16u
 #define RS485_UID_ARBITRATION_QUIET_MS 220u
 #define RS485_TX_QUEUE_CAPACITY  32u
+#define RS485_STATUS_ID_MASK          0x1Fu
+#define RS485_STATUS_OPTIC_BIT        0x20u
+#define RS485_STATUS_TX_ENABLE_BIT    0x40u
+#define RS485_STATUS_LABEL_BIT        0x80u
+#define RS485_STATUS_WINDOW_DIV       4u
+#define RS485_STATUS_SLOT_STRIDE      2u
+/* Искусственную паузу убираем: к моменту приёма полного sync-байта линия уже свободна,
+   а лишний guard только добавляет джиттер к ответу slave. */
+#define RS485_STATUS_RESPONSE_DELAY_BYTES 0u
+#define RS485_STATUS_PEER_HOLD_MS     30u
 #define RS485_SYNC_RELATION_UNKNOWN   0u
 #define RS485_SYNC_RELATION_IN_PHASE  1u
 #define RS485_SYNC_RELATION_ANTI_PHASE 2u
@@ -186,15 +233,23 @@ static inline uint8_t rs485_sync_edge_kind_from_marker_level(uint8_t marker_leve
   return (uint8_t)((marker_level ^ 1u) & 1u);
 }
 
-static uint32_t rs485_sync_get_uart_packet_ticks(void)
+static uint32_t rs485_sync_get_tim5_tick_hz(void)
 {
   uint32_t tim_clk = HAL_RCC_GetPCLK1Freq();
   uint32_t d2ppre1 = (RCC->D2CFGR & RCC_D2CFGR_D2PPRE1_Msk) >> RCC_D2CFGR_D2PPRE1_Pos;
-  uint32_t baud = huart2.Init.BaudRate;
 
   if (d2ppre1 != 0u) {
     tim_clk *= 2u;
   }
+
+  return tim_clk;
+}
+
+static uint32_t rs485_sync_get_uart_packet_ticks(void)
+{
+  uint32_t tim_clk = rs485_sync_get_tim5_tick_hz();
+  uint32_t baud = huart2.Init.BaudRate;
+
   if (baud == 0u) {
     return 0u;
   }
@@ -231,6 +286,20 @@ static void rs485_discovery_on_sync_received(void);
 static void rs485_discovery_on_request(uint8_t value);
 static void rs485_discovery_on_response(uint8_t value);
 static void rs485_discovery_reset_master_scan(void);
+static uint32_t rs485_status_get_effective_period_ticks(void);
+static uint32_t rs485_status_get_window_ticks(uint32_t period_ticks);
+static void rs485_status_wait_byte_times(uint32_t byte_count);
+static uint8_t rs485_status_count_recent_peers(uint32_t now_ms, uint32_t hold_ms);
+static uint8_t rs485_status_build_local_byte(void);
+static void rs485_status_reset_window_state(void);
+static void rs485_status_finalize_window(void);
+static void rs485_status_begin_window(void);
+static void rs485_status_on_received(uint8_t value);
+static void rs485_status_service(void);
+static uint8_t rs485_is_sync_byte(uint8_t value);
+static void rs485_process_received_byte(uint8_t value);
+static void rs485_dma_rx_start(void);
+static void rs485_dma_rx_service(void);
 static void rs485_load_local_uid(void);
 static void rs485_uid_rx_reset(void);
 static uint8_t rs485_uid_checksum(const uint8_t *uid_bytes);
@@ -977,6 +1046,7 @@ static void rs485_sync_on_packet_received(uint8_t edge_kind)
 
   rs485_last_rx_ms = sync_last_edge_ms;
   rs485_rx_packets++;
+  rs485_status_begin_window();
   vnd_sync_on_edge();
 }
 
@@ -1029,6 +1099,404 @@ static uint8_t rs485_count_bits_u32(uint32_t value)
     value >>= 1;
   }
   return count;
+}
+
+static uint32_t rs485_status_get_effective_period_ticks(void)
+{
+  uint32_t period_ticks = sync_tim5_period_ticks;
+
+  if (period_ticks < 1000u) {
+    uint16_t buf_rate = adc_stream_get_buf_rate();
+    uint32_t tim_clk = rs485_sync_get_tim5_tick_hz();
+
+    if ((buf_rate != 0u) && (tim_clk != 0u)) {
+      period_ticks = (uint32_t)(((uint64_t)tim_clk + ((uint64_t)buf_rate / 2u)) / (uint64_t)buf_rate);
+    }
+  }
+
+  return period_ticks;
+}
+
+static uint32_t rs485_status_get_window_ticks(uint32_t period_ticks)
+{
+  uint32_t window_ticks = 0u;
+  uint32_t byte_ticks = rs485_sync_get_uart_packet_ticks();
+
+  if (period_ticks == 0u) {
+    return 0u;
+  }
+
+  window_ticks = period_ticks / RS485_STATUS_WINDOW_DIV;
+  if (window_ticks <= byte_ticks) {
+    return 0u;
+  }
+
+  return window_ticks - byte_ticks;
+}
+
+static void rs485_status_wait_byte_times(uint32_t byte_count)
+{
+  uint32_t baud = huart2.Init.BaudRate;
+  uint32_t hclk = HAL_RCC_GetHCLKFreq();
+  uint32_t start_cycles = 0u;
+  uint32_t wait_cycles = 0u;
+
+  if ((byte_count == 0u) || (baud == 0u) || (hclk == 0u)) {
+    return;
+  }
+
+  if ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0u) {
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  }
+  if ((DWT->CTRL & DWT_CTRL_CYCCNTENA_Msk) == 0u) {
+    DWT->LAR = 0xC5ACCE55u;
+    DWT->CYCCNT = 0u;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  }
+
+  wait_cycles = (uint32_t)(((uint64_t)hclk * 10u * (uint64_t)byte_count + (uint64_t)baud - 1u) / (uint64_t)baud);
+  start_cycles = DWT->CYCCNT;
+  while ((uint32_t)(DWT->CYCCNT - start_cycles) < wait_cycles) {
+  }
+}
+
+static uint8_t rs485_status_count_recent_peers(uint32_t now_ms, uint32_t hold_ms)
+{
+  uint8_t count = 0u;
+  uint32_t index = 0u;
+
+  for (index = 0u; index < RS485_DISCOVERY_MAX_ID; index++) {
+    uint32_t peer_ms = rs485_status_peer_last_ms[index];
+    if ((peer_ms != 0u) && ((now_ms - peer_ms) <= hold_ms)) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
+static uint8_t rs485_status_build_local_byte(void)
+{
+  uint8_t status = (uint8_t)(rs485_local_node_id & RS485_STATUS_ID_MASK);
+
+  if (optic_sensor_get_state() != 0u) {
+    status |= RS485_STATUS_OPTIC_BIT;
+  }
+  if (vnd_is_tx_enabled() != 0u) {
+    status |= RS485_STATUS_TX_ENABLE_BIT;
+  }
+  /* Состояние детектора метки пока временно не приходит от хоста. */
+  return status;
+}
+
+static uint8_t rs485_is_sync_byte(uint8_t value)
+{
+  return (uint8_t)(((value & (uint8_t)~RS485_SYNC_EDGE_BIT) == RS485_SYNC7_BASE) ? 1u : 0u);
+}
+
+static void rs485_process_received_byte(uint8_t value)
+{
+  if (rs485_is_sync_byte(value)) {
+    if (rs485_status_window_active != 0u) {
+      rs485_status_finalize_window();
+    }
+    rs485_sync_on_packet_received((value & RS485_SYNC_EDGE_BIT) ? 1u : 0u);
+    rs485_discovery_on_sync_received();
+  } else if (rs485_status_window_active != 0u) {
+    rs485_status_on_received(value);
+  } else if (rs485_uid_rx_active != 0u) {
+    if (rs485_uid_rx_index < RS485_UID_FRAME_TAIL) {
+      rs485_uid_rx_buf[rs485_uid_rx_index++] = value;
+    } else {
+      rs485_uid_rx_reset();
+    }
+
+    if ((rs485_uid_rx_active != 0u) && (rs485_uid_rx_index >= RS485_UID_FRAME_TAIL)) {
+      if (rs485_uid_rx_buf[RS485_UID_FRAME_BYTES] == rs485_uid_checksum(rs485_uid_rx_buf)) {
+        rs485_uid_handle_received(rs485_uid_rx_buf);
+      }
+      rs485_uid_rx_reset();
+    }
+  } else if (value == RS485_UID_FRAME_MAGIC) {
+    rs485_uid_rx_active = 1u;
+    rs485_uid_rx_index = 0u;
+  } else if ((value & (uint8_t)~RS485_DISCOVERY_ID_MASK) == RS485_DISCOVERY_REQ_BASE) {
+    rs485_discovery_on_request(value);
+  } else if ((value & (uint8_t)~RS485_DISCOVERY_ID_MASK) == RS485_DISCOVERY_ACK_BASE) {
+    rs485_discovery_on_response(value);
+  }
+}
+
+static void rs485_dma_rx_start(void)
+{
+#if RS485_USART2_USE_DMA_RX
+  rs485_dma_rx_rd = 0u;
+  memset(rs485_dma_rx_buf, 0, sizeof(rs485_dma_rx_buf));
+  (void)HAL_UART_DMAStop(&huart2);
+  if (HAL_UART_Receive_DMA(&huart2, rs485_dma_rx_buf, RS485_DMA_RX_BUFFER_SIZE) != HAL_OK) {
+    Error_Handler();
+  }
+  if (huart2.hdmarx != NULL) {
+    __HAL_DMA_DISABLE_IT(huart2.hdmarx, DMA_IT_HT);
+    __HAL_DMA_DISABLE_IT(huart2.hdmarx, DMA_IT_TC);
+  }
+#else
+  if (HAL_UART_Receive_IT(&huart2, &rs485_rx_byte, 1) != HAL_OK) {
+    Error_Handler();
+  }
+#endif
+}
+
+static void rs485_dma_rx_service(void)
+{
+#if RS485_USART2_USE_DMA_RX
+  uint16_t write_pos = 0u;
+  uint16_t pending = 0u;
+
+  if (huart2.hdmarx == NULL) {
+    return;
+  }
+
+  write_pos = (uint16_t)(RS485_DMA_RX_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(huart2.hdmarx));
+  if (write_pos >= RS485_DMA_RX_BUFFER_SIZE) {
+    write_pos = 0u;
+  }
+
+  pending = (write_pos >= rs485_dma_rx_rd)
+      ? (uint16_t)(write_pos - rs485_dma_rx_rd)
+      : (uint16_t)((RS485_DMA_RX_BUFFER_SIZE - rs485_dma_rx_rd) + write_pos);
+  if (pending > (RS485_DMA_RX_BUFFER_SIZE - 8u)) {
+    rs485_dma_rx_overrun_count++;
+  }
+
+  while (rs485_dma_rx_rd != write_pos) {
+    uint8_t value = rs485_dma_rx_buf[rs485_dma_rx_rd];
+    rs485_dma_rx_rd = (uint16_t)((rs485_dma_rx_rd + 1u) & (RS485_DMA_RX_BUFFER_SIZE - 1u));
+    rs485_process_received_byte(value);
+  }
+#endif
+}
+
+static void rs485_status_reset_window_state(void)
+{
+  rs485_status_window_ticks = 0u;
+  rs485_status_seen_mask = 0u;
+  rs485_status_current_window_phase = 0xFFu;
+  rs485_status_master_expected_phase = 0xFFu;
+  rs485_status_window_active = 0u;
+  rs485_status_window_after_tx = 0u;
+  rs485_status_tx_due_ticks = 0u;
+  rs485_status_tx_pending = 0u;
+  rs485_status_tx_sent = 0u;
+  rs485_status_slot_local_tx = 0u;
+  rs485_status_cycle_count = 0u;
+  rs485_status_slot_response_seen = 0u;
+  rs485_status_slot_response_byte = 0u;
+  rs485_status_local_slot_expected = 0u;
+}
+
+static void rs485_status_reset_slot_state(void)
+{
+  rs485_status_window_ticks = 0u;
+  rs485_status_window_active = 0u;
+  rs485_status_current_window_phase = 0xFFu;
+  rs485_status_tx_due_ticks = 0u;
+  rs485_status_tx_pending = 0u;
+  rs485_status_tx_sent = 0u;
+  rs485_status_slot_local_tx = 0u;
+  rs485_status_slot_response_seen = 0u;
+  rs485_status_slot_response_byte = 0u;
+  rs485_status_local_slot_expected = 0u;
+}
+
+static void rs485_status_finalize_window(void)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint8_t next_node_id = rs485_local_node_id;
+  uint8_t slot_had_response = (uint8_t)((rs485_status_slot_response_seen != 0u) || (rs485_status_slot_local_tx != 0u));
+  uint8_t response_byte = rs485_status_slot_response_byte;
+  uint8_t recent_count = rs485_status_count_recent_peers(HAL_GetTick(), RS485_STATUS_PEER_HOLD_MS);
+  uint8_t response_id = (uint8_t)(response_byte & RS485_STATUS_ID_MASK);
+  uint8_t active_count = rs485_status_cycle_count;
+
+  if ((rs485_status_window_active == 0u) &&
+      (slot_had_response == 0u)) {
+    return;
+  }
+
+  if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+    if ((rs485_status_master_expected_phase < RS485_STATUS_SLOT_STRIDE) &&
+        (rs485_status_current_window_phase == rs485_status_master_expected_phase)) {
+      rs485_status_window_total_count++;
+      if (slot_had_response != 0u) {
+        rs485_status_window_ok_count++;
+      } else if ((recent_count != 0u) || (rs485_slave_count_estimate != 0u)) {
+        rs485_status_window_miss_count++;
+      }
+    }
+  } else if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
+             (rs485_status_local_slot_expected != 0u) &&
+             (rs485_status_slot_local_tx == 0u)) {
+    rs485_status_local_slot_miss_count++;
+  }
+
+  if (slot_had_response != 0u) {
+    if (rs485_status_cycle_count < RS485_DISCOVERY_MAX_ID) {
+      rs485_status_cycle_count++;
+      active_count = rs485_status_cycle_count;
+    }
+
+    if ((response_id != 0u) &&
+        (response_id <= RS485_DISCOVERY_MAX_ID)) {
+      rs485_status_seen_mask |= (1u << (response_id - 1u));
+      rs485_status_master_expected_phase = (uint8_t)((response_id - 1u) % RS485_STATUS_SLOT_STRIDE);
+      rs485_status_peer_bytes[response_id - 1u] = response_byte;
+      rs485_status_peer_last_ms[response_id - 1u] = HAL_GetTick();
+      if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+        rs485_slave_count_estimate = rs485_status_count_recent_peers(HAL_GetTick(), RS485_STATUS_PEER_HOLD_MS);
+      }
+    } else if ((rs485_local_node_id != 0u) &&
+               (rs485_local_node_id <= RS485_DISCOVERY_MAX_ID)) {
+      rs485_status_seen_mask |= (1u << (rs485_local_node_id - 1u));
+    }
+
+    rs485_discovery_seen_mask = rs485_status_seen_mask;
+    rs485_discovery_scan_mask = rs485_status_seen_mask;
+  } else {
+    rs485_discovery_seen_mask = rs485_status_seen_mask;
+    rs485_discovery_scan_mask = rs485_status_seen_mask;
+
+    if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+      rs485_slave_count_estimate = recent_count;
+    } else if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+      if (next_node_id == 0u) {
+        if (active_count < RS485_DISCOVERY_MAX_ID) {
+          next_node_id = (uint8_t)(active_count + 1u);
+        }
+      } else if (next_node_id > (uint8_t)(active_count + 1u)) {
+        next_node_id = (uint8_t)(active_count + 1u);
+      }
+
+      rs485_local_node_id = next_node_id;
+      if (next_node_id != 0u) {
+        rs485_slave_count_estimate = active_count;
+      } else {
+        rs485_slave_count_estimate = active_count;
+      }
+    } else {
+      rs485_slave_count_estimate = 0u;
+    }
+
+    rs485_status_seen_mask = 0u;
+    rs485_status_tx_sent = 0u;
+    rs485_status_cycle_count = 0u;
+  }
+
+  rs485_status_reset_slot_state();
+}
+
+static void rs485_status_begin_window(void)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint8_t local_slot_phase = 0u;
+  uint8_t current_slot_phase = 0u;
+  uint32_t byte_ticks = 0u;
+
+  if (rs485_status_window_active != 0u) {
+    rs485_status_finalize_window();
+  }
+
+  rs485_status_reset_slot_state();
+  rs485_status_window_active = 1u;
+  if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+    rs485_status_current_window_phase = rs485_last_sync_edge_kind;
+  }
+
+  if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
+      (rs485_local_node_id != 0u)) {
+    local_slot_phase = (uint8_t)((rs485_local_node_id - 1u) % RS485_STATUS_SLOT_STRIDE);
+    /* Таймслот нужно выбирать по биту текущего sync-пакета,
+       а не по локальному счётчику принятых пакетов: один пропуск RX иначе
+       навсегда сдвигает slave на чужой полупериод. */
+    current_slot_phase = (uint8_t)(rs485_last_sync_edge_kind % RS485_STATUS_SLOT_STRIDE);
+    if (local_slot_phase == current_slot_phase) {
+      rs485_status_local_slot_expected = 1u;
+      rs485_status_local_slot_expected_count++;
+      byte_ticks = rs485_sync_get_uart_packet_ticks();
+      rs485_status_window_ticks = byte_ticks * RS485_STATUS_RESPONSE_DELAY_BYTES;
+
+      if (rs485_tx_busy == 0u) {
+        uint32_t primask = __get_PRIMASK();
+        __disable_irq();
+        if ((rs485_tx_busy == 0u) && (RS485_STATUS_RESPONSE_DELAY_BYTES != 0u)) {
+          rs485_status_wait_byte_times(RS485_STATUS_RESPONSE_DELAY_BYTES);
+        }
+        if (rs485_tx_busy == 0u) {
+          rs485_status_tx_sent = 1u;
+          rs485_status_slot_local_tx = 1u;
+          rs485_status_local_tx_count++;
+          rs485_sync_start_tx_byte(rs485_status_build_local_byte());
+        } else {
+          rs485_status_tx_due_ticks = rs485_status_window_ticks;
+          rs485_status_tx_pending = 1u;
+          rs485_status_deferred_tx_count++;
+        }
+        if (primask == 0u) {
+          __enable_irq();
+        }
+      } else {
+        rs485_status_tx_due_ticks = rs485_status_window_ticks;
+        rs485_status_tx_pending = 1u;
+        rs485_status_deferred_tx_count++;
+      }
+    }
+  }
+}
+
+static void rs485_status_on_received(uint8_t value)
+{
+  uint8_t node_id = (uint8_t)(value & RS485_STATUS_ID_MASK);
+
+  if ((rs485_status_window_active == 0u) ||
+      (node_id == 0u) ||
+      (node_id > RS485_DISCOVERY_MAX_ID)) {
+    return;
+  }
+
+  if (rs485_status_slot_response_seen == 0u) {
+    rs485_status_slot_response_seen = 1u;
+    rs485_status_slot_response_byte = value;
+    rs485_status_peer_rx_count++;
+  }
+}
+
+static void rs485_status_service(void)
+{
+  uint32_t now_ticks = 0u;
+
+  if (rs485_status_window_active == 0u) {
+    return;
+  }
+  if (rs485_status_tx_pending == 0u) {
+    return;
+  }
+  if (rs485_status_tx_sent != 0u) {
+    return;
+  }
+  if (rs485_tx_busy != 0u) {
+    return;
+  }
+
+  now_ticks = htim5.Instance->CNT;
+  if ((rs485_status_tx_due_ticks != 0u) && (now_ticks < rs485_status_tx_due_ticks)) {
+    return;
+  }
+
+  rs485_status_tx_pending = 0u;
+  rs485_status_tx_sent = 1u;
+  rs485_status_slot_local_tx = 1u;
+  rs485_status_local_tx_count++;
+  rs485_sync_start_tx_byte(rs485_status_build_local_byte());
 }
 
 static void rs485_discovery_reset_master_scan(void)
@@ -1200,6 +1668,7 @@ static void rs485_sync_start_tx_byte(uint8_t value)
 
   rs485_tx_byte = value;
   rs485_tx_busy = 1u;
+  rs485_tx_start_ms = HAL_GetTick();
   HAL_GPIO_WritePin(RS485_RDE_GPIO_Port, RS485_RDE_Pin, GPIO_PIN_SET);
   huart2.Instance->ICR = USART_ICR_TCCF;
   SET_BIT(huart2.Instance->CR1, USART_CR1_TCIE);
@@ -1277,6 +1746,22 @@ static void rs485_discovery_on_sync_received(void)
 
 static void rs485_sync_service_tx(void)
 {
+  rs485_dma_rx_service();
+
+  if (rs485_tx_busy != 0u) {
+    uint32_t now_ms = HAL_GetTick();
+    uint32_t isr = huart2.Instance->ISR;
+
+    if (((isr & USART_ISR_TC) != 0u) ||
+        ((rs485_tx_start_ms != 0u) && ((now_ms - rs485_tx_start_ms) > 2u))) {
+      huart2.Instance->ICR = USART_ICR_TCCF;
+      CLEAR_BIT(huart2.Instance->CR1, USART_CR1_TCIE);
+      HAL_GPIO_WritePin(RS485_RDE_GPIO_Port, RS485_RDE_Pin, GPIO_PIN_RESET);
+      rs485_tx_busy = 0u;
+    }
+  }
+
+  rs485_status_service();
   rs485_tx_kick();
 }
 
@@ -1296,6 +1781,23 @@ static void rs485_sync_auto_role_service(uint32_t now_ms)
     rs485_anti_phase_recovery_active = 0u;
     rs485_anti_phase_recovery_packets = 0u;
     rs485_anti_phase_drive_sign = 1;
+    rs485_status_reset_window_state();
+    rs485_slave_count_estimate = 0u;
+    rs485_status_local_tx_count = 0u;
+    rs485_status_local_tx_complete_count = 0u;
+    rs485_status_peer_rx_count = 0u;
+    rs485_status_deferred_tx_count = 0u;
+    rs485_status_window_total_count = 0u;
+    rs485_status_window_ok_count = 0u;
+    rs485_status_window_miss_count = 0u;
+    rs485_status_local_slot_expected_count = 0u;
+    rs485_status_local_slot_miss_count = 0u;
+    if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+      rs485_local_node_id = 0u;
+    } else if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+               (rs485_local_node_id == 0u)) {
+      rs485_local_node_id = rs485_local_uid_hint;
+    }
     tim15_request_hold_offset(0);
   }
 
@@ -1678,11 +2180,22 @@ void rs485_sync_on_buffer_complete(uint8_t parity)
     return;
   }
 
+  if (rs485_status_window_active != 0u) {
+    rs485_status_finalize_window();
+  }
+  sync_tim5_period_ticks = htim5.Instance->CNT;
+  htim5.Instance->CNT = 0u;
+  rs485_status_current_window_phase = (uint8_t)(parity % RS485_STATUS_SLOT_STRIDE);
+  rs485_status_window_after_tx = 1u;
   sync_byte = (uint8_t)(RS485_SYNC7_BASE | (parity ? RS485_SYNC_EDGE_BIT : 0u));
-  /* sync-байт должен уходить первым и максимально близко к фронту/спаду.
-     Любой discovery/UID трафик в этом fast-path даёт фазовый джиттер на UART. */
-  rs485_tx_queue_push_front(sync_byte);
-  rs485_tx_kick();
+  /* sync-байт должен уходить максимально близко к событию DMA завершения буфера.
+     Если UART свободен — стартуем сразу, без лишней работы с очередью. */
+  if ((rs485_tx_busy == 0u) && (rs485_tx_queue_count == 0u)) {
+    rs485_sync_start_tx_byte(sync_byte);
+  } else {
+    rs485_tx_queue_push_front(sync_byte);
+    rs485_tx_kick();
+  }
 }
 /* USER CODE END 0 */
 
@@ -1899,7 +2412,7 @@ int main(void)
   printf("[BOOT] FW_VERSION=%s DATE=%s TIME=%s HASH=%s\r\n", fw_version, fw_build_date, fw_build_time, fw_git_hash);
   printf("[BOOT] %s\r\n", fw_build_full);
   printf("[UART] USART1=115200 8N1 ready\r\n");
-  printf("[RS485] NODE_ID=AUTO UID_HINT=%u DISCOVERY=req 0x40|id ack 0x80|id\r\n", (unsigned)rs485_local_uid_hint);
+  printf("[RS485] SLOT=AUTO UID_HINT=%u STATUS=id[4:0] optic[5] tx[6] label[7]\r\n", (unsigned)rs485_local_uid_hint);
   printf("[RS485] UID=%08lX-%08lX-%08lX CLAIM_MS=%lu\r\n",
          (unsigned long)rs485_local_uid_words[2],
          (unsigned long)rs485_local_uid_words[1],
@@ -2543,7 +3056,7 @@ int main(void)
       last_role_log_ms = now;
       uint32_t edge_age = (sync_last_edge_ms == 0u) ? 0xFFFFFFFFu : (now - sync_last_edge_ms);
       uint8_t alive = (edge_age <= RS485_SYNC_PRESENT_MS) && (sync_last_edge_ms != 0u);
-      printf("[ROLE] mode=%s node=%u slv=%u sync=%s(age=%lums) peer_uid=%u cmp=%d forced=%u bl=%lu rx=%lu\r\n",
+      printf("[ROLE] mode=%s node=%u slv=%u sync=%s(age=%lums) peer_uid=%u cmp=%d forced=%u bl=%lu rx=%lu stx=%lu stc=%lu srx=%lu def=%lu wok=%lu wmiss=%lu lexp=%lu lmiss=%lu\r\n",
         (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) ? "M" :
         (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE)  ? "S" : "O",
         (unsigned)rs485_local_node_id,
@@ -2554,7 +3067,15 @@ int main(void)
         (int)rs485_peer_uid_cmp,
         (unsigned)vnd_sync_is_mode_host_forced(),
         (unsigned long)rs485_boot_listen_ms,
-        (unsigned long)rs485_rx_packets);
+        (unsigned long)rs485_rx_packets,
+        (unsigned long)rs485_status_local_tx_count,
+        (unsigned long)rs485_status_local_tx_complete_count,
+        (unsigned long)rs485_status_peer_rx_count,
+        (unsigned long)rs485_status_deferred_tx_count,
+        (unsigned long)rs485_status_window_ok_count,
+        (unsigned long)rs485_status_window_miss_count,
+        (unsigned long)rs485_status_local_slot_expected_count,
+        (unsigned long)rs485_status_local_slot_miss_count);
     }
   }
   if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
@@ -2760,6 +3281,9 @@ int main(void)
           /* Подробный статус RS485 sync/role */
           uint32_t now_ms = HAL_GetTick();
           uint32_t edge_age = (sync_last_edge_ms == 0u) ? 0xFFFFFFFFu : (now_ms - sync_last_edge_ms);
+          uint8_t next_slot = (rs485_slave_count_estimate < RS485_DISCOVERY_MAX_ID) ?
+                              (uint8_t)(rs485_slave_count_estimate + 1u) :
+                              RS485_DISCOVERY_MAX_ID;
           printf("\r\n=== RS485 STATUS ===\r\n");
           printf("mode        : %u (%s)\r\n",
             (unsigned)vnd_sync_mode_public,
@@ -2768,9 +3292,14 @@ int main(void)
           printf("host_forced : %u\r\n", (unsigned)vnd_sync_is_mode_host_forced());
           printf("node_id     : %u\r\n", (unsigned)rs485_local_node_id);
           printf("slave_count : %u\r\n", (unsigned)rs485_slave_count_estimate);
+          printf("next_slot   : %u\r\n", (unsigned)next_slot);
+          printf("status_byte : 0x%02X\r\n", (unsigned)rs485_status_build_local_byte());
           printf("sync_edges  : %lu\r\n", (unsigned long)sync_edge_count);
           printf("sync_age_ms : %lu\r\n", (unsigned long)edge_age);
           printf("sync_alive  : %u\r\n", (unsigned)(edge_age <= RS485_SYNC_PRESENT_MS && sync_last_edge_ms != 0u));
+          printf("uart_errs   : %lu\r\n", (unsigned long)rs485_uart_error_count);
+          printf("rs485_rx    : %lu\r\n", (unsigned long)rs485_rx_packets);
+          printf("rs485_tx    : %lu\r\n", (unsigned long)rs485_tx_packets);
           printf("peer_uid_ok : %u\r\n", (unsigned)rs485_peer_uid_valid);
           printf("peer_uid_cmp: %d\r\n", (int)rs485_peer_uid_cmp);
           printf("uid_local   : %08lX-%08lX-%08lX\r\n",
@@ -3740,9 +4269,7 @@ static void MX_USART2_UART_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_UART_Receive_IT(&huart2, &rs485_rx_byte, 1) != HAL_OK) {
-    Error_Handler();
-  }
+  rs485_dma_rx_start();
 }
 
 /**
@@ -3761,6 +4288,9 @@ static void MX_DMA_Init(void)
   /* Enable DMA1_Stream1 IRQ for ADC2 DMA completion (used to re-arm oneshot) */
   HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 1); // ADC2 DMA just below ADC1
   HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
+  /* Низкоприоритетный IRQ для USART2 RX DMA (ошибки/служебные события) */
+  HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 8, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
   /* Enable DMA1_Stream5 IRQ for TIM15 ARR auto-update (Half Transfer callback) */
   HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
@@ -3998,47 +4528,64 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
       HAL_UART_Receive_IT(&huart1, &uart1_rx_byte, 1);
     }
   } else if (huart->Instance == USART2) {
-    if (rs485_uid_rx_active != 0u) {
-      if (rs485_uid_rx_index < RS485_UID_FRAME_TAIL) {
-        rs485_uid_rx_buf[rs485_uid_rx_index++] = rs485_rx_byte;
-      } else {
-        rs485_uid_rx_reset();
-      }
-
-      if (rs485_uid_rx_active != 0u && rs485_uid_rx_index >= RS485_UID_FRAME_TAIL) {
-        if (rs485_uid_rx_buf[RS485_UID_FRAME_BYTES] == rs485_uid_checksum(rs485_uid_rx_buf)) {
-          rs485_uid_handle_received(rs485_uid_rx_buf);
-        }
-        rs485_uid_rx_reset();
-      }
-    } else if (rs485_rx_byte == RS485_UID_FRAME_MAGIC) {
-      rs485_uid_rx_active = 1u;
-      rs485_uid_rx_index = 0u;
-    } else if ((rs485_rx_byte & (uint8_t)~RS485_SYNC_EDGE_BIT) == RS485_SYNC7_BASE) {
-      rs485_sync_on_packet_received((rs485_rx_byte & RS485_SYNC_EDGE_BIT) ? 1u : 0u);
-      rs485_discovery_on_sync_received();
-    } else if ((rs485_rx_byte & (uint8_t)~RS485_DISCOVERY_ID_MASK) == RS485_DISCOVERY_REQ_BASE) {
-      rs485_discovery_on_request(rs485_rx_byte);
-    } else if ((rs485_rx_byte & (uint8_t)~RS485_DISCOVERY_ID_MASK) == RS485_DISCOVERY_ACK_BASE) {
-      rs485_discovery_on_response(rs485_rx_byte);
-    }
+#if !RS485_USART2_USE_DMA_RX
+    rs485_process_received_byte(rs485_rx_byte);
     if (HAL_UART_Receive_IT(&huart2, &rs485_rx_byte, 1) != HAL_OK) {
       Error_Handler();
     }
+#endif
   }
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
   if (huart->Instance == USART2) {
+    uint8_t completed_byte = rs485_tx_byte;
     rs485_tx_packets++;
     rs485_tx_busy = 0u;
+    if (rs485_is_sync_byte(completed_byte) == 0u) {
+      rs485_status_local_tx_complete_count++;
+    }
+    if ((rs485_status_window_after_tx != 0u) &&
+        (rs485_is_sync_byte(completed_byte) != 0u)) {
+      rs485_status_window_after_tx = 0u;
+      CLEAR_BIT(huart->Instance->CR1, USART_CR1_TCIE);
+      HAL_GPIO_WritePin(RS485_RDE_GPIO_Port, RS485_RDE_Pin, GPIO_PIN_RESET);
+      rs485_status_begin_window();
+      return;
+    }
     if (rs485_tx_queue_count != 0u) {
       rs485_tx_kick();
       return;
     }
     CLEAR_BIT(huart->Instance->CR1, USART_CR1_TCIE);
     HAL_GPIO_WritePin(RS485_RDE_GPIO_Port, RS485_RDE_Pin, GPIO_PIN_RESET);
+  }
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == USART2) {
+    rs485_uart_error_count++;
+    rs485_tx_busy = 0u;
+    rs485_tx_start_ms = 0u;
+    CLEAR_BIT(huart->Instance->CR1, USART_CR1_TCIE);
+    HAL_GPIO_WritePin(RS485_RDE_GPIO_Port, RS485_RDE_Pin, GPIO_PIN_RESET);
+    huart->Instance->ICR = USART_ICR_PECF |
+                           USART_ICR_FECF |
+                           USART_ICR_NECF |
+                           USART_ICR_ORECF |
+                           USART_ICR_TCCF;
+    huart->ErrorCode = HAL_UART_ERROR_NONE;
+    huart->RxState = HAL_UART_STATE_READY;
+#if RS485_USART2_USE_DMA_RX
+    rs485_dma_rx_start();
+#else
+    if (HAL_UART_Receive_IT(&huart2, &rs485_rx_byte, 1) != HAL_OK) {
+      huart2.Instance->CR1 |= USART_CR1_RXNEIE_RXFNEIE;
+      huart2.Instance->CR3 |= USART_CR3_EIE;
+    }
+#endif
   }
 }
 
@@ -4241,9 +4788,8 @@ void DrawUSBStatus(void){
     /* Первая строка (y=0): USB статус */
     lcd_print_padded_if_changed(0,0,text0, prev_line0, sizeof(prev_line0), 7, 16, color0, BLACK, &prev_line0_fg, &prev_line0_bg);
 
-    /* Индикатор SYNC рядом со звездочкой: 2 цифры slave-count + M/S/O.
-       Сейчас достоверный slave-count ещё недоступен: текущий sync-протокол односторонний,
-       master передаёт 0xA5, но slave не отвечает. Поле зарезервировано под будущий опрос. */
+    /* Индикатор SYNC рядом со звездочкой: 2 цифры slave-count/slot + M/S/O.
+       MASTER показывает число ответивших slave, SLAVE — занятый номер слота. */
     {
       static uint8_t prev_mode = 0xFF;
       static uint8_t prev_display_value = 0xFF;

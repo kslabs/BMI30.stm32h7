@@ -84,6 +84,7 @@ extern PCD_HandleTypeDef hpcd_USB_OTG_HS;
 extern DMA_HandleTypeDef hdma_adc1;
 extern DMA_HandleTypeDef hdma_adc2;
 extern DMA_HandleTypeDef hdma_spi3_tx;
+extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DAC_HandleTypeDef hdac1;
 extern SPI_HandleTypeDef hspi3;
 extern TIM_HandleTypeDef htim2;
@@ -255,6 +256,13 @@ void USART1_IRQHandler(void)
   */
 void USART2_IRQHandler(void)
 {
+  uint32_t isr = huart2.Instance->ISR;
+
+  if ((isr & (USART_ISR_PE | USART_ISR_FE | USART_ISR_NE | USART_ISR_ORE | USART_ISR_RXNE_RXFNE)) != 0u) {
+    HAL_UART_IRQHandler(&huart2);
+    return;
+  }
+
   if (((huart2.Instance->ISR & USART_ISR_TC) != 0u) &&
       ((huart2.Instance->CR1 & USART_CR1_TCIE) != 0u)) {
     huart2.Instance->ICR = USART_ICR_TCCF;
@@ -295,6 +303,20 @@ void DMA1_Stream1_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Stream1_IRQn 1 */
 
   /* USER CODE END DMA1_Stream1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA1 stream2 global interrupt.
+  */
+void DMA1_Stream2_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream2_IRQn 0 */
+  /* USART2 RX DMA: обычно без HT/TC, оставлено для ошибок */
+  /* USER CODE END DMA1_Stream2_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart2_rx);
+  /* USER CODE BEGIN DMA1_Stream2_IRQn 1 */
+
+  /* USER CODE END DMA1_Stream2_IRQn 1 */
 }
 
 /**

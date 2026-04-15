@@ -1097,7 +1097,7 @@
 				"-ExecutionPolicy",
 				"Bypass",
 				"-File",
-				".vscode/build-and-flash.ps1"
+				".vscode/build-and-flash-all.ps1"
 			],
 			"isBackground": false,
 			"group": {
@@ -1108,6 +1108,37 @@
 		},
 		{
 			"label": "BUILD+FLASH (clean build)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/build-and-flash-all.ps1",
+				"-CleanBuild"
+			],
+			"isBackground": false,
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "BUILD+FLASH SINGLE ST-LINK (auto-update time)",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".vscode/build-and-flash.ps1"
+			],
+			"isBackground": false,
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "BUILD+FLASH SINGLE ST-LINK (clean build)",
 			"type": "shell",
 			"command": "powershell.exe",
 			"args": [

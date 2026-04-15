@@ -13,6 +13,7 @@ $DebugDir = Join-Path $ProjectRoot "Debug"
 $BuildInfoC = Join-Path $ProjectRoot "Core\Src\build_info.c"
 $ElfFile = Join-Path $DebugDir "BMI30.stm32h7.elf"
 $CubeProgrammer = "C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe"
+$FlashScript = Join-Path $PSScriptRoot "flash-cubecli.ps1"
 $MakeExeCandidates = @(
     "C:\msys64\usr\bin\make.exe",
     "C:\Program Files\Git\usr\bin\make.exe"
@@ -147,20 +148,20 @@ if ($NoFlash) {
     Write-Host "[4/4] Flash skipped (-NoFlash)" -ForegroundColor Yellow
 } else {
     Write-Host "[4/4] Flashing via STM32CubeProgrammer..." -ForegroundColor Yellow
-    if (!(Test-Path $CubeProgrammer)) {
-        Write-Host "  [ERROR] STM32CubeProgrammer not found at: $CubeProgrammer" -ForegroundColor Red
+    if (!(Test-Path $FlashScript)) {
+        Write-Host "  [ERROR] Flash script not found at: $FlashScript" -ForegroundColor Red
         exit 1
     }
 
-    $connectArgs = @("port=SWD", "freq=4000")
+    $flashArgs = @("-Elf", $ElfFile)
     if ($StlinkSn) {
-        $connectArgs += "sn=$StlinkSn"
+        $flashArgs += @("-StlinkSn", $StlinkSn)
         Write-Host "  [OK] Target ST-LINK: $StlinkSn" -ForegroundColor Cyan
     }
 
     $oldEap = $ErrorActionPreference
     $ErrorActionPreference = "Continue"  # CubeCLI тоже может писать в stderr без фатального кода
-    $flashOutput = & $CubeProgrammer -c @connectArgs -w $ElfFile -v -rst 2>&1 | Out-String
+    $flashOutput = & $FlashScript @flashArgs 2>&1 | Out-String
     $flashExit = $LASTEXITCODE
     $ErrorActionPreference = $oldEap
 

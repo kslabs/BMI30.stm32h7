@@ -17,8 +17,8 @@ $StlinkTargets = @(
     },
     @{
         Name = "ST-Link #2"
-        Sn = "066FFF565556857187224249"
-        Com = "COM11"
+        Sn = "066BFF514953667287243650"
+        Com = "COM22"
     }
 )
 
