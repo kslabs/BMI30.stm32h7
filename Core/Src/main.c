@@ -96,6 +96,15 @@ static volatile uint32_t tim15_arr_pulse_nominal = 0u;
 static volatile uint32_t tim15_arr_pulse_count = 0u;
 static volatile int32_t tim15_arr_hold_offset = 0;
 static volatile int32_t tim15_arr_hold_target_offset = 0;
+static volatile uint8_t sync_phase_diag_pending = 0u;
+static volatile uint8_t sync_phase_diag_role = 'O';
+static volatile uint16_t sync_phase_diag_sample = 0u;
+static volatile uint16_t sync_phase_diag_samples = 0u;
+static volatile uint32_t sync_phase_diag_ticks = 0u;
+static volatile uint32_t sync_phase_diag_arr = 0u;
+static volatile uint32_t sync_phase_diag_bufs = 0u;
+static volatile uint32_t sync_phase_diag_edge = 0u;
+static volatile uint8_t sync_phase_diag_kind = 0u;
 static volatile uint8_t optic_sensor_state_public = 0u;
 static volatile uint32_t optic_last_pulse_ms = 0u;
 static volatile uint32_t optic_pulse_window_start_ms = 0u;
@@ -127,7 +136,6 @@ static volatile uint8_t rs485_slave_led_pulse_pending = 0u;
 static volatile uint8_t rs485_slave_led_dark_latched = 0u;
 static volatile uint32_t rs485_slave_led_invert_until_ms = 0u;
 static volatile int8_t rs485_sync_relation_score = 0;
-static volatile int8_t rs485_anti_phase_drive_sign = 1;
 static volatile uint8_t rs485_anti_phase_recovery_active = 0u;
 static volatile uint8_t rs485_anti_phase_recovery_packets = 0u;
 static volatile uint32_t rs485_sync_buf_div4 = 0;
@@ -257,7 +265,26 @@ static uint32_t rs485_sync_get_uart_packet_ticks(void)
   return (uint32_t)((((uint64_t)tim_clk * 10u) + ((uint64_t)baud / 2u)) / (uint64_t)baud);
 }
 
-static uint32_t rs485_sync_get_auto_target_phase_ticks(uint32_t period_ticks)
+static int32_t rs485_sync_wrap_phase_ticks(int32_t phase_ticks, uint32_t period_ticks)
+{
+  int32_t period = (int32_t)period_ticks;
+  int32_t half_period = (int32_t)(period_ticks / 2u);
+
+  if (period <= 0) {
+    return phase_ticks;
+  }
+
+  while (phase_ticks > half_period) {
+    phase_ticks -= period;
+  }
+  while (phase_ticks < -half_period) {
+    phase_ticks += period;
+  }
+
+  return phase_ticks;
+}
+
+__attribute__((unused)) static uint32_t rs485_sync_get_auto_target_phase_ticks(uint32_t period_ticks)
 {
   extern uint16_t adc_stream_get_active_samples(void);
   uint32_t uart_packet_ticks = rs485_sync_get_uart_packet_ticks();
@@ -278,7 +305,36 @@ static uint32_t rs485_sync_get_auto_target_phase_ticks(uint32_t period_ticks)
     rx_comp_ticks += sample_ticks;
   }
 
-  return (period_ticks > rx_comp_ticks) ? (period_ticks - rx_comp_ticks) : 0u;
+  /* Корневая причина срыва lock была здесь: sync-байт приходит ПОСЛЕ реального
+     фронта master, поэтому целевая фаза для slave должна быть малой положительной
+     задержкой приёма, а не (period - delay), что уводило контур через ноль к 597/590. */
+  if (rx_comp_ticks >= period_ticks) {
+    rx_comp_ticks %= period_ticks;
+  }
+
+  return rx_comp_ticks;
+}
+
+int32_t tim15_get_default_target_phase_ticks(void)
+{
+  extern uint16_t adc_stream_get_active_samples(void);
+  uint32_t active_samples = adc_stream_get_active_samples();
+  uint32_t period_ticks = sync_tim5_period_ticks;
+  uint32_t sample_ticks = 0u;
+  int32_t target_ticks = 0;
+
+  if ((active_samples != 0u) && (period_ticks != 0u)) {
+    sample_ticks = period_ticks / active_samples;
+  }
+
+  if (sample_ticks == 0u) {
+    sample_ticks = 1144u;
+  }
+
+  /* Прямая ручная цель без скрытых поправок на транспорт/UART:
+     пользователь сам подбирает SYNC_TARGET_PHASE_SAMPLES по осциллографу. */
+  target_ticks = (int32_t)sample_ticks * (int32_t)SYNC_TARGET_PHASE_SAMPLES;
+  return rs485_sync_wrap_phase_ticks(target_ticks, period_ticks);
 }
 
 static void rs485_sync_on_packet_received(uint8_t edge_kind);
@@ -316,6 +372,7 @@ static void arr_auto_tune_service(void);
 static void tim15_request_hold_offset(int32_t arr_delta);
 static uint8_t tim15_schedule_arr_pulse(int32_t arr_delta);
 static void phase_micro_adjust_service(void);
+static void sync_phase_monitor_service(void);
 static void tune_led_service(uint32_t now_ms);
 static uint8_t rs485_count_bits_u32(uint32_t value);
 static void rs485_tx_queue_push(uint8_t value);
@@ -1041,6 +1098,31 @@ static void rs485_sync_on_packet_received(uint8_t edge_kind)
   sync_edge_seen = 1u;
   sync_edge_count++;
   if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+    uint32_t active_samples = adc_stream_get_active_samples();
+    uint32_t dma_remaining = active_samples;
+    uint32_t sample_idx = 0u;
+    uint32_t buf_slot = (uint32_t)(s_next_ring_index & (FIFO_FRAMES - 1u));
+
+    if ((active_samples != 0u) && (hdma_adc1.Instance != NULL)) {
+      dma_remaining = __HAL_DMA_GET_COUNTER(&hdma_adc1);
+      if (dma_remaining > active_samples) {
+        dma_remaining = active_samples;
+      }
+      sample_idx = active_samples - dma_remaining;
+      if (sample_idx >= active_samples) {
+        sample_idx = active_samples - 1u;
+      }
+    }
+
+    sync_phase_diag_role = 'S';
+    sync_phase_diag_sample = (uint16_t)sample_idx;
+    sync_phase_diag_samples = (uint16_t)active_samples;
+    sync_phase_diag_ticks = sync_tim15_cnt_at_pd5;
+    sync_phase_diag_arr = dma_remaining;
+    sync_phase_diag_bufs = buf_slot;
+    sync_phase_diag_edge = sync_edge_count;
+    sync_phase_diag_kind = rs485_last_sync_edge_kind;
+    sync_phase_diag_pending = 1u;
     rs485_slave_led_pulse_pending = 1u;
   }
 
@@ -1605,7 +1687,7 @@ static void rs485_uid_handle_received(const uint8_t *uid_bytes)
   rs485_peer_uid_cmp = cmp;
   rs485_peer_uid_valid = 1u;
   rs485_peer_uid_last_ms = HAL_GetTick();
-  printf("[RS485] PEER_UID cmp=%d\r\n", (int)cmp);
+  /* PEER_UID debug-лог отключён для чистого phase-monitor потока. */
 
   if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
     rs485_slave_count_estimate = 1u;
@@ -1780,7 +1862,6 @@ static void rs485_sync_auto_role_service(uint32_t now_ms)
     rs485_sync_relation_score = 0;
     rs485_anti_phase_recovery_active = 0u;
     rs485_anti_phase_recovery_packets = 0u;
-    rs485_anti_phase_drive_sign = 1;
     rs485_status_reset_window_state();
     rs485_slave_count_estimate = 0u;
     rs485_status_local_tx_count = 0u;
@@ -1815,8 +1896,7 @@ static void rs485_sync_auto_role_service(uint32_t now_ms)
     rs485_slave_count_estimate = 0u;
     rs485_discovery_seen_mask = 0u;
     rs485_discovery_reset_master_scan();
-    printf("[RS485] AUTO_ROLE init -> SLAVE, claim in %lums if no sync\r\n",
-           (unsigned long)rs485_master_claim_delay_ms);
+    /* AUTO_ROLE init-лог отключён для чистого phase-monitor потока. */
     return;
   }
 
@@ -1838,9 +1918,7 @@ static void rs485_sync_auto_role_service(uint32_t now_ms)
   rs485_slave_count_estimate = 0u;
   rs485_discovery_seen_mask = 0u;
   rs485_discovery_reset_master_scan();
-  printf("[RS485] AUTO_ROLE claim -> MASTER node=%u after %lums\r\n",
-         (unsigned)rs485_local_node_id,
-         (unsigned long)(now_ms - auto_start_ms));
+  /* AUTO_ROLE claim-лог отключён для чистого phase-monitor потока. */
 }
 
 typedef struct {
@@ -1854,10 +1932,73 @@ static volatile uint32_t g_arr_auto_selected = 1144u;
 static volatile uint8_t g_arr_auto_rescan_request = 0u;
 static volatile uint8_t g_tune_led_freq_active = 0u;
 
+#define TIM15_SYNC_LOCK_WINDOW_TICKS      40
+#define TIM15_SYNC_PULSE_DEADBAND_TICKS   80
+#define TIM15_SYNC_HOLD_DIVISOR           4096
+#define TIM15_SYNC_PULSE_DIVISOR          24
+#define TIM15_SYNC_PULSE_BOOST1_DIVISOR   12
+#define TIM15_SYNC_PULSE_BOOST2_DIVISOR   6
+#define TIM15_SYNC_PULSE_HOLD_UPDATES     16u
+#define TIM15_SYNC_HOLD_MAX_OFFSET        6
+#define TIM15_SYNC_PULSE_MIN_OFFSET       48
+#define TIM15_SYNC_PULSE_MAX_OFFSET       900
+#define TIM15_SYNC_PULSE_NEAR_ERROR       400
+#define TIM15_SYNC_PULSE_MID_ERROR        1500
+#define TIM15_SYNC_PULSE_FAR_ERROR        4000
+/* Базовая точка ARR для SLAVE берётся из текущего активного профиля TIM15,
+ * а не из жёстко прошитого значения: профили 300/400 Hz имеют разный номинал.
+ * 1 шаг = 1 тик ARR.
+ */
+static volatile uint32_t g_tim15_slave_base_arr = 0u;
+static volatile int32_t g_tim15_slave_arr_step_ticks = 1;
+
+static uint32_t tim15_sync_get_deadband_ticks(void)
+{
+  uint32_t period_ticks = sync_tim5_period_ticks;
+  uint32_t active_samples = adc_stream_get_active_samples();
+  uint32_t sample_ticks = 1144u;
+  uint32_t deadband = 0u;
+
+  if ((period_ticks != 0u) && (active_samples != 0u)) {
+    sample_ticks = period_ticks / active_samples;
+    if (sample_ticks == 0u) {
+      sample_ticks = 1144u;
+    }
+  }
+
+  /* Реальная рабочая lock-зона должна быть в нескольких семплах,
+     иначе контур неизбежно перелетает через правильную точку. */
+  deadband = sample_ticks * 2u;
+  if (deadband < 800u) {
+    deadband = 800u;
+  }
+  if (deadband > 4000u) {
+    deadband = 4000u;
+  }
+
+  return deadband;
+}
+
+static int32_t tim15_sync_clamp_i32(int32_t value, int32_t limit)
+{
+  if (value > limit) {
+    return limit;
+  }
+  if (value < -limit) {
+    return -limit;
+  }
+  return value;
+}
+
 static void arr_auto_apply_tim15(uint32_t arr)
 {
   extern TIM_HandleTypeDef htim15;
 
+  if (arr < 1u) {
+    arr = 1u;
+  }
+
+  htim15.Init.Period = arr;
   htim15.Instance->ARR = arr;
   __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, (arr + 1u) / 2u);
 }
@@ -1866,6 +2007,80 @@ static int32_t arr_auto_abs_i32(int32_t value)
 {
   return (value < 0) ? -value : value;
 }
+
+static int32_t tim15_compute_phase_pulse_delta(int32_t phase_ticks)
+{
+  int32_t abs_phase = arr_auto_abs_i32(phase_ticks);
+  int32_t pulse = 0;
+  int32_t boost_mid_start = 0;
+  int32_t boost_far_start = 0;
+  uint32_t deadband_ticks = tim15_sync_get_deadband_ticks();
+  uint32_t sample_ticks = 1144u;
+  uint32_t period_ticks = sync_tim5_period_ticks;
+  uint32_t active_samples = adc_stream_get_active_samples();
+
+  if ((uint32_t)abs_phase <= deadband_ticks) {
+    return 0;
+  }
+
+  if ((period_ticks != 0u) && (active_samples != 0u)) {
+    sample_ticks = period_ticks / active_samples;
+    if (sample_ticks == 0u) {
+      sample_ticks = 1144u;
+    }
+  }
+
+  pulse = abs_phase / TIM15_SYNC_PULSE_DIVISOR;
+
+  /* Адаптивное усиление: чем дальше ушли от lock-зоны, тем агрессивнее
+     одноразовый ARR-пульс. Это ускоряет вход в фазу без дёрганой доводки
+     рядом с целевой точкой. */
+  boost_mid_start = (int32_t)deadband_ticks + (int32_t)(sample_ticks * 2u);
+  boost_far_start = (int32_t)deadband_ticks + (int32_t)(sample_ticks * 6u);
+  if (abs_phase > boost_mid_start) {
+    pulse += (abs_phase - boost_mid_start) / TIM15_SYNC_PULSE_BOOST1_DIVISOR;
+  }
+  if (abs_phase > boost_far_start) {
+    pulse += (abs_phase - boost_far_start) / TIM15_SYNC_PULSE_BOOST2_DIVISOR;
+  }
+
+  if (pulse < TIM15_SYNC_PULSE_MIN_OFFSET) {
+    pulse = TIM15_SYNC_PULSE_MIN_OFFSET;
+  }
+  if (pulse > TIM15_SYNC_PULSE_MAX_OFFSET) {
+    pulse = TIM15_SYNC_PULSE_MAX_OFFSET;
+  }
+
+  /* Отрицательный delta даёт укороченный период (ускорение),
+     положительный — удлинённый (замедление).
+     После исправления знака target phase для устойчивой отрицательной ОС
+     положительная фазовая ошибка должна уменьшаться положительным delta. */
+  return (phase_ticks > 0) ? pulse : -pulse;
+}
+
+static uint32_t tim15_phase_pulse_spacing_buffers(uint32_t abs_phase)
+{
+  uint32_t deadband_ticks = tim15_sync_get_deadband_ticks();
+  uint32_t sample_ticks = 1144u;
+  uint32_t period_ticks = sync_tim5_period_ticks;
+  uint32_t active_samples = adc_stream_get_active_samples();
+
+  if ((period_ticks != 0u) && (active_samples != 0u)) {
+    sample_ticks = period_ticks / active_samples;
+    if (sample_ticks == 0u) {
+      sample_ticks = 1144u;
+    }
+  }
+
+  if (abs_phase >= (deadband_ticks + (sample_ticks * 2u))) {
+    return 1u;
+  }
+  if (abs_phase > deadband_ticks) {
+    return 2u;
+  }
+  return 4u;
+}
+
 static void tim15_apply_hold_target_if_possible(void)
 {
   tim15_arr_hold_target_offset = 0;
@@ -1881,11 +2096,42 @@ static void tim15_request_hold_offset(int32_t arr_delta)
 
 static uint8_t tim15_schedule_arr_pulse(int32_t arr_delta)
 {
-  (void)arr_delta;
-  tim15_arr_pulse_stage = 0u;
-  tim15_arr_hold_target_offset = 0;
-  tim15_arr_hold_offset = 0;
-  return 0u;
+  extern TIM_HandleTypeDef htim15;
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint32_t nominal_arr = TIM15->ARR;
+  int32_t pulse_arr = 0;
+
+  if (arr_delta == 0) {
+    return 0u;
+  }
+  if (tim15_arr_pulse_stage != 0u) {
+    return 0u;
+  }
+
+  /* Для SLAVE пульсуем относительно текущего номинального ARR,
+     который уже выставлен активным профилем/частотой потока. */
+  if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+    if (nominal_arr == 0u) {
+      nominal_arr = htim15.Init.Period;
+    }
+    if (nominal_arr == 0u) {
+      nominal_arr = 1u;
+    }
+    g_tim15_slave_base_arr = nominal_arr;
+  }
+
+  pulse_arr = (int32_t)nominal_arr + (arr_delta * g_tim15_slave_arr_step_ticks);
+  if (pulse_arr < 1) {
+    pulse_arr = 1;
+  }
+
+  tim15_arr_pulse_nominal = nominal_arr;
+  tim15_arr_pulse_stage = TIM15_SYNC_PULSE_HOLD_UPDATES;
+  tim15_arr_pulse_count++;
+  arr_auto_apply_tim15((uint32_t)pulse_arr);
+  __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+  __HAL_TIM_ENABLE_IT(&htim15, TIM_IT_UPDATE);
+  return 1u;
 }
 
 __attribute__((unused)) static uint32_t arr_auto_choose_best(const arr_auto_measure_t *samples, uint32_t count)
@@ -1947,12 +2193,105 @@ static void arr_auto_tune_service(void)
 
 static void phase_micro_adjust_service(void)
 {
-  rs485_sync_locked = 0u;
-  rs485_sync_led_active = 0u;
+  extern volatile uint8_t vnd_sync_mode_public;
+  extern volatile uint32_t adc_stream_total_buffer_count;
+  uint32_t now_ms = HAL_GetTick();
+  uint32_t period_ticks = sync_tim5_period_ticks;
+  uint32_t active_samples = (uint32_t)sync_phase_diag_samples;
+  uint32_t sample_ticks = 0u;
+  int32_t target_phase = (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO)
+                         ? tim15_get_default_target_phase_ticks()
+                         : rs485_sync_wrap_phase_ticks((int32_t)g_sync_target_phase_ticks, period_ticks);
+  int32_t measured_phase = 0;
+  int32_t phase_error = 0;
+  uint32_t abs_phase = 0u;
+  int32_t pulse_delta = 0;
+
+  if ((active_samples == 0u) || (period_ticks == 0u)) {
+    active_samples = adc_stream_get_active_samples();
+  }
+  if ((active_samples != 0u) && (period_ticks != 0u)) {
+    sample_ticks = period_ticks / active_samples;
+  }
+  if (sample_ticks == 0u) {
+    sample_ticks = 1144u;
+  }
+
+  /* Корневое исправление: контур должен управлять по той же фазе, которую реально
+     меряет приём sync-пакета и которую мы видим в строках S,<sample>. */
+  measured_phase = (int32_t)((uint32_t)sync_phase_diag_sample * sample_ticks);
+  phase_error = rs485_sync_wrap_phase_ticks(measured_phase - target_phase, period_ticks);
+  abs_phase = (uint32_t)arr_auto_abs_i32(phase_error);
+  pulse_delta = tim15_compute_phase_pulse_delta(phase_error);
+  uint32_t pulse_spacing = tim15_phase_pulse_spacing_buffers(abs_phase);
+  static uint32_t last_seen_buf = 0xFFFFFFFFu;
+  static uint32_t last_pulse_buf = 0xFFFFFFFFu;
+
+  tim15_request_hold_offset(0);
   rs485_anti_phase_recovery_active = 0u;
   rs485_anti_phase_recovery_packets = 0u;
-  rs485_anti_phase_drive_sign = 1;
-  tim15_request_hold_offset(0);
+
+  if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
+      (sync_last_edge_ms != 0u) &&
+      ((now_ms - sync_last_edge_ms) <= RS485_SYNC_PRESENT_MS)) {
+    rs485_sync_locked = (uint8_t)(abs_phase <= tim15_sync_get_deadband_ticks());
+    rs485_sync_led_active = rs485_sync_locked;
+
+    if (adc_stream_total_buffer_count != last_seen_buf) {
+      last_seen_buf = adc_stream_total_buffer_count;
+
+      if ((pulse_delta != 0) &&
+          ((last_pulse_buf == 0xFFFFFFFFu) ||
+           ((adc_stream_total_buffer_count - last_pulse_buf) >= pulse_spacing))) {
+        if (tim15_schedule_arr_pulse(pulse_delta) != 0u) {
+          last_pulse_buf = adc_stream_total_buffer_count;
+        }
+      }
+    }
+  } else {
+    rs485_sync_locked = 0u;
+    rs485_sync_led_active = 0u;
+    last_seen_buf = adc_stream_total_buffer_count;
+    last_pulse_buf = adc_stream_total_buffer_count;
+  }
+}
+
+static void sync_phase_monitor_service(void)
+{
+  uint32_t primask = __get_PRIMASK();
+  uint32_t now_ms = HAL_GetTick();
+  uint8_t pending = 0u;
+  uint8_t role = 'O';
+  uint16_t sample_idx = 0u;
+  static uint32_t last_print_ms = 0u;
+  static uint8_t have_data = 0u;
+  static uint8_t last_role = 'O';
+  static uint16_t last_sample = 0u;
+
+  __disable_irq();
+  pending = sync_phase_diag_pending;
+  if (pending != 0u) {
+    role = sync_phase_diag_role;
+    sample_idx = sync_phase_diag_sample;
+    sync_phase_diag_pending = 0u;
+  }
+  if (primask == 0u) {
+    __enable_irq();
+  }
+
+  if (pending != 0u) {
+    have_data = 1u;
+    last_role = role;
+    last_sample = sample_idx;
+  }
+
+  if ((!have_data) || ((now_ms - last_print_ms) < 250u)) {
+    return;
+  }
+
+  last_print_ms = now_ms;
+  printf("%c,%u\r\n", (int)last_role, (unsigned)last_sample);
+  /* Формат строки: role, real_sample_idx_at_sync */
 }
 
 static void tune_led_service(uint32_t now_ms)
@@ -2412,12 +2751,7 @@ int main(void)
   printf("[BOOT] FW_VERSION=%s DATE=%s TIME=%s HASH=%s\r\n", fw_version, fw_build_date, fw_build_time, fw_git_hash);
   printf("[BOOT] %s\r\n", fw_build_full);
   printf("[UART] USART1=115200 8N1 ready\r\n");
-  printf("[RS485] SLOT=AUTO UID_HINT=%u STATUS=id[4:0] optic[5] tx[6] label[7]\r\n", (unsigned)rs485_local_uid_hint);
-  printf("[RS485] UID=%08lX-%08lX-%08lX CLAIM_MS=%lu\r\n",
-         (unsigned long)rs485_local_uid_words[2],
-         (unsigned long)rs485_local_uid_words[1],
-         (unsigned long)rs485_local_uid_words[0],
-         (unsigned long)rs485_master_claim_delay_ms);
+  /* RS485 UID/slot banner отключён: COM оставляем под phase-monitor. */
 #if 1
   // Дополнительная диагностика debug и option bytes
   uint32_t dhcsr = CoreDebug->DHCSR;
@@ -2861,27 +3195,7 @@ int main(void)
 
   arr_auto_tune_service();
   phase_micro_adjust_service();
-
-  // Ежесекундный вывод периода PD5 измеренного через TIM5 (32-битный счетчик @ 275 MHz)
-  {
-    static uint32_t last_tim5_print_ms = 0;
-    if (now - last_tim5_print_ms >= 1000) {
-      last_tim5_print_ms = now;
-      uint32_t period_ticks = sync_tim5_period_ticks;
-      // TIM5 @ 275 MHz: 1 тик = 3.636 нс
-      // Период 200 Hz (5 ms) = 5000000 нс / 3.636 нс = ~1,375,000 тиков
-      float period_us = (float)period_ticks / 275.0f;  // в микросекундах
-      float freq_hz = 275000000.0f / (float)period_ticks;  // частота в Гц
-      extern volatile uint8_t vnd_sync_mode_public;
-      extern TIM_HandleTypeDef htim15;
-      extern volatile uint32_t sync_tim15_cnt_at_pd5;
-      uint32_t phase = sync_tim15_cnt_at_pd5;
-      uint32_t arr = htim15.Instance->ARR;
-      printf("[TIM5] PD5_period=%lu ticks (%.3f us, %.3f Hz) | mode=%u ARR=%lu phase=%lu\r\n", 
-             (unsigned long)period_ticks, period_us, freq_hz,
-             (unsigned)vnd_sync_mode_public, (unsigned long)arr, (unsigned long)phase);
-    }
-  }
+  sync_phase_monitor_service();
 
   /* DEBUG dumps отключены: TIM2 больше не управляет DMA, а вывод s_frame_buffer_idx в COM4 шумит. */
 
@@ -3026,58 +3340,10 @@ int main(void)
 #if !SAFE_MINIMAL
   extern volatile uint8_t vnd_tx_kick;
   extern uint8_t vnd_is_streaming(void);
-  #ifndef SYNC_DEBUG_LOG
-  #define SYNC_DEBUG_LOG 1
-  #endif
-  #if SYNC_DEBUG_LOG
-  {
-    static uint32_t last_sync_log_ms = 0u;
-    if ((now - last_sync_log_ms) >= 1000u) {
-      last_sync_log_ms = now;
-      extern volatile uint32_t sync_buffers_between_edges;
-      extern volatile uint32_t adc_stream_total_buffer_count;
-      extern volatile uint8_t vnd_sync_mode_public;
-      uint32_t age = (sync_last_edge_ms == 0u) ? 0xFFFFFFFFu : (now - sync_last_edge_ms);
-      printf("[SYNC] edges=%lu age=%lums mode=%u bufs_between_pd5=%lu total_bufs=%lu\r\n",
-             (unsigned long)sync_edge_count,
-             (unsigned long)age,
-             (unsigned)vnd_sync_mode_public,
-             (unsigned long)sync_buffers_between_edges,
-             (unsigned long)(adc_stream_total_buffer_count % 1000));
-    }
-  }
-  #endif
+  /* Периодический SYNC-лог отключён: COM оставляем под compact phase-monitor. */
   rs485_sync_auto_role_service(now);
   /* rs485_uid_service: UID-фрейм отключён — он мешал sync-арбитражу */
-  /* Периодический вывод RS485-состояния для отладки (каждые 2с) */
-  {
-    static uint32_t last_role_log_ms = 0u;
-    if ((now - last_role_log_ms) >= 2000u) {
-      last_role_log_ms = now;
-      uint32_t edge_age = (sync_last_edge_ms == 0u) ? 0xFFFFFFFFu : (now - sync_last_edge_ms);
-      uint8_t alive = (edge_age <= RS485_SYNC_PRESENT_MS) && (sync_last_edge_ms != 0u);
-      printf("[ROLE] mode=%s node=%u slv=%u sync=%s(age=%lums) peer_uid=%u cmp=%d forced=%u bl=%lu rx=%lu stx=%lu stc=%lu srx=%lu def=%lu wok=%lu wmiss=%lu lexp=%lu lmiss=%lu\r\n",
-        (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) ? "M" :
-        (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE)  ? "S" : "O",
-        (unsigned)rs485_local_node_id,
-        (unsigned)rs485_slave_count_estimate,
-        alive ? "OK" : "NO",
-        (unsigned long)edge_age,
-        (unsigned)rs485_peer_uid_valid,
-        (int)rs485_peer_uid_cmp,
-        (unsigned)vnd_sync_is_mode_host_forced(),
-        (unsigned long)rs485_boot_listen_ms,
-        (unsigned long)rs485_rx_packets,
-        (unsigned long)rs485_status_local_tx_count,
-        (unsigned long)rs485_status_local_tx_complete_count,
-        (unsigned long)rs485_status_peer_rx_count,
-        (unsigned long)rs485_status_deferred_tx_count,
-        (unsigned long)rs485_status_window_ok_count,
-        (unsigned long)rs485_status_window_miss_count,
-        (unsigned long)rs485_status_local_slot_expected_count,
-        (unsigned long)rs485_status_local_slot_miss_count);
-    }
-  }
+  /* Периодический ROLE-лог отключён: в COM оставляем только компактный phase-monitor. */
   if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
       (sync_last_edge_ms != 0u) &&
       ((now - sync_last_edge_ms) > 250u)) {
@@ -3085,7 +3351,6 @@ int main(void)
     rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
     rs485_anti_phase_recovery_active = 0u;
     rs485_anti_phase_recovery_packets = 0u;
-    rs485_anti_phase_drive_sign = 1;
     tim15_request_hold_offset(0);
   }
   /* Подстройка частоты TIM15 по фазе (TIM16 счётчик, PD5 reset) */
@@ -3240,9 +3505,9 @@ int main(void)
           printf("\r\n=== DEVICE STATUS (UART1) ===\r\n");
           printf("Uptime: %lu ms\r\n", HAL_GetTick());
           if (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO) {
-            printf("Sync target phase: AUTO\r\n");
+            printf("Sync target phase: AUTO target=%ld samples\r\n", (long)SYNC_TARGET_PHASE_SAMPLES);
           } else {
-            printf("Sync target phase: %lu ticks\r\n", (unsigned long)g_sync_target_phase_ticks);
+            printf("Sync target phase: %ld ticks\r\n", (long)((int32_t)g_sync_target_phase_ticks));
           }
           printf("Use 'PERF' or 'FPS' for detailed statistics\r\n");
           printf("==============================\r\n");
@@ -3251,22 +3516,22 @@ int main(void)
           while(*arg == ' ') arg++;
           if(*arg == 0){
             if (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO) {
-              printf("[UART] PHASE=AUTO\r\n");
+              printf("[UART] PHASE=AUTO target=%ld samples\r\n", (long)SYNC_TARGET_PHASE_SAMPLES);
             } else {
-              printf("[UART] PHASE=%lu ticks\r\n", (unsigned long)g_sync_target_phase_ticks);
+              printf("[UART] PHASE=%ld ticks\r\n", (long)((int32_t)g_sync_target_phase_ticks));
             }
           } else if(strcmp(arg, "AUTO") == 0){
             g_sync_target_phase_ticks = SYNC_TARGET_PHASE_AUTO;
-            printf("[UART] PHASE=AUTO\r\n");
+            printf("[UART] PHASE=AUTO target=%ld samples\r\n", (long)SYNC_TARGET_PHASE_SAMPLES);
           } else {
             char *end_ptr = NULL;
-            unsigned long phase_ticks = strtoul(arg, &end_ptr, 10);
+            long phase_ticks = strtol(arg, &end_ptr, 10);
             while (end_ptr && *end_ptr == ' ') end_ptr++;
             if ((end_ptr == arg) || (end_ptr && *end_ptr != 0)) {
               printf("[UART] PHASE parse error: '%s'\r\n", arg);
             } else {
-              g_sync_target_phase_ticks = (uint32_t)phase_ticks;
-              printf("[UART] PHASE=%lu ticks\r\n", phase_ticks);
+              g_sync_target_phase_ticks = (uint32_t)((int32_t)phase_ticks);
+              printf("[UART] PHASE=%ld ticks\r\n", phase_ticks);
             }
           }
         } else if(strncmp(uart1_cmd_buf, "FPS", 3) == 0){
@@ -4490,8 +4755,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     #endif
   }
   else if (htim->Instance == TIM15) {
-    tim15_arr_pulse_stage = 0u;
-    __HAL_TIM_DISABLE_IT(&htim15, TIM_IT_UPDATE);
+    if (tim15_arr_pulse_stage != 0u) {
+      tim15_arr_pulse_stage--;
+      if (tim15_arr_pulse_stage == 0u) {
+        arr_auto_apply_tim15(tim15_arr_pulse_nominal);
+      }
+    }
+    if (tim15_arr_pulse_stage == 0u) {
+      __HAL_TIM_DISABLE_IT(&htim15, TIM_IT_UPDATE);
+    }
     tim15_apply_hold_target_if_possible();
     __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
   }

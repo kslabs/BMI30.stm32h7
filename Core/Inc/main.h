@@ -141,7 +141,11 @@ extern volatile uint32_t systick_heartbeat;
 #define OPTIC_TX_GPIO_Port GPIOA
 
 #define RS485_SYNC_BYTE 0xA5u
+/* Прямая целевая фаза синхронизации в семплах, без скрытых авто-коррекций.
+   Подбирается вручную по осциллографу; допустимы и значения у конца буфера (например 598/599). */
+#define SYNC_TARGET_PHASE_SAMPLES (10)
 
+int32_t tim15_get_default_target_phase_ticks(void);
 void rs485_sync_on_buffer_complete(uint8_t parity);
 uint32_t rs485_get_master_claim_delay_ms(void);
 uint8_t optic_sensor_get_state(void);

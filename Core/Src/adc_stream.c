@@ -2145,9 +2145,13 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                     evaluate_lock = 1u;
                 }
 
-                if (sync_locked && evaluate_lock) {
+                {
+                    int32_t target_phase_ticks = tim15_get_default_target_phase_ticks();
+                    int32_t phase_error = g_tim5_avg_phase - target_phase_ticks;
+
+                    if (sync_locked && evaluate_lock) {
                     // Already locked: check if we lost it (very wide window)
-                    bool bad_phase = (g_tim5_avg_phase <= -20000 || g_tim5_avg_phase >= 20000);
+                    bool bad_phase = (phase_error <= -20000 || phase_error >= 20000);
                     if (bad_phase) {
                         unlock_stable_cnt++;
                         // Require continuous failure for ~1 second on the averaged phase updates.
@@ -2161,7 +2165,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                 } else if (!sync_locked && evaluate_lock) {
                     // Not locked: green only after the averaged phase enters a narrow window
                     // and keeps holding there on repeated averaged updates.
-                    bool good_phase = (g_tim5_avg_phase > -40 && g_tim5_avg_phase < 40);
+                    bool good_phase = (phase_error > -40 && phase_error < 40);
                     if (good_phase) {
                         lock_stable_cnt++;
                         // Require about 1 second of stable averaged phase before Green.
@@ -2172,6 +2176,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                     } else {
                         lock_stable_cnt = 0;
                     }
+                }
                 }
                 vnd_sync_ok_public = sync_locked;
                 
