@@ -153,15 +153,15 @@ if ($NoFlash) {
         exit 1
     }
 
-    $flashArgs = @("-Elf", $ElfFile)
+    $flashParams = @{ Elf = $ElfFile }
     if ($StlinkSn) {
-        $flashArgs += @("-StlinkSn", $StlinkSn)
+        $flashParams.StlinkSn = $StlinkSn
         Write-Host "  [OK] Target ST-LINK: $StlinkSn" -ForegroundColor Cyan
     }
 
     $oldEap = $ErrorActionPreference
     $ErrorActionPreference = "Continue"  # CubeCLI тоже может писать в stderr без фатального кода
-    $flashOutput = & $FlashScript @flashArgs 2>&1 | Out-String
+    $flashOutput = & $FlashScript @flashParams 2>&1 | Out-String
     $flashExit = $LASTEXITCODE
     $ErrorActionPreference = $oldEap
 

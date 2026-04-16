@@ -349,12 +349,19 @@ static inline uint8_t adc_marker_output_allowed(void)
     return (uint8_t)((vnd_is_streaming() && vnd_is_tx_enabled()) ? 1u : 0u);
 }
 
+static inline uint8_t adc_marker_get_level(void)
+{
+    return ((ADC_MARKER_PORT_A->ODR & ADC_MARKER_PIN_A) != 0u) ? 1u : 0u;
+}
+
 static inline void adc_marker_set_level(uint8_t level_high)
 {
     if (!adc_marker_output_allowed()) {
         level_high = 0u;
     }
-    /* Текущий режим: зеркалим общий бит на оба канала. */
+
+    /* Единственный источник истины для phase/polarity — реальный GPIO маркера. */
+    s_pb8_state = (uint8_t)(level_high ? 1u : 0u);
     adc_marker_set_level_a(level_high);
     adc_marker_set_level_b(level_high);
 }
@@ -367,32 +374,32 @@ static inline void adc_marker_pa3_toggle(void)
     pa3_divider++;
     if (pa3_divider >= ADC_MARKER_PA3_DIV) {
         pa3_divider = 0;
-        /* Atomic toggle via BSRR: safe even inside ISR */
-        uint8_t next_level_high = ((ADC_MARKER_PORT_A->ODR & ADC_MARKER_PIN_A) == 0u) ? 1u : 0u;
+        /* Переключаем реальный маркер и одновременно синхронизируем s_pb8_state. */
+        uint8_t next_level_high = (uint8_t)(adc_marker_get_level() ? 0u : 1u);
         adc_marker_set_level(next_level_high);
     }
 #endif
 }
 
-/* Привязка чет/нечет к счетчику буферов.
-    s_pb8_state теперь используется только как внутренний маркер четности,
-    без выдачи синхросигнала на отдельный GPIO. */
+/* Привязка чет/нечет к реальному состоянию GPIO-маркера.
+    Это устраняет рассогласование между sync-bit и физической фазой на выводе. */
 static inline uint8_t adc_parity_from_pa3(void)
 {
-    /* Просто читаем текущее состояние, которое инвертируется при каждом toggle */
-    return s_pb8_state ? 0u : 1u;
+    uint8_t marker_level = adc_marker_get_level();
+    s_pb8_state = marker_level;
+    return (uint8_t)((marker_level ^ 1u) & 1u);
 }
 
 void adc_stream_invert_phase_polarity(void)
 {
     __disable_irq();
 
-    s_pb8_state ^= 1u;
-
 #if ADC_MARKER_PA3_ENABLE
-    /* Поведение как у legacy PA3: инвертируем уровень маркера атомарно. */
-    uint8_t next_level_high = ((ADC_MARKER_PORT_A->ODR & ADC_MARKER_PIN_A) == 0u) ? 1u : 0u;
+    /* Жёстко инвертируем именно физический маркер; s_pb8_state обновится внутри set_level(). */
+    uint8_t next_level_high = (uint8_t)(adc_marker_get_level() ? 0u : 1u);
     adc_marker_set_level(next_level_high);
+#else
+    s_pb8_state ^= 1u;
 #endif
 
     __enable_irq();
@@ -2065,10 +2072,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
         s_tc_mask = 0;
         s_both_ready++;
         
-        /* Внутренний маркер четности буфера: отдельный GPIO sync больше не используется */
-        s_pb8_state ^= 1u;
-        
-         /* PA2/PC7 больше не форсируются от parity: маркером управляет только adc_marker_pa3_toggle(). */
+        /* Маркер фазы теперь обновляется только в adc_marker_pa3_toggle()/adc_marker_set_level(),
+           чтобы sync-bit всегда соответствовал реальному GPIO без двойного источника истины. */
         extern TIM_HandleTypeDef htim15;
         
 

@@ -1080,6 +1080,9 @@ static void rs485_sync_on_packet_received(uint8_t edge_kind)
       }
     }
 
+    /* Сравниваем именно edge-kind, а не raw-уровень GPIO.
+       Если local_edge_kind совпадает с bit из sync-пакета, то slave идёт
+       в той же фазе, что и master. Если не совпадает — это противофаза. */
     if (rs485_sync_relation_score >= 3) {
       rs485_sync_phase_relation = RS485_SYNC_RELATION_IN_PHASE;
     } else if (rs485_sync_relation_score <= -3) {
@@ -2226,14 +2229,40 @@ static void phase_micro_adjust_service(void)
   uint32_t pulse_spacing = tim15_phase_pulse_spacing_buffers(abs_phase);
   static uint32_t last_seen_buf = 0xFFFFFFFFu;
   static uint32_t last_pulse_buf = 0xFFFFFFFFu;
+  static uint32_t last_phase_flip_ms = 0u;
 
   tim15_request_hold_offset(0);
-  rs485_anti_phase_recovery_active = 0u;
-  rs485_anti_phase_recovery_packets = 0u;
 
   if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
       (sync_last_edge_ms != 0u) &&
       ((now_ms - sync_last_edge_ms) <= RS485_SYNC_PRESENT_MS)) {
+    if (rs485_sync_phase_relation == RS485_SYNC_RELATION_ANTI_PHASE) {
+      rs485_anti_phase_recovery_active = 1u;
+      if (rs485_anti_phase_recovery_packets < 255u) {
+        rs485_anti_phase_recovery_packets++;
+      }
+
+      /* Если несколько sync-пакетов подряд подтверждают противофазу,
+         разворачиваем локальную полярность маркера и принудительно
+         перелочиваемся уже в ту же полуволну, что и master. */
+      if ((rs485_anti_phase_recovery_packets >= 4u) &&
+          ((now_ms - last_phase_flip_ms) >= 250u)) {
+        adc_stream_invert_phase_polarity();
+        last_phase_flip_ms = now_ms;
+        rs485_sync_relation_score = 0;
+        rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+        rs485_sync_locked = 0u;
+        rs485_sync_led_active = 0u;
+        rs485_anti_phase_recovery_active = 0u;
+        rs485_anti_phase_recovery_packets = 0u;
+        last_pulse_buf = adc_stream_total_buffer_count;
+        printf("[SYNC] anti-phase detected -> invert local marker polarity, relock IN-PHASE\r\n");
+      }
+    } else {
+      rs485_anti_phase_recovery_active = 0u;
+      rs485_anti_phase_recovery_packets = 0u;
+    }
+
     rs485_sync_locked = (uint8_t)(abs_phase <= tim15_sync_get_deadband_ticks());
     rs485_sync_led_active = rs485_sync_locked;
 
@@ -2251,6 +2280,8 @@ static void phase_micro_adjust_service(void)
   } else {
     rs485_sync_locked = 0u;
     rs485_sync_led_active = 0u;
+    rs485_anti_phase_recovery_active = 0u;
+    rs485_anti_phase_recovery_packets = 0u;
     last_seen_buf = adc_stream_total_buffer_count;
     last_pulse_buf = adc_stream_total_buffer_count;
   }
@@ -2292,6 +2323,28 @@ static void sync_phase_monitor_service(void)
   last_print_ms = now_ms;
   printf("%c,%u\r\n", (int)last_role, (unsigned)last_sample);
   /* Формат строки: role, real_sample_idx_at_sync */
+
+  {
+    static uint32_t last_rel_print_ms = 0u;
+    static uint8_t last_rel = 0xFFu;
+    uint8_t rel = rs485_sync_phase_relation;
+    uint8_t local_level = rs485_sync_read_local_marker_phase();
+    uint8_t local_edge = rs485_sync_edge_kind_from_marker_level(local_level);
+
+    if ((rel != last_rel) || ((now_ms - last_rel_print_ms) >= 1000u)) {
+      const char *rel_str = (rel == RS485_SYNC_RELATION_IN_PHASE) ? "IN" :
+                            (rel == RS485_SYNC_RELATION_ANTI_PHASE) ? "ANTI" : "UNK";
+      printf("[SYNC_REL] rel=%s score=%d local=%u edge=%u remote=%u fix=%u\r\n",
+             rel_str,
+             (int)rs485_sync_relation_score,
+             (unsigned)local_level,
+             (unsigned)local_edge,
+             (unsigned)rs485_last_sync_edge_kind,
+             (unsigned)rs485_anti_phase_recovery_packets);
+      last_rel = rel;
+      last_rel_print_ms = now_ms;
+    }
+  }
 }
 
 static void tune_led_service(uint32_t now_ms)
@@ -3562,6 +3615,13 @@ int main(void)
           printf("sync_edges  : %lu\r\n", (unsigned long)sync_edge_count);
           printf("sync_age_ms : %lu\r\n", (unsigned long)edge_age);
           printf("sync_alive  : %u\r\n", (unsigned)(edge_age <= RS485_SYNC_PRESENT_MS && sync_last_edge_ms != 0u));
+          printf("phase_rel   : %u (%s)\r\n",
+            (unsigned)rs485_sync_phase_relation,
+            (rs485_sync_phase_relation == RS485_SYNC_RELATION_IN_PHASE) ? "IN_PHASE" :
+            (rs485_sync_phase_relation == RS485_SYNC_RELATION_ANTI_PHASE) ? "ANTI_PHASE" : "UNKNOWN");
+          printf("anti_fix    : %u, packets=%u\r\n",
+            (unsigned)rs485_anti_phase_recovery_active,
+            (unsigned)rs485_anti_phase_recovery_packets);
           printf("uart_errs   : %lu\r\n", (unsigned long)rs485_uart_error_count);
           printf("rs485_rx    : %lu\r\n", (unsigned long)rs485_rx_packets);
           printf("rs485_tx    : %lu\r\n", (unsigned long)rs485_tx_packets);
