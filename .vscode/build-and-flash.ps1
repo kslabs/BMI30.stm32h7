@@ -61,7 +61,9 @@ function Invoke-Make {
         } else {
             $cmd = 'export PATH="/c/Users/Admin/AppData/Local/Programs/Python/Launcher:$PATH"; cd ''' + $projectRootMsys + ''' && make ' + $argsLine
         }
-        & $BashExe -lc $cmd
+        # gcc пишет warning в stderr; перенаправляем в stdout,
+        # чтобы PowerShell не поднимал NativeCommandError как фатальную ошибку задачи.
+        & $BashExe -lc $cmd 2>&1
     } else {
         & $MakeExe @MakeArgs
     }

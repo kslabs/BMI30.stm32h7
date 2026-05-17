@@ -1,0 +1,84 @@
+[UART1] RX interrupt armed
+[BOOT] BUILD_TS=Apr 24 2026-14:14:10 COUNT=2883170582 SIGN=0xA5B6C7D8
+[BOOT] DIAG_REV=4
+[EARLY] RSR=0x01420000 (pre-HAL_Init snapshot)
+[BOOT] RSR=0x01420000 FLAGS=PIN,SOFT PRIMARY=PIN SIGN=0xA5B6C7D8
+[BOOT] RSR_TRACE idx=9: 0x01420000,0x00420000,0x00420000,0x00420000,0x00420000,0x00420000,0x00420000,0x00420000
+[BOOT] FW_VERSION=1.2.3 DATE=2026-04-24 TIME=14:14:10 HASH=nogit
+[BOOT] FW 1.2.3 (GCC) built 2026-04-24 14:14:10 (nogit)
+[UART] USART1=115200 8N1 ready
+[BOOT] DBG:DHCSR=0x00010000 C_DEBUGEN=0 S_SLEEP=0 S_LOCKUP=0 CR=0x00000000 OPTSR=0x00000000
+[BOOT] IWDG_CFG=DISABLED (compile-time macro)
+[BOOT] LAST_UPTIMES(ms): 0,0,0,0,0,0,0,0
+[BOOT] LAST_PROGRESS: 0x00,0x00,0x00,0x00
+[OPTIC] TIM1 initialized: ARR=7236, PSC=0 -> 37999 Hz on CH3
+[ADC1][CFG] ADC1->CFGR=0x800005C1 EXTSEL=14 EXTEN=1
+[ADC1][CFG] Expected (from HAL init): EXTSEL=14 EXTEN=1
+[OPTIC] TIM3 init: PSC=7236 ARR=47 CCR1=40 CR2=0x40 SMCR=0x80 CCMR1=0x68
+[UART1] RX interrupt armed
+[TIM15][CFG] TIM15->CR2=0x00000020 MMS=2 (expected 2=UPDATE)
+[TIM15][CFG] PSC=0 ARR=4295 ??? f_counter=275MHz/(PSC+1)=275MHz, f_UPDATE=275MHz/(ARR+1)=64 kHz
+[ADC1][CFG] ADC1->CFGR=0x800005C1 EXTSEL=14 EXTEN=1 (expected EXTSEL=14 EXTEN=1 from HAL)
+[INIT] Before USB_DEVICE_Init
+[00:00.139][USB_INIT] Starting MX_USB_DEVICE_Init...
+[00:00.139][USB_INIT] USBD_Init OK
+[00:00.139][USB_INIT] USBD_RegisterClass OK
+[00:00.139][USB_INIT] USBD_CDC_RegisterInterface OK
+[00:00.139][USB_INIT] USBD_Start OK - device should enumerate now
+[DIAG] IWDG hard-disabled (no init call)
+[USB] DEVICE_INIT
+[OPTIC][GATE] TIM1_SMCR=0x000000A5 TIM3_CR1=0x00000081 TIM3_ARR=47 TIM3_CCR1=40
+[OPTIC] HW gate mode: carrier=37999 Hz, burst=40 on / 8 off, power=255/255
+[PWM] PWM disabled by DISABLE_PWM_TEST or FORCE_BL_GPIO
+[INIT] Starting common initialization...
+[INIT] USB voltage detector enabled
+[USB] VID=0xCAFE PID=0x4001 LANGID=1033
+[USB] MFG="AM Security" PROD="BMI30 TagIT"
+[INIT] USB initialization completed
+[ADC][DIAG] adc_stream_start: ADC1->CR=0x10000300 ADC2->CR=0x10000300
+[SYNC_TIMING] TIM5 (32-bit): PSC=0 ARR=0xFFFFFFFF ??? tick_rate=275000000 Hz
+[SYNC_TIMING] TIM5: per_ADC_sample=1145 ticks | per_buffer=687500 ticks ( ms)
+[SYNC_TIMING] TIM15: ARR=1144 sample_rate=240000 Hz | APB2=275 MHz
+[TIM2] marker apply: N=600 f_buf=400Hz f_marker=200Hz tick_hz=1000000 ARR=4999 CCR1=4600 guard=400us
+[TIM15] Pre-Start: CR1=0x00000080 CR2=0x00000020 SMCR=0x00000010 SR=0x00000000 DIER=0x00000001 PSC=0 ARR=1144 CNT=0
+[TIM15] Started & synced: CR1=0x00000081 SR=0x00000007 CNT=95 SMCR=0x00000010
+[TIM15][TEST] Counter increment test: before=2241 after=4103 delta=1862 (expected ~275)
+[TIM2] marker apply: N=600 f_buf=400Hz f_marker=200Hz tick_hz=1000000 ARR=4999 CCR1=4600 guard=400us
+[TIM2][NVIC] Before Start_IT: TIM2_IRQn=28 enabled=1
+[TIM2][NVIC] After Start_IT: enabled=1 CR1=0x00000001 DIER=0x00000000 SR=0x00000000
+[TIM2] Started with CH1 PWM interrupt (CCR1=4600 ticks, ARR=4999)
+[INIT] ADC and TIM15 initialization completed
+[INIT] Entering main loop...
+S,307
+[SYNC_REL] rel=UNK score=2 local=1 edge=0 remote=0 fix=0 err=342144 pulse=900 ok=6 busy=0 space=370 uart=0 ovr=0
+
+======================================================================
+                       *** HARDFAULT EXCEPTION ***
+======================================================================
+
+[STACK REGISTERS]
+  R0  = 0x00000000
+  R1  = 0x00000000
+  R2  = 0x00000000
+  R3  = 0x00000000
+  R12 = 0x00000000
+  LR  = 0x00000000  (return address)
+  PC  = 0x00000000  (fault address)
+  PSR = 0x08003F0C
+
+[FAULT STATUS REGISTERS]
+  CFSR  = 0x00008200  (Configurable Fault Status Register)
+  HFSR  = 0x40000000  (HardFault Status Register)
+  BFAR  = 0x080E10A0  (Bus Fault Address Register)
+  MMFAR = 0x080E10A0  (MemManage Fault Address Register)
+
+[FAULT ANALYSIS]
+  Bus Fault (BFSR=0x82):
+    - PRECISERR: Precise data bus error
+    - BFARVALID: BFAR contains valid address (0x080E10A0)
+  FORCED: HardFault escalated from configurable fault
+
+======================================================================
+System halted. LED will blink to indicate HardFault state.
+======================================================================
+

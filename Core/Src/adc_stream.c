@@ -2119,10 +2119,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
             static uint8_t sync_lock_eval_div = 0u;
             extern volatile uint8_t g_arr_manual_mode;
             static uint8_t sync_loop_reset_req = 0;
-            static uint16_t signal_present_stable = 0u;
-            static uint16_t signal_lost_stable = 0u;
-            static uint32_t signal_lost_since_ms = 0xFFFFFFFFu;
-
 
             if (g_arr_manual_mode) {
                 if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
@@ -2139,23 +2135,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                 lock_stable_cnt = 0u;
                 unlock_stable_cnt = 0u;
                 sync_lock_eval_div = 0u;
-                signal_present_stable = 0u;
-                signal_lost_stable = 0u;
-                signal_lost_since_ms = 0xFFFFFFFFu;
-            } else
-            if (signal_present) {
-                if (signal_present_stable < 1000u) signal_present_stable++;
-                signal_lost_stable = 0u;
-                signal_lost_since_ms = 0xFFFFFFFFu;
             } else {
-                if (signal_lost_stable < 1000u) signal_lost_stable++;
-                signal_present_stable = 0u;
-                if (signal_lost_since_ms == 0xFFFFFFFFu) {
-                    signal_lost_since_ms = now_ms;
-                }
+                g_auto_freq_sync_enable = (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) ? 1u : 0u;
             }
 
-            if (signal_present) {
+            if (signal_present && vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
                 // Signal IS present -> SLAVE MODE CANDIDATE
                 uint8_t evaluate_lock = 0u;
 
@@ -2198,46 +2182,18 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
                 }
                 }
                 vnd_sync_ok_public = sync_locked;
-                
-                if (!g_auto_freq_sync_enable && (signal_present_stable >= 8u)) {
-                    // Switch MASTER -> SLAVE
-                    g_auto_freq_sync_enable = 1;
-                    vnd_sync_mode_public = 1; // SLAVE
-                    sync_locked = 0; // Reset lock state on mode switch
-                    vnd_sync_ok_public = 0u;
-                    lock_stable_cnt = 0u;
-                    unlock_stable_cnt = 0u;
-                    sync_lock_eval_div = 0u;
-                    sync_loop_reset_req = 1; // Request reset of PLL integrator
-                }
             } else {
-                // Signal Lost -> MASTER MODE
-                uint32_t signal_lost_age_ms = 0u;
-                uint32_t master_claim_delay_ms = rs485_get_master_claim_delay_ms();
-
-                if (signal_lost_since_ms != 0xFFFFFFFFu) {
-                    signal_lost_age_ms = now_ms - signal_lost_since_ms;
-                }
-
                 sync_locked = 0;
-                vnd_sync_ok_public = 0u;
+                vnd_sync_ok_public = (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) ? 1u : 0u;
                 lock_stable_cnt = 0u;
                 unlock_stable_cnt = 0u;
                 sync_lock_eval_div = 0u;
-                
-                if (g_auto_freq_sync_enable && (signal_lost_stable >= 20u) && (signal_lost_age_ms >= master_claim_delay_ms)) {
-                    // Switch SLAVE -> MASTER
-                    g_auto_freq_sync_enable = 0;
-                    vnd_sync_mode_public = 0; // MASTER
-                    ADC_LOGF("[SYNC] Signal lost %lums -> MASTER mode enabled after claim delay %lums\r\n",
-                             (unsigned long)signal_lost_age_ms,
-                             (unsigned long)master_claim_delay_ms);
-                }
             }
             
-            // Ensure public status is always consistent
-            if(g_auto_freq_sync_enable && vnd_sync_mode_public == 0) vnd_sync_mode_public = 1;
-            if(!g_auto_freq_sync_enable && vnd_sync_mode_public == 1) vnd_sync_mode_public = 0;
+            /* Role arbitration is owned by vnd_sync_apply_mode()/RS485 auto-role.
+               This ADC path must not rewrite vnd_sync_mode_public: doing so bypasses
+               host-forced sync mode and can make M/S bounce without a host. */
+            g_auto_freq_sync_enable = (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) ? 1u : 0u;
             
             {
                 static int32_t phase_integrator = 0;

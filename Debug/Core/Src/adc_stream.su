@@ -46,10 +46,10 @@
 ../Core/Src/adc_stream.c:1591:28:adc_stream_on_new_frames	16	static
 ../Core/Src/adc_stream.c:1678:6:HAL_ADC_ConvHalfCpltCallback	16	static
 ../Core/Src/adc_stream.c:1705:6:adc_stream_tim2_switch_buffers	96	static
-../Core/Src/adc_stream.c:2028:6:HAL_ADC_ConvCpltCallback	104	static
-../Core/Src/adc_stream.c:2531:6:adc_stream_sync_edge	32	static
-../Core/Src/adc_stream.c:2587:24:tick_diff32	16	static
-../Core/Src/adc_stream.c:2604:6:adc_stream_watchdog	112	static
-../Core/Src/adc_stream.c:2744:6:adc_stream_set_buf_rate_fine	24	static
-../Core/Src/adc_stream.c:2774:6:adc_stream_set_buf_rate_external	16	static
-../Core/Src/adc_stream.c:2784:6:adc_stream_clear_buf_rate_override	16	static
+../Core/Src/adc_stream.c:2028:6:HAL_ADC_ConvCpltCallback	96	static
+../Core/Src/adc_stream.c:2487:6:adc_stream_sync_edge	32	static
+../Core/Src/adc_stream.c:2543:24:tick_diff32	16	static
+../Core/Src/adc_stream.c:2560:6:adc_stream_watchdog	112	static
+../Core/Src/adc_stream.c:2700:6:adc_stream_set_buf_rate_fine	24	static
+../Core/Src/adc_stream.c:2730:6:adc_stream_set_buf_rate_external	16	static
+../Core/Src/adc_stream.c:2740:6:adc_stream_clear_buf_rate_override	16	static

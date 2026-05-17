@@ -41,7 +41,10 @@ if ($CleanBuild) {
 }
 
 Write-Host "[1/2] Building firmware once..." -ForegroundColor Yellow
+$oldEap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 & $BuildScript @buildArgs -NoFlash
+$ErrorActionPreference = $oldEap
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
@@ -54,7 +57,10 @@ if (!(Test-Path $ElfFile)) {
 Write-Host "[2/2] Flashing configured probes..." -ForegroundColor Yellow
 foreach ($target in $StlinkTargets) {
     Write-Host ("  -> {0} | SN={1} | {2}" -f $target.Name, $target.Sn, $target.Com) -ForegroundColor Cyan
+    $oldEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     & $FlashScript -Elf $ElfFile -StlinkSn $target.Sn
+    $ErrorActionPreference = $oldEap
     if ($LASTEXITCODE -ne 0) {
         Write-Host ("  [ERROR] Flash failed for {0} ({1})" -f $target.Name, $target.Sn) -ForegroundColor Red
         exit $LASTEXITCODE

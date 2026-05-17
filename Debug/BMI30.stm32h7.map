@@ -8736,33 +8736,33 @@ Discarded input sections
                 0x00000000      0x778 ./Core/Src/adc_stream.o
  .text.adc_stream_set_buf_rate_external
                 0x00000000       0x30 ./Core/Src/adc_stream.o
- .bss.first_call_logged.31
+ .bss.first_call_logged.28
                 0x00000000        0x1 ./Core/Src/adc_stream.o
- .bss.tim2_switch_call_count.30
+ .bss.tim2_switch_call_count.27
                 0x00000000        0x4 ./Core/Src/adc_stream.o
- .bss.last_log_ms.29
+ .bss.last_log_ms.26
                 0x00000000        0x4 ./Core/Src/adc_stream.o
- .bss.tim2_switch_ok_count.28
+ .bss.tim2_switch_ok_count.25
                 0x00000000        0x4 ./Core/Src/adc_stream.o
- .bss.tim2_switch_busy_count.27
+ .bss.tim2_switch_busy_count.24
                 0x00000000        0x4 ./Core/Src/adc_stream.o
- .bss.last_busy_ndtr_a.26
+ .bss.last_busy_ndtr_a.23
                 0x00000000        0x4 ./Core/Src/adc_stream.o
- .bss.last_busy_ndtr_b.25
+ .bss.last_busy_ndtr_b.22
                 0x00000000        0x4 ./Core/Src/adc_stream.o
- .bss.dbg_tim2_ok_counter.24
+ .bss.dbg_tim2_ok_counter.21
                 0x00000000        0x4 ./Core/Src/adc_stream.o
- .bss.dbg_sample_count.23
+ .bss.dbg_sample_count.20
                 0x00000000        0x4 ./Core/Src/adc_stream.o
- .bss.even_sum.22
+ .bss.even_sum.19
                 0x00000000       0x14 ./Core/Src/adc_stream.o
- .bss.even_count.21
+ .bss.even_count.18
                 0x00000000        0x4 ./Core/Src/adc_stream.o
- .bss.odd_sum.20
+ .bss.odd_sum.17
                 0x00000000       0x14 ./Core/Src/adc_stream.o
- .bss.odd_count.19
+ .bss.odd_count.16
                 0x00000000        0x4 ./Core/Src/adc_stream.o
- .bss.dbg_save_counter.18
+ .bss.dbg_save_counter.15
                 0x00000000        0x4 ./Core/Src/adc_stream.o
  .debug_macro   0x00000000      0xaf6 ./Core/Src/adc_stream.o
  .debug_macro   0x00000000       0x22 ./Core/Src/adc_stream.o
@@ -8996,6 +8996,8 @@ Discarded input sections
                 0x00000000       0x50 ./Core/Src/main.o
  .rodata.build_signature_hex
                 0x00000000        0x4 ./Core/Src/main.o
+ .text.rs485_get_master_claim_delay_ms
+                0x00000000       0x18 ./Core/Src/main.o
  .text.rs485_status_get_effective_period_ticks
                 0x00000000       0x7c ./Core/Src/main.o
  .text.rs485_status_get_window_ticks
@@ -11517,7 +11519,7 @@ LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
                 0x08000000                g_pfnVectors
                 0x080002cc                        . = ALIGN (0x4)
 
-.text           0x080002d0    0x2f578
+.text           0x080002d0    0x2f440
                 0x080002d0                        . = ALIGN (0x4)
  *(.text)
  .text          0x080002d0       0x40 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
@@ -13033,934 +13035,932 @@ LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
                 0x08022840       0x14 ./Core/Src/adc_stream.o
                 0x08022840                HAL_ADC_ConvHalfCpltCallback
  .text.HAL_ADC_ConvCpltCallback
-                0x08022854      0xcbc ./Core/Src/adc_stream.o
+                0x08022854      0xb98 ./Core/Src/adc_stream.o
                 0x08022854                HAL_ADC_ConvCpltCallback
  .text.tick_diff32
-                0x08023510       0x1c ./Core/Src/adc_stream.o
+                0x080233ec       0x1c ./Core/Src/adc_stream.o
  .text.adc_stream_watchdog
-                0x0802352c      0x3a4 ./Core/Src/adc_stream.o
-                0x0802352c                adc_stream_watchdog
+                0x08023408      0x3a4 ./Core/Src/adc_stream.o
+                0x08023408                adc_stream_watchdog
  .text.adc_stream_set_buf_rate_fine
-                0x080238d0       0x54 ./Core/Src/adc_stream.o
-                0x080238d0                adc_stream_set_buf_rate_fine
+                0x080237ac       0x54 ./Core/Src/adc_stream.o
+                0x080237ac                adc_stream_set_buf_rate_fine
  .text.adc_stream_clear_buf_rate_override
-                0x08023924       0x38 ./Core/Src/adc_stream.o
-                0x08023924                adc_stream_clear_buf_rate_override
+                0x08023800       0x38 ./Core/Src/adc_stream.o
+                0x08023800                adc_stream_clear_buf_rate_override
  .text.__NVIC_SystemReset
-                0x0802395c       0x2c ./Core/Src/main.o
+                0x08023838       0x2c ./Core/Src/main.o
  .text.rs485_sync_read_local_marker_phase
-                0x08023988       0x14 ./Core/Src/main.o
+                0x08023864       0x14 ./Core/Src/main.o
  .text.rs485_sync_edge_kind_from_marker_level
-                0x0802399c       0x28 ./Core/Src/main.o
+                0x08023878       0x28 ./Core/Src/main.o
  .text.rs485_sync_get_tim5_tick_hz
-                0x080239c4       0x34 ./Core/Src/main.o
+                0x080238a0       0x34 ./Core/Src/main.o
  .text.rs485_sync_get_uart_packet_ticks
-                0x080239f8       0x98 ./Core/Src/main.o
+                0x080238d4       0x98 ./Core/Src/main.o
  .text.rs485_sync_get_uart_bit_ticks
-                0x08023a90       0x30 ./Core/Src/main.o
+                0x0802396c       0x30 ./Core/Src/main.o
  .text.rs485_sync_wrap_phase_ticks
-                0x08023ac0       0x50 ./Core/Src/main.o
+                0x0802399c       0x50 ./Core/Src/main.o
  .text.tim15_get_default_target_phase_ticks
-                0x08023b10       0x74 ./Core/Src/main.o
-                0x08023b10                tim15_get_default_target_phase_ticks
+                0x080239ec       0x74 ./Core/Src/main.o
+                0x080239ec                tim15_get_default_target_phase_ticks
  .text.reset_trace_record
-                0x08023b84       0x80 ./Core/Src/main.o
+                0x08023a60       0x80 ./Core/Src/main.o
  .text.reset_cause_str
-                0x08023c04       0x98 ./Core/Src/main.o
+                0x08023ae0       0x98 ./Core/Src/main.o
  .text.log_reset_cause
-                0x08023c9c      0x2dc ./Core/Src/main.o
+                0x08023b78      0x2dc ./Core/Src/main.o
  .text.boot_diag_init
-                0x08023f78       0xfc ./Core/Src/main.o
+                0x08023e54       0xfc ./Core/Src/main.o
  .text.boot_diag_periodic
-                0x08024074       0x6c ./Core/Src/main.o
+                0x08023f50       0x6c ./Core/Src/main.o
  .text.boot_diag_finalize_before_reset
-                0x080240e0       0x74 ./Core/Src/main.o
+                0x08023fbc       0x74 ./Core/Src/main.o
  .text.uart1_raw_putc
-                0x08024154       0x54 ./Core/Src/main.o
-                0x08024154                uart1_raw_putc
- .text.LED_ON   0x080241a8       0x18 ./Core/Src/main.o
- .text.LED_OFF  0x080241c0       0x18 ./Core/Src/main.o
+                0x08024030       0x54 ./Core/Src/main.o
+                0x08024030                uart1_raw_putc
+ .text.LED_ON   0x08024084       0x18 ./Core/Src/main.o
+ .text.LED_OFF  0x0802409c       0x18 ./Core/Src/main.o
  .text.uart1_rx_led_pulse
-                0x080241d8       0x1c ./Core/Src/main.o
+                0x080240b4       0x1c ./Core/Src/main.o
  .text.dynamic_led_set_pattern
-                0x080241f4       0x34 ./Core/Src/main.o
-                0x080241f4                dynamic_led_set_pattern
+                0x080240d0       0x34 ./Core/Src/main.o
+                0x080240d0                dynamic_led_set_pattern
  .text.dynamic_led_get_pattern
-                0x08024228       0x18 ./Core/Src/main.o
-                0x08024228                dynamic_led_get_pattern
+                0x08024104       0x18 ./Core/Src/main.o
+                0x08024104                dynamic_led_get_pattern
  .text.optic_sensor_get_state
-                0x08024240       0x18 ./Core/Src/main.o
-                0x08024240                optic_sensor_get_state
+                0x0802411c       0x18 ./Core/Src/main.o
+                0x0802411c                optic_sensor_get_state
  .text.optic_sensor_set_hold_seconds
-                0x08024258       0x2e ./Core/Src/main.o
-                0x08024258                optic_sensor_set_hold_seconds
- *fill*         0x08024286        0x2 
+                0x08024134       0x2e ./Core/Src/main.o
+                0x08024134                optic_sensor_set_hold_seconds
+ *fill*         0x08024162        0x2 
  .text.optic_sensor_get_hold_seconds
-                0x08024288       0x28 ./Core/Src/main.o
-                0x08024288                optic_sensor_get_hold_seconds
+                0x08024164       0x28 ./Core/Src/main.o
+                0x08024164                optic_sensor_get_hold_seconds
  .text.optic_sensor_set_hold_deciseconds
-                0x080242b0       0x40 ./Core/Src/main.o
-                0x080242b0                optic_sensor_set_hold_deciseconds
+                0x0802418c       0x40 ./Core/Src/main.o
+                0x0802418c                optic_sensor_set_hold_deciseconds
  .text.optic_sensor_get_hold_deciseconds
-                0x080242f0       0x18 ./Core/Src/main.o
-                0x080242f0                optic_sensor_get_hold_deciseconds
+                0x080241cc       0x18 ./Core/Src/main.o
+                0x080241cc                optic_sensor_get_hold_deciseconds
  .text.optic_tim1_get_input_clk_hz
-                0x08024308       0x34 ./Core/Src/main.o
+                0x080241e4       0x34 ./Core/Src/main.o
  .text.optic_sensor_service
-                0x0802433c       0x58 ./Core/Src/main.o
+                0x08024218       0x58 ./Core/Src/main.o
  .text.optic_tx_apply_runtime_pattern
-                0x08024394       0x78 ./Core/Src/main.o
+                0x08024270       0x78 ./Core/Src/main.o
  .text.optic_tx_power_to_percent
-                0x0802440c       0x30 ./Core/Src/main.o
+                0x080242e8       0x30 ./Core/Src/main.o
  .text.optic_tx_power_badge_color
-                0x0802443c       0x46 ./Core/Src/main.o
- *fill*         0x08024482        0x2 
+                0x08024318       0x46 ./Core/Src/main.o
+ *fill*         0x0802435e        0x2 
  .text.optic_tx_set_power
-                0x08024484       0x28 ./Core/Src/main.o
-                0x08024484                optic_tx_set_power
+                0x08024360       0x28 ./Core/Src/main.o
+                0x08024360                optic_tx_set_power
  .text.optic_tx_get_power
-                0x080244ac       0x18 ./Core/Src/main.o
-                0x080244ac                optic_tx_get_power
+                0x08024388       0x18 ./Core/Src/main.o
+                0x08024388                optic_tx_get_power
  .text.ws2812_test_pattern_name
-                0x080244c4       0xc0 ./Core/Src/main.o
+                0x080243a0       0xc0 ./Core/Src/main.o
  .text.ws2812_test_button_service
-                0x08024584       0xf4 ./Core/Src/main.o
+                0x08024460       0xf4 ./Core/Src/main.o
  .text.optic_tx_start
-                0x08024678       0xe4 ./Core/Src/main.o
+                0x08024554       0xe4 ./Core/Src/main.o
  .text.rs485_sync_on_packet_received
-                0x0802475c      0x3ac ./Core/Src/main.o
+                0x08024638      0x3ac ./Core/Src/main.o
  .text.rs485_compute_uid_mix
-                0x08024b08       0x44 ./Core/Src/main.o
+                0x080249e4       0x44 ./Core/Src/main.o
  .text.rs485_load_local_uid
-                0x08024b4c       0x5c ./Core/Src/main.o
+                0x08024a28       0x5c ./Core/Src/main.o
  .text.rs485_compute_local_node_id
-                0x08024ba8       0x38 ./Core/Src/main.o
+                0x08024a84       0x38 ./Core/Src/main.o
  .text.rs485_compute_master_claim_delay_ms
-                0x08024be0       0x1c ./Core/Src/main.o
- .text.rs485_get_master_claim_delay_ms
-                0x08024bfc       0x18 ./Core/Src/main.o
-                0x08024bfc                rs485_get_master_claim_delay_ms
+                0x08024abc       0x1c ./Core/Src/main.o
  .text.rs485_count_bits_u32
-                0x08024c14       0x38 ./Core/Src/main.o
+                0x08024ad8       0x38 ./Core/Src/main.o
  .text.rs485_status_count_recent_peers
-                0x08024c4c       0x58 ./Core/Src/main.o
+                0x08024b10       0x58 ./Core/Src/main.o
  .text.rs485_status_build_local_byte
-                0x08024ca4       0x44 ./Core/Src/main.o
+                0x08024b68       0x44 ./Core/Src/main.o
  .text.rs485_status_get_snapshot
-                0x08024ce8      0x150 ./Core/Src/main.o
-                0x08024ce8                rs485_status_get_snapshot
+                0x08024bac      0x150 ./Core/Src/main.o
+                0x08024bac                rs485_status_get_snapshot
  .text.rs485_is_sync_byte
-                0x08024e38       0x26 ./Core/Src/main.o
- *fill*         0x08024e5e        0x2 
+                0x08024cfc       0x26 ./Core/Src/main.o
+ *fill*         0x08024d22        0x2 
  .text.rs485_process_received_byte
-                0x08024e60      0x100 ./Core/Src/main.o
+                0x08024d24      0x100 ./Core/Src/main.o
  .text.rs485_dma_rx_start
-                0x08024f60       0x6c ./Core/Src/main.o
+                0x08024e24       0x6c ./Core/Src/main.o
  .text.rs485_dma_rx_service
-                0x08024fcc        0xe ./Core/Src/main.o
- *fill*         0x08024fda        0x2 
+                0x08024e90        0xe ./Core/Src/main.o
+ *fill*         0x08024e9e        0x2 
  .text.rs485_usart2_irq_rx_service
-                0x08024fdc       0x5c ./Core/Src/main.o
-                0x08024fdc                rs485_usart2_irq_rx_service
+                0x08024ea0       0x5c ./Core/Src/main.o
+                0x08024ea0                rs485_usart2_irq_rx_service
  .text.rs485_status_reset_window_state
-                0x08025038       0x9c ./Core/Src/main.o
+                0x08024efc       0x9c ./Core/Src/main.o
  .text.rs485_status_reset_slot_state
-                0x080250d4       0x74 ./Core/Src/main.o
+                0x08024f98       0x74 ./Core/Src/main.o
  .text.rs485_status_finalize_window
-                0x08025148      0x290 ./Core/Src/main.o
+                0x0802500c      0x290 ./Core/Src/main.o
  .text.rs485_status_begin_window
-                0x080253d8      0x158 ./Core/Src/main.o
+                0x0802529c      0x158 ./Core/Src/main.o
  .text.rs485_status_on_received
-                0x08025530       0x68 ./Core/Src/main.o
+                0x080253f4       0x68 ./Core/Src/main.o
  .text.rs485_status_service
-                0x08025598       0xb0 ./Core/Src/main.o
+                0x0802545c       0xb0 ./Core/Src/main.o
  .text.rs485_discovery_reset_master_scan
-                0x08025648       0x4c ./Core/Src/main.o
+                0x0802550c       0x4c ./Core/Src/main.o
  .text.rs485_uid_rx_reset
-                0x08025694       0x24 ./Core/Src/main.o
+                0x08025558       0x24 ./Core/Src/main.o
  .text.rs485_uid_checksum
-                0x080256b8       0x3e ./Core/Src/main.o
+                0x0802557c       0x3e ./Core/Src/main.o
  .text.rs485_compare_uid_words
-                0x080256f6       0x64 ./Core/Src/main.o
- *fill*         0x0802575a        0x2 
+                0x080255ba       0x64 ./Core/Src/main.o
+ *fill*         0x0802561e        0x2 
  .text.rs485_uid_handle_received
-                0x0802575c       0xd0 ./Core/Src/main.o
+                0x08025620       0xd0 ./Core/Src/main.o
  .text.rs485_tx_queue_push
-                0x0802582c       0x60 ./Core/Src/main.o
+                0x080256f0       0x60 ./Core/Src/main.o
  .text.rs485_tx_queue_push_front
-                0x0802588c       0x60 ./Core/Src/main.o
+                0x08025750       0x60 ./Core/Src/main.o
  .text.rs485_tx_queue_pop
-                0x080258ec       0x6c ./Core/Src/main.o
+                0x080257b0       0x6c ./Core/Src/main.o
  .text.rs485_sync_start_tx_byte
-                0x08025958       0x74 ./Core/Src/main.o
+                0x0802581c       0x74 ./Core/Src/main.o
  .text.rs485_tx_kick
-                0x080259cc       0x3c ./Core/Src/main.o
+                0x08025890       0x3c ./Core/Src/main.o
  .text.rs485_discovery_on_request
-                0x08025a08       0x84 ./Core/Src/main.o
+                0x080258cc       0x84 ./Core/Src/main.o
  .text.rs485_discovery_on_response
-                0x08025a8c       0x9c ./Core/Src/main.o
+                0x08025950       0x9c ./Core/Src/main.o
  .text.rs485_discovery_on_sync_received
-                0x08025b28        0xe ./Core/Src/main.o
- *fill*         0x08025b36        0x2 
+                0x080259ec        0xe ./Core/Src/main.o
+ *fill*         0x080259fa        0x2 
  .text.rs485_sync_service_tx
-                0x08025b38       0x88 ./Core/Src/main.o
+                0x080259fc       0x88 ./Core/Src/main.o
  .text.rs485_sync_auto_role_service
-                0x08025bc0      0x1b0 ./Core/Src/main.o
+                0x08025a84      0x1b0 ./Core/Src/main.o
  .text.tim15_sync_get_uart_bit_ticks_or_sample
-                0x08025d70       0x2e ./Core/Src/main.o
- *fill*         0x08025d9e        0x2 
+                0x08025c34       0x2e ./Core/Src/main.o
+ *fill*         0x08025c62        0x2 
  .text.tim15_sync_get_deadband_ticks
-                0x08025da0       0x70 ./Core/Src/main.o
+                0x08025c64       0x70 ./Core/Src/main.o
  .text.tim15_sync_clamp_i32
-                0x08025e10       0x34 ./Core/Src/main.o
+                0x08025cd4       0x34 ./Core/Src/main.o
  .text.arr_auto_apply_tim15
-                0x08025e44       0x3c ./Core/Src/main.o
+                0x08025d08       0x3c ./Core/Src/main.o
  .text.arr_auto_abs_i32
-                0x08025e80       0x1c ./Core/Src/main.o
+                0x08025d44       0x1c ./Core/Src/main.o
  .text.tim15_compute_phase_pulse_delta
-                0x08025e9c      0x130 ./Core/Src/main.o
+                0x08025d60      0x130 ./Core/Src/main.o
  .text.tim15_phase_pulse_spacing_buffers
-                0x08025fcc       0x7c ./Core/Src/main.o
+                0x08025e90       0x7c ./Core/Src/main.o
  .text.tim15_apply_hold_target_if_possible
-                0x08026048       0x24 ./Core/Src/main.o
+                0x08025f0c       0x24 ./Core/Src/main.o
  .text.tim15_request_hold_offset
-                0x0802606c       0x28 ./Core/Src/main.o
+                0x08025f30       0x28 ./Core/Src/main.o
  .text.tim15_schedule_arr_pulse
-                0x08026094       0xcc ./Core/Src/main.o
+                0x08025f58       0xcc ./Core/Src/main.o
  .text.sync_phase_handle_irq_fast
-                0x08026160      0x284 ./Core/Src/main.o
+                0x08026024      0x284 ./Core/Src/main.o
  .text.arr_auto_tune_service
-                0x080263e4       0x3c ./Core/Src/main.o
+                0x080262a8       0x3c ./Core/Src/main.o
  .text.phase_micro_adjust_service
-                0x08026420       0xec ./Core/Src/main.o
+                0x080262e4       0xec ./Core/Src/main.o
  .text.sync_phase_monitor_service
-                0x0802650c       0xf0 ./Core/Src/main.o
+                0x080263d0       0xf0 ./Core/Src/main.o
  .text.tune_led_service
-                0x080265fc       0x7c ./Core/Src/main.o
+                0x080264c0       0x7c ./Core/Src/main.o
  .text.tim2_led_breathe_service
-                0x08026678       0x44 ./Core/Src/main.o
+                0x0802653c       0x44 ./Core/Src/main.o
  .text.ws2812_status_service
-                0x080266bc       0x24 ./Core/Src/main.o
+                0x08026580       0x24 ./Core/Src/main.o
  .text.diag_get_alarm_text
-                0x080266e0      0x10c ./Core/Src/main.o
+                0x080265a4      0x10c ./Core/Src/main.o
  .text.diag_alarm_com_service
-                0x080267ec      0x108 ./Core/Src/main.o
+                0x080266b0      0x108 ./Core/Src/main.o
  .text.ws2812_gpio_test_init
-                0x080268f4        0xe ./Core/Src/main.o
+                0x080267b8        0xe ./Core/Src/main.o
  .text.ws2812_gpio_test_service
-                0x08026902       0x14 ./Core/Src/main.o
+                0x080267c6       0x14 ./Core/Src/main.o
  .text.pb2_spi3_direct_test_service
-                0x08026916       0x14 ./Core/Src/main.o
- *fill*         0x0802692a        0x2 
+                0x080267da       0x14 ./Core/Src/main.o
+ *fill*         0x080267ee        0x2 
  .text.rs485_sync_on_buffer_complete
-                0x0802692c       0xc0 ./Core/Src/main.o
-                0x0802692c                rs485_sync_on_buffer_complete
+                0x080267f0       0xc0 ./Core/Src/main.o
+                0x080267f0                rs485_sync_on_buffer_complete
  .text.tim2_apply_profile_window
-                0x080269ec      0x19c ./Core/Src/main.o
-                0x080269ec                tim2_apply_profile_window
- .text.main     0x08026b88     0x1330 ./Core/Src/main.o
-                0x08026b88                main
+                0x080268b0      0x19c ./Core/Src/main.o
+                0x080268b0                tim2_apply_profile_window
+ .text.main     0x08026a4c     0x1330 ./Core/Src/main.o
+                0x08026a4c                main
  .text.SystemClock_Config
-                0x08027eb8       0xf8 ./Core/Src/main.o
-                0x08027eb8                SystemClock_Config
+                0x08027d7c       0xf8 ./Core/Src/main.o
+                0x08027d7c                SystemClock_Config
  .text.PeriphCommonClock_Config
-                0x08027fb0       0x98 ./Core/Src/main.o
-                0x08027fb0                PeriphCommonClock_Config
+                0x08027e74       0x98 ./Core/Src/main.o
+                0x08027e74                PeriphCommonClock_Config
  .text.MX_ADC1_Init
-                0x08028048      0x13c ./Core/Src/main.o
+                0x08027f0c      0x13c ./Core/Src/main.o
  .text.MX_ADC2_Init
-                0x08028184       0xd4 ./Core/Src/main.o
+                0x08028048       0xd4 ./Core/Src/main.o
  .text.MX_DAC1_Init
-                0x08028258       0x78 ./Core/Src/main.o
+                0x0802811c       0x78 ./Core/Src/main.o
  .text.MX_SPI1_Init
-                0x080282d0       0xac ./Core/Src/main.o
+                0x08028194       0xac ./Core/Src/main.o
  .text.MX_SPI3_Init
-                0x0802837c       0xac ./Core/Src/main.o
+                0x08028240       0xac ./Core/Src/main.o
  .text.MX_SPI4_Init
-                0x08028428       0xb0 ./Core/Src/main.o
+                0x080282ec       0xb0 ./Core/Src/main.o
  .text.MX_TIM1_Init
-                0x080284d8      0x1d8 ./Core/Src/main.o
+                0x0802839c      0x1d8 ./Core/Src/main.o
  .text.MX_TIM2_Init
-                0x080286b0      0x134 ./Core/Src/main.o
+                0x08028574      0x134 ./Core/Src/main.o
  .text.MX_TIM3_Init
-                0x080287e4      0x168 ./Core/Src/main.o
+                0x080286a8      0x168 ./Core/Src/main.o
  .text.MX_TIM6_Init
-                0x0802894c       0x80 ./Core/Src/main.o
+                0x08028810       0x80 ./Core/Src/main.o
  .text.MX_TIM15_Init
-                0x080289cc      0x134 ./Core/Src/main.o
+                0x08028890      0x134 ./Core/Src/main.o
  .text.MX_TIM5_Init
-                0x08028b00       0x48 ./Core/Src/main.o
+                0x080289c4       0x48 ./Core/Src/main.o
  .text.MX_USART1_UART_Init
-                0x08028b48       0xc4 ./Core/Src/main.o
+                0x08028a0c       0xc4 ./Core/Src/main.o
  .text.MX_USART2_UART_Init
-                0x08028c0c       0xa0 ./Core/Src/main.o
+                0x08028ad0       0xa0 ./Core/Src/main.o
  .text.MX_DMA_Init
-                0x08028cac       0x80 ./Core/Src/main.o
+                0x08028b70       0x80 ./Core/Src/main.o
  .text.MX_GPIO_Init
-                0x08028d2c      0x320 ./Core/Src/main.o
+                0x08028bf0      0x320 ./Core/Src/main.o
  .text.HAL_TIM_PeriodElapsedCallback
-                0x0802904c       0xf0 ./Core/Src/main.o
-                0x0802904c                HAL_TIM_PeriodElapsedCallback
+                0x08028f10       0xf0 ./Core/Src/main.o
+                0x08028f10                HAL_TIM_PeriodElapsedCallback
  .text.HAL_TIM_PWM_PulseFinishedCallback
-                0x0802913c       0x16 ./Core/Src/main.o
-                0x0802913c                HAL_TIM_PWM_PulseFinishedCallback
- *fill*         0x08029152        0x2 
+                0x08029000       0x16 ./Core/Src/main.o
+                0x08029000                HAL_TIM_PWM_PulseFinishedCallback
+ *fill*         0x08029016        0x2 
  .text.HAL_UART_RxCpltCallback
-                0x08029154       0xb0 ./Core/Src/main.o
-                0x08029154                HAL_UART_RxCpltCallback
+                0x08029018       0xb0 ./Core/Src/main.o
+                0x08029018                HAL_UART_RxCpltCallback
  .text.HAL_UART_TxCpltCallback
-                0x08029204       0xd0 ./Core/Src/main.o
-                0x08029204                HAL_UART_TxCpltCallback
+                0x080290c8       0xd0 ./Core/Src/main.o
+                0x080290c8                HAL_UART_TxCpltCallback
  .text.HAL_UART_ErrorCallback
-                0x080292d4       0xb0 ./Core/Src/main.o
-                0x080292d4                HAL_UART_ErrorCallback
+                0x08029198       0xb0 ./Core/Src/main.o
+                0x08029198                HAL_UART_ErrorCallback
  .text.HAL_GPIO_EXTI_Callback
-                0x08029384       0x3c ./Core/Src/main.o
-                0x08029384                HAL_GPIO_EXTI_Callback
+                0x08029248       0x3c ./Core/Src/main.o
+                0x08029248                HAL_GPIO_EXTI_Callback
  .text.lcd_print_padded_if_changed
-                0x080293c0      0x10c ./Core/Src/main.o
+                0x08029284      0x10c ./Core/Src/main.o
  .text.lcd_draw_badge_if_changed
-                0x080294cc      0x16a ./Core/Src/main.o
+                0x08029390      0x16a ./Core/Src/main.o
  .text.vnd_lcd_sync_color_to_id
-                0x08029636       0x76 ./Core/Src/main.o
+                0x080294fa       0x76 ./Core/Src/main.o
  .text.vnd_get_lcd_sync_snapshot
-                0x080296ac      0x274 ./Core/Src/main.o
-                0x080296ac                vnd_get_lcd_sync_snapshot
+                0x08029570      0x274 ./Core/Src/main.o
+                0x08029570                vnd_get_lcd_sync_snapshot
  .text.UpdateLCDStatus
-                0x08029920       0x18 ./Core/Src/main.o
-                0x08029920                UpdateLCDStatus
+                0x080297e4       0x18 ./Core/Src/main.o
+                0x080297e4                UpdateLCDStatus
  .text.DrawUSBStatus
-                0x08029938      0xa64 ./Core/Src/main.o
-                0x08029938                DrawUSBStatus
+                0x080297fc      0xa64 ./Core/Src/main.o
+                0x080297fc                DrawUSBStatus
  .text.Error_Handler
-                0x0802a39c      0x160 ./Core/Src/main.o
-                0x0802a39c                Error_Handler
+                0x0802a260      0x160 ./Core/Src/main.o
+                0x0802a260                Error_Handler
  .text.HAL_MspInit
-                0x0802a4fc       0x34 ./Core/Src/stm32h7xx_hal_msp.o
-                0x0802a4fc                HAL_MspInit
+                0x0802a3c0       0x34 ./Core/Src/stm32h7xx_hal_msp.o
+                0x0802a3c0                HAL_MspInit
  .text.HAL_ADC_MspInit
-                0x0802a530      0x240 ./Core/Src/stm32h7xx_hal_msp.o
-                0x0802a530                HAL_ADC_MspInit
+                0x0802a3f4      0x240 ./Core/Src/stm32h7xx_hal_msp.o
+                0x0802a3f4                HAL_ADC_MspInit
  .text.HAL_DAC_MspInit
-                0x0802a770       0x9c ./Core/Src/stm32h7xx_hal_msp.o
-                0x0802a770                HAL_DAC_MspInit
+                0x0802a634       0x9c ./Core/Src/stm32h7xx_hal_msp.o
+                0x0802a634                HAL_DAC_MspInit
  .text.HAL_SPI_MspInit
-                0x0802a80c      0x26c ./Core/Src/stm32h7xx_hal_msp.o
-                0x0802a80c                HAL_SPI_MspInit
+                0x0802a6d0      0x26c ./Core/Src/stm32h7xx_hal_msp.o
+                0x0802a6d0                HAL_SPI_MspInit
  .text.HAL_TIM_PWM_MspInit
-                0x0802aa78       0x74 ./Core/Src/stm32h7xx_hal_msp.o
-                0x0802aa78                HAL_TIM_PWM_MspInit
+                0x0802a93c       0x74 ./Core/Src/stm32h7xx_hal_msp.o
+                0x0802a93c                HAL_TIM_PWM_MspInit
  .text.HAL_TIM_Base_MspInit
-                0x0802aaec      0x104 ./Core/Src/stm32h7xx_hal_msp.o
-                0x0802aaec                HAL_TIM_Base_MspInit
+                0x0802a9b0      0x104 ./Core/Src/stm32h7xx_hal_msp.o
+                0x0802a9b0                HAL_TIM_Base_MspInit
  .text.HAL_TIM_MspPostInit
-                0x0802abf0      0x254 ./Core/Src/stm32h7xx_hal_msp.o
-                0x0802abf0                HAL_TIM_MspPostInit
+                0x0802aab4      0x254 ./Core/Src/stm32h7xx_hal_msp.o
+                0x0802aab4                HAL_TIM_MspPostInit
  .text.HAL_UART_MspInit
-                0x0802ae44      0x198 ./Core/Src/stm32h7xx_hal_msp.o
-                0x0802ae44                HAL_UART_MspInit
+                0x0802ad08      0x198 ./Core/Src/stm32h7xx_hal_msp.o
+                0x0802ad08                HAL_UART_MspInit
  .text.NMI_Handler
-                0x0802afdc        0x8 ./Core/Src/stm32h7xx_it.o
-                0x0802afdc                NMI_Handler
+                0x0802aea0        0x8 ./Core/Src/stm32h7xx_it.o
+                0x0802aea0                NMI_Handler
  .text.HardFault_Handler
-                0x0802afe4       0x1a ./Core/Src/stm32h7xx_it.o
-                0x0802afe4                HardFault_Handler
+                0x0802aea8       0x1a ./Core/Src/stm32h7xx_it.o
+                0x0802aea8                HardFault_Handler
  .text.MemManage_Handler
-                0x0802affe        0x8 ./Core/Src/stm32h7xx_it.o
-                0x0802affe                MemManage_Handler
+                0x0802aec2        0x8 ./Core/Src/stm32h7xx_it.o
+                0x0802aec2                MemManage_Handler
  .text.BusFault_Handler
-                0x0802b006        0x8 ./Core/Src/stm32h7xx_it.o
-                0x0802b006                BusFault_Handler
+                0x0802aeca        0x8 ./Core/Src/stm32h7xx_it.o
+                0x0802aeca                BusFault_Handler
  .text.UsageFault_Handler
-                0x0802b00e        0x8 ./Core/Src/stm32h7xx_it.o
-                0x0802b00e                UsageFault_Handler
+                0x0802aed2        0x8 ./Core/Src/stm32h7xx_it.o
+                0x0802aed2                UsageFault_Handler
  .text.SVC_Handler
-                0x0802b016        0xe ./Core/Src/stm32h7xx_it.o
-                0x0802b016                SVC_Handler
+                0x0802aeda        0xe ./Core/Src/stm32h7xx_it.o
+                0x0802aeda                SVC_Handler
  .text.DebugMon_Handler
-                0x0802b024        0xe ./Core/Src/stm32h7xx_it.o
-                0x0802b024                DebugMon_Handler
+                0x0802aee8        0xe ./Core/Src/stm32h7xx_it.o
+                0x0802aee8                DebugMon_Handler
  .text.PendSV_Handler
-                0x0802b032        0xe ./Core/Src/stm32h7xx_it.o
-                0x0802b032                PendSV_Handler
+                0x0802aef6        0xe ./Core/Src/stm32h7xx_it.o
+                0x0802aef6                PendSV_Handler
  .text.SysTick_Handler
-                0x0802b040       0x1c ./Core/Src/stm32h7xx_it.o
-                0x0802b040                SysTick_Handler
+                0x0802af04       0x1c ./Core/Src/stm32h7xx_it.o
+                0x0802af04                SysTick_Handler
  .text.USART1_IRQHandler
-                0x0802b05c       0x14 ./Core/Src/stm32h7xx_it.o
-                0x0802b05c                USART1_IRQHandler
+                0x0802af20       0x14 ./Core/Src/stm32h7xx_it.o
+                0x0802af20                USART1_IRQHandler
  .text.USART2_IRQHandler
-                0x0802b070       0x58 ./Core/Src/stm32h7xx_it.o
-                0x0802b070                USART2_IRQHandler
+                0x0802af34       0x58 ./Core/Src/stm32h7xx_it.o
+                0x0802af34                USART2_IRQHandler
  .text.DMA1_Stream0_IRQHandler
-                0x0802b0c8       0x14 ./Core/Src/stm32h7xx_it.o
-                0x0802b0c8                DMA1_Stream0_IRQHandler
+                0x0802af8c       0x14 ./Core/Src/stm32h7xx_it.o
+                0x0802af8c                DMA1_Stream0_IRQHandler
  .text.DMA1_Stream1_IRQHandler
-                0x0802b0dc       0x14 ./Core/Src/stm32h7xx_it.o
-                0x0802b0dc                DMA1_Stream1_IRQHandler
+                0x0802afa0       0x14 ./Core/Src/stm32h7xx_it.o
+                0x0802afa0                DMA1_Stream1_IRQHandler
  .text.DMA1_Stream7_IRQHandler
-                0x0802b0f0       0x18 ./Core/Src/stm32h7xx_it.o
-                0x0802b0f0                DMA1_Stream7_IRQHandler
+                0x0802afb4       0x18 ./Core/Src/stm32h7xx_it.o
+                0x0802afb4                DMA1_Stream7_IRQHandler
  .text.SPI3_IRQHandler
-                0x0802b108       0x18 ./Core/Src/stm32h7xx_it.o
-                0x0802b108                SPI3_IRQHandler
+                0x0802afcc       0x18 ./Core/Src/stm32h7xx_it.o
+                0x0802afcc                SPI3_IRQHandler
  .text.EXTI0_IRQHandler
-                0x0802b120        0xe ./Core/Src/stm32h7xx_it.o
-                0x0802b120                EXTI0_IRQHandler
- *fill*         0x0802b12e        0x2 
+                0x0802afe4        0xe ./Core/Src/stm32h7xx_it.o
+                0x0802afe4                EXTI0_IRQHandler
+ *fill*         0x0802aff2        0x2 
  .text.TIM2_IRQHandler
-                0x0802b130       0x3c ./Core/Src/stm32h7xx_it.o
-                0x0802b130                TIM2_IRQHandler
+                0x0802aff4       0x3c ./Core/Src/stm32h7xx_it.o
+                0x0802aff4                TIM2_IRQHandler
  .text.TIM6_DAC_IRQHandler
-                0x0802b16c       0x1c ./Core/Src/stm32h7xx_it.o
-                0x0802b16c                TIM6_DAC_IRQHandler
+                0x0802b030       0x1c ./Core/Src/stm32h7xx_it.o
+                0x0802b030                TIM6_DAC_IRQHandler
  .text.TIM15_IRQHandler
-                0x0802b188       0x14 ./Core/Src/stm32h7xx_it.o
-                0x0802b188                TIM15_IRQHandler
+                0x0802b04c       0x14 ./Core/Src/stm32h7xx_it.o
+                0x0802b04c                TIM15_IRQHandler
  .text.OTG_HS_IRQHandler
-                0x0802b19c       0x20 ./Core/Src/stm32h7xx_it.o
-                0x0802b19c                OTG_HS_IRQHandler
+                0x0802b060       0x20 ./Core/Src/stm32h7xx_it.o
+                0x0802b060                OTG_HS_IRQHandler
  .text.hf_delay
-                0x0802b1bc       0x24 ./Core/Src/stm32h7xx_it.o
+                0x0802b080       0x24 ./Core/Src/stm32h7xx_it.o
  .text.hf_pin_shift
-                0x0802b1e0       0x3a ./Core/Src/stm32h7xx_it.o
+                0x0802b0a4       0x3a ./Core/Src/stm32h7xx_it.o
  .text.hf_gpio_output
-                0x0802b21a       0x78 ./Core/Src/stm32h7xx_it.o
- *fill*         0x0802b292        0x2 
+                0x0802b0de       0x78 ./Core/Src/stm32h7xx_it.o
+ *fill*         0x0802b156        0x2 
  .text.hf_fault_indicator_init
-                0x0802b294       0x38 ./Core/Src/stm32h7xx_it.o
+                0x0802b158       0x38 ./Core/Src/stm32h7xx_it.o
  .text.hf_fault_indicator_set
-                0x0802b2cc       0x40 ./Core/Src/stm32h7xx_it.o
+                0x0802b190       0x40 ./Core/Src/stm32h7xx_it.o
  .text.hf_fault_blink_forever
-                0x0802b30c       0x2c ./Core/Src/stm32h7xx_it.o
- .text.hf_hex   0x0802b338       0x58 ./Core/Src/stm32h7xx_it.o
+                0x0802b1d0       0x2c ./Core/Src/stm32h7xx_it.o
+ .text.hf_hex   0x0802b1fc       0x58 ./Core/Src/stm32h7xx_it.o
  .text.hf_raw_puts
-                0x0802b390       0x2a ./Core/Src/stm32h7xx_it.o
- *fill*         0x0802b3ba        0x2 
+                0x0802b254       0x2a ./Core/Src/stm32h7xx_it.o
+ *fill*         0x0802b27e        0x2 
  .text.hf_raw_hex_line
-                0x0802b3bc       0x44 ./Core/Src/stm32h7xx_it.o
+                0x0802b280       0x44 ./Core/Src/stm32h7xx_it.o
  .text.hf_print_line
-                0x0802b400       0xb8 ./Core/Src/stm32h7xx_it.o
+                0x0802b2c4       0xb8 ./Core/Src/stm32h7xx_it.o
  .text.HardFault_Display
-                0x0802b4b8       0xa4 ./Core/Src/stm32h7xx_it.o
+                0x0802b37c       0xa4 ./Core/Src/stm32h7xx_it.o
  .text.HardFault_Capture
-                0x0802b55c      0x138 ./Core/Src/stm32h7xx_it.o
-                0x0802b55c                HardFault_Capture
- .text._read    0x0802b694       0x3a ./Core/Src/syscalls.o
-                0x0802b694                _read
- .text._write   0x0802b6ce       0x38 ./Core/Src/syscalls.o
-                0x0802b6ce                _write
- *fill*         0x0802b706        0x2 
+                0x0802b420      0x138 ./Core/Src/stm32h7xx_it.o
+                0x0802b420                HardFault_Capture
+ .text._read    0x0802b558       0x3a ./Core/Src/syscalls.o
+                0x0802b558                _read
+ .text._write   0x0802b592       0x38 ./Core/Src/syscalls.o
+                0x0802b592                _write
+ *fill*         0x0802b5ca        0x2 
  .text.__io_putchar
-                0x0802b708       0x2c ./Core/Src/syscalls.o
-                0x0802b708                __io_putchar
- .text._close   0x0802b734       0x18 ./Core/Src/syscalls.o
-                0x0802b734                _close
- .text._fstat   0x0802b74c       0x20 ./Core/Src/syscalls.o
-                0x0802b74c                _fstat
- .text._isatty  0x0802b76c       0x16 ./Core/Src/syscalls.o
-                0x0802b76c                _isatty
- .text._lseek   0x0802b782       0x1a ./Core/Src/syscalls.o
-                0x0802b782                _lseek
- .text._sbrk    0x0802b79c       0x6c ./Core/Src/sysmem.o
-                0x0802b79c                _sbrk
+                0x0802b5cc       0x2c ./Core/Src/syscalls.o
+                0x0802b5cc                __io_putchar
+ .text._close   0x0802b5f8       0x18 ./Core/Src/syscalls.o
+                0x0802b5f8                _close
+ .text._fstat   0x0802b610       0x20 ./Core/Src/syscalls.o
+                0x0802b610                _fstat
+ .text._isatty  0x0802b630       0x16 ./Core/Src/syscalls.o
+                0x0802b630                _isatty
+ .text._lseek   0x0802b646       0x1a ./Core/Src/syscalls.o
+                0x0802b646                _lseek
+ .text._sbrk    0x0802b660       0x6c ./Core/Src/sysmem.o
+                0x0802b660                _sbrk
  .text.SystemInit
-                0x0802b808      0x120 ./Core/Src/system_stm32h7xx.o
-                0x0802b808                SystemInit
+                0x0802b6cc      0x120 ./Core/Src/system_stm32h7xx.o
+                0x0802b6cc                SystemInit
  .text.ExitRun0Mode
-                0x0802b928       0x30 ./Core/Src/system_stm32h7xx.o
-                0x0802b928                ExitRun0Mode
+                0x0802b7ec       0x30 ./Core/Src/system_stm32h7xx.o
+                0x0802b7ec                ExitRun0Mode
  .text.usb_cdc_ll_write
-                0x0802b958       0x6a ./Core/Src/usb_cdc_ll_st.o
-                0x0802b958                usb_cdc_ll_write
- *fill*         0x0802b9c2        0x2 
+                0x0802b81c       0x6a ./Core/Src/usb_cdc_ll_st.o
+                0x0802b81c                usb_cdc_ll_write
+ *fill*         0x0802b886        0x2 
  .text.temp_sensor_read_celsius
-                0x0802b9c4       0x60 ./Core/Src/usb_cdc_proto.o
-                0x0802b9c4                temp_sensor_read_celsius
+                0x0802b888       0x60 ./Core/Src/usb_cdc_proto.o
+                0x0802b888                temp_sensor_read_celsius
  .text.usb_stream_send_status
-                0x0802ba24       0xf0 ./Core/Src/usb_cdc_proto.o
-                0x0802ba24                usb_stream_send_status
+                0x0802b8e8       0xf0 ./Core/Src/usb_cdc_proto.o
+                0x0802b8e8                usb_stream_send_status
  .text.usb_stream_send_test_frame
-                0x0802bb14      0x198 ./Core/Src/usb_cdc_proto.o
-                0x0802bb14                usb_stream_send_test_frame
+                0x0802b9d8      0x198 ./Core/Src/usb_cdc_proto.o
+                0x0802b9d8                usb_stream_send_test_frame
  .text.crc16_buf
-                0x0802bcac       0x7e ./Core/Src/usb_cdc_proto.o
- *fill*         0x0802bd2a        0x2 
+                0x0802bb70       0x7e ./Core/Src/usb_cdc_proto.o
+ *fill*         0x0802bbee        0x2 
  .text.try_send_one_adc_frame
-                0x0802bd2c      0x1cc ./Core/Src/usb_cdc_proto.o
+                0x0802bbf0      0x1cc ./Core/Src/usb_cdc_proto.o
  .text.usb_stream_service
-                0x0802bef8       0x5c ./Core/Src/usb_cdc_proto.o
+                0x0802bdbc       0x5c ./Core/Src/usb_cdc_proto.o
  .text.usb_stream_try_send_frame
-                0x0802bf54       0xd8 ./Core/Src/usb_cdc_proto.o
-                0x0802bf54                usb_stream_try_send_frame
+                0x0802be18       0xd8 ./Core/Src/usb_cdc_proto.o
+                0x0802be18                usb_stream_try_send_frame
  .text.usb_stream_cfg
-                0x0802c02c       0x14 ./Core/Src/usb_cdc_proto.o
-                0x0802c02c                usb_stream_cfg
+                0x0802bef0       0x14 ./Core/Src/usb_cdc_proto.o
+                0x0802bef0                usb_stream_cfg
  .text.stream_send_ack
-                0x0802c040       0x26 ./Core/Src/usb_cdc_proto.o
+                0x0802bf04       0x26 ./Core/Src/usb_cdc_proto.o
  .text.stream_send_ack_param
-                0x0802c066       0x30 ./Core/Src/usb_cdc_proto.o
-                0x0802c066                stream_send_ack_param
+                0x0802bf2a       0x30 ./Core/Src/usb_cdc_proto.o
+                0x0802bf2a                stream_send_ack_param
  .text.stream_send_nack
-                0x0802c096       0x30 ./Core/Src/usb_cdc_proto.o
- *fill*         0x0802c0c6        0x2 
+                0x0802bf5a       0x30 ./Core/Src/usb_cdc_proto.o
+ *fill*         0x0802bf8a        0x2 
  .text.usb_stream_on_rx_bytes
-                0x0802c0c8      0x390 ./Core/Src/usb_cdc_proto.o
-                0x0802c0c8                usb_stream_on_rx_bytes
+                0x0802bf8c      0x390 ./Core/Src/usb_cdc_proto.o
+                0x0802bf8c                usb_stream_on_rx_bytes
  .text.usb_stream_init
-                0x0802c458       0x30 ./Core/Src/usb_cdc_proto.o
-                0x0802c458                usb_stream_init
+                0x0802c31c       0x30 ./Core/Src/usb_cdc_proto.o
+                0x0802c31c                usb_stream_init
  .text.ws2812_irq_save
-                0x0802c488       0x22 ./Core/Src/ws2812_spi.o
+                0x0802c34c       0x22 ./Core/Src/ws2812_spi.o
  .text.ws2812_irq_restore
-                0x0802c4aa       0x20 ./Core/Src/ws2812_spi.o
- *fill*         0x0802c4ca        0x2 
+                0x0802c36e       0x20 ./Core/Src/ws2812_spi.o
+ *fill*         0x0802c38e        0x2 
  .text.ws2812_begin_tx_buffer_update
-                0x0802c4cc       0x48 ./Core/Src/ws2812_spi.o
+                0x0802c390       0x48 ./Core/Src/ws2812_spi.o
  .text.ws2812_end_tx_buffer_update
-                0x0802c514       0x24 ./Core/Src/ws2812_spi.o
+                0x0802c3d8       0x24 ./Core/Src/ws2812_spi.o
  .text.ws2812_try_mark_busy
-                0x0802c538       0x68 ./Core/Src/ws2812_spi.o
+                0x0802c3fc       0x68 ./Core/Src/ws2812_spi.o
  .text.ws2812_clear_busy
-                0x0802c5a0       0x24 ./Core/Src/ws2812_spi.o
+                0x0802c464       0x24 ./Core/Src/ws2812_spi.o
  .text.ws2812_scope_pin_init
-                0x0802c5c4       0x68 ./Core/Src/ws2812_spi.o
+                0x0802c488       0x68 ./Core/Src/ws2812_spi.o
  .text.ws2812_scope_pulse_count
-                0x0802c62c       0x14 ./Core/Src/ws2812_spi.o
+                0x0802c4f0       0x14 ./Core/Src/ws2812_spi.o
  .text.ws2812_scope_sync_begin
-                0x0802c640        0xe ./Core/Src/ws2812_spi.o
- *fill*         0x0802c64e        0x2 
+                0x0802c504        0xe ./Core/Src/ws2812_spi.o
+ *fill*         0x0802c512        0x2 
  .text.ws2812_pin_spi_mode
-                0x0802c650       0x7c ./Core/Src/ws2812_spi.o
+                0x0802c514       0x7c ./Core/Src/ws2812_spi.o
  .text.ws2812_pin_gpio_low_mode
-                0x0802c6cc       0x74 ./Core/Src/ws2812_spi.o
+                0x0802c590       0x74 ./Core/Src/ws2812_spi.o
  .text.ws2812_encode_byte
-                0x0802c740       0x7e ./Core/Src/ws2812_spi.o
+                0x0802c604       0x7e ./Core/Src/ws2812_spi.o
  .text.ws2812_encode_led_rgb
-                0x0802c7be       0x4a ./Core/Src/ws2812_spi.o
+                0x0802c682       0x4a ./Core/Src/ws2812_spi.o
  .text.ws2812_build_tx_buffer
-                0x0802c808       0x9c ./Core/Src/ws2812_spi.o
+                0x0802c6cc       0x9c ./Core/Src/ws2812_spi.o
  .text.ws2812_clean_dcache_region
-                0x0802c8a4       0x16 ./Core/Src/ws2812_spi.o
+                0x0802c768       0x16 ./Core/Src/ws2812_spi.o
  .text.ws2812_build_pattern_buffers
-                0x0802c8ba        0xe ./Core/Src/ws2812_spi.o
+                0x0802c77e        0xe ./Core/Src/ws2812_spi.o
  .text.ws2812_pixels_clear_all
-                0x0802c8c8       0x18 ./Core/Src/ws2812_spi.o
+                0x0802c78c       0x18 ./Core/Src/ws2812_spi.o
  .text.ws2812_pixels_set_onboard_rgb
-                0x0802c8e0       0x34 ./Core/Src/ws2812_spi.o
+                0x0802c7a4       0x34 ./Core/Src/ws2812_spi.o
  .text.ws2812_pixels_fill_strip_rgb
-                0x0802c914       0x70 ./Core/Src/ws2812_spi.o
+                0x0802c7d8       0x70 ./Core/Src/ws2812_spi.o
  .text.ws2812_pixels_set_strip_led_rgb
-                0x0802c984       0x70 ./Core/Src/ws2812_spi.o
+                0x0802c848       0x70 ./Core/Src/ws2812_spi.o
  .text.ws2812_pattern_step_frames
-                0x0802c9f4       0x8c ./Core/Src/ws2812_spi.o
+                0x0802c8b8       0x8c ./Core/Src/ws2812_spi.o
  .text.ws2812_render_strip_comet
-                0x0802ca80       0xc0 ./Core/Src/ws2812_spi.o
+                0x0802c944       0xc0 ./Core/Src/ws2812_spi.o
  .text.ws2812_render_strip_moving_blocks
-                0x0802cb40       0x70 ./Core/Src/ws2812_spi.o
+                0x0802ca04       0x70 ./Core/Src/ws2812_spi.o
  .text.ws2812_render_strip_moving_blocks_alternating
-                0x0802cbb0       0x3c ./Core/Src/ws2812_spi.o
+                0x0802ca74       0x3c ./Core/Src/ws2812_spi.o
  .text.ws2812_render_strip_split_moving_blocks
-                0x0802cbec       0xe2 ./Core/Src/ws2812_spi.o
- *fill*         0x0802ccce        0x2 
+                0x0802cab0       0xe2 ./Core/Src/ws2812_spi.o
+ *fill*         0x0802cb92        0x2 
  .text.ws2812_drip_tail_visible
-                0x0802ccd0       0x38 ./Core/Src/ws2812_spi.o
+                0x0802cb94       0x38 ./Core/Src/ws2812_spi.o
  .text.ws2812_render_strip_drip
-                0x0802cd08       0xd4 ./Core/Src/ws2812_spi.o
+                0x0802cbcc       0xd4 ./Core/Src/ws2812_spi.o
  .text.ws2812_get_onboard_status_rgb
-                0x0802cddc      0x2c4 ./Core/Src/ws2812_spi.o
+                0x0802cca0      0x2c4 ./Core/Src/ws2812_spi.o
  .text.ws2812_update_onboard_status_in_tx_buffer
-                0x0802d0a0       0x44 ./Core/Src/ws2812_spi.o
+                0x0802cf64       0x44 ./Core/Src/ws2812_spi.o
  .text.ws2812_apply_onboard_status_overlay
-                0x0802d0e4       0x32 ./Core/Src/ws2812_spi.o
- *fill*         0x0802d116        0x2 
+                0x0802cfa8       0x32 ./Core/Src/ws2812_spi.o
+ *fill*         0x0802cfda        0x2 
  .text.ws2812_render_pattern
-                0x0802d118      0x33c ./Core/Src/ws2812_spi.o
+                0x0802cfdc      0x33c ./Core/Src/ws2812_spi.o
  .text.ws2812_start_transfer
-                0x0802d454       0x58 ./Core/Src/ws2812_spi.o
+                0x0802d318       0x58 ./Core/Src/ws2812_spi.o
  .text.ws2812_spi_init
-                0x0802d4ac       0xd4 ./Core/Src/ws2812_spi.o
-                0x0802d4ac                ws2812_spi_init
+                0x0802d370       0xd4 ./Core/Src/ws2812_spi.o
+                0x0802d370                ws2812_spi_init
  .text.ws2812_spi_set_pattern
-                0x0802d580       0x2c ./Core/Src/ws2812_spi.o
-                0x0802d580                ws2812_spi_set_pattern
+                0x0802d444       0x2c ./Core/Src/ws2812_spi.o
+                0x0802d444                ws2812_spi_set_pattern
  .text.ws2812_spi_trigger_event
-                0x0802d5ac       0xb8 ./Core/Src/ws2812_spi.o
-                0x0802d5ac                ws2812_spi_trigger_event
+                0x0802d470       0xb8 ./Core/Src/ws2812_spi.o
+                0x0802d470                ws2812_spi_trigger_event
  .text.ws2812_spi_service
-                0x0802d664      0x14c ./Core/Src/ws2812_spi.o
-                0x0802d664                ws2812_spi_service
+                0x0802d528      0x14c ./Core/Src/ws2812_spi.o
+                0x0802d528                ws2812_spi_service
  .text.ws2812_note_transfer_started
-                0x0802d7b0       0xb0 ./Core/Src/ws2812_spi.o
+                0x0802d674       0xb0 ./Core/Src/ws2812_spi.o
  .text.ws2812_spi_on_adc_buffer_complete
-                0x0802d860       0x50 ./Core/Src/ws2812_spi.o
-                0x0802d860                ws2812_spi_on_adc_buffer_complete
+                0x0802d724       0x50 ./Core/Src/ws2812_spi.o
+                0x0802d724                ws2812_spi_on_adc_buffer_complete
  .text.HAL_SPI_TxCpltCallback
-                0x0802d8b0       0x50 ./Core/Src/ws2812_spi.o
-                0x0802d8b0                HAL_SPI_TxCpltCallback
+                0x0802d774       0x50 ./Core/Src/ws2812_spi.o
+                0x0802d774                HAL_SPI_TxCpltCallback
  .text.HAL_SPI_ErrorCallback
-                0x0802d900       0x34 ./Core/Src/ws2812_spi.o
-                0x0802d900                HAL_SPI_ErrorCallback
+                0x0802d7c4       0x34 ./Core/Src/ws2812_spi.o
+                0x0802d7c4                HAL_SPI_ErrorCallback
  .text.ws2812_spi_dma_irq_trace
-                0x0802d934        0xe ./Core/Src/ws2812_spi.o
-                0x0802d934                ws2812_spi_dma_irq_trace
+                0x0802d7f8        0xe ./Core/Src/ws2812_spi.o
+                0x0802d7f8                ws2812_spi_dma_irq_trace
  .text.ws2812_spi_spi_irq_trace
-                0x0802d942        0xe ./Core/Src/ws2812_spi.o
-                0x0802d942                ws2812_spi_spi_irq_trace
+                0x0802d806        0xe ./Core/Src/ws2812_spi.o
+                0x0802d806                ws2812_spi_spi_irq_trace
  .text._strtol_l.isra.0
-                0x0802d950       0xf4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strtol.o)
+                0x0802d814       0xf4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strtol.o)
  .text._strtol_r
-                0x0802da44        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strtol.o)
-                0x0802da44                _strtol_r
- .text.strtol   0x0802da48       0x14 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strtol.o)
-                0x0802da48                strtol
- .text.std      0x0802da5c       0x6c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
+                0x0802d908        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strtol.o)
+                0x0802d908                _strtol_r
+ .text.strtol   0x0802d90c       0x14 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strtol.o)
+                0x0802d90c                strtol
+ .text.std      0x0802d920       0x6c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
  .text.stdio_exit_handler
-                0x0802dac8       0x18 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
+                0x0802d98c       0x18 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
  .text.cleanup_stdio
-                0x0802dae0       0x40 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
+                0x0802d9a4       0x40 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
  .text.global_stdio_init.part.0
-                0x0802db20       0x3c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
+                0x0802d9e4       0x3c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
  .text.__sfp_lock_acquire
-                0x0802db5c        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
-                0x0802db5c                __sfp_lock_acquire
+                0x0802da20        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
+                0x0802da20                __sfp_lock_acquire
  .text.__sfp_lock_release
-                0x0802db68        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
-                0x0802db68                __sfp_lock_release
- .text.__sinit  0x0802db74       0x30 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
-                0x0802db74                __sinit
+                0x0802da2c        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
+                0x0802da2c                __sfp_lock_release
+ .text.__sinit  0x0802da38       0x30 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
+                0x0802da38                __sinit
  .text._fwalk_sglue
-                0x0802dba4       0x3c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-fwalk.o)
-                0x0802dba4                _fwalk_sglue
- .text.printf   0x0802dbe0       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-printf.o)
-                0x0802dbe0                iprintf
-                0x0802dbe0                printf
- .text._puts_r  0x0802dc04       0xaa C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-puts.o)
-                0x0802dc04                _puts_r
- *fill*         0x0802dcae        0x2 
- .text.puts     0x0802dcb0       0x10 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-puts.o)
-                0x0802dcb0                puts
- .text.setvbuf  0x0802dcc0      0x168 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-setvbuf.o)
-                0x0802dcc0                setvbuf
+                0x0802da68       0x3c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-fwalk.o)
+                0x0802da68                _fwalk_sglue
+ .text.printf   0x0802daa4       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-printf.o)
+                0x0802daa4                iprintf
+                0x0802daa4                printf
+ .text._puts_r  0x0802dac8       0xaa C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-puts.o)
+                0x0802dac8                _puts_r
+ *fill*         0x0802db72        0x2 
+ .text.puts     0x0802db74       0x10 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-puts.o)
+                0x0802db74                puts
+ .text.setvbuf  0x0802db84      0x168 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-setvbuf.o)
+                0x0802db84                setvbuf
  .text.snprintf
-                0x0802de28       0x6c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-snprintf.o)
-                0x0802de28                sniprintf
-                0x0802de28                snprintf
- .text.sscanf   0x0802de94       0x58 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-sscanf.o)
-                0x0802de94                siscanf
-                0x0802de94                sscanf
- .text.__sread  0x0802deec       0x22 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-stdio.o)
-                0x0802deec                __sread
+                0x0802dcec       0x6c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-snprintf.o)
+                0x0802dcec                sniprintf
+                0x0802dcec                snprintf
+ .text.sscanf   0x0802dd58       0x58 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-sscanf.o)
+                0x0802dd58                siscanf
+                0x0802dd58                sscanf
+ .text.__sread  0x0802ddb0       0x22 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-stdio.o)
+                0x0802ddb0                __sread
  .text.__seofread
-                0x0802df0e        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-stdio.o)
-                0x0802df0e                __seofread
+                0x0802ddd2        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-stdio.o)
+                0x0802ddd2                __seofread
  .text.__swrite
-                0x0802df12       0x38 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-stdio.o)
-                0x0802df12                __swrite
- .text.__sseek  0x0802df4a       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-stdio.o)
-                0x0802df4a                __sseek
+                0x0802ddd6       0x38 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-stdio.o)
+                0x0802ddd6                __swrite
+ .text.__sseek  0x0802de0e       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-stdio.o)
+                0x0802de0e                __sseek
  .text.__sclose
-                0x0802df6e        0x8 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-stdio.o)
-                0x0802df6e                __sclose
+                0x0802de32        0x8 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-stdio.o)
+                0x0802de32                __sclose
  .text._vsnprintf_r
-                0x0802df76       0x5c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-vsnprintf.o)
-                0x0802df76                _vsniprintf_r
-                0x0802df76                _vsnprintf_r
- *fill*         0x0802dfd2        0x2 
+                0x0802de3a       0x5c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-vsnprintf.o)
+                0x0802de3a                _vsniprintf_r
+                0x0802de3a                _vsnprintf_r
+ *fill*         0x0802de96        0x2 
  .text.vsnprintf
-                0x0802dfd4       0x1c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-vsnprintf.o)
-                0x0802dfd4                vsniprintf
-                0x0802dfd4                vsnprintf
+                0x0802de98       0x1c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-vsnprintf.o)
+                0x0802de98                vsniprintf
+                0x0802de98                vsnprintf
  .text.__swbuf_r
-                0x0802dff0       0x7c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-wbuf.o)
-                0x0802dff0                __swbuf_r
+                0x0802deb4       0x7c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-wbuf.o)
+                0x0802deb4                __swbuf_r
  .text.__swsetup_r
-                0x0802e06c       0xac C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-wsetup.o)
-                0x0802e06c                __swsetup_r
- .text.memset   0x0802e118       0x10 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-memset.o)
-                0x0802e118                memset
- .text.strncmp  0x0802e128       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strncmp.o)
-                0x0802e128                strncmp
- .text.strncpy  0x0802e14c       0x26 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strncpy.o)
-                0x0802e14c                strncpy
- *fill*         0x0802e172        0x2 
+                0x0802df30       0xac C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-wsetup.o)
+                0x0802df30                __swsetup_r
+ .text.memset   0x0802dfdc       0x10 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-memset.o)
+                0x0802dfdc                memset
+ .text.strncmp  0x0802dfec       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strncmp.o)
+                0x0802dfec                strncmp
+ .text.strncpy  0x0802e010       0x26 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strncpy.o)
+                0x0802e010                strncpy
+ *fill*         0x0802e036        0x2 
  .text._close_r
-                0x0802e174       0x20 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-closer.o)
-                0x0802e174                _close_r
+                0x0802e038       0x20 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-closer.o)
+                0x0802e038                _close_r
  .text._lseek_r
-                0x0802e194       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-lseekr.o)
-                0x0802e194                _lseek_r
- .text._read_r  0x0802e1b8       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-readr.o)
-                0x0802e1b8                _read_r
+                0x0802e058       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-lseekr.o)
+                0x0802e058                _lseek_r
+ .text._read_r  0x0802e07c       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-readr.o)
+                0x0802e07c                _read_r
  .text._write_r
-                0x0802e1dc       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-writer.o)
-                0x0802e1dc                _write_r
- .text.__errno  0x0802e200        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-errno.o)
-                0x0802e200                __errno
+                0x0802e0a0       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-writer.o)
+                0x0802e0a0                _write_r
+ .text.__errno  0x0802e0c4        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-errno.o)
+                0x0802e0c4                __errno
  .text.__libc_init_array
-                0x0802e20c       0x48 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-init.o)
-                0x0802e20c                __libc_init_array
+                0x0802e0d0       0x48 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-init.o)
+                0x0802e0d0                __libc_init_array
  .text.__retarget_lock_init_recursive
-                0x0802e254        0x2 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-lock.o)
-                0x0802e254                __retarget_lock_init_recursive
+                0x0802e118        0x2 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-lock.o)
+                0x0802e118                __retarget_lock_init_recursive
  .text.__retarget_lock_acquire_recursive
-                0x0802e256        0x2 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-lock.o)
-                0x0802e256                __retarget_lock_acquire_recursive
+                0x0802e11a        0x2 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-lock.o)
+                0x0802e11a                __retarget_lock_acquire_recursive
  .text.__retarget_lock_release_recursive
-                0x0802e258        0x2 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-lock.o)
-                0x0802e258                __retarget_lock_release_recursive
- .text.memcpy   0x0802e25a       0x1c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-memcpy-stub.o)
-                0x0802e25a                memcpy
- *fill*         0x0802e276        0x2 
- .text._free_r  0x0802e278       0x94 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-freer.o)
-                0x0802e278                _free_r
- .text.malloc   0x0802e30c       0x10 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-malloc.o)
-                0x0802e30c                malloc
+                0x0802e11c        0x2 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-lock.o)
+                0x0802e11c                __retarget_lock_release_recursive
+ .text.memcpy   0x0802e11e       0x1c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-memcpy-stub.o)
+                0x0802e11e                memcpy
+ *fill*         0x0802e13a        0x2 
+ .text._free_r  0x0802e13c       0x94 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-freer.o)
+                0x0802e13c                _free_r
+ .text.malloc   0x0802e1d0       0x10 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-malloc.o)
+                0x0802e1d0                malloc
  .text.sbrk_aligned
-                0x0802e31c       0x44 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-mallocr.o)
+                0x0802e1e0       0x44 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-mallocr.o)
  .text._malloc_r
-                0x0802e360      0x100 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-mallocr.o)
-                0x0802e360                _malloc_r
+                0x0802e224      0x100 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-mallocr.o)
+                0x0802e224                _malloc_r
  .text.__malloc_lock
-                0x0802e460        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-mlock.o)
-                0x0802e460                __malloc_lock
+                0x0802e324        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-mlock.o)
+                0x0802e324                __malloc_lock
  .text.__malloc_unlock
-                0x0802e46c        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-mlock.o)
-                0x0802e46c                __malloc_unlock
+                0x0802e330        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-mlock.o)
+                0x0802e330                __malloc_unlock
  .text.__ssputs_r
-                0x0802e478       0xb6 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfprintf.o)
-                0x0802e478                __ssputs_r
- *fill*         0x0802e52e        0x2 
+                0x0802e33c       0xb6 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfprintf.o)
+                0x0802e33c                __ssputs_r
+ *fill*         0x0802e3f2        0x2 
  .text._svfprintf_r
-                0x0802e530      0x1f8 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfprintf.o)
-                0x0802e530                _svfiprintf_r
-                0x0802e530                _svfprintf_r
+                0x0802e3f4      0x1f8 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfprintf.o)
+                0x0802e3f4                _svfiprintf_r
+                0x0802e3f4                _svfprintf_r
  .text._sungetc_r
-                0x0802e728       0x7a C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfscanf.o)
-                0x0802e728                _sungetc_r
+                0x0802e5ec       0x7a C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfscanf.o)
+                0x0802e5ec                _sungetc_r
  .text.__ssrefill_r
-                0x0802e7a2       0x3a C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfscanf.o)
-                0x0802e7a2                __ssrefill_r
+                0x0802e666       0x3a C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfscanf.o)
+                0x0802e666                __ssrefill_r
  .text.__ssvfscanf_r
-                0x0802e7dc      0x2ec C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfscanf.o)
-                0x0802e7dc                __ssvfiscanf_r
-                0x0802e7dc                __ssvfscanf_r
+                0x0802e6a0      0x2ec C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfscanf.o)
+                0x0802e6a0                __ssvfiscanf_r
+                0x0802e6a0                __ssvfscanf_r
  .text.__sfputc_r
-                0x0802eac8       0x2e C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf.o)
+                0x0802e98c       0x2e C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf.o)
  .text.__sfputs_r
-                0x0802eaf6       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf.o)
-                0x0802eaf6                __sfputs_r
- *fill*         0x0802eb1a        0x2 
+                0x0802e9ba       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf.o)
+                0x0802e9ba                __sfputs_r
+ *fill*         0x0802e9de        0x2 
  .text._vfprintf_r
-                0x0802eb1c      0x230 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf.o)
-                0x0802eb1c                _vfprintf_r
-                0x0802eb1c                _vfiprintf_r
+                0x0802e9e0      0x230 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf.o)
+                0x0802e9e0                _vfprintf_r
+                0x0802e9e0                _vfiprintf_r
  .text._printf_common
-                0x0802ed4c       0xda C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf_i.o)
-                0x0802ed4c                _printf_common
- *fill*         0x0802ee26        0x2 
+                0x0802ec10       0xda C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf_i.o)
+                0x0802ec10                _printf_common
+ *fill*         0x0802ecea        0x2 
  .text._printf_i
-                0x0802ee28      0x23c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf_i.o)
-                0x0802ee28                _printf_i
+                0x0802ecec      0x23c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf_i.o)
+                0x0802ecec                _printf_i
  .text._scanf_chars
-                0x0802f064       0xb4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfscanf_i.o)
-                0x0802f064                _scanf_chars
+                0x0802ef28       0xb4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfscanf_i.o)
+                0x0802ef28                _scanf_chars
  .text._scanf_i
-                0x0802f118      0x1e8 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfscanf_i.o)
-                0x0802f118                _scanf_i
+                0x0802efdc      0x1e8 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfscanf_i.o)
+                0x0802efdc                _scanf_i
  .text.__sflush_r
-                0x0802f300      0x108 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-fflush.o)
-                0x0802f300                __sflush_r
+                0x0802f1c4      0x108 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-fflush.o)
+                0x0802f1c4                __sflush_r
  .text._fflush_r
-                0x0802f408       0x50 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-fflush.o)
-                0x0802f408                _fflush_r
+                0x0802f2cc       0x50 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-fflush.o)
+                0x0802f2cc                _fflush_r
  .text.__swhatbuf_r
-                0x0802f458       0x4c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-makebuf.o)
-                0x0802f458                __swhatbuf_r
+                0x0802f31c       0x4c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-makebuf.o)
+                0x0802f31c                __swhatbuf_r
  .text.__smakebuf_r
-                0x0802f4a4       0x78 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-makebuf.o)
-                0x0802f4a4                __smakebuf_r
- .text.__sccl   0x0802f51c       0x72 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-sccl.o)
-                0x0802f51c                __sccl
+                0x0802f368       0x78 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-makebuf.o)
+                0x0802f368                __smakebuf_r
+ .text.__sccl   0x0802f3e0       0x72 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-sccl.o)
+                0x0802f3e0                __sccl
  .text.__submore
-                0x0802f58e       0x74 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-ungetc.o)
-                0x0802f58e                __submore
- .text.memmove  0x0802f602       0x34 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-memmove.o)
-                0x0802f602                memmove
- *fill*         0x0802f636        0x2 
+                0x0802f452       0x74 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-ungetc.o)
+                0x0802f452                __submore
+ .text.memmove  0x0802f4c6       0x34 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-memmove.o)
+                0x0802f4c6                memmove
+ *fill*         0x0802f4fa        0x2 
  .text._fstat_r
-                0x0802f638       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-fstatr.o)
-                0x0802f638                _fstat_r
+                0x0802f4fc       0x24 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-fstatr.o)
+                0x0802f4fc                _fstat_r
  .text._isatty_r
-                0x0802f65c       0x20 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-isattyr.o)
-                0x0802f65c                _isatty_r
- .text._sbrk_r  0x0802f67c       0x20 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-sbrkr.o)
-                0x0802f67c                _sbrk_r
+                0x0802f520       0x20 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-isattyr.o)
+                0x0802f520                _isatty_r
+ .text._sbrk_r  0x0802f540       0x20 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-sbrkr.o)
+                0x0802f540                _sbrk_r
  .text._realloc_r
-                0x0802f69c       0x5c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-reallocr.o)
-                0x0802f69c                _realloc_r
+                0x0802f560       0x5c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-reallocr.o)
+                0x0802f560                _realloc_r
  .text._strtoul_l.isra.0
-                0x0802f6f8       0xdc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strtoul.o)
+                0x0802f5bc       0xdc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strtoul.o)
  .text._strtoul_r
-                0x0802f7d4        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strtoul.o)
-                0x0802f7d4                _strtoul_r
+                0x0802f698        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strtoul.o)
+                0x0802f698                _strtoul_r
  .text._malloc_usable_size_r
-                0x0802f7d8       0x10 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-msizer.o)
-                0x0802f7d8                _malloc_usable_size_r
- .text.sqrt     0x0802f7e8       0x40 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libm.a(libm_a-w_sqrt.o)
-                0x0802f7e8                sqrt
+                0x0802f69c       0x10 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-msizer.o)
+                0x0802f69c                _malloc_usable_size_r
+ *fill*         0x0802f6ac        0x4 
+ .text.sqrt     0x0802f6b0       0x40 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libm.a(libm_a-w_sqrt.o)
+                0x0802f6b0                sqrt
  .text.__ieee754_sqrt
-                0x0802f828        0x6 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libm.a(libm_a-e_sqrt.o)
-                0x0802f828                __ieee754_sqrt
+                0x0802f6f0        0x6 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libm.a(libm_a-e_sqrt.o)
+                0x0802f6f0                __ieee754_sqrt
  *(.glue_7)
- .glue_7        0x0802f82e        0x0 linker stubs
+ .glue_7        0x0802f6f6        0x0 linker stubs
  *(.glue_7t)
- .glue_7t       0x0802f82e        0x0 linker stubs
+ .glue_7t       0x0802f6f6        0x0 linker stubs
  *(.eh_frame)
- *fill*         0x0802f82e        0x2 
- .eh_frame      0x0802f830        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
+ *fill*         0x0802f6f6        0x2 
+ .eh_frame      0x0802f6f8        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
  *(.init)
- .init          0x0802f830        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crti.o
-                0x0802f830                _init
- .init          0x0802f834        0x8 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtn.o
+ .init          0x0802f6f8        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crti.o
+                0x0802f6f8                _init
+ .init          0x0802f6fc        0x8 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtn.o
  *(.fini)
- .fini          0x0802f83c        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crti.o
-                0x0802f83c                _fini
- .fini          0x0802f840        0x8 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtn.o
-                0x0802f848                        . = ALIGN (0x4)
-                0x0802f848                        _etext = .
+ .fini          0x0802f704        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crti.o
+                0x0802f704                _fini
+ .fini          0x0802f708        0x8 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtn.o
+                0x0802f710                        . = ALIGN (0x4)
+                0x0802f710                        _etext = .
 
-.vfp11_veneer   0x0802f848        0x0
- .vfp11_veneer  0x0802f848        0x0 linker stubs
+.vfp11_veneer   0x0802f710        0x0
+ .vfp11_veneer  0x0802f710        0x0 linker stubs
 
-.v4_bx          0x0802f848        0x0
- .v4_bx         0x0802f848        0x0 linker stubs
+.v4_bx          0x0802f710        0x0
+ .v4_bx         0x0802f710        0x0 linker stubs
 
-.iplt           0x0802f848        0x0
- .iplt          0x0802f848        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
+.iplt           0x0802f710        0x0
+ .iplt          0x0802f710        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
 
-.rodata         0x0802f848     0x4408
-                0x0802f848                        . = ALIGN (0x4)
+.rodata         0x0802f710     0x4408
+                0x0802f710                        . = ALIGN (0x4)
  *(.rodata)
- .rodata        0x0802f848      0x21c ./USB_DEVICE/App/usb_device.o
- .rodata        0x0802fa64      0xeae ./USB_DEVICE/App/usb_vendor_app.o
- *fill*         0x08030912        0x2 
- .rodata        0x08030914       0x94 ./USB_DEVICE/App/usbd_cdc_custom.o
- .rodata        0x080309a8      0x2de ./USB_DEVICE/App/usbd_cdc_if.o
- *fill*         0x08030c86        0x2 
- .rodata        0x08030c88       0x3c ./USB_DEVICE/App/usbd_desc.o
- .rodata        0x08030cc4      0x4e6 ./Core/Src/adc_stream.o
- *fill*         0x080311aa        0x2 
- .rodata        0x080311ac     0x15b0 ./Core/Src/main.o
- .rodata        0x0803275c       0xa1 ./Core/Src/stm32h7xx_it.o
- *fill*         0x080327fd        0x3 
- .rodata        0x08032800       0xb2 ./Core/Src/usb_cdc_proto.o
- *fill*         0x080328b2        0x2 
- .rodata        0x080328b4        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfscanf_i.o)
+ .rodata        0x0802f710      0x21c ./USB_DEVICE/App/usb_device.o
+ .rodata        0x0802f92c      0xeae ./USB_DEVICE/App/usb_vendor_app.o
+ *fill*         0x080307da        0x2 
+ .rodata        0x080307dc       0x94 ./USB_DEVICE/App/usbd_cdc_custom.o
+ .rodata        0x08030870      0x2de ./USB_DEVICE/App/usbd_cdc_if.o
+ *fill*         0x08030b4e        0x2 
+ .rodata        0x08030b50       0x3c ./USB_DEVICE/App/usbd_desc.o
+ .rodata        0x08030b8c      0x4e6 ./Core/Src/adc_stream.o
+ *fill*         0x08031072        0x2 
+ .rodata        0x08031074     0x15b0 ./Core/Src/main.o
+ .rodata        0x08032624       0xa1 ./Core/Src/stm32h7xx_it.o
+ *fill*         0x080326c5        0x3 
+ .rodata        0x080326c8       0xb2 ./Core/Src/usb_cdc_proto.o
+ *fill*         0x0803277a        0x2 
+ .rodata        0x0803277c        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfscanf_i.o)
  *(.rodata*)
  .rodata.flagBitshiftOffset.0
-                0x080328c0        0x8 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_dma.o
+                0x08032788        0x8 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_dma.o
  .rodata.UARTPrescTable
-                0x080328c8       0x18 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart.o
-                0x080328c8                UARTPrescTable
+                0x08032790       0x18 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart.o
+                0x08032790                UARTPrescTable
  .rodata.numerator.1
-                0x080328e0        0x8 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart_ex.o
+                0x080327a8        0x8 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart_ex.o
  .rodata.denominator.0
-                0x080328e8        0x8 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart_ex.o
+                0x080327b0        0x8 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart_ex.o
  .rodata.asc2_1206
-                0x080328f0      0x774 ./Drivers/BSP/ST7735/font.o
-                0x080328f0                asc2_1206
+                0x080327b8      0x774 ./Drivers/BSP/ST7735/font.o
+                0x080327b8                asc2_1206
  .rodata.asc2_1608
-                0x08033064      0x9f0 ./Drivers/BSP/ST7735/font.o
-                0x08033064                asc2_1608
+                0x08032f2c      0x9f0 ./Drivers/BSP/ST7735/font.o
+                0x08032f2c                asc2_1608
  .rodata.g_profiles
-                0x08033a54       0x28 ./Core/Src/adc_stream.o
+                0x0803391c       0x28 ./Core/Src/adc_stream.o
  .rodata.test_patterns.64
-                0x08033a7c        0xa ./Core/Src/main.o
- *fill*         0x08033a86        0x2 
+                0x08033944        0xa ./Core/Src/main.o
+ *fill*         0x0803394e        0x2 
  .rodata.fw_version
-                0x08033a88        0x6 ./Core/Src/build_info.o
-                0x08033a88                fw_version
- *fill*         0x08033a8e        0x2 
+                0x08033950        0x6 ./Core/Src/build_info.o
+                0x08033950                fw_version
+ *fill*         0x08033956        0x2 
  .rodata.fw_build_date
-                0x08033a90        0xb ./Core/Src/build_info.o
-                0x08033a90                fw_build_date
- *fill*         0x08033a9b        0x1 
+                0x08033958        0xb ./Core/Src/build_info.o
+                0x08033958                fw_build_date
+ *fill*         0x08033963        0x1 
  .rodata.fw_build_time
-                0x08033a9c        0x9 ./Core/Src/build_info.o
-                0x08033a9c                fw_build_time
- *fill*         0x08033aa5        0x3 
+                0x08033964        0x9 ./Core/Src/build_info.o
+                0x08033964                fw_build_time
+ *fill*         0x0803396d        0x3 
  .rodata.fw_git_hash
-                0x08033aa8        0x6 ./Core/Src/build_info.o
-                0x08033aa8                fw_git_hash
- *fill*         0x08033aae        0x2 
+                0x08033970        0x6 ./Core/Src/build_info.o
+                0x08033970                fw_git_hash
+ *fill*         0x08033976        0x2 
  .rodata.fw_build_full
-                0x08033ab0       0x31 ./Core/Src/build_info.o
-                0x08033ab0                fw_build_full
- *fill*         0x08033ae1        0x3 
+                0x08033978       0x31 ./Core/Src/build_info.o
+                0x08033978                fw_build_full
+ *fill*         0x080339a9        0x3 
  .rodata.D1CorePrescTable
-                0x08033ae4       0x10 ./Core/Src/system_stm32h7xx.o
-                0x08033ae4                D1CorePrescTable
+                0x080339ac       0x10 ./Core/Src/system_stm32h7xx.o
+                0x080339ac                D1CorePrescTable
  .rodata.drip_rgb.0
-                0x08033af4        0xc ./Core/Src/ws2812_spi.o
+                0x080339bc        0xc ./Core/Src/ws2812_spi.o
  .rodata._ctype_
-                0x08033b00      0x101 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-ctype_.o)
-                0x08033b00                _ctype_
+                0x080339c8      0x101 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-ctype_.o)
+                0x080339c8                _ctype_
  .rodata._svfprintf_r.str1.1
-                0x08033c01       0x4e C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfprintf.o)
+                0x08033ac9       0x4e C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfprintf.o)
                                  0x11 (size before relaxing)
  .rodata.__ssvfscanf_r.str1.1
-                0x08033c4f        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfscanf.o)
+                0x08033b17        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-svfscanf.o)
  .rodata._vfprintf_r.str1.1
-                0x08033c4f       0x11 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf.o)
+                0x08033b17       0x11 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf.o)
  .rodata._printf_i.str1.1
-                0x08033c4f       0x22 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf_i.o)
+                0x08033b17       0x22 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfprintf_i.o)
  .rodata._scanf_i.str1.1
-                0x08033c4f       0x12 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfscanf_i.o)
+                0x08033b17       0x12 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfscanf_i.o)
  .rodata.str1.1
-                0x08033c4f        0x9 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfscanf_i.o)
-                0x08033c74                        . = ALIGN (0x4)
- *fill*         0x08033c4f        0x1 
+                0x08033b17        0x9 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-nano-vfscanf_i.o)
+                0x08033b3c                        . = ALIGN (0x4)
+ *fill*         0x08033b17        0x1 
 
 .ARM.extab
  *(.ARM.extab* .gnu.linkonce.armextab.*)
 
-.ARM            0x08033c50        0x8
-                0x08033c50                        __exidx_start = .
+.ARM            0x08033b18        0x8
+                0x08033b18                        __exidx_start = .
  *(.ARM.exidx*)
- .ARM.exidx     0x08033c50        0x8 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strcmp.o)
- .ARM.exidx     0x08033c58        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strlen.o)
+ .ARM.exidx     0x08033b18        0x8 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strcmp.o)
+ .ARM.exidx     0x08033b20        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-strlen.o)
                                   0x8 (size before relaxing)
- .ARM.exidx     0x08033c58        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-memchr.o)
+ .ARM.exidx     0x08033b20        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-memchr.o)
                                   0x8 (size before relaxing)
- .ARM.exidx     0x08033c58        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard\libgcc.a(_udivmoddi4.o)
+ .ARM.exidx     0x08033b20        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard\libgcc.a(_udivmoddi4.o)
                                   0x8 (size before relaxing)
-                0x08033c58                        __exidx_end = .
+                0x08033b20                        __exidx_end = .
 
-.preinit_array  0x08033c58        0x0
-                0x08033c58                        PROVIDE (__preinit_array_start = .)
+.preinit_array  0x08033b20        0x0
+                0x08033b20                        PROVIDE (__preinit_array_start = .)
  *(.preinit_array*)
-                0x08033c58                        PROVIDE (__preinit_array_end = .)
+                0x08033b20                        PROVIDE (__preinit_array_end = .)
 
-.init_array     0x08033c58        0x4
-                0x08033c58                        PROVIDE (__init_array_start = .)
+.init_array     0x08033b20        0x4
+                0x08033b20                        PROVIDE (__init_array_start = .)
  *(SORT_BY_NAME(.init_array.*))
  *(.init_array*)
- .init_array    0x08033c58        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
-                0x08033c5c                        PROVIDE (__init_array_end = .)
+ .init_array    0x08033b20        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
+                0x08033b24                        PROVIDE (__init_array_end = .)
 
-.fini_array     0x08033c5c        0x4
+.fini_array     0x08033b24        0x4
                 [!provide]                        PROVIDE (__fini_array_start = .)
  *(SORT_BY_NAME(.fini_array.*))
  *(.fini_array*)
- .fini_array    0x08033c5c        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
+ .fini_array    0x08033b24        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
                 [!provide]                        PROVIDE (__fini_array_end = .)
-                0x08033c60                        _sidata = LOADADDR (.data)
+                0x08033b28                        _sidata = LOADADDR (.data)
 
-.rel.dyn        0x08033c60        0x0
- .rel.iplt      0x08033c60        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
+.rel.dyn        0x08033b28        0x0
+ .rel.iplt      0x08033b28        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
 
-.data           0x24000000      0x328 load address 0x08033c60
+.data           0x24000000      0x324 load address 0x08033b28
                 0x24000000                        . = ALIGN (0x4)
                 0x24000000                        _sdata = .
  *(.data)
@@ -14081,111 +14081,109 @@ LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
  .data.g_auto_freq_sync_enable
                 0x24000244        0x1 ./Core/Src/adc_stream.o
  *fill*         0x24000245        0x3 
- .data.signal_lost_since_ms.10
-                0x24000248        0x4 ./Core/Src/adc_stream.o
  .data.last_ndtrB.2
-                0x2400024c        0x4 ./Core/Src/adc_stream.o
+                0x24000248        0x4 ./Core/Src/adc_stream.o
  .data.g_sync_target_phase_ticks
-                0x24000250        0x4 ./Core/Src/main.o
+                0x2400024c        0x4 ./Core/Src/main.o
  .data.sync_phase_diag_role
-                0x24000254        0x1 ./Core/Src/main.o
- *fill*         0x24000255        0x3 
+                0x24000250        0x1 ./Core/Src/main.o
+ *fill*         0x24000251        0x3 
  .data.sync_phase_fast_last_buf
-                0x24000258        0x4 ./Core/Src/main.o
+                0x24000254        0x4 ./Core/Src/main.o
  .data.optic_active_hold_deciseconds
-                0x2400025c        0x2 ./Core/Src/main.o
+                0x24000258        0x2 ./Core/Src/main.o
  .data.rs485_tx_byte
-                0x2400025e        0x1 ./Core/Src/main.o
+                0x2400025a        0x1 ./Core/Src/main.o
  .data.rs485_status_current_window_phase
-                0x2400025f        0x1 ./Core/Src/main.o
+                0x2400025b        0x1 ./Core/Src/main.o
  .data.rs485_status_master_expected_phase
-                0x24000260        0x1 ./Core/Src/main.o
+                0x2400025c        0x1 ./Core/Src/main.o
  .data.rs485_local_uid_hint
-                0x24000261        0x1 ./Core/Src/main.o
- *fill*         0x24000262        0x2 
+                0x2400025d        0x1 ./Core/Src/main.o
+ *fill*         0x2400025e        0x2 
  .data.rs485_master_claim_delay_ms
-                0x24000264        0x4 ./Core/Src/main.o
+                0x24000260        0x4 ./Core/Src/main.o
  .data.rs485_discovery_next_id
-                0x24000268        0x1 ./Core/Src/main.o
- *fill*         0x24000269        0x3 
+                0x24000264        0x1 ./Core/Src/main.o
+ *fill*         0x24000265        0x3 
  .data.need_recovery_guard
-                0x2400026c        0xc ./Core/Src/main.o
-                0x2400026c                need_recovery_guard
+                0x24000268        0xc ./Core/Src/main.o
+                0x24000268                need_recovery_guard
  .data.optic_tx_power_level
-                0x24000278        0x1 ./Core/Src/main.o
- *fill*         0x24000279        0x3 
+                0x24000274        0x1 ./Core/Src/main.o
+ *fill*         0x24000275        0x3 
  .data.g_arr_auto_selected
-                0x2400027c        0x4 ./Core/Src/main.o
+                0x24000278        0x4 ./Core/Src/main.o
  .data.g_tim15_slave_arr_step_ticks
-                0x24000280        0x4 ./Core/Src/main.o
+                0x2400027c        0x4 ./Core/Src/main.o
  .data.prev_mode.63
-                0x24000284        0x1 ./Core/Src/main.o
+                0x24000280        0x1 ./Core/Src/main.o
  .data.last_role.55
-                0x24000285        0x1 ./Core/Src/main.o
+                0x24000281        0x1 ./Core/Src/main.o
  .data.last_rel.52
-                0x24000286        0x1 ./Core/Src/main.o
+                0x24000282        0x1 ./Core/Src/main.o
  .data.first_loop.45
-                0x24000287        0x1 ./Core/Src/main.o
+                0x24000283        0x1 ./Core/Src/main.o
  .data.lcd_first_update.43
-                0x24000288        0x1 ./Core/Src/main.o
- *fill*         0x24000289        0x3 
+                0x24000284        0x1 ./Core/Src/main.o
+ *fill*         0x24000285        0x3 
  .data.last_eval_ms.40
-                0x2400028c        0x4 ./Core/Src/main.o
+                0x24000288        0x4 ./Core/Src/main.o
  .data.prev_logic_mode.35
-                0x24000290        0x1 ./Core/Src/main.o
+                0x2400028c        0x1 ./Core/Src/main.o
  .data.star_prev.32
-                0x24000291        0x1 ./Core/Src/main.o
+                0x2400028d        0x1 ./Core/Src/main.o
  .data.prev_mode.28
-                0x24000292        0x1 ./Core/Src/main.o
+                0x2400028e        0x1 ./Core/Src/main.o
  .data.prev_display_value.27
-                0x24000293        0x1 ./Core/Src/main.o
+                0x2400028f        0x1 ./Core/Src/main.o
  .data.prev_color.26
-                0x24000294        0x2 ./Core/Src/main.o
+                0x24000290        0x2 ./Core/Src/main.o
  .data.dc_bar_prev_len.5
-                0x24000296        0x2 ./Core/Src/main.o
+                0x24000292        0x2 ./Core/Src/main.o
  .data.dc_bar_prev_color.4
-                0x24000298        0x2 ./Core/Src/main.o
+                0x24000294        0x2 ./Core/Src/main.o
  .data.first_irq.1
-                0x2400029a        0x1 ./Core/Src/stm32h7xx_it.o
- *fill*         0x2400029b        0x1 
- .data.hx.0     0x2400029c        0x4 ./Core/Src/stm32h7xx_it.o
+                0x24000296        0x1 ./Core/Src/stm32h7xx_it.o
+ *fill*         0x24000297        0x1 
+ .data.hx.0     0x24000298        0x4 ./Core/Src/stm32h7xx_it.o
  .data.SystemCoreClock
-                0x240002a0        0x4 ./Core/Src/system_stm32h7xx.o
-                0x240002a0                SystemCoreClock
+                0x2400029c        0x4 ./Core/Src/system_stm32h7xx.o
+                0x2400029c                SystemCoreClock
  .data.SystemD2Clock
-                0x240002a4        0x4 ./Core/Src/system_stm32h7xx.o
-                0x240002a4                SystemD2Clock
- .data.g_cfg    0x240002a8       0x14 ./Core/Src/usb_cdc_proto.o
+                0x240002a0        0x4 ./Core/Src/system_stm32h7xx.o
+                0x240002a0                SystemD2Clock
+ .data.g_cfg    0x240002a4       0x14 ./Core/Src/usb_cdc_proto.o
  .data.s_pattern_force_send
-                0x240002bc        0x1 ./Core/Src/ws2812_spi.o
- *fill*         0x240002bd        0x3 
+                0x240002b8        0x1 ./Core/Src/ws2812_spi.o
+ *fill*         0x240002b9        0x3 
  .data.s_frame_period_cycles
-                0x240002c0        0x4 ./Core/Src/ws2812_spi.o
+                0x240002bc        0x4 ./Core/Src/ws2812_spi.o
  .data.s_rendered_pattern
-                0x240002c4        0x1 ./Core/Src/ws2812_spi.o
- *fill*         0x240002c5        0x1 
+                0x240002c0        0x1 ./Core/Src/ws2812_spi.o
+ *fill*         0x240002c1        0x1 
  .data.s_rendered_anim_step
-                0x240002c6        0x2 ./Core/Src/ws2812_spi.o
+                0x240002c2        0x2 ./Core/Src/ws2812_spi.o
  .data.s_rendered_status_key
-                0x240002c8        0x4 ./Core/Src/ws2812_spi.o
- .data.__sglue  0x240002cc        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
-                0x240002cc                __sglue
+                0x240002c4        0x4 ./Core/Src/ws2812_spi.o
+ .data.__sglue  0x240002c8        0xc C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
+                0x240002c8                __sglue
  .data._impure_ptr
-                0x240002d8        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-impure.o)
-                0x240002d8                _impure_ptr
+                0x240002d4        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-impure.o)
+                0x240002d4                _impure_ptr
  .data._impure_data
-                0x240002dc       0x4c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-impure.o)
-                0x240002dc                _impure_data
+                0x240002d8       0x4c C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-impure.o)
+                0x240002d8                _impure_data
  *(.RamFunc)
  *(.RamFunc*)
-                0x24000328                        . = ALIGN (0x4)
-                0x24000328                        _edata = .
+                0x24000324                        . = ALIGN (0x4)
+                0x24000324                        _edata = .
 
-.igot.plt       0x24000328        0x0 load address 0x08033f88
- .igot.plt      0x24000328        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
-                0x24000328                        . = ALIGN (0x4)
+.igot.plt       0x24000324        0x0 load address 0x08033e4c
+ .igot.plt      0x24000324        0x0 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard/crtbegin.o
+                0x24000324                        . = ALIGN (0x4)
 
-.bss            0x24000340    0x4c2cc load address 0x08033f88
+.bss            0x24000340    0x4c2c4 load address 0x08033e4c
                 0x24000340                        _sbss = .
                 0x24000340                        __bss_start__ = _sbss
  *(.bss)
@@ -14913,632 +14911,626 @@ LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
  .bss.g_tim5_avg_phase
                 0x2404a85c        0x4 ./Core/Src/adc_stream.o
                 0x2404a85c                g_tim5_avg_phase
- .bss.last_zero_log_ms.32
+ .bss.last_zero_log_ms.29
                 0x2404a860        0x8 ./Core/Src/adc_stream.o
- .bss.pa3_divider.17
+ .bss.pa3_divider.14
                 0x2404a868        0x4 ./Core/Src/adc_stream.o
- .bss.sync_locked.16
+ .bss.sync_locked.13
                 0x2404a86c        0x1 ./Core/Src/adc_stream.o
  *fill*         0x2404a86d        0x3 
- .bss.lock_stable_cnt.15
+ .bss.lock_stable_cnt.12
                 0x2404a870        0x4 ./Core/Src/adc_stream.o
- .bss.unlock_stable_cnt.14
+ .bss.unlock_stable_cnt.11
                 0x2404a874        0x4 ./Core/Src/adc_stream.o
- .bss.sync_lock_eval_div.13
+ .bss.sync_lock_eval_div.10
                 0x2404a878        0x1 ./Core/Src/adc_stream.o
- *fill*         0x2404a879        0x1 
- .bss.signal_present_stable.12
-                0x2404a87a        0x2 ./Core/Src/adc_stream.o
- .bss.signal_lost_stable.11
-                0x2404a87c        0x2 ./Core/Src/adc_stream.o
  .bss.sync_loop_reset_req.9
-                0x2404a87e        0x1 ./Core/Src/adc_stream.o
- *fill*         0x2404a87f        0x1 
+                0x2404a879        0x1 ./Core/Src/adc_stream.o
+ *fill*         0x2404a87a        0x2 
  .bss.phase_integrator.8
-                0x2404a880        0x4 ./Core/Src/adc_stream.o
+                0x2404a87c        0x4 ./Core/Src/adc_stream.o
  .bss.samples_collected.7
-                0x2404a884        0x4 ./Core/Src/adc_stream.o
+                0x2404a880        0x4 ./Core/Src/adc_stream.o
  .bss.last_summary_ms.6
-                0x2404a888        0x4 ./Core/Src/adc_stream.o
+                0x2404a884        0x4 ./Core/Src/adc_stream.o
  .bss.prev_wr_seq.5
-                0x2404a88c        0x4 ./Core/Src/adc_stream.o
+                0x2404a888        0x4 ./Core/Src/adc_stream.o
  .bss.prev_ch_wr.4
-                0x2404a890        0x8 ./Core/Src/adc_stream.o
+                0x2404a88c        0x8 ./Core/Src/adc_stream.o
  .bss.last_dbg_ms.3
-                0x2404a898        0x4 ./Core/Src/adc_stream.o
+                0x2404a894        0x4 ./Core/Src/adc_stream.o
  .bss.last_ndtrB_change_ms.1
-                0x2404a89c        0x4 ./Core/Src/adc_stream.o
+                0x2404a898        0x4 ./Core/Src/adc_stream.o
  .bss.b_stuck_strikes.0
-                0x2404a8a0        0x1 ./Core/Src/adc_stream.o
- *fill*         0x2404a8a1        0x3 
- .bss.hadc1     0x2404a8a4       0x70 ./Core/Src/main.o
-                0x2404a8a4                hadc1
- .bss.hadc2     0x2404a914       0x70 ./Core/Src/main.o
-                0x2404a914                hadc2
- .bss.hspi1     0x2404a984       0x88 ./Core/Src/main.o
-                0x2404a984                hspi1
- .bss.hspi3     0x2404aa0c       0x88 ./Core/Src/main.o
-                0x2404aa0c                hspi3
- .bss.hspi4     0x2404aa94       0x88 ./Core/Src/main.o
-                0x2404aa94                hspi4
- .bss.htim1     0x2404ab1c       0x4c ./Core/Src/main.o
-                0x2404ab1c                htim1
- .bss.htim2     0x2404ab68       0x4c ./Core/Src/main.o
-                0x2404ab68                htim2
- .bss.htim3     0x2404abb4       0x4c ./Core/Src/main.o
-                0x2404abb4                htim3
- .bss.htim5     0x2404ac00       0x4c ./Core/Src/main.o
-                0x2404ac00                htim5
- .bss.htim6     0x2404ac4c       0x4c ./Core/Src/main.o
-                0x2404ac4c                htim6
- .bss.htim15    0x2404ac98       0x4c ./Core/Src/main.o
-                0x2404ac98                htim15
- .bss.huart1    0x2404ace4       0x94 ./Core/Src/main.o
-                0x2404ace4                huart1
- .bss.huart2    0x2404ad78       0x94 ./Core/Src/main.o
-                0x2404ad78                huart2
- .bss.hdac1     0x2404ae0c       0x14 ./Core/Src/main.o
-                0x2404ae0c                hdac1
+                0x2404a89c        0x1 ./Core/Src/adc_stream.o
+ *fill*         0x2404a89d        0x3 
+ .bss.hadc1     0x2404a8a0       0x70 ./Core/Src/main.o
+                0x2404a8a0                hadc1
+ .bss.hadc2     0x2404a910       0x70 ./Core/Src/main.o
+                0x2404a910                hadc2
+ .bss.hspi1     0x2404a980       0x88 ./Core/Src/main.o
+                0x2404a980                hspi1
+ .bss.hspi3     0x2404aa08       0x88 ./Core/Src/main.o
+                0x2404aa08                hspi3
+ .bss.hspi4     0x2404aa90       0x88 ./Core/Src/main.o
+                0x2404aa90                hspi4
+ .bss.htim1     0x2404ab18       0x4c ./Core/Src/main.o
+                0x2404ab18                htim1
+ .bss.htim2     0x2404ab64       0x4c ./Core/Src/main.o
+                0x2404ab64                htim2
+ .bss.htim3     0x2404abb0       0x4c ./Core/Src/main.o
+                0x2404abb0                htim3
+ .bss.htim5     0x2404abfc       0x4c ./Core/Src/main.o
+                0x2404abfc                htim5
+ .bss.htim6     0x2404ac48       0x4c ./Core/Src/main.o
+                0x2404ac48                htim6
+ .bss.htim15    0x2404ac94       0x4c ./Core/Src/main.o
+                0x2404ac94                htim15
+ .bss.huart1    0x2404ace0       0x94 ./Core/Src/main.o
+                0x2404ace0                huart1
+ .bss.huart2    0x2404ad74       0x94 ./Core/Src/main.o
+                0x2404ad74                huart2
+ .bss.hdac1     0x2404ae08       0x14 ./Core/Src/main.o
+                0x2404ae08                hdac1
  .bss.hdma_adc1
-                0x2404ae20       0x78 ./Core/Src/main.o
-                0x2404ae20                hdma_adc1
+                0x2404ae1c       0x78 ./Core/Src/main.o
+                0x2404ae1c                hdma_adc1
  .bss.hdma_adc2
-                0x2404ae98       0x78 ./Core/Src/main.o
-                0x2404ae98                hdma_adc2
+                0x2404ae94       0x78 ./Core/Src/main.o
+                0x2404ae94                hdma_adc2
  .bss.hdma_spi3_tx
-                0x2404af10       0x78 ./Core/Src/main.o
-                0x2404af10                hdma_spi3_tx
+                0x2404af0c       0x78 ./Core/Src/main.o
+                0x2404af0c                hdma_spi3_tx
  .bss.tim6_irq_count
-                0x2404af88        0x4 ./Core/Src/main.o
-                0x2404af88                tim6_irq_count
+                0x2404af84        0x4 ./Core/Src/main.o
+                0x2404af84                tim6_irq_count
  .bss.tim6_led_toggled_flag
-                0x2404af8c        0x1 ./Core/Src/main.o
-                0x2404af8c                tim6_led_toggled_flag
- *fill*         0x2404af8d        0x3 
+                0x2404af88        0x1 ./Core/Src/main.o
+                0x2404af88                tim6_led_toggled_flag
+ *fill*         0x2404af89        0x3 
  .bss.main_loop_heartbeat
-                0x2404af90        0x4 ./Core/Src/main.o
-                0x2404af90                main_loop_heartbeat
+                0x2404af8c        0x4 ./Core/Src/main.o
+                0x2404af8c                main_loop_heartbeat
  .bss.last_heartbeat_ms
-                0x2404af94        0x4 ./Core/Src/main.o
-                0x2404af94                last_heartbeat_ms
+                0x2404af90        0x4 ./Core/Src/main.o
+                0x2404af90                last_heartbeat_ms
  .bss.loop_cycle_accum
-                0x2404af98        0x4 ./Core/Src/main.o
-                0x2404af98                loop_cycle_accum
+                0x2404af94        0x4 ./Core/Src/main.o
+                0x2404af94                loop_cycle_accum
  .bss.loop_cycle_count
-                0x2404af9c        0x4 ./Core/Src/main.o
-                0x2404af9c                loop_cycle_count
+                0x2404af98        0x4 ./Core/Src/main.o
+                0x2404af98                loop_cycle_count
  .bss.loop_cycle_last_report_ms
-                0x2404afa0        0x4 ./Core/Src/main.o
-                0x2404afa0                loop_cycle_last_report_ms
+                0x2404af9c        0x4 ./Core/Src/main.o
+                0x2404af9c                loop_cycle_last_report_ms
  .bss.loop_cycle_last_avg
-                0x2404afa4        0x4 ./Core/Src/main.o
-                0x2404afa4                loop_cycle_last_avg
+                0x2404afa0        0x4 ./Core/Src/main.o
+                0x2404afa0                loop_cycle_last_avg
  .bss.need_recovery
-                0x2404afa8        0x1 ./Core/Src/main.o
-                0x2404afa8                need_recovery
+                0x2404afa4        0x1 ./Core/Src/main.o
+                0x2404afa4                need_recovery
  .bss.need_usb_status_refresh
-                0x2404afa9        0x1 ./Core/Src/main.o
-                0x2404afa9                need_usb_status_refresh
+                0x2404afa5        0x1 ./Core/Src/main.o
+                0x2404afa5                need_usb_status_refresh
  .bss.need_hard_reset
-                0x2404afaa        0x1 ./Core/Src/main.o
-                0x2404afaa                need_hard_reset
- *fill*         0x2404afab        0x1 
+                0x2404afa6        0x1 ./Core/Src/main.o
+                0x2404afa6                need_hard_reset
+ *fill*         0x2404afa7        0x1 
  .bss.systick_heartbeat
-                0x2404afac        0x4 ./Core/Src/main.o
-                0x2404afac                systick_heartbeat
+                0x2404afa8        0x4 ./Core/Src/main.o
+                0x2404afa8                systick_heartbeat
  .bss.auto_stream_started
-                0x2404afb0        0x1 ./Core/Src/main.o
-                0x2404afb0                auto_stream_started
+                0x2404afac        0x1 ./Core/Src/main.o
+                0x2404afac                auto_stream_started
  .bss.init_messages_ready
-                0x2404afb1        0x1 ./Core/Src/main.o
-                0x2404afb1                init_messages_ready
- *fill*         0x2404afb2        0x2 
+                0x2404afad        0x1 ./Core/Src/main.o
+                0x2404afad                init_messages_ready
+ *fill*         0x2404afae        0x2 
  .bss.sync_last_edge_ms
-                0x2404afb4        0x4 ./Core/Src/main.o
-                0x2404afb4                sync_last_edge_ms
+                0x2404afb0        0x4 ./Core/Src/main.o
+                0x2404afb0                sync_last_edge_ms
  .bss.sync_edge_seen
-                0x2404afb8        0x1 ./Core/Src/main.o
-                0x2404afb8                sync_edge_seen
+                0x2404afb4        0x1 ./Core/Src/main.o
+                0x2404afb4                sync_edge_seen
  .bss.sync_align_pending
-                0x2404afb9        0x1 ./Core/Src/main.o
-                0x2404afb9                sync_align_pending
+                0x2404afb5        0x1 ./Core/Src/main.o
+                0x2404afb5                sync_align_pending
  .bss.sync_phase_lock_armed
-                0x2404afba        0x1 ./Core/Src/main.o
-                0x2404afba                sync_phase_lock_armed
+                0x2404afb6        0x1 ./Core/Src/main.o
+                0x2404afb6                sync_phase_lock_armed
  .bss.sync_phase_lock_active
-                0x2404afbb        0x1 ./Core/Src/main.o
-                0x2404afbb                sync_phase_lock_active
+                0x2404afb7        0x1 ./Core/Src/main.o
+                0x2404afb7                sync_phase_lock_active
  .bss.sync_restart_on_edge
-                0x2404afbc        0x1 ./Core/Src/main.o
-                0x2404afbc                sync_restart_on_edge
- *fill*         0x2404afbd        0x3 
+                0x2404afb8        0x1 ./Core/Src/main.o
+                0x2404afb8                sync_restart_on_edge
+ *fill*         0x2404afb9        0x3 
  .bss.sync_edge_count
-                0x2404afc0        0x4 ./Core/Src/main.o
-                0x2404afc0                sync_edge_count
+                0x2404afbc        0x4 ./Core/Src/main.o
+                0x2404afbc                sync_edge_count
  .bss.sync_tim5_period_ticks
-                0x2404afc4        0x4 ./Core/Src/main.o
-                0x2404afc4                sync_tim5_period_ticks
+                0x2404afc0        0x4 ./Core/Src/main.o
+                0x2404afc0                sync_tim5_period_ticks
  .bss.tim15_arr_pulse_stage
-                0x2404afc8        0x1 ./Core/Src/main.o
- *fill*         0x2404afc9        0x3 
+                0x2404afc4        0x1 ./Core/Src/main.o
+ *fill*         0x2404afc5        0x3 
  .bss.tim15_arr_pulse_nominal
-                0x2404afcc        0x4 ./Core/Src/main.o
+                0x2404afc8        0x4 ./Core/Src/main.o
  .bss.tim15_arr_pulse_count
-                0x2404afd0        0x4 ./Core/Src/main.o
+                0x2404afcc        0x4 ./Core/Src/main.o
  .bss.tim15_arr_hold_offset
-                0x2404afd4        0x4 ./Core/Src/main.o
+                0x2404afd0        0x4 ./Core/Src/main.o
  .bss.tim15_arr_hold_target_offset
-                0x2404afd8        0x4 ./Core/Src/main.o
+                0x2404afd4        0x4 ./Core/Src/main.o
  .bss.sync_phase_diag_pending
-                0x2404afdc        0x1 ./Core/Src/main.o
- *fill*         0x2404afdd        0x1 
+                0x2404afd8        0x1 ./Core/Src/main.o
+ *fill*         0x2404afd9        0x1 
  .bss.sync_phase_diag_sample
-                0x2404afde        0x2 ./Core/Src/main.o
+                0x2404afda        0x2 ./Core/Src/main.o
  .bss.sync_phase_diag_samples
-                0x2404afe0        0x2 ./Core/Src/main.o
- *fill*         0x2404afe2        0x2 
+                0x2404afdc        0x2 ./Core/Src/main.o
+ *fill*         0x2404afde        0x2 
  .bss.sync_phase_diag_ticks
-                0x2404afe4        0x4 ./Core/Src/main.o
+                0x2404afe0        0x4 ./Core/Src/main.o
  .bss.sync_phase_diag_arr
-                0x2404afe8        0x4 ./Core/Src/main.o
+                0x2404afe4        0x4 ./Core/Src/main.o
  .bss.sync_phase_diag_bufs
-                0x2404afec        0x4 ./Core/Src/main.o
+                0x2404afe8        0x4 ./Core/Src/main.o
  .bss.sync_phase_diag_edge
-                0x2404aff0        0x4 ./Core/Src/main.o
+                0x2404afec        0x4 ./Core/Src/main.o
  .bss.sync_phase_diag_kind
-                0x2404aff4        0x1 ./Core/Src/main.o
- *fill*         0x2404aff5        0x3 
+                0x2404aff0        0x1 ./Core/Src/main.o
+ *fill*         0x2404aff1        0x3 
  .bss.sync_phase_last_error_ticks
-                0x2404aff8        0x4 ./Core/Src/main.o
+                0x2404aff4        0x4 ./Core/Src/main.o
  .bss.sync_phase_last_pulse_delta
-                0x2404affc        0x4 ./Core/Src/main.o
+                0x2404aff8        0x4 ./Core/Src/main.o
  .bss.sync_phase_fast_edges
-                0x2404b000        0x4 ./Core/Src/main.o
+                0x2404affc        0x4 ./Core/Src/main.o
  .bss.sync_phase_fast_pulses
-                0x2404b004        0x4 ./Core/Src/main.o
+                0x2404b000        0x4 ./Core/Src/main.o
  .bss.sync_phase_fast_skip_busy
-                0x2404b008        0x4 ./Core/Src/main.o
+                0x2404b004        0x4 ./Core/Src/main.o
  .bss.sync_phase_fast_skip_spacing
-                0x2404b00c        0x4 ./Core/Src/main.o
+                0x2404b008        0x4 ./Core/Src/main.o
  .bss.sync_phase_fast_last_spacing
-                0x2404b010        0x4 ./Core/Src/main.o
+                0x2404b00c        0x4 ./Core/Src/main.o
  .bss.optic_sensor_state_public
-                0x2404b014        0x1 ./Core/Src/main.o
- *fill*         0x2404b015        0x3 
+                0x2404b010        0x1 ./Core/Src/main.o
+ *fill*         0x2404b011        0x3 
  .bss.optic_last_change_ms
-                0x2404b018        0x4 ./Core/Src/main.o
+                0x2404b014        0x4 ./Core/Src/main.o
  .bss.rs485_last_rx_ms
-                0x2404b01c        0x4 ./Core/Src/main.o
+                0x2404b018        0x4 ./Core/Src/main.o
  .bss.rs485_rx_packets
-                0x2404b020        0x4 ./Core/Src/main.o
+                0x2404b01c        0x4 ./Core/Src/main.o
  .bss.rs485_tx_packets
-                0x2404b024        0x4 ./Core/Src/main.o
+                0x2404b020        0x4 ./Core/Src/main.o
  .bss.rs485_tx_busy
-                0x2404b028        0x1 ./Core/Src/main.o
- *fill*         0x2404b029        0x3 
+                0x2404b024        0x1 ./Core/Src/main.o
+ *fill*         0x2404b025        0x3 
  .bss.rs485_tx_start_ms
-                0x2404b02c        0x4 ./Core/Src/main.o
+                0x2404b028        0x4 ./Core/Src/main.o
  .bss.rs485_last_sync_edge_kind
-                0x2404b030        0x1 ./Core/Src/main.o
+                0x2404b02c        0x1 ./Core/Src/main.o
  .bss.rs485_sync_phase_relation
-                0x2404b031        0x1 ./Core/Src/main.o
+                0x2404b02d        0x1 ./Core/Src/main.o
  .bss.rs485_sync_locked
-                0x2404b032        0x1 ./Core/Src/main.o
+                0x2404b02e        0x1 ./Core/Src/main.o
  .bss.rs485_sync_led_active
-                0x2404b033        0x1 ./Core/Src/main.o
+                0x2404b02f        0x1 ./Core/Src/main.o
  .bss.rs485_sync_relation_score
-                0x2404b034        0x1 ./Core/Src/main.o
+                0x2404b030        0x1 ./Core/Src/main.o
  .bss.rs485_anti_phase_recovery_active
-                0x2404b035        0x1 ./Core/Src/main.o
+                0x2404b031        0x1 ./Core/Src/main.o
  .bss.rs485_anti_phase_recovery_packets
-                0x2404b036        0x1 ./Core/Src/main.o
+                0x2404b032        0x1 ./Core/Src/main.o
  .bss.rs485_anti_phase_recovery_request
-                0x2404b037        0x1 ./Core/Src/main.o
+                0x2404b033        0x1 ./Core/Src/main.o
  .bss.rs485_sync_buf_div4
-                0x2404b038        0x4 ./Core/Src/main.o
+                0x2404b034        0x4 ./Core/Src/main.o
  .bss.rs485_slave_count_estimate
-                0x2404b03c        0x1 ./Core/Src/main.o
- *fill*         0x2404b03d        0x3 
+                0x2404b038        0x1 ./Core/Src/main.o
+ *fill*         0x2404b039        0x3 
  .bss.rs485_status_window_ticks
-                0x2404b040        0x4 ./Core/Src/main.o
+                0x2404b03c        0x4 ./Core/Src/main.o
  .bss.rs485_status_seen_mask
-                0x2404b044        0x4 ./Core/Src/main.o
+                0x2404b040        0x4 ./Core/Src/main.o
  .bss.rs485_status_window_active
-                0x2404b048        0x1 ./Core/Src/main.o
+                0x2404b044        0x1 ./Core/Src/main.o
  .bss.rs485_status_window_after_tx
-                0x2404b049        0x1 ./Core/Src/main.o
- *fill*         0x2404b04a        0x2 
+                0x2404b045        0x1 ./Core/Src/main.o
+ *fill*         0x2404b046        0x2 
  .bss.rs485_status_tx_due_ticks
-                0x2404b04c        0x4 ./Core/Src/main.o
+                0x2404b048        0x4 ./Core/Src/main.o
  .bss.rs485_status_tx_pending
-                0x2404b050        0x1 ./Core/Src/main.o
+                0x2404b04c        0x1 ./Core/Src/main.o
  .bss.rs485_status_tx_sent
-                0x2404b051        0x1 ./Core/Src/main.o
+                0x2404b04d        0x1 ./Core/Src/main.o
  .bss.rs485_status_slot_local_tx
-                0x2404b052        0x1 ./Core/Src/main.o
+                0x2404b04e        0x1 ./Core/Src/main.o
  .bss.rs485_status_cycle_count
-                0x2404b053        0x1 ./Core/Src/main.o
+                0x2404b04f        0x1 ./Core/Src/main.o
  .bss.rs485_status_slot_response_seen
-                0x2404b054        0x1 ./Core/Src/main.o
+                0x2404b050        0x1 ./Core/Src/main.o
  .bss.rs485_status_slot_response_byte
-                0x2404b055        0x1 ./Core/Src/main.o
- *fill*         0x2404b056        0x2 
+                0x2404b051        0x1 ./Core/Src/main.o
+ *fill*         0x2404b052        0x2 
  .bss.rs485_uart_error_count
-                0x2404b058        0x4 ./Core/Src/main.o
+                0x2404b054        0x4 ./Core/Src/main.o
  .bss.rs485_status_peer_bytes
-                0x2404b05c       0x1f ./Core/Src/main.o
- *fill*         0x2404b07b        0x1 
+                0x2404b058       0x1f ./Core/Src/main.o
+ *fill*         0x2404b077        0x1 
  .bss.rs485_status_peer_last_ms
-                0x2404b07c       0x7c ./Core/Src/main.o
+                0x2404b078       0x7c ./Core/Src/main.o
  .bss.rs485_status_local_tx_count
-                0x2404b0f8        0x4 ./Core/Src/main.o
+                0x2404b0f4        0x4 ./Core/Src/main.o
  .bss.rs485_status_local_tx_complete_count
-                0x2404b0fc        0x4 ./Core/Src/main.o
+                0x2404b0f8        0x4 ./Core/Src/main.o
  .bss.rs485_status_peer_rx_count
-                0x2404b100        0x4 ./Core/Src/main.o
+                0x2404b0fc        0x4 ./Core/Src/main.o
  .bss.rs485_status_deferred_tx_count
-                0x2404b104        0x4 ./Core/Src/main.o
+                0x2404b100        0x4 ./Core/Src/main.o
  .bss.rs485_status_window_total_count
-                0x2404b108        0x4 ./Core/Src/main.o
+                0x2404b104        0x4 ./Core/Src/main.o
  .bss.rs485_status_window_ok_count
-                0x2404b10c        0x4 ./Core/Src/main.o
+                0x2404b108        0x4 ./Core/Src/main.o
  .bss.rs485_status_window_miss_count
-                0x2404b110        0x4 ./Core/Src/main.o
+                0x2404b10c        0x4 ./Core/Src/main.o
  .bss.rs485_status_local_slot_expected_count
-                0x2404b114        0x4 ./Core/Src/main.o
+                0x2404b110        0x4 ./Core/Src/main.o
  .bss.rs485_status_local_slot_miss_count
-                0x2404b118        0x4 ./Core/Src/main.o
+                0x2404b114        0x4 ./Core/Src/main.o
  .bss.rs485_status_local_slot_expected
-                0x2404b11c        0x1 ./Core/Src/main.o
+                0x2404b118        0x1 ./Core/Src/main.o
  .bss.rs485_local_node_id
-                0x2404b11d        0x1 ./Core/Src/main.o
- *fill*         0x2404b11e        0x2 
+                0x2404b119        0x1 ./Core/Src/main.o
+ *fill*         0x2404b11a        0x2 
  .bss.rs485_tx_queue
-                0x2404b120       0x20 ./Core/Src/main.o
+                0x2404b11c       0x20 ./Core/Src/main.o
  .bss.rs485_tx_queue_head
-                0x2404b140        0x1 ./Core/Src/main.o
+                0x2404b13c        0x1 ./Core/Src/main.o
  .bss.rs485_tx_queue_tail
-                0x2404b141        0x1 ./Core/Src/main.o
+                0x2404b13d        0x1 ./Core/Src/main.o
  .bss.rs485_tx_queue_count
-                0x2404b142        0x1 ./Core/Src/main.o
+                0x2404b13e        0x1 ./Core/Src/main.o
  .bss.rs485_discovery_wait_id
-                0x2404b143        0x1 ./Core/Src/main.o
+                0x2404b13f        0x1 ./Core/Src/main.o
  .bss.rs485_discovery_response_seen
-                0x2404b144        0x1 ./Core/Src/main.o
+                0x2404b140        0x1 ./Core/Src/main.o
  .bss.rs485_discovery_window_open
-                0x2404b145        0x1 ./Core/Src/main.o
+                0x2404b141        0x1 ./Core/Src/main.o
  .bss.rs485_discovery_phase_wait_response
-                0x2404b146        0x1 ./Core/Src/main.o
+                0x2404b142        0x1 ./Core/Src/main.o
  .bss.rs485_reply_pending_id
-                0x2404b147        0x1 ./Core/Src/main.o
+                0x2404b143        0x1 ./Core/Src/main.o
  .bss.rs485_discovery_seen_mask
-                0x2404b148        0x4 ./Core/Src/main.o
+                0x2404b144        0x4 ./Core/Src/main.o
  .bss.rs485_discovery_scan_mask
-                0x2404b14c        0x4 ./Core/Src/main.o
+                0x2404b148        0x4 ./Core/Src/main.o
  .bss.rs485_local_uid_words
-                0x2404b150        0xc ./Core/Src/main.o
+                0x2404b14c        0xc ./Core/Src/main.o
  .bss.rs485_local_uid_bytes
-                0x2404b15c        0xc ./Core/Src/main.o
+                0x2404b158        0xc ./Core/Src/main.o
  .bss.rs485_peer_uid_words
-                0x2404b168        0xc ./Core/Src/main.o
+                0x2404b164        0xc ./Core/Src/main.o
  .bss.rs485_peer_uid_bytes
-                0x2404b174        0xc ./Core/Src/main.o
+                0x2404b170        0xc ./Core/Src/main.o
  .bss.rs485_peer_uid_valid
-                0x2404b180        0x1 ./Core/Src/main.o
+                0x2404b17c        0x1 ./Core/Src/main.o
  .bss.rs485_peer_uid_cmp
-                0x2404b181        0x1 ./Core/Src/main.o
- *fill*         0x2404b182        0x2 
+                0x2404b17d        0x1 ./Core/Src/main.o
+ *fill*         0x2404b17e        0x2 
  .bss.rs485_peer_uid_last_ms
-                0x2404b184        0x4 ./Core/Src/main.o
+                0x2404b180        0x4 ./Core/Src/main.o
  .bss.rs485_uid_rx_active
-                0x2404b188        0x1 ./Core/Src/main.o
+                0x2404b184        0x1 ./Core/Src/main.o
  .bss.rs485_uid_rx_index
-                0x2404b189        0x1 ./Core/Src/main.o
- *fill*         0x2404b18a        0x2 
+                0x2404b185        0x1 ./Core/Src/main.o
+ *fill*         0x2404b186        0x2 
  .bss.rs485_uid_rx_buf
-                0x2404b18c        0xd ./Core/Src/main.o
- *fill*         0x2404b199        0x3 
- .bss.err_code  0x2404b19c        0x4 ./Core/Src/main.o
+                0x2404b188        0xd ./Core/Src/main.o
+ *fill*         0x2404b195        0x3 
+ .bss.err_code  0x2404b198        0x4 ./Core/Src/main.o
  .bss.reset_cause_raw
-                0x2404b1a0        0x4 ./Core/Src/main.o
+                0x2404b19c        0x4 ./Core/Src/main.o
  .bss.iwdg_enabled_runtime
-                0x2404b1a4        0x1 ./Core/Src/main.o
- *fill*         0x2404b1a5        0x3 
+                0x2404b1a0        0x1 ./Core/Src/main.o
+ *fill*         0x2404b1a1        0x3 
  .bss.g_progress_flags
-                0x2404b1a8        0x4 ./Core/Src/main.o
+                0x2404b1a4        0x4 ./Core/Src/main.o
  .bss.uart1_led_off_tick
-                0x2404b1ac        0x4 ./Core/Src/main.o
+                0x2404b1a8        0x4 ./Core/Src/main.o
  .bss.uart1_rx_byte
-                0x2404b1b0        0x1 ./Core/Src/main.o
- *fill*         0x2404b1b1        0x3 
+                0x2404b1ac        0x1 ./Core/Src/main.o
+ *fill*         0x2404b1ad        0x3 
  .bss.uart1_rx_count
-                0x2404b1b4        0x4 ./Core/Src/main.o
+                0x2404b1b0        0x4 ./Core/Src/main.o
  .bss.uart1_last_rx_ms
-                0x2404b1b8        0x4 ./Core/Src/main.o
+                0x2404b1b4        0x4 ./Core/Src/main.o
  .bss.g_ws2812_test_pattern
-                0x2404b1bc        0x1 ./Core/Src/main.o
- *fill*         0x2404b1bd        0x3 
+                0x2404b1b8        0x1 ./Core/Src/main.o
+ *fill*         0x2404b1b9        0x3 
  .bss.uart1_rx_ring
-                0x2404b1c0       0x80 ./Core/Src/main.o
+                0x2404b1bc       0x80 ./Core/Src/main.o
  .bss.uart1_rx_ring_wr
-                0x2404b240        0x2 ./Core/Src/main.o
+                0x2404b23c        0x2 ./Core/Src/main.o
  .bss.uart1_rx_ring_rd
-                0x2404b242        0x2 ./Core/Src/main.o
+                0x2404b23e        0x2 ./Core/Src/main.o
  .bss.uart1_cmd_buf
-                0x2404b244       0x60 ./Core/Src/main.o
+                0x2404b240       0x60 ./Core/Src/main.o
  .bss.uart1_cmd_len
-                0x2404b2a4        0x2 ./Core/Src/main.o
+                0x2404b2a0        0x2 ./Core/Src/main.o
  .bss.optic_tx_started
-                0x2404b2a6        0x1 ./Core/Src/main.o
+                0x2404b2a2        0x1 ./Core/Src/main.o
  .bss.g_arr_auto_ready
-                0x2404b2a7        0x1 ./Core/Src/main.o
+                0x2404b2a3        0x1 ./Core/Src/main.o
  .bss.g_arr_auto_rescan_request
-                0x2404b2a8        0x1 ./Core/Src/main.o
+                0x2404b2a4        0x1 ./Core/Src/main.o
  .bss.g_tune_led_freq_active
-                0x2404b2a9        0x1 ./Core/Src/main.o
- *fill*         0x2404b2aa        0x2 
+                0x2404b2a5        0x1 ./Core/Src/main.o
+ *fill*         0x2404b2a6        0x2 
  .bss.g_tim15_slave_base_arr
-                0x2404b2ac        0x4 ./Core/Src/main.o
+                0x2404b2a8        0x4 ./Core/Src/main.o
  .bss.tim2_irq_counter
-                0x2404b2b0        0x4 ./Core/Src/main.o
+                0x2404b2ac        0x4 ./Core/Src/main.o
  .bss.raw_state.67
-                0x2404b2b4        0x1 ./Core/Src/main.o
- *fill*         0x2404b2b5        0x3 
+                0x2404b2b0        0x1 ./Core/Src/main.o
+ *fill*         0x2404b2b1        0x3 
  .bss.last_change_ms.66
-                0x2404b2b8        0x4 ./Core/Src/main.o
+                0x2404b2b4        0x4 ./Core/Src/main.o
  .bss.stable_state.65
-                0x2404b2bc        0x1 ./Core/Src/main.o
+                0x2404b2b8        0x1 ./Core/Src/main.o
  .bss.auto_init_done.62
-                0x2404b2bd        0x1 ./Core/Src/main.o
- *fill*         0x2404b2be        0x2 
+                0x2404b2b9        0x1 ./Core/Src/main.o
+ *fill*         0x2404b2ba        0x2 
  .bss.auto_start_ms.61
-                0x2404b2c0        0x4 ./Core/Src/main.o
+                0x2404b2bc        0x4 ./Core/Src/main.o
  .bss.filtered_phase_valid.60
-                0x2404b2c4        0x1 ./Core/Src/main.o
- *fill*         0x2404b2c5        0x3 
+                0x2404b2c0        0x1 ./Core/Src/main.o
+ *fill*         0x2404b2c1        0x3 
  .bss.filtered_period_ticks.59
-                0x2404b2c8        0x4 ./Core/Src/main.o
+                0x2404b2c4        0x4 ./Core/Src/main.o
  .bss.filtered_phase_error.58
-                0x2404b2cc        0x4 ./Core/Src/main.o
+                0x2404b2c8        0x4 ./Core/Src/main.o
  .bss.last_phase_flip_ms.57
-                0x2404b2d0        0x4 ./Core/Src/main.o
+                0x2404b2cc        0x4 ./Core/Src/main.o
  .bss.have_data.56
-                0x2404b2d4        0x1 ./Core/Src/main.o
- *fill*         0x2404b2d5        0x1 
+                0x2404b2d0        0x1 ./Core/Src/main.o
+ *fill*         0x2404b2d1        0x1 
  .bss.last_sample.54
-                0x2404b2d6        0x2 ./Core/Src/main.o
+                0x2404b2d2        0x2 ./Core/Src/main.o
  .bss.last_print_ms.53
-                0x2404b2d8        0x4 ./Core/Src/main.o
+                0x2404b2d4        0x4 ./Core/Src/main.o
  .bss.last_rel_print_ms.51
-                0x2404b2dc        0x4 ./Core/Src/main.o
+                0x2404b2d8        0x4 ./Core/Src/main.o
  .bss.prev_active.50
-                0x2404b2e0        0x1 ./Core/Src/main.o
- *fill*         0x2404b2e1        0x3 
+                0x2404b2dc        0x1 ./Core/Src/main.o
+ *fill*         0x2404b2dd        0x3 
  .bss.prev_text.49
-                0x2404b2e4       0x20 ./Core/Src/main.o
+                0x2404b2e0       0x20 ./Core/Src/main.o
  .bss.last_report_ms.48
-                0x2404b304        0x4 ./Core/Src/main.o
+                0x2404b300        0x4 ./Core/Src/main.o
  .bss.early_rsr_raw.47
-                0x2404b308        0x4 ./Core/Src/main.o
+                0x2404b304        0x4 ./Core/Src/main.o
  .bss.loop_count.46
-                0x2404b30c        0x4 ./Core/Src/main.o
+                0x2404b308        0x4 ./Core/Src/main.o
  .bss.last_vendor_ms.44
-                0x2404b310        0x4 ./Core/Src/main.o
+                0x2404b30c        0x4 ./Core/Src/main.o
  .bss.last_lcd_ms.42
-                0x2404b314        0x4 ./Core/Src/main.o
+                0x2404b310        0x4 ./Core/Src/main.o
  .bss.first_tim2_logged.41
-                0x2404b318        0x1 ./Core/Src/main.o
- *fill*         0x2404b319        0x3 
+                0x2404b314        0x1 ./Core/Src/main.o
+ *fill*         0x2404b315        0x3 
  .bss.cached.39
-                0x2404b31c       0x10 ./Core/Src/main.o
+                0x2404b318       0x10 ./Core/Src/main.o
  .bss.sync_color_locked.38
-                0x2404b32c        0x1 ./Core/Src/main.o
+                0x2404b328        0x1 ./Core/Src/main.o
  .bss.sync_color_rise_count.37
-                0x2404b32d        0x1 ./Core/Src/main.o
+                0x2404b329        0x1 ./Core/Src/main.o
  .bss.sync_color_fall_count.36
-                0x2404b32e        0x1 ./Core/Src/main.o
- *fill*         0x2404b32f        0x1 
+                0x2404b32a        0x1 ./Core/Src/main.o
+ *fill*         0x2404b32b        0x1 
  .bss.last_star_toggle_ms.34
-                0x2404b330        0x4 ./Core/Src/main.o
+                0x2404b32c        0x4 ./Core/Src/main.o
  .bss.star_on.33
-                0x2404b334        0x1 ./Core/Src/main.o
- *fill*         0x2404b335        0x3 
+                0x2404b330        0x1 ./Core/Src/main.o
+ *fill*         0x2404b331        0x3 
  .bss.prev_line0.31
-                0x2404b338       0x10 ./Core/Src/main.o
+                0x2404b334       0x10 ./Core/Src/main.o
  .bss.prev_line0_fg.30
-                0x2404b348        0x2 ./Core/Src/main.o
+                0x2404b344        0x2 ./Core/Src/main.o
  .bss.prev_line0_bg.29
-                0x2404b34a        0x2 ./Core/Src/main.o
+                0x2404b346        0x2 ./Core/Src/main.o
  .bss.prev_line1.25
-                0x2404b34c       0x10 ./Core/Src/main.o
+                0x2404b348       0x10 ./Core/Src/main.o
  .bss.prev_line1_fg.24
-                0x2404b35c        0x2 ./Core/Src/main.o
+                0x2404b358        0x2 ./Core/Src/main.o
  .bss.prev_line1_bg.23
-                0x2404b35e        0x2 ./Core/Src/main.o
+                0x2404b35a        0x2 ./Core/Src/main.o
  .bss.prev_optic_line.22
-                0x2404b360        0x8 ./Core/Src/main.o
+                0x2404b35c        0x8 ./Core/Src/main.o
  .bss.prev_optic_fg.21
-                0x2404b368        0x2 ./Core/Src/main.o
+                0x2404b364        0x2 ./Core/Src/main.o
  .bss.prev_optic_bg.20
-                0x2404b36a        0x2 ./Core/Src/main.o
+                0x2404b366        0x2 ./Core/Src/main.o
  .bss.prev_optic_power_line.19
-                0x2404b36c        0x8 ./Core/Src/main.o
+                0x2404b368        0x8 ./Core/Src/main.o
  .bss.prev_optic_power_fg.18
-                0x2404b374        0x2 ./Core/Src/main.o
+                0x2404b370        0x2 ./Core/Src/main.o
  .bss.prev_optic_power_bg.17
-                0x2404b376        0x2 ./Core/Src/main.o
+                0x2404b372        0x2 ./Core/Src/main.o
  .bss.prev_rate_calc_ms.16
-                0x2404b378        0x4 ./Core/Src/main.o
- *fill*         0x2404b37c        0x4 
+                0x2404b374        0x4 ./Core/Src/main.o
  .bss.prev_tx_bytes.15
-                0x2404b380        0x8 ./Core/Src/main.o
+                0x2404b378        0x8 ./Core/Src/main.o
  .bss.prev_tx_samples.14
-                0x2404b388        0x8 ./Core/Src/main.o
+                0x2404b380        0x8 ./Core/Src/main.o
  .bss.last_rate_bps.13
-                0x2404b390        0x4 ./Core/Src/main.o
+                0x2404b388        0x4 ./Core/Src/main.o
  .bss.last_rate_sps.12
-                0x2404b394        0x4 ./Core/Src/main.o
+                0x2404b38c        0x4 ./Core/Src/main.o
  .bss.prev_line2.11
-                0x2404b398       0x10 ./Core/Src/main.o
+                0x2404b390       0x10 ./Core/Src/main.o
  .bss.prev_line2_fg.10
-                0x2404b3a8        0x2 ./Core/Src/main.o
+                0x2404b3a0        0x2 ./Core/Src/main.o
  .bss.prev_line2_bg.9
-                0x2404b3aa        0x2 ./Core/Src/main.o
+                0x2404b3a2        0x2 ./Core/Src/main.o
  .bss.prev_line3.8
-                0x2404b3ac       0x10 ./Core/Src/main.o
+                0x2404b3a4       0x10 ./Core/Src/main.o
  .bss.prev_line3_fg.7
-                0x2404b3bc        0x2 ./Core/Src/main.o
+                0x2404b3b4        0x2 ./Core/Src/main.o
  .bss.prev_line3_bg.6
-                0x2404b3be        0x2 ./Core/Src/main.o
+                0x2404b3b6        0x2 ./Core/Src/main.o
  .bss.prev_line4.3
-                0x2404b3c0       0x18 ./Core/Src/main.o
+                0x2404b3b8       0x18 ./Core/Src/main.o
  .bss.prev_line4_fg.2
-                0x2404b3d8        0x2 ./Core/Src/main.o
+                0x2404b3d0        0x2 ./Core/Src/main.o
  .bss.prev_line4_bg.1
-                0x2404b3da        0x2 ./Core/Src/main.o
+                0x2404b3d2        0x2 ./Core/Src/main.o
  .bss.error_logged.0
-                0x2404b3dc        0x1 ./Core/Src/main.o
- *fill*         0x2404b3dd        0x3 
+                0x2404b3d4        0x1 ./Core/Src/main.o
+ *fill*         0x2404b3d5        0x3 
  .bss.HAL_RCC_ADC12_CLK_ENABLED
-                0x2404b3e0        0x4 ./Core/Src/stm32h7xx_hal_msp.o
+                0x2404b3d8        0x4 ./Core/Src/stm32h7xx_hal_msp.o
  .bss.HAL_RCC_ADC3_CLK_ENABLED
-                0x2404b3e4        0x4 ./Core/Src/stm32h7xx_hal_msp.o
+                0x2404b3dc        0x4 ./Core/Src/stm32h7xx_hal_msp.o
  .bss.usb_isr_counter
-                0x2404b3e8        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b3e8                usb_isr_counter
+                0x2404b3e0        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b3e0                usb_isr_counter
  .bss.hardfault_r0
-                0x2404b3ec        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b3ec                hardfault_r0
+                0x2404b3e4        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b3e4                hardfault_r0
  .bss.hardfault_r1
-                0x2404b3f0        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b3f0                hardfault_r1
+                0x2404b3e8        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b3e8                hardfault_r1
  .bss.hardfault_r2
-                0x2404b3f4        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b3f4                hardfault_r2
+                0x2404b3ec        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b3ec                hardfault_r2
  .bss.hardfault_r3
-                0x2404b3f8        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b3f8                hardfault_r3
+                0x2404b3f0        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b3f0                hardfault_r3
  .bss.hardfault_r12
-                0x2404b3fc        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b3fc                hardfault_r12
+                0x2404b3f4        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b3f4                hardfault_r12
  .bss.hardfault_lr
-                0x2404b400        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b400                hardfault_lr
+                0x2404b3f8        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b3f8                hardfault_lr
  .bss.hardfault_pc
-                0x2404b404        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b404                hardfault_pc
+                0x2404b3fc        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b3fc                hardfault_pc
  .bss.hardfault_psr
-                0x2404b408        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b408                hardfault_psr
+                0x2404b400        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b400                hardfault_psr
  .bss.hardfault_cfsr
-                0x2404b40c        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b40c                hardfault_cfsr
+                0x2404b404        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b404                hardfault_cfsr
  .bss.hardfault_hfsr
-                0x2404b410        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b410                hardfault_hfsr
+                0x2404b408        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b408                hardfault_hfsr
  .bss.hardfault_bfar
-                0x2404b414        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b414                hardfault_bfar
+                0x2404b40c        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b40c                hardfault_bfar
  .bss.hardfault_mmfar
-                0x2404b418        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b418                hardfault_mmfar
+                0x2404b410        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b410                hardfault_mmfar
  .bss.hardfault_active
-                0x2404b41c        0x4 ./Core/Src/stm32h7xx_it.o
-                0x2404b41c                hardfault_active
+                0x2404b414        0x4 ./Core/Src/stm32h7xx_it.o
+                0x2404b414                hardfault_active
  .bss.__sbrk_heap_end
-                0x2404b420        0x4 ./Core/Src/sysmem.o
+                0x2404b418        0x4 ./Core/Src/sysmem.o
  .bss.g_pair_seq
-                0x2404b424        0x4 ./Core/Src/usb_cdc_proto.o
+                0x2404b41c        0x4 ./Core/Src/usb_cdc_proto.o
  .bss.g_locked_samples
-                0x2404b428        0x2 ./Core/Src/usb_cdc_proto.o
- *fill*         0x2404b42a        0x2 
+                0x2404b420        0x2 ./Core/Src/usb_cdc_proto.o
+ *fill*         0x2404b422        0x2 
  .bss.g_sent_adc0
-                0x2404b42c        0x4 ./Core/Src/usb_cdc_proto.o
+                0x2404b424        0x4 ./Core/Src/usb_cdc_proto.o
  .bss.g_sent_adc1
-                0x2404b430        0x4 ./Core/Src/usb_cdc_proto.o
+                0x2404b428        0x4 ./Core/Src/usb_cdc_proto.o
  .bss.g_dbg_partial_frame_abort
-                0x2404b434        0x4 ./Core/Src/usb_cdc_proto.o
+                0x2404b42c        0x4 ./Core/Src/usb_cdc_proto.o
  .bss.g_dbg_size_mismatch
-                0x2404b438        0x4 ./Core/Src/usb_cdc_proto.o
+                0x2404b430        0x4 ./Core/Src/usb_cdc_proto.o
  .bss.g_dbg_tx_cplt
-                0x2404b43c        0x4 ./Core/Src/usb_cdc_proto.o
+                0x2404b434        0x4 ./Core/Src/usb_cdc_proto.o
  .bss.g_test_frames
-                0x2404b440        0x4 ./Core/Src/usb_cdc_proto.o
+                0x2404b438        0x4 ./Core/Src/usb_cdc_proto.o
  .bss.g_service_lock
-                0x2404b444        0x1 ./Core/Src/usb_cdc_proto.o
- *fill*         0x2404b445        0x3 
+                0x2404b43c        0x1 ./Core/Src/usb_cdc_proto.o
+ *fill*         0x2404b43d        0x3 
  .bss.s_frame_ch0
-                0x2404b448        0x4 ./Core/Src/usb_cdc_proto.o
+                0x2404b440        0x4 ./Core/Src/usb_cdc_proto.o
  .bss.s_frame_ch1
-                0x2404b44c        0x4 ./Core/Src/usb_cdc_proto.o
+                0x2404b444        0x4 ./Core/Src/usb_cdc_proto.o
  .bss.s_frame_samples
-                0x2404b450        0x2 ./Core/Src/usb_cdc_proto.o
- *fill*         0x2404b452        0x2 
+                0x2404b448        0x2 ./Core/Src/usb_cdc_proto.o
+ *fill*         0x2404b44a        0x2 
  .bss.s_frame_seq
-                0x2404b454        0x4 ./Core/Src/usb_cdc_proto.o
+                0x2404b44c        0x4 ./Core/Src/usb_cdc_proto.o
  .bss.s_frame_ring_seq
-                0x2404b458        0x4 ./Core/Src/usb_cdc_proto.o
+                0x2404b450        0x4 ./Core/Src/usb_cdc_proto.o
  .bss.s_next_channel_to_send
-                0x2404b45c        0x1 ./Core/Src/usb_cdc_proto.o
+                0x2404b454        0x1 ./Core/Src/usb_cdc_proto.o
  .bss.s_frame_active
-                0x2404b45d        0x1 ./Core/Src/usb_cdc_proto.o
- *fill*         0x2404b45e        0x2 
+                0x2404b455        0x1 ./Core/Src/usb_cdc_proto.o
+ *fill*         0x2404b456        0x2 
  .bss.s_frame_seq_ch0.2
-                0x2404b460        0x4 ./Core/Src/usb_cdc_proto.o
+                0x2404b458        0x4 ./Core/Src/usb_cdc_proto.o
  .bss.s_frame_seq_ch1.1
-                0x2404b464        0x4 ./Core/Src/usb_cdc_proto.o
- .bss.txbuf.0   0x2404b468     0x1000 ./Core/Src/usb_cdc_proto.o
- .bss.s_pixels  0x2404c468       0x3f ./Core/Src/ws2812_spi.o
- .bss.s_busy    0x2404c4a7        0x1 ./Core/Src/ws2812_spi.o
+                0x2404b45c        0x4 ./Core/Src/usb_cdc_proto.o
+ .bss.txbuf.0   0x2404b460     0x1000 ./Core/Src/usb_cdc_proto.o
+ .bss.s_pixels  0x2404c460       0x3f ./Core/Src/ws2812_spi.o
+ .bss.s_busy    0x2404c49f        0x1 ./Core/Src/ws2812_spi.o
  .bss.s_tx_frame_ready
-                0x2404c4a8        0x1 ./Core/Src/ws2812_spi.o
+                0x2404c4a0        0x1 ./Core/Src/ws2812_spi.o
  .bss.s_tx_buffer_building
-                0x2404c4a9        0x1 ./Core/Src/ws2812_spi.o
+                0x2404c4a1        0x1 ./Core/Src/ws2812_spi.o
  .bss.s_active_pattern
-                0x2404c4aa        0x1 ./Core/Src/ws2812_spi.o
+                0x2404c4a2        0x1 ./Core/Src/ws2812_spi.o
  .bss.s_requested_pattern
-                0x2404c4ab        0x1 ./Core/Src/ws2812_spi.o
+                0x2404c4a3        0x1 ./Core/Src/ws2812_spi.o
  .bss.s_last_frame_cycles
-                0x2404c4ac        0x4 ./Core/Src/ws2812_spi.o
+                0x2404c4a4        0x4 ./Core/Src/ws2812_spi.o
  .bss.s_pattern_anim_step
-                0x2404c4b0        0x2 ./Core/Src/ws2812_spi.o
+                0x2404c4a8        0x2 ./Core/Src/ws2812_spi.o
  .bss.s_pattern_frame_repeat
-                0x2404c4b2        0x2 ./Core/Src/ws2812_spi.o
+                0x2404c4aa        0x2 ./Core/Src/ws2812_spi.o
  .bss.s_pattern_frame_counter
-                0x2404c4b4        0x4 ./Core/Src/ws2812_spi.o
+                0x2404c4ac        0x4 ./Core/Src/ws2812_spi.o
  .bss.s_override_pattern
-                0x2404c4b8        0x1 ./Core/Src/ws2812_spi.o
- *fill*         0x2404c4b9        0x3 
+                0x2404c4b0        0x1 ./Core/Src/ws2812_spi.o
+ *fill*         0x2404c4b1        0x3 
  .bss.s_override_until_ms
-                0x2404c4bc        0x4 ./Core/Src/ws2812_spi.o
- .bss.__sf      0x2404c4c0      0x138 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
-                0x2404c4c0                __sf
+                0x2404c4b4        0x4 ./Core/Src/ws2812_spi.o
+ .bss.__sf      0x2404c4b8      0x138 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
+                0x2404c4b8                __sf
  .bss.__stdio_exit_handler
-                0x2404c5f8        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
-                0x2404c5f8                __stdio_exit_handler
- .bss.errno     0x2404c5fc        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-reent.o)
-                0x2404c5fc                errno
+                0x2404c5f0        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-findfp.o)
+                0x2404c5f0                __stdio_exit_handler
+ .bss.errno     0x2404c5f4        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-reent.o)
+                0x2404c5f4                errno
  .bss.__lock___malloc_recursive_mutex
-                0x2404c600        0x1 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-lock.o)
-                0x2404c600                __lock___malloc_recursive_mutex
+                0x2404c5f8        0x1 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-lock.o)
+                0x2404c5f8                __lock___malloc_recursive_mutex
  .bss.__lock___sfp_recursive_mutex
-                0x2404c601        0x1 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-lock.o)
-                0x2404c601                __lock___sfp_recursive_mutex
- *fill*         0x2404c602        0x2 
+                0x2404c5f9        0x1 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-lock.o)
+                0x2404c5f9                __lock___sfp_recursive_mutex
+ *fill*         0x2404c5fa        0x2 
  .bss.__malloc_sbrk_start
-                0x2404c604        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-mallocr.o)
-                0x2404c604                __malloc_sbrk_start
+                0x2404c5fc        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-mallocr.o)
+                0x2404c5fc                __malloc_sbrk_start
  .bss.__malloc_free_list
-                0x2404c608        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-mallocr.o)
-                0x2404c608                __malloc_free_list
+                0x2404c600        0x4 C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libc_nano.a(libc_a-mallocr.o)
+                0x2404c600                __malloc_free_list
  *(COMMON)
-                0x2404c60c                        . = ALIGN (0x4)
-                0x2404c60c                        _ebss = .
-                0x2404c60c                        __bss_end__ = _ebss
+                0x2404c604                        . = ALIGN (0x4)
+                0x2404c604                        _ebss = .
+                0x2404c604                        __bss_end__ = _ebss
 
-.noinit         0x2404c60c       0xbc load address 0x08033f88
- .noinit        0x2404c60c       0x14 ./USB_DEVICE/App/usb_vendor_app.o
- .noinit        0x2404c620       0xa8 ./Core/Src/main.o
+.noinit         0x2404c604       0xbc load address 0x08033e4c
+ .noinit        0x2404c604       0x14 ./USB_DEVICE/App/usb_vendor_app.o
+ .noinit        0x2404c618       0xa8 ./Core/Src/main.o
 
 .ram_d2         0x30000000      0x140
                 0x30000000                        . = ALIGN (0x20)
@@ -15549,15 +15541,15 @@ LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
  *fill*         0x3000013f        0x1 
 
 ._user_heap_stack
-                0x2404c6c8      0x600
-                0x2404c6c8                        . = ALIGN (0x8)
+                0x2404c6c0      0x600
+                0x2404c6c0                        . = ALIGN (0x8)
                 [!provide]                        PROVIDE (end = .)
-                0x2404c6c8                        PROVIDE (_end = .)
-                0x2404c8c8                        . = (. + _Min_Heap_Size)
- *fill*         0x2404c6c8      0x200 
-                0x2404ccc8                        . = (. + _Min_Stack_Size)
- *fill*         0x2404c8c8      0x400 
-                0x2404ccc8                        . = ALIGN (0x8)
+                0x2404c6c0                        PROVIDE (_end = .)
+                0x2404c8c0                        . = (. + _Min_Heap_Size)
+ *fill*         0x2404c6c0      0x200 
+                0x2404ccc0                        . = (. + _Min_Stack_Size)
+ *fill*         0x2404c8c0      0x400 
+                0x2404ccc0                        . = ALIGN (0x8)
 
 /DISCARD/
  libc.a(*)
@@ -15783,7 +15775,7 @@ LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
 LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/../../../../arm-none-eabi/lib/thumb/v7e-m+dp/hard\libm.a
 LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/13.3.1/thumb/v7e-m+dp/hard\libgcc.a
 
-.debug_info     0x00000000    0x44ff7
+.debug_info     0x00000000    0x44f89
  .debug_info    0x00000000     0x25c3 ./USB_DEVICE/Target/usbd_conf.o
  .debug_info    0x000025c3      0x789 ./USB_DEVICE/App/usb_device.o
  .debug_info    0x00002d4c     0x882a ./USB_DEVICE/App/usb_vendor_app.o
@@ -15819,19 +15811,19 @@ LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
  .debug_info    0x0002e030      0x4d5 ./Drivers/BSP/ST7735/lcd.o
  .debug_info    0x0002e505      0x9cb ./Drivers/BSP/ST7735/st7735.o
  .debug_info    0x0002eed0       0x30 ./Core/Startup/startup_stm32h723vgtx.o
- .debug_info    0x0002ef00     0x38db ./Core/Src/adc_stream.o
- .debug_info    0x000327db     0x8bc7 ./Core/Src/main.o
- .debug_info    0x0003b3a2      0x11c ./Core/Src/build_info.o
- .debug_info    0x0003b4be     0x2878 ./Core/Src/stm32h7xx_hal_msp.o
- .debug_info    0x0003dd36     0x2517 ./Core/Src/stm32h7xx_it.o
- .debug_info    0x0004024d      0xe04 ./Core/Src/syscalls.o
- .debug_info    0x00041051      0x168 ./Core/Src/sysmem.o
- .debug_info    0x000411b9      0xbf0 ./Core/Src/system_stm32h7xx.o
- .debug_info    0x00041da9      0x1a4 ./Core/Src/usb_cdc_ll_st.o
- .debug_info    0x00041f4d      0xefd ./Core/Src/usb_cdc_proto.o
- .debug_info    0x00042e4a     0x21ad ./Core/Src/ws2812_spi.o
+ .debug_info    0x0002ef00     0x386d ./Core/Src/adc_stream.o
+ .debug_info    0x0003276d     0x8bc7 ./Core/Src/main.o
+ .debug_info    0x0003b334      0x11c ./Core/Src/build_info.o
+ .debug_info    0x0003b450     0x2878 ./Core/Src/stm32h7xx_hal_msp.o
+ .debug_info    0x0003dcc8     0x2517 ./Core/Src/stm32h7xx_it.o
+ .debug_info    0x000401df      0xe04 ./Core/Src/syscalls.o
+ .debug_info    0x00040fe3      0x168 ./Core/Src/sysmem.o
+ .debug_info    0x0004114b      0xbf0 ./Core/Src/system_stm32h7xx.o
+ .debug_info    0x00041d3b      0x1a4 ./Core/Src/usb_cdc_ll_st.o
+ .debug_info    0x00041edf      0xefd ./Core/Src/usb_cdc_proto.o
+ .debug_info    0x00042ddc     0x21ad ./Core/Src/ws2812_spi.o
 
-.debug_abbrev   0x00000000     0x781c
+.debug_abbrev   0x00000000     0x781b
  .debug_abbrev  0x00000000      0x377 ./USB_DEVICE/Target/usbd_conf.o
  .debug_abbrev  0x00000377      0x1ed ./USB_DEVICE/App/usb_device.o
  .debug_abbrev  0x00000564      0x528 ./USB_DEVICE/App/usb_vendor_app.o
@@ -15867,17 +15859,17 @@ LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
  .debug_abbrev  0x00005537      0x1ab ./Drivers/BSP/ST7735/lcd.o
  .debug_abbrev  0x000056e2      0x1e9 ./Drivers/BSP/ST7735/st7735.o
  .debug_abbrev  0x000058cb       0x24 ./Core/Startup/startup_stm32h723vgtx.o
- .debug_abbrev  0x000058ef      0x53d ./Core/Src/adc_stream.o
- .debug_abbrev  0x00005e2c      0x5b1 ./Core/Src/main.o
- .debug_abbrev  0x000063dd       0x63 ./Core/Src/build_info.o
- .debug_abbrev  0x00006440      0x296 ./Core/Src/stm32h7xx_hal_msp.o
- .debug_abbrev  0x000066d6      0x3ad ./Core/Src/stm32h7xx_it.o
- .debug_abbrev  0x00006a83      0x269 ./Core/Src/syscalls.o
- .debug_abbrev  0x00006cec       0xbc ./Core/Src/sysmem.o
- .debug_abbrev  0x00006da8      0x153 ./Core/Src/system_stm32h7xx.o
- .debug_abbrev  0x00006efb       0xf5 ./Core/Src/usb_cdc_ll_st.o
- .debug_abbrev  0x00006ff0      0x338 ./Core/Src/usb_cdc_proto.o
- .debug_abbrev  0x00007328      0x4f4 ./Core/Src/ws2812_spi.o
+ .debug_abbrev  0x000058ef      0x53c ./Core/Src/adc_stream.o
+ .debug_abbrev  0x00005e2b      0x5b1 ./Core/Src/main.o
+ .debug_abbrev  0x000063dc       0x63 ./Core/Src/build_info.o
+ .debug_abbrev  0x0000643f      0x296 ./Core/Src/stm32h7xx_hal_msp.o
+ .debug_abbrev  0x000066d5      0x3ad ./Core/Src/stm32h7xx_it.o
+ .debug_abbrev  0x00006a82      0x269 ./Core/Src/syscalls.o
+ .debug_abbrev  0x00006ceb       0xbc ./Core/Src/sysmem.o
+ .debug_abbrev  0x00006da7      0x153 ./Core/Src/system_stm32h7xx.o
+ .debug_abbrev  0x00006efa       0xf5 ./Core/Src/usb_cdc_ll_st.o
+ .debug_abbrev  0x00006fef      0x338 ./Core/Src/usb_cdc_proto.o
+ .debug_abbrev  0x00007327      0x4f4 ./Core/Src/ws2812_spi.o
 
 .debug_aranges  0x00000000     0x3108
  .debug_aranges
@@ -16246,7 +16238,7 @@ LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
  .debug_macro   0x0003e89d      0x3ca ./Core/Src/ws2812_spi.o
  .debug_macro   0x0003ec67       0x16 ./Core/Src/ws2812_spi.o
 
-.debug_line     0x00000000    0x410f0
+.debug_line     0x00000000    0x41079
  .debug_line    0x00000000      0xf85 ./USB_DEVICE/Target/usbd_conf.o
  .debug_line    0x00000f85      0xb76 ./USB_DEVICE/App/usb_device.o
  .debug_line    0x00001afb     0x6bb6 ./USB_DEVICE/App/usb_vendor_app.o
@@ -16282,66 +16274,66 @@ LOAD C:/ST/STM32CubeCLT_1.19.0/GNU-tools-for-STM32/bin/../lib/gcc/arm-none-eabi/
  .debug_line    0x00031e88      0xb21 ./Drivers/BSP/ST7735/lcd.o
  .debug_line    0x000329a9      0xa51 ./Drivers/BSP/ST7735/st7735.o
  .debug_line    0x000333fa       0x75 ./Core/Startup/startup_stm32h723vgtx.o
- .debug_line    0x0003346f     0x297a ./Core/Src/adc_stream.o
- .debug_line    0x00035de9     0x4867 ./Core/Src/main.o
- .debug_line    0x0003a650       0x68 ./Core/Src/build_info.o
- .debug_line    0x0003a6b8      0xe51 ./Core/Src/stm32h7xx_hal_msp.o
- .debug_line    0x0003b509      0xe77 ./Core/Src/stm32h7xx_it.o
- .debug_line    0x0003c380      0xc95 ./Core/Src/syscalls.o
- .debug_line    0x0003d015      0x38f ./Core/Src/sysmem.o
- .debug_line    0x0003d3a4      0xad1 ./Core/Src/system_stm32h7xx.o
- .debug_line    0x0003de75      0xb51 ./Core/Src/usb_cdc_ll_st.o
- .debug_line    0x0003e9c6     0x109c ./Core/Src/usb_cdc_proto.o
- .debug_line    0x0003fa62     0x168e ./Core/Src/ws2812_spi.o
+ .debug_line    0x0003346f     0x2903 ./Core/Src/adc_stream.o
+ .debug_line    0x00035d72     0x4867 ./Core/Src/main.o
+ .debug_line    0x0003a5d9       0x68 ./Core/Src/build_info.o
+ .debug_line    0x0003a641      0xe51 ./Core/Src/stm32h7xx_hal_msp.o
+ .debug_line    0x0003b492      0xe77 ./Core/Src/stm32h7xx_it.o
+ .debug_line    0x0003c309      0xc95 ./Core/Src/syscalls.o
+ .debug_line    0x0003cf9e      0x38f ./Core/Src/sysmem.o
+ .debug_line    0x0003d32d      0xad1 ./Core/Src/system_stm32h7xx.o
+ .debug_line    0x0003ddfe      0xb51 ./Core/Src/usb_cdc_ll_st.o
+ .debug_line    0x0003e94f     0x109c ./Core/Src/usb_cdc_proto.o
+ .debug_line    0x0003f9eb     0x168e ./Core/Src/ws2812_spi.o
 
-.debug_str      0x00000000   0x17c45d
- .debug_str     0x00000000   0x17c45d ./USB_DEVICE/Target/usbd_conf.o
+.debug_str      0x00000000   0x17c40c
+ .debug_str     0x00000000   0x17c40c ./USB_DEVICE/Target/usbd_conf.o
                              0x1669d3 (size before relaxing)
- .debug_str     0x0017c45d   0x1652ef ./USB_DEVICE/App/usb_device.o
- .debug_str     0x0017c45d   0x16abbd ./USB_DEVICE/App/usb_vendor_app.o
- .debug_str     0x0017c45d   0x166361 ./USB_DEVICE/App/usbd_cdc_custom.o
- .debug_str     0x0017c45d   0x166065 ./USB_DEVICE/App/usbd_cdc_if.o
- .debug_str     0x0017c45d   0x164ea4 ./USB_DEVICE/App/usbd_desc.o
- .debug_str     0x0017c45d   0x165919 ./Middlewares/USB_Device_Library/usbd_cdc.o
- .debug_str     0x0017c45d   0x165227 ./Middlewares/USB_Device_Library/usbd_core.o
- .debug_str     0x0017c45d   0x165052 ./Middlewares/USB_Device_Library/usbd_ctlreq.o
- .debug_str     0x0017c45d   0x164f27 ./Middlewares/USB_Device_Library/usbd_ioreq.o
- .debug_str     0x0017c45d   0x1646ef ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal.o
- .debug_str     0x0017c45d   0x164714 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_adc.o
- .debug_str     0x0017c45d   0x164634 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_adc_ex.o
- .debug_str     0x0017c45d   0x164009 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_cortex.o
- .debug_str     0x0017c45d   0x1639a1 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_dac.o
- .debug_str     0x0017c45d   0x1639d9 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_dac_ex.o
- .debug_str     0x0017c45d   0x163e1a ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_dma.o
- .debug_str     0x0017c45d   0x163661 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_flash.o
- .debug_str     0x0017c45d   0x163978 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_flash_ex.o
- .debug_str     0x0017c45d   0x1636b0 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_gpio.o
- .debug_str     0x0017c45d   0x163e62 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_pcd.o
- .debug_str     0x0017c45d   0x163800 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_pcd_ex.o
- .debug_str     0x0017c45d   0x163ab8 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_pwr_ex.o
- .debug_str     0x0017c45d   0x163a33 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_rcc.o
- .debug_str     0x0017c45d   0x163f4b ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_rcc_ex.o
- .debug_str     0x0017c45d   0x163db6 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_spi.o
- .debug_str     0x0017c45d   0x164831 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_tim.o
- .debug_str     0x0017c45d   0x1641de ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_tim_ex.o
- .debug_str     0x0017c45d   0x1645d3 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart.o
- .debug_str     0x0017c45d   0x163b93 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart_ex.o
- .debug_str     0x0017c45d   0x163d5c ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_ll_usb.o
- .debug_str     0x0017c45d     0x3ee3 ./Drivers/BSP/ST7735/font.o
- .debug_str     0x0017c45d   0x163f37 ./Drivers/BSP/ST7735/lcd.o
- .debug_str     0x0017c45d   0x16439b ./Drivers/BSP/ST7735/st7735.o
- .debug_str     0x0017c45d       0x8f ./Core/Startup/startup_stm32h723vgtx.o
- .debug_str     0x0017c45d   0x16721a ./Core/Src/adc_stream.o
- .debug_str     0x0017c45d   0x16c767 ./Core/Src/main.o
- .debug_str     0x0017c45d     0x2fd4 ./Core/Src/build_info.o
- .debug_str     0x0017c45d   0x16579e ./Core/Src/stm32h7xx_hal_msp.o
- .debug_str     0x0017c45d   0x165e59 ./Core/Src/stm32h7xx_it.o
- .debug_str     0x0017c45d   0x1664fd ./Core/Src/syscalls.o
- .debug_str     0x0017c45d     0x77c6 ./Core/Src/sysmem.o
- .debug_str     0x0017c45d   0x16366b ./Core/Src/system_stm32h7xx.o
- .debug_str     0x0017c45d   0x164d75 ./Core/Src/usb_cdc_ll_st.o
- .debug_str     0x0017c45d   0x164a4b ./Core/Src/usb_cdc_proto.o
- .debug_str     0x0017c45d   0x165a2e ./Core/Src/ws2812_spi.o
+ .debug_str     0x0017c40c   0x1652ef ./USB_DEVICE/App/usb_device.o
+ .debug_str     0x0017c40c   0x16abbd ./USB_DEVICE/App/usb_vendor_app.o
+ .debug_str     0x0017c40c   0x166361 ./USB_DEVICE/App/usbd_cdc_custom.o
+ .debug_str     0x0017c40c   0x166065 ./USB_DEVICE/App/usbd_cdc_if.o
+ .debug_str     0x0017c40c   0x164ea4 ./USB_DEVICE/App/usbd_desc.o
+ .debug_str     0x0017c40c   0x165919 ./Middlewares/USB_Device_Library/usbd_cdc.o
+ .debug_str     0x0017c40c   0x165227 ./Middlewares/USB_Device_Library/usbd_core.o
+ .debug_str     0x0017c40c   0x165052 ./Middlewares/USB_Device_Library/usbd_ctlreq.o
+ .debug_str     0x0017c40c   0x164f27 ./Middlewares/USB_Device_Library/usbd_ioreq.o
+ .debug_str     0x0017c40c   0x1646ef ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal.o
+ .debug_str     0x0017c40c   0x164714 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_adc.o
+ .debug_str     0x0017c40c   0x164634 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_adc_ex.o
+ .debug_str     0x0017c40c   0x164009 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_cortex.o
+ .debug_str     0x0017c40c   0x1639a1 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_dac.o
+ .debug_str     0x0017c40c   0x1639d9 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_dac_ex.o
+ .debug_str     0x0017c40c   0x163e1a ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_dma.o
+ .debug_str     0x0017c40c   0x163661 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_flash.o
+ .debug_str     0x0017c40c   0x163978 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_flash_ex.o
+ .debug_str     0x0017c40c   0x1636b0 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_gpio.o
+ .debug_str     0x0017c40c   0x163e62 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_pcd.o
+ .debug_str     0x0017c40c   0x163800 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_pcd_ex.o
+ .debug_str     0x0017c40c   0x163ab8 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_pwr_ex.o
+ .debug_str     0x0017c40c   0x163a33 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_rcc.o
+ .debug_str     0x0017c40c   0x163f4b ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_rcc_ex.o
+ .debug_str     0x0017c40c   0x163db6 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_spi.o
+ .debug_str     0x0017c40c   0x164831 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_tim.o
+ .debug_str     0x0017c40c   0x1641de ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_tim_ex.o
+ .debug_str     0x0017c40c   0x1645d3 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart.o
+ .debug_str     0x0017c40c   0x163b93 ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart_ex.o
+ .debug_str     0x0017c40c   0x163d5c ./Drivers/STM32H7xx_HAL_Driver/stm32h7xx_ll_usb.o
+ .debug_str     0x0017c40c     0x3ee3 ./Drivers/BSP/ST7735/font.o
+ .debug_str     0x0017c40c   0x163f37 ./Drivers/BSP/ST7735/lcd.o
+ .debug_str     0x0017c40c   0x16439b ./Drivers/BSP/ST7735/st7735.o
+ .debug_str     0x0017c40c       0x8f ./Core/Startup/startup_stm32h723vgtx.o
+ .debug_str     0x0017c40c   0x167193 ./Core/Src/adc_stream.o
+ .debug_str     0x0017c40c   0x16c767 ./Core/Src/main.o
+ .debug_str     0x0017c40c     0x2fd4 ./Core/Src/build_info.o
+ .debug_str     0x0017c40c   0x16579e ./Core/Src/stm32h7xx_hal_msp.o
+ .debug_str     0x0017c40c   0x165e59 ./Core/Src/stm32h7xx_it.o
+ .debug_str     0x0017c40c   0x1664fd ./Core/Src/syscalls.o
+ .debug_str     0x0017c40c     0x77c6 ./Core/Src/sysmem.o
+ .debug_str     0x0017c40c   0x16366b ./Core/Src/system_stm32h7xx.o
+ .debug_str     0x0017c40c   0x164d75 ./Core/Src/usb_cdc_ll_st.o
+ .debug_str     0x0017c40c   0x164a4b ./Core/Src/usb_cdc_proto.o
+ .debug_str     0x0017c40c   0x165a2e ./Core/Src/ws2812_spi.o
 
 .comment        0x00000000       0x43
  .comment       0x00000000       0x43 ./USB_DEVICE/Target/usbd_conf.o

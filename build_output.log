@@ -1,0 +1,243 @@
+========================================
+STM32 BUILD AND FLASH ALL ST-LINK
+========================================
+[1/2] Building firmware once...
+========================================
+STM32 BUILD AND FLASH
+========================================
+[1/4] Updating build timestamp...
+  [OK] build_info.c timestamp updated
+  [OK] Removed build_info.o
+  [OK] Removed main.o
+[2/4] Incremental build (use -CleanBuild for full rebuild)
+[3/4] Building...
+  make: ╨▓╤Е╨╛╨┤ ╨▓ ╨║╨░╤В╨░╨╗╨╛╨│ ┬л/d/Users/Admin/Documents/Work/BMI20/STM32/BMI30.stm32h7/Debug┬╗
+[AUTOGEN] Generating ../Core/Inc/build_autogen.h
+[AUTOGEN] Wrote: ..\Core\Inc\build_autogen.h
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m7 -std=gnu11 -g3 -DDEBUG -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H723xx -c -I../Core/Inc -I"C://Users//Admin//STM32Cube//Repository//STM32Cube_FW_H7_V1.12.1//Drivers//STM32H7xx_HAL_Driver//Inc" -IC:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -IC:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/CMSIS/Device/ST/STM32H7xx/Include -IC:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/CMSIS/Include -I../Drivers/BSP/ST7735 -IC:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/STM32H7xx_HAL_Driver/Inc -I../USB_DEVICE/App -I../USB_DEVICE/Target -IC:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc -IC:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+bash.exe : ../Core/Src/main.c: In function 'sync_phase_monitor_service':
+D:\Users\Admin\Documents\Work\BMI20\STM32\BMI30.stm32h7\.vscode\build-and-flash
+.ps1:64 знак:9
++         & $BashExe -lc $cmd
++         ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (../Core/Src/mai...nitor_service': 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+../Core/Src/main.c:2594:13: warning: unused variable 'local_edge' 
+[-Wunused-variable]
+ 2594 |     uint8_t local_edge = 
+rs485_sync_edge_kind_from_marker_level(local_level);
+      |             ^~~~~~~~~~
+../Core/Src/main.c:2560:19: warning: variable 'last_sample' set but not used 
+[-Wunused-but-set-variable]
+ 2560 |   static uint16_t last_sample = 0u;
+      |                   ^~~~~~~~~~~
+../Core/Src/main.c:2559:18: warning: variable 'last_role' set but not used 
+[-Wunused-but-set-variable]
+ 2559 |   static uint8_t last_role = 'O';
+      |                  ^~~~~~~~~
+../Core/Src/main.c: In function 'DrawUSBStatus':
+../Core/Src/main.c:5634:19: warning: variable 'last_rate_sps' set but not used 
+[-Wunused-but-set-variable]
+ 5634 |   static uint32_t last_rate_sps = 0; /* ╤Б╨╡╨╝╨┐╨╗╨╛╨▓ ╨▓ 
+╤Б╨╡╨║╤Г╨╜╨┤╤Г (╨╛╨▒╨░ ╨║╨░╨╜╨░╨╗╨░ ╤Б╤Г╨╝╨╝╨░╤А╨╜╨╛) */
+      |                   ^~~~~~~~~~~~~
+../Core/Src/main.c: At top level:
+../Core/Src/main.c:2831:13: warning: 'ws2812_gpio_test_send_rgb' defined but 
+not used [-Wunused-function]
+ 2831 | static void ws2812_gpio_test_send_rgb(uint8_t r, uint8_t g, uint8_t b)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:1890:13: warning: 'rs485_uid_begin_arbitration_window' 
+defined but not used [-Wunused-function]
+ 1890 | static void rs485_uid_begin_arbitration_window(uint32_t now_ms)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:1884:17: warning: 'rs485_uid_get_announce_delay_ms' defined 
+but not used [-Wunused-function]
+ 1884 | static uint32_t rs485_uid_get_announce_delay_ms(void)
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:1829:13: warning: 'rs485_uid_service' defined but not used 
+[-Wunused-function]
+ 1829 | static void rs485_uid_service(uint32_t now_ms)
+      |             ^~~~~~~~~~~~~~~~~
+../Core/Src/main.c:1811:13: warning: 'rs485_uid_schedule_announce' defined but 
+not used [-Wunused-function]
+ 1811 | static void rs485_uid_schedule_announce(uint32_t now_ms, uint8_t 
+retries, uint32_t delay_ms)
+      |             ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:1227:17: warning: 'rs485_status_get_window_ticks' defined 
+but not used [-Wunused-function]
+ 1227 | static uint32_t rs485_status_get_window_ticks(uint32_t period_ticks)
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:1211:17: warning: 'rs485_status_get_effective_period_ticks' 
+defined but not used [-Wunused-function]
+ 1211 | static uint32_t rs485_status_get_effective_period_ticks(void)
+      |                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:135:17: warning: 'rs485_boot_listen_ms' defined but not 
+used [-Wunused-variable]
+  135 | static uint32_t rs485_boot_listen_ms = 0u;
+      |                 ^~~~~~~~~~~~~~~~~~~~
+../Core/Src/main.c:128:16: warning: 'rs485_dma_rx_buf' defined but not used 
+[-Wunused-variable]
+  128 | static uint8_t rs485_dma_rx_buf[RS485_DMA_RX_BUFFER_SIZE] = {0u};
+      |                ^~~~~~~~~~~~~~~~
+Core/Src/subdir.mk:76: ╨┐╤А╨╡╨┤╤Г╨┐╤А╨╡╨╢╨┤╨╡╨╜╨╕╨╡: ╤И╨░╨▒╨╗╨╛╨╜ 
+╤Б╨┐╨╛╤Б╨╛╨▒╨░ ╨╜╨╡ ╨╛╨▒╨╜╨╛╨▓╨╕╨╗ ╤А╨░╨▓╨╜╨╛╨╖╨╜╨░╤З╨╜╤Г╤О ╤Ж╨╡╨╗╤М 
+┬лCore/Src/main.cyclo┬╗.
+arm-none-eabi-gcc "../Core/Src/build_info.c" -mcpu=cortex-m7 -std=gnu11 -g3 -DDEBUG -DUSE_PWR_LDO_SUPPLY -DUSE_HAL_DRIVER -DSTM32H723xx -c -I../Core/Inc -I"C://Users//Admin//STM32Cube//Repository//STM32Cube_FW_H7_V1.12.1//Drivers//STM32H7xx_HAL_Driver//Inc" -IC:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -IC:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/CMSIS/Device/ST/STM32H7xx/Include -IC:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/CMSIS/Include -I../Drivers/BSP/ST7735 -IC:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Drivers/STM32H7xx_HAL_Driver/Inc -I../USB_DEVICE/App -I../USB_DEVICE/Target -IC:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc -IC:/Users/Admin/STM32Cube/Repository/STM32Cube_FW_H7_V1.12.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -MMD -MP -MF"Core/Src/build_info.d" -MT"Core/Src/build_info.o" --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -o "Core/Src/build_info.o"
+Core/Src/subdir.mk:76: ╨┐╤А╨╡╨┤╤Г╨┐╤А╨╡╨╢╨┤╨╡╨╜╨╕╨╡: ╤И╨░╨▒╨╗╨╛╨╜ 
+╤Б╨┐╨╛╤Б╨╛╨▒╨░ ╨╜╨╡ ╨╛╨▒╨╜╨╛╨▓╨╕╨╗ ╤А╨░╨▓╨╜╨╛╨╖╨╜╨░╤З╨╜╤Г╤О ╤Ж╨╡╨╗╤М 
+┬лCore/Src/build_info.cyclo┬╗.
+arm-none-eabi-gcc -o "BMI30.stm32h7.elf" @"objects.list"   -mcpu=cortex-m7 -T"../STM32H723VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="BMI30.stm32h7.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: BMI30.stm32h7.elf
+ 
+arm-none-eabi-size  BMI30.stm32h7.elf 
+   text	   data	    bss	    dec	    hex	filename
+ 212452	    804	 314048	 527304	  80bc8	BMI30.stm32h7.elf
+Finished building: default.size.stdout
+ 
+arm-none-eabi-objdump -h -S BMI30.stm32h7.elf  > "BMI30.stm32h7.list"
+Finished building: BMI30.stm32h7.list
+ 
+make: ╨▓╤Л╤Е╨╛╨┤ ╨╕╨╖ ╨║╨░╤В╨░╨╗╨╛╨│╨░ ┬л/d/Users/Admin/Documents/Work/BMI20/STM32/BMI30.stm32h7/Debug┬╗
+
+  [OK] Built: 19:22:34
+  [OK] Size: 2729.7 KB
+[4/4] Flash skipped (-NoFlash)
+
+========================================
+SUCCESS: Build 19:22:34 completed!
+========================================
+[2/2] Flashing configured probes...
+  -> ST-Link #1 | SN=0667FF514953667287233516 | COM18
+Using CLI: C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe
+Target ST-LINK SN: 0667FF514953667287233516
+Attempt [SWD-4000] connect args: port=SWD freq=4000 sn=0667FF514953667287233516
+      -------------------------------------------------------------------
+                       STM32CubeProgrammer v2.20.0                  
+      -------------------------------------------------------------------
+
+ST-LINK SN  : 0667FF514953667287233516
+ST-LINK FW  : V2J43M28
+Board       : --
+Voltage     : 3.23V
+SWD freq    : 4000 KHz
+Connect mode: Normal
+Reset mode  : Software reset
+Device ID   : 0x483
+Revision ID : Rev Z
+Device name : STM32H72x/STM32H73x
+Flash size  : 1 MBytes
+Device type : MCU
+Device CPU  : Cortex-M7
+BL Version  : 0x93
+
+
+
+Opening and parsing file: BMI30.stm32h7.elf
+
+
+Memory Programming ...
+  File          : BMI30.stm32h7.elf
+  Size          : 208.26 KB 
+  Address       : 0x08000000
+
+
+Erasing memory corresponding to segment 0:
+Erasing internal memory sectors [0 1]
+Download in Progress:
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 0%
+█████████████████████████████ 59%█████████████████████ 100%
+
+File download complete
+Time elapsed during download operation: 00:00:03.955
+
+
+
+Verifying...
+
+
+Read progress:
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 50%
+██████████████████████████████████████████████████ 100%
+
+Time elapsed during verifying operation: 00:00:01.312
+
+
+Download verified successfully 
+
+
+
+MCU Reset
+
+Software reset is performed
+
+  [OK] Flash completed for ST-Link #1
+  -> ST-Link #2 | SN=066BFF514953667287243650 | COM22
+Using CLI: C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe
+Target ST-LINK SN: 066BFF514953667287243650
+Attempt [SWD-4000] connect args: port=SWD freq=4000 sn=066BFF514953667287243650
+      -------------------------------------------------------------------
+                       STM32CubeProgrammer v2.20.0                  
+      -------------------------------------------------------------------
+
+ST-LINK SN  : 066BFF514953667287243650
+ST-LINK FW  : V2J43M28
+Board       : --
+Voltage     : 3.28V
+SWD freq    : 4000 KHz
+Connect mode: Normal
+Reset mode  : Software reset
+Device ID   : 0x483
+Revision ID : Rev Z
+Device name : STM32H72x/STM32H73x
+Flash size  : 1 MBytes
+Device type : MCU
+Device CPU  : Cortex-M7
+BL Version  : 0x93
+
+
+
+Opening and parsing file: BMI30.stm32h7.elf
+
+
+Memory Programming ...
+  File          : BMI30.stm32h7.elf
+  Size          : 208.26 KB 
+  Address       : 0x08000000
+
+
+Erasing memory corresponding to segment 0:
+Erasing internal memory sectors [0 1]
+Download in Progress:
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 0%
+█████████████████████████████ 59%█████████████████████ 100%
+
+File download complete
+Time elapsed during download operation: 00:00:04.044
+
+
+
+Verifying...
+
+
+Read progress:
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 50%
+██████████████████████████████████████████████████ 100%
+
+Time elapsed during verifying operation: 00:00:01.314
+
+
+Download verified successfully 
+
+
+
+MCU Reset
+
+Software reset is performed
+
+  [OK] Flash completed for ST-Link #2
+
+========================================
+SUCCESS: All configured ST-LINK probes flashed.
+========================================

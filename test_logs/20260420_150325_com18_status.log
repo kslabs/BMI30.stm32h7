@@ -1,0 +1,35 @@
+=== COM18 ===
+STATUS
+RS485
+STATUS
+
+
+=== DEVICE STATUS (UART1) ===
+Uptime: 202003 ms
+Sync target phase: AUTO target=10 samples
+Use 'PERF' or 'FPS' for detailed statistics
+==============================
+RS485
+
+
+=== RS485 STATUS ===
+mode        : 0 (MASTER)
+host_forced : 0
+node_id     : 4
+slave_count : 0
+next_slot   : 1
+status_byte : 0x04
+sync_edges  : 0
+sync_age_ms : 4294967295
+sync_alive  : 0
+phase_rel   : 0 (UNKNOWN)
+anti_fix    : 0, packets=0
+uart_errs   : 0
+rs485_rx    : 0
+rs485_tx    : 79450
+peer_uid_ok : 0
+peer_uid_cmp: 0
+uid_local   : 33363534-30325117-000F002C
+uid_peer    : 00000000-00000000-00000000
+sync_ok_pub : 0
+====================
