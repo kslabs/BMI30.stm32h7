@@ -41,6 +41,20 @@ CMD_SET_FULL_MODE = 0x13
 CMD_SET_PROFILE = 0x14
 CMD_SET_STREAM_MODE = 0x1A  # 0=LATEST (как сейчас), 1=LOSSLESS_ROI (280..480, 200)
 
+CMD_NAMES = {
+    CMD_SET_WINDOWS: 'SET_WINDOWS',
+    CMD_SET_TRUNC_SAMPLES: 'SET_TRUNC_SAMPLES',
+    CMD_SET_FRAME_SAMPLES: 'SET_FRAME_SAMPLES',
+    CMD_START: 'START',
+    CMD_STOP: 'STOP',
+    CMD_SET_ASYNC_MODE: 'SET_ASYNC_MODE',
+    CMD_SET_CHMODE: 'SET_CHMODE',
+    CMD_SET_FULL_MODE: 'SET_FULL_MODE',
+    CMD_SET_PROFILE: 'SET_PROFILE',
+    CMD_SET_STREAM_MODE: 'SET_STREAM_MODE',
+}
+CMD_TRACE_PATH = Path(__file__).with_name('rpi_usb_cmd_trace.log')
+
 def find_dev():
     """Поиск и инициализация устройства BMI30.
 
@@ -158,6 +172,15 @@ def send_cmd(dev, cmd_byte, data=None, lock: Optional[threading.Lock] = None):
     pkt = bytearray([cmd_byte])
     if data:
         pkt.extend(data)
+    try:
+        ts = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+        frac_ms = int((time.time() % 1.0) * 1000.0)
+        name = CMD_NAMES.get(int(cmd_byte) & 0xFF, 'UNKNOWN')
+        payload = bytes(pkt[1:]).hex()
+        with CMD_TRACE_PATH.open('a', encoding='ascii', errors='ignore') as f:
+            f.write(f"{ts}.{frac_ms:03d} cmd=0x{int(cmd_byte) & 0xFF:02X} name={name} len={len(pkt) - 1} payload={payload}\n")
+    except Exception:
+        pass
     try:
         if lock is None:
             dev.write(EP_OUT, pkt, timeout=500)

@@ -23,13 +23,17 @@ VND_CMD_SET_CHMODE        = 0x19
 VND_CMD_SET_STREAM_MODE   = 0x1A
 VND_CMD_SET_TX_ENABLE     = 0x33
 VND_CMD_SET_OPTIC_POWER   = 0x34
+VND_CMD_SET_OPTIC_HOLD    = 0x39
 VND_CMD_HOST_RX_ACK       = 0x36
 VND_CMD_HOST_RX_CLEAR     = 0x37
+
+VND_STFLAG_OPTIC_ACTIVE   = 0x0020
 
 MAGIC = 0xA55A
 
 STAT_LEN_V1 = 64
 STAT_LEN_V4 = 96
+STAT_LEN_V5 = 136
 
 
 def find_device(vid, pid):
@@ -129,8 +133,14 @@ def parse_stat(buf: bytes):
     st['pair_idx'] = int.from_bytes(buf[54:56], 'little')
     st['last_tx_len'] = int.from_bytes(buf[56:58], 'little')
     st['cur_stream_seq'] = int.from_bytes(buf[58:62], 'little')
+    st['reserved3'] = int.from_bytes(buf[62:64], 'little')
+    st['optic_power'] = (st['reserved3'] >> 8) & 0xFF
+    st['optic_hold_seconds'] = (st['reserved3'] >> 2) & 0x3F
+    st['optic_active_packed'] = 1 if (st['reserved3'] & 0x01) else 0
+    st['tx_enable_packed'] = 1 if (st['reserved3'] & 0x02) else 0
+    st['optic_active_flag'] = 1 if (st['flags_rt'] & VND_STFLAG_OPTIC_ACTIVE) else 0
 
-    # v2/v3/v4 extensions (total 96 bytes in current firmware)
+    # v2/v3/v4 extensions (total 96 bytes)
     if len(buf) >= STAT_LEN_V4:
         st['stage_alt1_ms'] = int.from_bytes(buf[64:68], 'little')
         st['stage_start_ms'] = int.from_bytes(buf[68:72], 'little')
@@ -140,6 +150,13 @@ def parse_stat(buf: bytes):
         st['now_ms'] = int.from_bytes(buf[84:88], 'little')
         st['last_full0_ms'] = int.from_bytes(buf[88:92], 'little')
         st['last_full1_ms'] = int.from_bytes(buf[92:96], 'little')
+    if len(buf) >= STAT_LEN_V5 and st.get('ver', 0) >= 5:
+        st['optic_hold_ds'] = int.from_bytes(buf[96:98], 'little')
+        st['led_pattern'] = buf[98]
+        st['sync_local_status'] = buf[99]
+        st['sync_seen_mask'] = int.from_bytes(buf[100:104], 'little')
+        st['sync_node_count'] = buf[104]
+        st['sync_status_bytes'] = list(buf[105:136])
     return st
 
 
@@ -148,7 +165,8 @@ def stat_expected_len(acc: bytes) -> int:
     if len(acc) < 5 or not acc.startswith(b'STAT'):
         return STAT_LEN_V1
     ver = acc[4]
-    # Current firmware uses v4 (96 bytes) on bulk; keep v1 compatibility.
+    if ver >= 5:
+        return STAT_LEN_V5
     return STAT_LEN_V4 if ver >= 2 else STAT_LEN_V1
 
 
@@ -188,6 +206,7 @@ def main():
     ap.add_argument('--chmode', type=int, choices=[0, 1, 2, 3], default=None, help='Set channel mode (firmware-defined).')
     ap.add_argument('--tx-enable', type=int, choices=[0, 1], default=None, help='Set external TX gate (0=disable, 1=enable) via CMD 0x33.')
     ap.add_argument('--optic-power', type=int, default=None, help='Set optical TX power (0..255) via CMD 0x34.')
+    ap.add_argument('--optic-hold-s', type=float, default=None, help='Set optic active hold time in seconds via CMD 0x39 (0=default 3.0, step 0.1, max 60.0).')
     ap.add_argument('--quiet', action='store_true', help='Reduce per-frame prints, show only summary and warnings')
     args = ap.parse_args()
 
@@ -259,6 +278,16 @@ def main():
             if optic_power > 255:
                 optic_power = 255
             send_cmd(dev, ep_out, bytes([VND_CMD_SET_OPTIC_POWER, optic_power & 0xFF]))
+    except Exception:
+        pass
+    try:
+        if args.optic_hold_s is not None:
+            optic_hold_ds = int(round(float(args.optic_hold_s) * 10.0))
+            if optic_hold_ds < 0:
+                optic_hold_ds = 0
+            if optic_hold_ds > 600:
+                optic_hold_ds = 600
+            send_cmd(dev, ep_out, bytes([VND_CMD_SET_OPTIC_HOLD]) + le16(optic_hold_ds))
     except Exception:
         pass
 
@@ -340,11 +369,11 @@ def main():
                 try:
                     if args.ctrl_status:
                         # bmRequestType: 0xC0 (device-to-host, vendor, device)
-                        raw = dev.ctrl_transfer(0xC0, VND_CMD_GET_STATUS, 0, 0, STAT_LEN_V4, timeout=300)
+                        raw = dev.ctrl_transfer(0xC0, VND_CMD_GET_STATUS, 0, 0, STAT_LEN_V5, timeout=300)
                         buf = bytes(raw)
                         st = parse_stat(buf)
                         if st and status_verbose:
-                            print(f"STAT[vnd-ctl] v{st['ver']} f2=0x{st['flags2']:04X} cur={st['cur_samples']} seq={st['cur_stream_seq']} sentA/B={st['sent0']}/{st['sent1']} wr={st['wr']} dma0/1={st['dma0']}/{st['dma1']} lastTX={st['last_tx_len']} send={st['sending_ch']} pair fs={st['pair_idx']>>8}/{st['pair_idx']&0xFF}")
+                            print(f"STAT[vnd-ctl] v{st['ver']} f2=0x{st['flags2']:04X} cur={st['cur_samples']} seq={st['cur_stream_seq']} sentA/B={st['sent0']}/{st['sent1']} wr={st['wr']} dma0/1={st['dma0']}/{st['dma1']} lastTX={st['last_tx_len']} send={st['sending_ch']} pair fs={st['pair_idx']>>8}/{st['pair_idx']&0xFF} optic_power={st['optic_power']} optic_hold_ds={st.get('optic_hold_ds', st['optic_hold_seconds']*10)} optic_active={1 if (st['optic_active_packed'] or st['optic_active_flag']) else 0} tx_enable={st['tx_enable_packed']} led_pattern={st.get('led_pattern', '-')} sync_count={st.get('sync_node_count', '-')}")
                         elif status_verbose:
                             print("STAT[vnd-ctl]", buf[:16].hex(), "len=", len(buf))
                     else:
@@ -399,7 +428,7 @@ def main():
                             extra = ""
                             if 'now_ms' in stp:
                                 extra = f" now={stp['now_ms']} last_full0/1={stp['last_full0_ms']}/{stp['last_full1_ms']}"
-                            print(f"STAT v{stp['ver']} f2=0x{stp['flags2']:04X} cur={stp['cur_samples']} seq={stp['cur_stream_seq']} sentA/B={stp['sent0']}/{stp['sent1']} wr={stp['wr']} dma0/1={stp['dma0']}/{stp['dma1']} lastTX={stp['last_tx_len']} send={stp['sending_ch']} pair fs={stp['pair_idx']>>8}/{stp['pair_idx']&0xFF}{extra}")
+                            print(f"STAT v{stp['ver']} f2=0x{stp['flags2']:04X} cur={stp['cur_samples']} seq={stp['cur_stream_seq']} sentA/B={stp['sent0']}/{stp['sent1']} wr={stp['wr']} dma0/1={stp['dma0']}/{stp['dma1']} lastTX={stp['last_tx_len']} send={stp['sending_ch']} pair fs={stp['pair_idx']>>8}/{stp['pair_idx']&0xFF} optic_power={stp['optic_power']} optic_hold_ds={stp.get('optic_hold_ds', stp['optic_hold_seconds']*10)} optic_active={1 if (stp['optic_active_packed'] or stp['optic_active_flag']) else 0} tx_enable={stp['tx_enable_packed']} led_pattern={stp.get('led_pattern', '-')} sync_count={stp.get('sync_node_count', '-')}{extra}")
                         else:
                             print("STAT", st[:16].hex(), "len=", len(st))
                     progressed = True

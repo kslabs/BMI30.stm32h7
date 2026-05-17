@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import struct
 import time
 from dataclasses import dataclass
@@ -40,13 +41,69 @@ CMD_SET_STREAM_MODE = 0x1A
 CMD_SET_DC_ADAPT = 0x1B
 CMD_SET_BUF_RATE_FINE = 0x1C
 CMD_SET_SYNC_MODE = 0x1D
+CMD_SET_DC_CONFIG = 0x1F
 CMD_START_STREAM = 0x20
 CMD_STOP_STREAM = 0x21
 CMD_GET_STATUS = 0x30
 CMD_SET_OPTIC_POWER = 0x34
+CMD_SET_OPTIC_HOLD = 0x39
+CMD_GET_LCD_STATUS = 0x38
+CMD_GET_DC_CONFIG = 0x3A
+CMD_SET_LED_PATTERN = 0x3B
 CMD_SET_ALT = 0x31
 CMD_SOFT_RESET = 0x7E
 CMD_DEEP_RESET = 0x7F
+
+_CMD_NAMES = {
+    CMD_SET_WINDOWS: "SET_WINDOWS",
+    CMD_BLOCK_HZ: "BLOCK_HZ",
+    CMD_FULL_MODE: "SET_FULL_MODE",
+    CMD_SET_PROFILE: "SET_PROFILE",
+    CMD_SET_TRUNC_SAMPLES: "SET_TRUNC_SAMPLES",
+    CMD_SET_FRAME_SAMPLES: "SET_FRAME_SAMPLES",
+    CMD_ASYNC: "SET_ASYNC",
+    CMD_CHMODE: "SET_CHMODE",
+    CMD_SET_STREAM_MODE: "SET_STREAM_MODE",
+    CMD_SET_DC_ADAPT: "SET_DC_ADAPT",
+    CMD_SET_BUF_RATE_FINE: "SET_BUF_RATE_FINE",
+    CMD_SET_SYNC_MODE: "SET_SYNC_MODE",
+    CMD_SET_DC_CONFIG: "SET_DC_CONFIG",
+    CMD_START_STREAM: "START_STREAM",
+    CMD_STOP_STREAM: "STOP_STREAM",
+    CMD_GET_STATUS: "GET_STATUS",
+    CMD_SET_ALT: "SET_ALT",
+    CMD_SET_OPTIC_POWER: "SET_OPTIC_POWER",
+    CMD_GET_LCD_STATUS: "GET_LCD_STATUS",
+    CMD_SET_OPTIC_HOLD: "SET_OPTIC_HOLD",
+    CMD_GET_DC_CONFIG: "GET_DC_CONFIG",
+    CMD_SET_LED_PATTERN: "SET_LED_PATTERN",
+    CMD_SOFT_RESET: "SOFT_RESET",
+    CMD_DEEP_RESET: "DEEP_RESET",
+}
+_CMD_TRACE_FILE = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), os.pardir, "HostTools", "usb_cmd_trace.log")
+)
+
+
+def _trace_cmd(cmd: int, payload: bytes) -> None:
+    try:
+        os.makedirs(os.path.dirname(_CMD_TRACE_FILE), exist_ok=True)
+        ts = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        frac_ms = int((time.time() % 1.0) * 1000.0)
+        name = _CMD_NAMES.get(int(cmd) & 0xFF, "UNKNOWN")
+        line = (
+            f"{ts}.{frac_ms:03d} cmd=0x{int(cmd) & 0xFF:02X} name={name} "
+            f"len={len(payload)} payload={payload.hex()}\n"
+        )
+        with open(_CMD_TRACE_FILE, "a", encoding="ascii") as f:
+            f.write(line)
+    except Exception:
+        pass
+
+DC_MODE_FREEZE = 0
+DC_MODE_WORK = 1
+DC_MODE_DETECT = 2
+DC_MODE_BOOT_FAST = 3
 
 # EP0 status request (vendor IN, recipient interface)
 _BM_STATUS_IN = usb.util.build_request_type(
@@ -65,6 +122,20 @@ class Frame:
     reserved: int
     reserved2: int
     adc_id: int
+
+
+@dataclass(frozen=True)
+class DCConfig:
+    mode: int
+    flags: int
+    work_settle_ms: int
+    detect_settle_ms: int
+    fast_settle_ms: int
+    fast_duration_ms: int
+    active_settle_ms: int
+    mode_enter_ms: int
+    fast_until_ms: int
+    adapt_updates: int
 
 
 def _parse_frame(buf: bytes) -> Optional[Frame]:
@@ -115,13 +186,50 @@ def _parse_frame(buf: bytes) -> Optional[Frame]:
     )
 
 
+def _parse_dc_config(buf: bytes) -> Optional[DCConfig]:
+    if len(buf) < 40 or not buf.startswith(b"DCCF"):
+        return None
+    try:
+        (
+            _sig,
+            version,
+            mode,
+            flags,
+            work_settle_ms,
+            detect_settle_ms,
+            fast_settle_ms,
+            fast_duration_ms,
+            active_settle_ms,
+            mode_enter_ms,
+            fast_until_ms,
+            adapt_updates,
+        ) = struct.unpack_from("<4sBBHIIIIIIII", buf, 0)
+    except Exception:
+        return None
+    if int(version) != 1:
+        return None
+    return DCConfig(
+        mode=int(mode),
+        flags=int(flags),
+        work_settle_ms=int(work_settle_ms),
+        detect_settle_ms=int(detect_settle_ms),
+        fast_settle_ms=int(fast_settle_ms),
+        fast_duration_ms=int(fast_duration_ms),
+        active_settle_ms=int(active_settle_ms),
+        mode_enter_ms=int(mode_enter_ms),
+        fast_until_ms=int(fast_until_ms),
+        adapt_updates=int(adapt_updates),
+    )
+
+
 class USBStream:
     """Minimal streaming helper used by HostTools/BMI30.200.py.
 
     Implements:
     - bulk OUT commands (send_cmd)
     - bulk IN frame reads (get_stereo)
-    - EP0 vendor GET_STATUS (last_stat, _get_status_ep0)
+    - EP0 vendor GET_STATUS/GET_LCD_STATUS
+    - EP0 vendor GET_DC_CONFIG and bulk SET_DC_CONFIG
     - soft/deep reset via control OUT
     - altsetting switching
     """
@@ -172,6 +280,7 @@ class USBStream:
             pass
 
         self.last_stat: Optional[bytes] = None
+        self.last_lcd_status: Optional[bytes] = None
         self.port_info = self.get_port_path_info() or {}
 
         class _AsmStub:
@@ -210,7 +319,9 @@ class USBStream:
             pass
 
     def send_cmd(self, cmd: int, payload: bytes = b""):
-        pkt = bytes([int(cmd) & 0xFF]) + (payload or b"")
+        payload = payload or b""
+        _trace_cmd(cmd, payload)
+        pkt = bytes([int(cmd) & 0xFF]) + payload
         self.dev.write(self.ep_out, pkt, timeout=500)  # type: ignore[attr-defined]
 
     def set_alt(self, alt: int):
@@ -240,6 +351,67 @@ class USBStream:
             level_i = 255
         self.send_cmd(CMD_SET_OPTIC_POWER, bytes([level_i]))
 
+    def set_optic_hold_seconds(self, seconds: float):
+        hold_ds = int(round(float(seconds) * 10.0))
+        if hold_ds < 0:
+            hold_ds = 0
+        if hold_ds > 600:
+            hold_ds = 600
+        self.send_cmd(CMD_SET_OPTIC_HOLD, hold_ds.to_bytes(2, "little", signed=False))
+
+    def set_led_pattern(self, pattern_id: int):
+        self.send_cmd(CMD_SET_LED_PATTERN, bytes([int(pattern_id) & 0xFF]))
+
+    def set_dc_adapt(self, enabled: bool):
+        """Quick DC learning toggle via CMD_SET_DC_ADAPT (0x1B).
+
+        True  -> resume learning (ACTIVE)
+        False -> freeze learning (FREEZE), DC subtraction still applies.
+        """
+        self.send_cmd(CMD_SET_DC_ADAPT, bytes([1 if bool(enabled) else 0]))
+
+    def set_dc_mode(self, mode: int):
+        """Set only the DC adaptation mode. Use DC_MODE_* constants."""
+        self.send_cmd(CMD_SET_DC_CONFIG, struct.pack("<BB", 1, int(mode) & 0xFF))
+
+    def set_dc_config_ms(
+        self,
+        mode: int,
+        work_settle_ms: int = 900_000,
+        detect_settle_ms: int = 60_000,
+        fast_settle_ms: int = 5_000,
+        fast_duration_ms: int = 30_000,
+    ):
+        """Configure DC adaptation time constants in milliseconds."""
+        payload = struct.pack(
+            "<BBHIIII",
+            1,
+            int(mode) & 0xFF,
+            0,
+            max(0, int(work_settle_ms)) & 0xFFFFFFFF,
+            max(0, int(detect_settle_ms)) & 0xFFFFFFFF,
+            max(0, int(fast_settle_ms)) & 0xFFFFFFFF,
+            max(0, int(fast_duration_ms)) & 0xFFFFFFFF,
+        )
+        self.send_cmd(CMD_SET_DC_CONFIG, payload)
+
+    def set_dc_config_seconds(
+        self,
+        mode: int,
+        work_settle_s: float = 900.0,
+        detect_settle_s: float = 60.0,
+        fast_settle_s: float = 5.0,
+        fast_duration_s: float = 30.0,
+    ):
+        """Configure DC adaptation time constants in seconds."""
+        self.set_dc_config_ms(
+            mode=mode,
+            work_settle_ms=int(float(work_settle_s) * 1000.0),
+            detect_settle_ms=int(float(detect_settle_s) * 1000.0),
+            fast_settle_ms=int(float(fast_settle_s) * 1000.0),
+            fast_duration_ms=int(float(fast_duration_s) * 1000.0),
+        )
+
     def soft_reset(self):
         # vendor control OUT without data
         self.dev.ctrl_transfer(0x40, CMD_SOFT_RESET, 0, 0, None, timeout=400)  # type: ignore[attr-defined]
@@ -247,7 +419,7 @@ class USBStream:
     def deep_reset(self):
         self.dev.ctrl_transfer(0x40, CMD_DEEP_RESET, 0, 0, None, timeout=500)  # type: ignore[attr-defined]
 
-    def _get_status_ep0(self, length: int = 96, timeout_ms: int = 500) -> bytes:
+    def _get_status_ep0(self, length: int = 136, timeout_ms: int = 500) -> bytes:
         # Try interface index 2 then 0 (some firmware exposes status on IF#0 too)
         last_err = None
         for idx in (self.interface, 0):
@@ -261,6 +433,33 @@ class USBStream:
                 last_err = e
                 continue
         raise RuntimeError(f"GET_STATUS EP0 failed: {last_err}")
+
+    def _get_lcd_status_ep0(self, length: int = 24, timeout_ms: int = 500) -> bytes:
+        last_err = None
+        for idx in (self.interface, 0):
+            try:
+                data = self.dev.ctrl_transfer(_BM_STATUS_IN, CMD_GET_LCD_STATUS, 0, int(idx), int(length), timeout=int(timeout_ms))  # type: ignore[attr-defined]
+                ba = bytes(data)
+                if ba:
+                    self.last_lcd_status = ba
+                return ba
+            except Exception as e:
+                last_err = e
+                continue
+        raise RuntimeError(f"GET_LCD_STATUS EP0 failed: {last_err}")
+
+    def get_dc_config(self, timeout_ms: int = 500) -> DCConfig:
+        last_err = None
+        for idx in (self.interface, 0):
+            try:
+                data = self.dev.ctrl_transfer(_BM_STATUS_IN, CMD_GET_DC_CONFIG, 0, int(idx), 40, timeout=int(timeout_ms))  # type: ignore[attr-defined]
+                cfg = _parse_dc_config(bytes(data))
+                if cfg is not None:
+                    return cfg
+            except Exception as e:
+                last_err = e
+                continue
+        raise RuntimeError(f"GET_DC_CONFIG EP0 failed: {last_err}")
 
     def get_port_path_info(self) -> dict:
         # Best-effort. On Windows this may be empty/unsupported.

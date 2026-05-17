@@ -3,6 +3,7 @@ import usb.core, usb.util, time, argparse
 
 VID=0xCAFE; PID=0x4001; IF_NUM=2; EP_OUT=0x03; EP_IN=0x83
 CMD_GET_STATUS=0x30; CMD_START=0x20; CMD_STOP=0x21
+STAT_LEN_V5 = 136
 
 LAYOUT = [
   (0,4,'sig'),      # 'STAT'
@@ -33,6 +34,8 @@ LAYOUT = [
 FLAG2_BITS = [
  'ep_busy','tx_ready','pending_B','test_in_flight','start_ack_done','start_stat_inflight','start_stat_planned','pending_status','simple_tx_mode','diag_mode_active'
 ]
+
+VND_STFLAG_OPTIC_ACTIVE = 0x0020
 
 def find_dev():
     d=usb.core.find(idVendor=VID,idProduct=PID)
@@ -72,7 +75,7 @@ def read_pkt(dev, timeout=300):
 def ctrl_get_status(dev, timeout=300):
     # Vendor IN (device->host). В прошивке GET_STATUS по EP0 разрешён всегда.
     try:
-        data = dev.ctrl_transfer(0xC0, CMD_GET_STATUS, 0, 0, 64, timeout=timeout)
+        data = dev.ctrl_transfer(0xC0, CMD_GET_STATUS, 0, 0, STAT_LEN_V5, timeout=timeout)
         return bytes(data)
     except usb.core.USBError as e:
         if getattr(e,'errno',None) in (110,10060):
@@ -100,6 +103,21 @@ def parse_status(buf: bytes):
     # Расшифровка flags2
     f2 = out.get('flags2',0)
     out['flags2_bits'] = {FLAG2_BITS[i]: bool(f2 & (1<<i)) for i in range(min(len(FLAG2_BITS),16))}
+    # reserved3 packed optic info:
+    # [15:8]=optic_power, [7:2]=optic_hold_seconds, [0]=optic_active, [1]=tx_enable
+    rs3 = out.get('reserved3', 0)
+    out['optic_power'] = (rs3 >> 8) & 0xFF
+    out['optic_hold_seconds'] = (rs3 >> 2) & 0x3F
+    out['optic_active_packed'] = bool(rs3 & 0x01)
+    out['tx_enable_packed'] = bool(rs3 & 0x02)
+    out['optic_active_flag'] = bool(out.get('flags_runtime', 0) & VND_STFLAG_OPTIC_ACTIVE)
+    if len(buf) >= STAT_LEN_V5 and out.get('version', 0) >= 5:
+        out['optic_hold_ds'] = int.from_bytes(buf[96:98], 'little')
+        out['led_pattern'] = buf[98]
+        out['sync_local_status'] = buf[99]
+        out['sync_seen_mask'] = int.from_bytes(buf[100:104], 'little')
+        out['sync_node_count'] = buf[104]
+        out['sync_status_bytes'] = list(buf[105:136])
     return out
 
 def main():
@@ -145,7 +163,17 @@ def main():
             if st is None:
                 print(f'[{i}] BAD len={len(pkt)} hex={pkt.hex()}')
             else:
-                print(f'[{i}] len={len(pkt)} cur_samples={st["cur_samples"]} produced_seq={st["produced_seq"]} sent0={st["sent0"]} sent1={st["sent1"]} tx_cplt={st["dbg_tx_cplt"]} test_frames={st["test_frames"]} flags2={hex(st["flags2"])} bits={st["flags2_bits"]}')
+                print(
+                    f'[{i}] len={len(pkt)} cur_samples={st["cur_samples"]} produced_seq={st["produced_seq"]} '
+                    f'sent0={st["sent0"]} sent1={st["sent1"]} tx_cplt={st["dbg_tx_cplt"]} '
+                    f'test_frames={st["test_frames"]} flags2={hex(st["flags2"])} bits={st["flags2_bits"]} '
+                    f'optic_power={st["optic_power"]} optic_hold_s={st["optic_hold_seconds"]} '
+                    f'optic_active={int(st["optic_active_packed"] or st["optic_active_flag"])} '
+                    f'tx_enable={int(st["tx_enable_packed"])} '
+                    f'optic_hold_ds={st.get("optic_hold_ds", st["optic_hold_seconds"]*10)} '
+                    f'led_pattern={st.get("led_pattern", "-")} '
+                    f'sync_count={st.get("sync_node_count", "-")} sync_mask=0x{st.get("sync_seen_mask", 0):08X}'
+                )
         time.sleep(args.interval)
 
     try:

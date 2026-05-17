@@ -133,6 +133,10 @@ void adc_stream_get_debug(adc_stream_debug_t *out);
 // Получить parity (чётность) буфера по seq (0=even, 1=odd) для 400Hz режима
 uint8_t adc_get_buffer_parity(uint32_t seq);
 
+// Логическое состояние маркера фазы (0/1), не зависящее от принудительного зажима PA2/PC7.
+uint8_t adc_stream_get_marker_level(void);
+void adc_stream_refresh_marker_output(void);
+
 // Одноразово инвертировать локальную полярность фазы (PA3/паритет) без изменения DMA/USB логики
 void adc_stream_invert_phase_polarity(void);
 

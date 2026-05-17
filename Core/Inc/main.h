@@ -141,16 +141,38 @@ extern volatile uint32_t systick_heartbeat;
 #define OPTIC_TX_GPIO_Port GPIOA
 
 #define RS485_SYNC_BYTE 0xA5u
-/* Прямая целевая фаза синхронизации в семплах, без скрытых авто-коррекций.
-   Подбирается вручную по осциллографу; допустимы и значения у конца буфера (например 598/599). */
+
+// MCP4261 через аппаратный SPI1: PB3/PB4/PB5 (SCK/MISO/MOSI, AF5) + PA15 (NSS, GPIO)
+#define MCP4261_SPI_NSS_Pin GPIO_PIN_15
+#define MCP4261_SPI_NSS_GPIO_Port GPIOA
+#define MCP4261_SPI_SCK_Pin GPIO_PIN_3
+#define MCP4261_SPI_SCK_GPIO_Port GPIOB
+#define MCP4261_SPI_MISO_Pin GPIO_PIN_4
+#define MCP4261_SPI_MISO_GPIO_Port GPIOB
+#define MCP4261_SPI_MOSI_Pin GPIO_PIN_5
+#define MCP4261_SPI_MOSI_GPIO_Port GPIOB
+
+/* Базовая AUTO-цель фазы в семплах. В прошивке к ней добавляется длительность
+   RS485 sync-байта, потому что slave измеряет фазу в IRQ уже после приема пакета. */
 #define SYNC_TARGET_PHASE_SAMPLES (10)
 
 int32_t tim15_get_default_target_phase_ticks(void);
 void rs485_sync_on_buffer_complete(uint8_t parity);
 uint32_t rs485_get_master_claim_delay_ms(void);
 uint8_t optic_sensor_get_state(void);
+uint8_t optic_sensor_set_hold_seconds(uint8_t seconds);
+uint8_t optic_sensor_get_hold_seconds(void);
+uint16_t optic_sensor_set_hold_deciseconds(uint16_t deciseconds);
+uint16_t optic_sensor_get_hold_deciseconds(void);
 uint8_t optic_tx_set_power(uint8_t power);
 uint8_t optic_tx_get_power(void);
+uint8_t dynamic_led_set_pattern(uint8_t pattern_id);
+uint8_t dynamic_led_get_pattern(void);
+uint8_t rs485_status_get_snapshot(uint8_t *local_status,
+                                  uint8_t *node_count,
+                                  uint32_t *seen_mask,
+                                  uint8_t *status_bytes,
+                                  uint8_t max_status_bytes);
 
 // --- Профили потоков ADC (буфер/частота) ---
 // Профиль B (default): f_buf=300 Гц, N=912 (Fs=273600 Гц)

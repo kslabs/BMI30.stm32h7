@@ -5,6 +5,7 @@
 #include "main.h"
 #include "adc_stream.h"
 #include "usb_vendor_app.h"
+#include "ws2812_spi.h"
 
 /* Управление логированием этого модуля: по умолчанию выключено, чтобы не спамить из ISR */
 #ifndef ADC_LOG_ENABLE
@@ -344,26 +345,30 @@ static inline void adc_marker_set_level_b(uint8_t level_high)
 
 static inline uint8_t adc_marker_output_allowed(void)
 {
-    /* Потерянное после отката поведение:
-       маркер на PA2/PC7 должен жить только при активном стриме и разрешённом TX. */
-    return (uint8_t)((vnd_is_streaming() && vnd_is_tx_enabled()) ? 1u : 0u);
+    /* USB stream может стартовать/останавливаться независимо от sync/маркера.
+       Фазовый маркер PA2/PC7 должен жить всегда, иначе без хоста sync теряется.
+       Реальное разрешение внешнего передатчика по-прежнему контролируется PA1. */
+    return 1u;
 }
 
 static inline uint8_t adc_marker_get_level(void)
 {
-    return ((ADC_MARKER_PORT_A->ODR & ADC_MARKER_PIN_A) != 0u) ? 1u : 0u;
+    return (uint8_t)(s_pb8_state & 1u);
 }
 
 static inline void adc_marker_set_level(uint8_t level_high)
 {
+    uint8_t physical_level = (uint8_t)(level_high ? 1u : 0u);
+
+    /* Логическая фаза sync должна жить независимо от USB stream/TX gate.
+       Физические PA2/PC7 можем при этом принудительно зажимать в LOW. */
+    s_pb8_state = (uint8_t)(level_high ? 1u : 0u);
     if (!adc_marker_output_allowed()) {
-        level_high = 0u;
+        physical_level = 0u;
     }
 
-    /* Единственный источник истины для phase/polarity — реальный GPIO маркера. */
-    s_pb8_state = (uint8_t)(level_high ? 1u : 0u);
-    adc_marker_set_level_a(level_high);
-    adc_marker_set_level_b(level_high);
+    adc_marker_set_level_a(physical_level);
+    adc_marker_set_level_b(physical_level);
 }
 
 static inline void adc_marker_pa3_toggle(void)
@@ -386,8 +391,17 @@ static inline void adc_marker_pa3_toggle(void)
 static inline uint8_t adc_parity_from_pa3(void)
 {
     uint8_t marker_level = adc_marker_get_level();
-    s_pb8_state = marker_level;
     return (uint8_t)((marker_level ^ 1u) & 1u);
+}
+
+uint8_t adc_stream_get_marker_level(void)
+{
+    return adc_marker_get_level();
+}
+
+void adc_stream_refresh_marker_output(void)
+{
+    adc_marker_set_level(adc_marker_get_level());
 }
 
 void adc_stream_invert_phase_polarity(void)
@@ -2350,6 +2364,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
         #endif
 
         s_next_ring_index = next_idx;
+
+        ws2812_spi_on_adc_buffer_complete();
 
         /* Попробуем опубликовать готовые подряд пары */
         adc_mark_ready_and_publish(READY_MASK_FULL);

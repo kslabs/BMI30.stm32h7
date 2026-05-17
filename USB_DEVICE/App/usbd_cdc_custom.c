@@ -461,7 +461,7 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
   USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)pdev->pClassData;
   if (!hcdc) return (uint8_t)USBD_FAIL;
   uint16_t status_info = 0; uint16_t len;
-  /* ДОБАВЛЕНО: ветка обработки vendor-specific control (GET_STATUS / SOFT/DEEP RESET) */
+  /* ДОБАВЛЕНО: ветка обработки vendor-specific control (GET_STATUS / GET_LCD_STATUS / SOFT/DEEP RESET) */
   if ( (req->bmRequest & USB_REQ_TYPE_MASK) == USB_REQ_TYPE_VENDOR ) {
     VND_LOGF("[SETUP:VND] bm=0x%02X bReq=0x%02X wIndex=%u wLength=%u", (unsigned)req->bmRequest, (unsigned)req->bRequest, (unsigned)req->wIndex, (unsigned)req->wLength);
     /* Принимаем IN GET_STATUS вне зависимости от получателя и номера интерфейса (wIndex),
@@ -474,6 +474,26 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
       uint16_t l = vnd_build_status(buf, max_len);
       if(!l){ USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL; }
       VND_LOGF("[SETUP:VND] -> STAT %uB", (unsigned)l);
+      USBD_CtlSendData(pdev, buf, l);
+      return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) && req->bRequest == VND_CMD_GET_LCD_STATUS ) {
+      uint8_t buf[VND_LCD_STATUS_MAX];
+      uint16_t max_len = (req->wLength != 0U && req->wLength < (uint16_t)sizeof(buf))
+                       ? req->wLength
+                       : (uint16_t)sizeof(buf);
+      uint16_t l = vnd_build_lcd_status(buf, max_len);
+      if(!l){ USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL; }
+      VND_LOGF("[SETUP:VND] -> LCDS %uB", (unsigned)l);
+      USBD_CtlSendData(pdev, buf, l);
+      return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) && req->bRequest == VND_CMD_GET_DC_CONFIG ) {
+      uint8_t buf[VND_DC_CONFIG_MAX];
+      uint16_t max_len = (req->wLength != 0U && req->wLength < (uint16_t)sizeof(buf))
+                       ? req->wLength
+                       : (uint16_t)sizeof(buf);
+      uint16_t l = vnd_build_dc_config(buf, max_len);
+      if(!l){ USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL; }
+      VND_LOGF("[SETUP:VND] -> DCCF %uB", (unsigned)l);
       USBD_CtlSendData(pdev, buf, l);
       return (uint8_t)USBD_OK;
     } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 && req->bRequest == 0x7Eu ) {
@@ -492,12 +512,23 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
     } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 &&
                 (req->bRequest == VND_CMD_SET_ASYNC_MODE || req->bRequest == VND_CMD_SET_CHMODE ||
                  req->bRequest == VND_CMD_SET_FULL_MODE  || req->bRequest == VND_CMD_SET_PROFILE ||
-                 req->bRequest == VND_CMD_SET_TX_ENABLE || req->bRequest == VND_CMD_SET_OPTIC_POWER) ) {
+                 req->bRequest == VND_CMD_SET_TX_ENABLE || req->bRequest == VND_CMD_SET_OPTIC_POWER ||
+                 req->bRequest == VND_CMD_SET_LED_PATTERN) ) {
       /* Альтернативный путь: принять параметр через wValue (без data stage) */
       uint8_t tmp[2];
       tmp[0] = (uint8_t)req->bRequest;
       tmp[1] = (uint8_t)(req->wValue & 0xFFU);
       USBD_VND_DataReceived(tmp, 2U);
+      USBD_CtlSendStatus(pdev);
+      return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 &&
+                (req->bRequest == VND_CMD_SET_OPTIC_HOLD) ) {
+      /* SET_OPTIC_HOLD: 16-bit deciseconds in wValue (0=default 3.0s). */
+      uint8_t tmp[3];
+      tmp[0] = (uint8_t)req->bRequest;
+      tmp[1] = (uint8_t)(req->wValue & 0xFFU);
+      tmp[2] = (uint8_t)((req->wValue >> 8) & 0xFFU);
+      USBD_VND_DataReceived(tmp, 3U);
       USBD_CtlSendStatus(pdev);
       return (uint8_t)USBD_OK;
     } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 &&
@@ -513,7 +544,9 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
     } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength > 0 &&
                 (req->bRequest == VND_CMD_SET_ASYNC_MODE || req->bRequest == VND_CMD_SET_CHMODE ||
                  req->bRequest == VND_CMD_SET_FULL_MODE  || req->bRequest == VND_CMD_SET_PROFILE ||
-                 req->bRequest == VND_CMD_SET_TX_ENABLE || req->bRequest == VND_CMD_SET_OPTIC_POWER) ) {
+                 req->bRequest == VND_CMD_SET_TX_ENABLE || req->bRequest == VND_CMD_SET_OPTIC_POWER ||
+                 req->bRequest == VND_CMD_SET_OPTIC_HOLD || req->bRequest == VND_CMD_SET_LED_PATTERN ||
+                 req->bRequest == VND_CMD_SET_DC_CONFIG) ) {
       /* Принимаем небольшие конфиги по control OUT с телом данных, доставляем в Vendor как будто по Bulk OUT */
       hcdc->CmdOpCode = req->bRequest;
       hcdc->CmdLength = (uint8_t)req->wLength;
@@ -661,10 +694,6 @@ static uint8_t USBD_CDCVND_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum)
       SCB_InvalidateDCache_by_Addr((uint32_t*)inv_addr, (int32_t)inv_len);
     }
 #endif
-    /* Мини-лог: подтверждаем приём однобайтовой команды */
-    if (vnd_rx_len > 0) {
-      printf("[CMD] 0x%02X len=%lu\r\n", (unsigned)vnd_rx_buf[0], (unsigned long)vnd_rx_len);
-    }
     USBD_VND_DataReceived(vnd_rx_buf, vnd_rx_len);
     /* Небольшой memory barrier для надёжности перед реармом приёма */
     {
@@ -694,7 +723,10 @@ static uint8_t USBD_CDCVND_EP0_RxReady(USBD_HandleTypeDef *pdev)
         op == VND_CMD_SET_FULL_MODE ||
         op == VND_CMD_SET_PROFILE   ||
         op == VND_CMD_SET_TX_ENABLE ||
-        op == VND_CMD_SET_OPTIC_POWER) {
+        op == VND_CMD_SET_OPTIC_POWER ||
+        op == VND_CMD_SET_OPTIC_HOLD ||
+        op == VND_CMD_SET_LED_PATTERN ||
+        op == VND_CMD_SET_DC_CONFIG) {
       uint32_t tot = (uint32_t)len + 1U;
       if (tot > sizeof(vnd_rx_buf)) tot = sizeof(vnd_rx_buf); /* страхуемся от выхода за границы */
       vnd_rx_buf[0] = op;

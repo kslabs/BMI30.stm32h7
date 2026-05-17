@@ -43,7 +43,8 @@ Core/Src/usb_cdc_proto.o: ../Core/Src/usb_cdc_proto.c \
  C://Users//Admin//STM32Cube//Repository//STM32Cube_FW_H7_V1.12.1//Drivers//STM32H7xx_HAL_Driver//Inc/stm32h7xx_hal_pcd.h \
  C://Users//Admin//STM32Cube//Repository//STM32Cube_FW_H7_V1.12.1//Drivers//STM32H7xx_HAL_Driver//Inc/stm32h7xx_ll_usb.h \
  C://Users//Admin//STM32Cube//Repository//STM32Cube_FW_H7_V1.12.1//Drivers//STM32H7xx_HAL_Driver//Inc/stm32h7xx_hal_pcd_ex.h \
- ../Drivers/BSP/ST7735/lcd.h ../Core/Inc/main.h ../Core/Inc/adc_stream.h
+ ../Drivers/BSP/ST7735/lcd.h ../Core/Inc/main.h ../Core/Inc/adc_stream.h \
+ ../Core/Inc/build_info.h
 ../Core/Inc/usb_cdc_proto.h:
 ../Core/Inc/adc_stream.h:
 ../Core/Inc/main.h:
@@ -93,3 +94,4 @@ C://Users//Admin//STM32Cube//Repository//STM32Cube_FW_H7_V1.12.1//Drivers//STM32
 ../Drivers/BSP/ST7735/lcd.h:
 ../Core/Inc/main.h:
 ../Core/Inc/adc_stream.h:
+../Core/Inc/build_info.h:

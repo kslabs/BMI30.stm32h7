@@ -22,6 +22,8 @@ extern "C" {
 // Новые команды Vendor протокола
 #define CMD_SET_PROFILE      0x14  // param: profile id (0=B,1=C)
 #define CMD_SET_ROI_US       0x15  // payload: offset_us(uint32), length_us(uint32)
+#define CMD_GET_TEMP         0x31  // получить температуру кристалла (ответ: 2 байта temp_c_i16 LE)
+#define CMD_GET_VERSION      0x32  // получить версию прошивки (ответ: 4 байта version + 0 терминаль или длина строки)
 
 // Ответы (IN <- STM32)
 #define RSP_ACK             0x80

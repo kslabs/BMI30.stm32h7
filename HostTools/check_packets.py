@@ -1,12 +1,29 @@
 #!/usr/bin/env python3
 """Проверка поступления всех 4 типов пакетов (A_even, A_odd, B_even, B_odd)."""
+import os
+import sys
 import usb.core
 import struct
 import time
 
+_this_dir = os.path.dirname(__file__)
+_proj_root = os.path.abspath(os.path.join(_this_dir, os.pardir))
+if _proj_root not in sys.path:
+    sys.path.insert(0, _proj_root)
+
+from usb_vendor.usb_stream import (
+    CMD_ASYNC,
+    CMD_CHMODE,
+    CMD_FULL_MODE,
+    CMD_SET_PROFILE,
+    CMD_START_STREAM,
+    CMD_STOP_STREAM,
+)
+
 VID = 0xCAFE
 PID = 0x4001
-EP_IN = 0x81
+EP_IN = 0x83
+EP_OUT = 0x03
 HDR_SIZE = 32
 
 def parse_hdr(b: bytes):
@@ -15,7 +32,8 @@ def parse_hdr(b: bytes):
     magic, ver, flags, seq, ts, total_samples, zone_cnt, zone_off, zone_len, reserved, reserved2, crc16 = struct.unpack_from(
         '<HBBIIHHIIIHH', b, 0
     )
-    parity = 1 if (flags & 0x80) else 0
+    # В актуальном протоколе bit7 flags = TEST, parity берём из reserved2 (buffer_index & 1).
+    parity = int(reserved2 & 0x01)
     ch_mask = flags & 0x03
     return {
         'magic': magic,
@@ -33,44 +51,44 @@ def main():
         return
     
     print("Устройство найдено. Настраиваю и отправляю START...")
-    # STOP (0x21)
+    # STOP
     try:
-        dev.ctrl_transfer(0x40, 0, 0, 0, bytes([0x21]), timeout=1000)
+        dev.write(EP_OUT, bytes([CMD_STOP_STREAM]), timeout=1000)
         time.sleep(0.2)
     except:
         pass
     
-    # SET_ASYNC_MODE (0x18) = 0x80 (paired + strict)
+    # SET_ASYNC_MODE = 0x80 (paired + strict)
     try:
-        dev.ctrl_transfer(0x40, 0, 0, 0, bytes([0x18, 0x80]), timeout=1000)
+        dev.write(EP_OUT, bytes([CMD_ASYNC, 0x80]), timeout=1000)
         time.sleep(0.05)
     except:
         pass
     
-    # SET_CHMODE (0x19) = 0x02 (Both A+B)
+    # SET_CHMODE = 0x02 (Both A+B)
     try:
-        dev.ctrl_transfer(0x40, 0, 0, 0, bytes([0x19, 0x02]), timeout=1000)
+        dev.write(EP_OUT, bytes([CMD_CHMODE, 0x02]), timeout=1000)
         time.sleep(0.05)
     except:
         pass
     
-    # SET_FULL_MODE (0x1B) = 0x01
+    # SET_FULL_MODE = 0x01
     try:
-        dev.ctrl_transfer(0x40, 0, 0, 0, bytes([0x1B, 0x01]), timeout=1000)
+        dev.write(EP_OUT, bytes([CMD_FULL_MODE, 0x01]), timeout=1000)
         time.sleep(0.05)
     except:
         pass
     
-    # SET_PROFILE (0x16) = 0x00
+    # SET_PROFILE = 0x00
     try:
-        dev.ctrl_transfer(0x40, 0, 0, 0, bytes([0x16, 0x00]), timeout=1000)
+        dev.write(EP_OUT, bytes([CMD_SET_PROFILE, 0x00]), timeout=1000)
         time.sleep(0.05)
     except:
         pass
     
-    # START (0x20)
+    # START
     try:
-        dev.ctrl_transfer(0x40, 0, 0, 0, bytes([0x20]), timeout=1000)
+        dev.write(EP_OUT, bytes([CMD_START_STREAM]), timeout=1000)
         time.sleep(0.5)
     except:
         pass
@@ -193,7 +211,7 @@ def main():
     
     # Отправка STOP
     try:
-        dev.ctrl_transfer(0x40, 0, 0, 0, bytes([0x21]), timeout=1000)
+        dev.write(EP_OUT, bytes([CMD_STOP_STREAM]), timeout=1000)
     except:
         pass
 

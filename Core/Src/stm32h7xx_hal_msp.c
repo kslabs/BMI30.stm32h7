@@ -28,7 +28,6 @@ extern DMA_HandleTypeDef hdma_adc1;
 extern DMA_HandleTypeDef hdma_adc2;
 
 extern DMA_HandleTypeDef hdma_spi3_tx;
-extern DMA_HandleTypeDef hdma_usart2_rx;
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
@@ -85,6 +84,7 @@ void HAL_MspInit(void)
 }
 
 static uint32_t HAL_RCC_ADC12_CLK_ENABLED=0;
+static uint32_t HAL_RCC_ADC3_CLK_ENABLED=0;
 
 /**
   * @brief ADC MSP Initialization
@@ -186,6 +186,21 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
 
     /* USER CODE END ADC2_MspInit 1 */
   }
+  else if(hadc->Instance==ADC3)
+  {
+    /* USER CODE BEGIN ADC3_MspInit 0 */
+
+    /* USER CODE END ADC3_MspInit 0 */
+    /* Peripheral clock enable. ADC3 is on AHB4 on STM32H72/H73, separate from ADC1/2. */
+    HAL_RCC_ADC3_CLK_ENABLED++;
+    if(HAL_RCC_ADC3_CLK_ENABLED==1){
+      __HAL_RCC_ADC3_CLK_ENABLE();
+    }
+
+    /* USER CODE BEGIN ADC3_MspInit 1 */
+
+    /* USER CODE END ADC3_MspInit 1 */
+  }
 
 }
 
@@ -240,6 +255,21 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
     /* USER CODE BEGIN ADC2_MspDeInit 1 */
 
     /* USER CODE END ADC2_MspDeInit 1 */
+  }
+  else if(hadc->Instance==ADC3)
+  {
+    /* USER CODE BEGIN ADC3_MspDeInit 0 */
+
+    /* USER CODE END ADC3_MspDeInit 0 */
+    /* Peripheral clock disable */
+    HAL_RCC_ADC3_CLK_ENABLED--;
+    if(HAL_RCC_ADC3_CLK_ENABLED==0){
+      __HAL_RCC_ADC3_CLK_DISABLE();
+    }
+
+    /* USER CODE BEGIN ADC3_MspDeInit 1 */
+
+    /* USER CODE END ADC3_MspDeInit 1 */
   }
 
 }
@@ -329,31 +359,41 @@ void HAL_DAC_MspDeInit(DAC_HandleTypeDef* hdac)
 void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-  if(hspi->Instance==SPI2)
+  if(hspi->Instance==SPI1)
   {
-    /* USER CODE BEGIN SPI2_MspInit 0 */
+    /* USER CODE BEGIN SPI1_MspInit 0 */
 
-    /* USER CODE END SPI2_MspInit 0 */
+    /* USER CODE END SPI1_MspInit 0 */
     /* Peripheral clock enable */
-    __HAL_RCC_SPI2_CLK_ENABLE();
+    __HAL_RCC_SPI1_CLK_ENABLE();
 
     __HAL_RCC_GPIOB_CLK_ENABLE();
-    /**SPI2 GPIO Configuration
-    PB12     ------> SPI2_NSS
-    PB13     ------> SPI2_SCK
-    PB14     ------> SPI2_MISO
-    PB15     ------> SPI2_MOSI
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    /**SPI1 GPIO Configuration (MCP4261)
+    PB3     ------> SPI1_SCK  (AF5)
+    PB4     ------> SPI1_MISO (AF5)
+    PB5     ------> SPI1_MOSI (AF5)
+    PA15    ------> NSS (GPIO Output, программный)
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
+    GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
+    GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    /* USER CODE BEGIN SPI2_MspInit 1 */
+    /* PA15: NSS программный — HIGH по умолчанию (chip deselect) */
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+    GPIO_InitStruct.Pin = GPIO_PIN_15;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = 0;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /* USER CODE END SPI2_MspInit 1 */
+    /* USER CODE BEGIN SPI1_MspInit 1 */
+
+    /* USER CODE END SPI1_MspInit 1 */
   }
   else if(hspi->Instance==SPI3)
   {
@@ -419,19 +459,12 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     PE12     ------> SPI4_SCK
     PE14     ------> SPI4_MOSI
     */
-    GPIO_InitStruct.Pin = LCD_SCL_Pin;
+    GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_14;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF5_SPI4;
-    HAL_GPIO_Init(LCD_SCL_GPIO_Port, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = LCD_SDA_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate = GPIO_AF5_SPI4;
-    HAL_GPIO_Init(LCD_SDA_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
     /* USER CODE BEGIN SPI4_MspInit 1 */
 
@@ -448,25 +481,26 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
   */
 void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
 {
-  if(hspi->Instance==SPI2)
+  if(hspi->Instance==SPI1)
   {
-    /* USER CODE BEGIN SPI2_MspDeInit 0 */
+    /* USER CODE BEGIN SPI1_MspDeInit 0 */
 
-    /* USER CODE END SPI2_MspDeInit 0 */
+    /* USER CODE END SPI1_MspDeInit 0 */
     /* Peripheral clock disable */
-    __HAL_RCC_SPI2_CLK_DISABLE();
+    __HAL_RCC_SPI1_CLK_DISABLE();
 
-    /**SPI2 GPIO Configuration
-    PB12     ------> SPI2_NSS
-    PB13     ------> SPI2_SCK
-    PB14     ------> SPI2_MISO
-    PB15     ------> SPI2_MOSI
+    /**SPI1 GPIO Configuration (MCP4261)
+    PB3     ------> SPI1_SCK
+    PB4     ------> SPI1_MISO
+    PB5     ------> SPI1_MOSI
+    PA15    ------> NSS (GPIO)
     */
-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15);
+    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5);
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_15);
 
-    /* USER CODE BEGIN SPI2_MspDeInit 1 */
+    /* USER CODE BEGIN SPI1_MspDeInit 1 */
 
-    /* USER CODE END SPI2_MspDeInit 1 */
+    /* USER CODE END SPI1_MspDeInit 1 */
   }
   else if(hspi->Instance==SPI3)
   {
@@ -504,7 +538,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
     PE12     ------> SPI4_SCK
     PE14     ------> SPI4_MOSI
     */
-    HAL_GPIO_DeInit(GPIOE, LCD_SCL_Pin|LCD_SDA_Pin);
+    HAL_GPIO_DeInit(GPIOE, GPIO_PIN_12|GPIO_PIN_14);
 
     /* USER CODE BEGIN SPI4_MspDeInit 1 */
 
@@ -971,23 +1005,6 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-    /* USART2 RX DMA: непрерывное кольцо для фонового разбора RS485 */
-    hdma_usart2_rx.Instance = DMA1_Stream2;
-    hdma_usart2_rx.Init.Request = DMA_REQUEST_USART2_RX;
-    hdma_usart2_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    hdma_usart2_rx.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_usart2_rx.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_usart2_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-    hdma_usart2_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-    hdma_usart2_rx.Init.Mode = DMA_CIRCULAR;
-    hdma_usart2_rx.Init.Priority = DMA_PRIORITY_LOW;
-    hdma_usart2_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-    if (HAL_DMA_Init(&hdma_usart2_rx) != HAL_OK)
-    {
-      Error_Handler();
-    }
-    __HAL_LINKDMA(huart, hdmarx, hdma_usart2_rx);
-
     HAL_NVIC_SetPriority(USART2_IRQn, 6, 0);
     HAL_NVIC_EnableIRQ(USART2_IRQn);
   }
@@ -1024,7 +1041,6 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
   {
     __HAL_RCC_USART2_CLK_DISABLE();
     HAL_GPIO_DeInit(GPIOD, GPIO_PIN_5|GPIO_PIN_6);
-    HAL_DMA_DeInit(huart->hdmarx);
     HAL_NVIC_DisableIRQ(USART2_IRQn);
   }
 

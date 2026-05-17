@@ -14,7 +14,7 @@ import sys
 import time
 
 try:
-    from usb_vendor.usb_stream import USBStream, CMD_SET_DC_ADAPT
+    from usb_vendor.usb_stream import USBStream
 except ImportError:
     print("Ошибка: не найден модуль usb_vendor")
     print("Убедитесь что вы запускаете из корня проекта")
@@ -24,14 +24,14 @@ except ImportError:
 def freeze_dc_adaptation(stream: USBStream):
     """Заморозить DC-адаптацию (прекратить обучение, продолжить вычитание)"""
     print("[DC] Замораживаем адаптацию...")
-    stream.send_cmd(CMD_SET_DC_ADAPT, b'\x00')  # 0x00 = FREEZE
+    stream.set_dc_adapt(False)  # 0x00 = FREEZE
     print("[DC] Адаптация заморожена (FREEZE)")
 
 
 def resume_dc_adaptation(stream: USBStream):
     """Возобновить DC-адаптацию (продолжить обучение)"""
     print("[DC] Возобновляем адаптацию...")
-    stream.send_cmd(CMD_SET_DC_ADAPT, b'\x01')  # 0x01 = ACTIVE
+    stream.set_dc_adapt(True)  # 0x01 = ACTIVE
     print("[DC] Адаптация активна (ACTIVE)")
 
 
@@ -84,17 +84,17 @@ def main():
         print("\nИнтеграция в код детекции сигнала:")
         print("""
 # В вашем коде детекции на RPI:
-from usb_vendor.usb_stream import USBStream, CMD_SET_DC_ADAPT
+from usb_vendor.usb_stream import USBStream
 
 stream = USBStream()
 
 # При детекции сигнала
 if signal_detected():
-    stream.send_cmd(CMD_SET_DC_ADAPT, b'\\x00')  # FREEZE
+    stream.set_dc_adapt(False)  # FREEZE
     
 # Когда сигнал пропал
 if signal_lost():
-    stream.send_cmd(CMD_SET_DC_ADAPT, b'\\x01')  # ACTIVE
+    stream.set_dc_adapt(True)  # ACTIVE
         """)
         
         return 0

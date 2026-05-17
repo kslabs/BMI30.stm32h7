@@ -275,11 +275,35 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
   static volatile uint32_t cdc_rx_count = 0;
   static volatile uint8_t last_cmd = 0;
   static volatile uint32_t last_len = 0;
+  char cdc_rx_hex[3 * 24 + 1];
+  uint32_t dump_len = 0;
+  uint32_t pos = 0;
   
   cdc_rx_count++;
   if(*Len > 0) last_cmd = Buf[0];
   last_len = *Len;
   (void)cdc_rx_count; (void)last_cmd; (void)last_len; // suppress warnings
+
+  if ((Buf != NULL) && (Len != NULL) && (*Len > 0u)) {
+    dump_len = (*Len > 24u) ? 24u : *Len;
+    for (uint32_t i = 0; i < dump_len; ++i) {
+      int n = snprintf(&cdc_rx_hex[pos], sizeof(cdc_rx_hex) - pos,
+                       "%02X%s", (unsigned)Buf[i], ((i + 1u) < dump_len) ? " " : "");
+      if (n <= 0) {
+        break;
+      }
+      pos += (uint32_t)n;
+      if (pos >= sizeof(cdc_rx_hex)) {
+        pos = sizeof(cdc_rx_hex) - 1u;
+        break;
+      }
+    }
+    cdc_rx_hex[(pos < sizeof(cdc_rx_hex)) ? pos : (sizeof(cdc_rx_hex) - 1u)] = 0;
+    printf("[CDC_RX_RAW] len=%lu head=%s%s\r\n",
+           (unsigned long)(*Len),
+           cdc_rx_hex,
+           (*Len > dump_len) ? " ..." : "");
+  }
   
   // Индикация приёма UART данных через LED - мигать при любом событии RX
   HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_SET); // Включить LED
@@ -349,9 +373,13 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
       case 0x14u: // VND_CMD_SET_PROFILE
       case 0x18u: // VND_CMD_SET_ASYNC_MODE
       case 0x19u: // VND_CMD_SET_CHMODE
+      case 0x1Bu: // VND_CMD_SET_DC_ADAPT
+      case 0x1Eu: // VND_CMD_CALIB_DC_FAST
+      case 0x1Fu: // VND_CMD_SET_DC_CONFIG
       case 0x15u: // VND_CMD_SET_ROI_US
       case 0x20u: // VND_CMD_START_STREAM
       case 0x21u: // VND_CMD_STOP_STREAM
+      case 0x2Bu: // VND_CMD_SAVE_DC_TO_FLASH
       case 0x30u: // VND_CMD_GET_STATUS
       case 0x33u: // VND_CMD_SET_TX_ENABLE
       case 0x34u: // VND_CMD_SET_OPTIC_POWER

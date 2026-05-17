@@ -54,6 +54,18 @@ python3 HostTools/list_usb_interfaces.py
 
 Режим full mode (реальные ADC кадры, last-buffer-wins уже включён в прошивке). Скрипт читает A/B‑пары, проверяет строгий порядок, STAT только между парами, в конце печатает FPS.
 
+Критично: что именно запускает bulk-поток
+
+- Для старта Vendor bulk-потока недостаточно команд DC-компенсации.
+- Рабочая последовательность запуска на RPI должна включать:
+  - `SetInterface(IF#2, alt=1)`
+  - `SET_WINDOWS (0x10)`
+  - `SET_STREAM_MODE (0x15)`
+  - при необходимости `SET_PROFILE (0x14)` и `SET_ASYNC (0x18)`
+  - `START_STREAM (0x20)`
+- Команды `SET_DC_ADAPT (0x1B)`, `CALIB_DC_FAST (0x1E)` и чтение `GET_STATUS` по EP0 только управляют DC/диагностикой и сами по себе bulk-поток не запускают.
+- Если в логе есть только повторяющиеся `0x1B`, `0x1E` и `EP0 status len=64`, это означает: STM32 отвечает по EP0, но host-side код не выполнил полноценный запуск bulk stream.
+
 ```bash
 python3 HostTools/vendor_stream_read.py \
   --vid 0xCAFE --pid 0x4001 --intf 2 --ep-in 0x83 --ep-out 0x03 \
@@ -144,6 +156,159 @@ send_host_rx_clear(dev, 0x03)
 
 - если ваш RPI-скрипт реально читает и парсит поток, но не шлёт `0x36`, LED на STM32 будет `синим`, а не `зелёным`
 - это теперь ожидаемое поведение
+
+## 4.3) Оптика: установка чувствительности, времени удержания и чтение результата срабатывания
+
+В прошивке используются команды Vendor OUT:
+
+- `0x34 = VND_CMD_SET_OPTIC_POWER`
+- `0x39 = VND_CMD_SET_OPTIC_HOLD`
+- payload `0x34`: `u8` в диапазоне `0..255`
+  - `0` = минимальная мощность/чувствительность
+  - `255` = максимальная
+- payload `0x39`: новый формат `u16 hold_ds` little-endian, где единица = `0.1 сек`
+  - `0` = вернуть значение по умолчанию `30` (`3.0 сек`)
+  - `1..600` = удерживать `optic_active=1` ещё `0.1..60.0 сек` после каждого изменения входа фотоприёмника
+  - старый формат `u8 seconds` тоже принимается для совместимости
+
+Пример установки через ваш host-код (bulk OUT `0x03`):
+
+```python
+VND_CMD_SET_OPTIC_POWER = 0x34
+VND_CMD_SET_OPTIC_HOLD = 0x39
+
+optic_power = 120     # 0..255
+optic_hold_s = 1.5    # 0=default(3.0), step 0.1, max 60.0
+optic_hold_ds = int(round(optic_hold_s * 10.0))
+
+dev.write(0x03, bytes([VND_CMD_SET_OPTIC_POWER, optic_power & 0xFF]), timeout=1000)
+dev.write(0x03, bytes([VND_CMD_SET_OPTIC_HOLD]) + optic_hold_ds.to_bytes(2, "little"), timeout=1000)
+```
+
+Логика детекта теперь такая:
+
+1. Счёт импульсов больше не используется.
+2. Достаточно первого изменения уровня на входе фотоприёмника.
+3. После каждого изменения `optic_active` удерживается ещё `optic_hold_ds * 0.1` секунд.
+4. По умолчанию используется `3.0 сек`.
+
+Как прочитать "что установлено сейчас" и "сработал ли фотоприёмник":
+
+1. Запросите `STAT` через `GET_STATUS` (`0x30`, лучше по EP0 vendor IN).
+2. В пакете `STAT` используйте поля:
+   - `reserved3[15:8]` = `optic_power` (текущее установленное значение 0..255)
+   - `reserved3[7:2]` = legacy `optic_hold_seconds`, округлённое вверх до секунд
+   - `reserved3[0]` = `optic_active` (1 = фотоприёмник активен, 0 = неактивен)
+   - `flags_runtime bit5 (0x0020)` = дублирующий флаг `optic_active`
+   - в полном `STAT v5` длиной `136` байт: offset `96`, `u16 optic_hold_ds` = точное время удержания в шагах `0.1 сек`
+
+В `STAT v5` также отдаются состояния фотоприёмников всей sync-системы:
+
+- offset `99`: `u8 sync_local_status`
+- offset `100`: `u32 sync_seen_mask`, bit0=node1 ... bit30=node31
+- offset `104`: `u8 sync_node_count`
+- offset `105..135`: `u8 sync_status_bytes[31]`, index0=node1 ... index30=node31
+- формат каждого status byte: bits `0..4=node_id`, bit `5=photoreceiver active`, bit `6=TX enabled`, bit `7=label/reserved`
+
+В проекте это уже декодируют скрипты:
+
+- `python3 HostTools/vendor_get_status.py --ctrl --repeat 5`
+- `python3 HostTools/vendor_quick_status.py --secs 5`
+- `python3 HostTools/vendor_stream_read.py --optic-power 120 --optic-hold-s 1.5 ...`
+
+В выводе будут поля:
+
+- `optic_power=...` (какой параметр реально установлен сейчас)
+- `optic_hold_ds=...` (точное время удержания в шагах 0.1 сек)
+- `optic_active=0/1` (текущий результат срабатывания фотоприёмника)
+- `tx_enable=0/1` (состояние внешнего TX-gate, если используется)
+
+## 4.2) Как прочитать sync-индикатор LCD (`M/S/O`, число и цвет)
+
+Добавлена отдельная vendor-команда:
+
+- `0x38 = VND_CMD_GET_LCD_STATUS`
+- рекомендуемый транспорт: `EP0 vendor IN`
+- ответ: короткая структура `LCDS` длиной `24` байта
+
+Самый простой способ:
+
+```bash
+python3 HostTools/read_lcd_status.py
+```
+
+Скрипт выводит:
+
+- `raw_mode`
+  это реальный режим sync-логики: `MASTER`, `SLAVE` или `OFF`
+- `display_mode`
+  это именно то, что сейчас рисует LCD
+- `display_char`
+  буква индикатора: `M`, `S` или `O`
+- `display_value`
+  число рядом с буквой
+- `color`
+  цвет индикатора на LCD
+- `signal_alive`
+  LCD считает, что sync сейчас жив
+- `sync_ok_visual`
+  LCD считает sync корректным
+- `color_locked`
+  зелёный уже защёлкнут антидребезгом LCD state machine
+- `display_fallback`
+  LCD перешёл в fallback и принудительно показывает `M00`
+
+Что означает число:
+
+- если `display_mode=MASTER`, `display_value` = число обнаруженных slave
+- если `display_mode=SLAVE`, `display_value` = локальный номер слота/узла
+- если `display_mode=OFF`, цифры на LCD пустые, а в пакете `display_value` остаётся `0`
+
+Что означает цвет:
+
+- `GREEN`
+  sync есть и он прошёл визуальный lock
+- `RED`
+  sync живой, но lock ещё не набран или качество sync пока плохое
+- `CYAN`
+  сигнала sync нет, LCD показывает fallback `M00`
+
+Минимальный пример на Python без готового скрипта:
+
+```python
+import struct
+import usb.core
+import usb.util
+
+VID, PID = 0xCAFE, 0x4001
+INTF = 2
+CMD_GET_LCD_STATUS = 0x38
+
+dev = usb.core.find(idVendor=VID, idProduct=PID)
+if dev is None:
+    raise SystemExit("Device not found")
+
+try:
+    dev.set_configuration()
+except Exception:
+    pass
+
+try:
+    usb.util.claim_interface(dev, INTF)
+except Exception:
+    pass
+
+raw = dev.ctrl_transfer(0xC1, CMD_GET_LCD_STATUS, 0, INTF, 24, timeout=1000)
+sig, ver, raw_mode, display_mode, display_value, slave_count, node_id, color_id, display_char, color_rgb565, flags, sync_age_ms, text = \
+    struct.unpack("<4sBBBBBBBBHHI4s", bytes(raw))
+
+print(sig, ver, display_mode, display_value, chr(display_char), hex(color_rgb565), hex(flags), text)
+```
+
+Практическое правило:
+
+- для UI ориентируйтесь на `display_mode`, `display_value`, `display_char`, `color`
+- для диагностики и логики управления ориентируйтесь на `raw_mode`, `slave_count`, `node_id`, `signal_alive`, `sync_ok_visual`
 
 ## 5) DIAG режим (максимальный FPS, тестовые кадры)
 
@@ -311,13 +476,59 @@ PY
 
 Сейчас у Raspberry Pi host есть два разных способа влиять на адресные светодиоды:
 
-- постоянный тестовый паттерн выбирается локально кнопкой `PC13` на устройстве
+- постоянный паттерн 20 динамических светодиодов можно выбрать с RPI через Vendor USB команду `0x3B`
 - временный визуальный паттерн можно запустить с RPI через Vendor USB команду `0x35`
 
 Важно:
-- Через USB сейчас не выбирается постоянный тестовый режим `DRIP/RED_UP/RED_DOWN/RGB_SCOPE/RED_BLUE_SPLIT/COLOR_CYCLE`.
-- Эти режимы циклически переключаются только кнопкой `PC13`.
-- Хост по USB может запустить только временное событие поверх текущего фона.
+- первый onboard/system LED остаётся под управлением STM32; прошивка накладывает на него системный статус независимо от выбранного host-паттерна
+- команда `0x3B` выбирает базовый паттерн для 20 динамических LED
+- команда `0x35` запускает временное событие поверх текущего базового паттерна
+
+### Команда `0x3B` (`VND_CMD_SET_LED_PATTERN`)
+
+Формат payload:
+
+```text
+byte0 = 0x3B
+byte1 = pattern_id
+```
+
+Поддерживаемые `pattern_id`:
+
+- `0` = `OFF`
+- `1` = `IDLE_BREATHE`
+- `2` = `STREAMING`
+- `3` = `SYNC_PULSE`
+- `4` = `UART_RX`
+- `5` = `TUNE`
+- `6` = `RECOVERY`
+- `7` = `HARD_RESET`
+- `8` = `EVENT_B_UP`
+- `9` = `EVENT_A_DOWN`
+- `10` = `EVENT_BOTH_ALT`
+- `11` = `EVENT_SPLIT_IN`
+- `12` = `EVENT_SPLIT_OUT`
+- `13` = `TEST_DRIP`
+- `14` = `TEST_SCOPE_RGB`
+- `15` = `TEST_BLUE`
+- `16` = `TEST_COLOR_CYCLE`
+
+Пример:
+
+```python
+VND_CMD_SET_LED_PATTERN = 0x3B
+dev.write(0x03, bytes([VND_CMD_SET_LED_PATTERN, 13]), timeout=1000)  # TEST_DRIP
+dev.write(0x03, bytes([VND_CMD_SET_LED_PATTERN, 0]), timeout=1000)   # OFF
+```
+
+Готовый helper:
+
+```bash
+python3 HostTools/send_led_event.py --pattern TEST_DRIP
+python3 HostTools/send_led_event.py --pattern OFF
+```
+
+Текущий выбранный паттерн читается из `STAT v5`: offset `98`, `u8 led_pattern`.
 
 ### Команда `0x35` (`VND_CMD_LED_EVENT`)
 

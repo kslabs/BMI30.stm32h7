@@ -13,6 +13,11 @@ extern "C" {
 #define VND_CMD_LED_EVENT       0x35u /* payload: u8 event, u16 duration_ms */
 #define VND_CMD_HOST_RX_ACK     0x36u /* payload: u32 total host-received A/B frames */
 #define VND_CMD_HOST_RX_CLEAR   0x37u /* payload: none, clear host receive heartbeat */
+#define VND_CMD_GET_LCD_STATUS  0x38u /* получить состояние LCD sync-индикатора (M/S/O, число, цвет) */
+#define VND_CMD_SET_OPTIC_HOLD  0x39u /* payload: u16 deciseconds; legacy u8 seconds also accepted */
+#define VND_CMD_SET_DC_CONFIG   0x1Fu /* payload: v1 DC timing config, see vnd_dc_config_v1_t fields */
+#define VND_CMD_GET_DC_CONFIG   0x3Au /* получить текущий DC timing config ('DCCF', 40 байт) */
+#define VND_CMD_SET_LED_PATTERN 0x3Bu /* payload: u8 ws2812_pattern_t for the 20 dynamic LEDs */
 /* Дополнение из спецификации */
 #define VND_CMD_SET_FULL_MODE   0x13u /* 1 байт: 0=ROI, 1=FULL */
 #define VND_CMD_SET_PROFILE     0x14u /* 1 байт profile */
@@ -61,7 +66,13 @@ extern "C" {
 #define VND_FRAME_MAX_SIZE  (VND_FRAME_HDR_SIZE + 2u*VND_MAX_SAMPLES)
 #endif
 #ifndef VND_STATUS_MAX
-#define VND_STATUS_MAX      96u
+#define VND_STATUS_MAX      136u
+#endif
+#ifndef VND_LCD_STATUS_MAX
+#define VND_LCD_STATUS_MAX  24u
+#endif
+#ifndef VND_DC_CONFIG_MAX
+#define VND_DC_CONFIG_MAX   40u
 #endif
 /* Дефолт: 300 семплов на канал в полном режиме */
 #ifndef VND_FULL_DEFAULT_SAMPLES
@@ -77,8 +88,77 @@ extern "C" {
 #define VND_DMA_TIMEOUT_MS  300u
 #endif
 
+#define VND_LCD_SYNC_COLOR_BLACK   0u
+#define VND_LCD_SYNC_COLOR_RED     1u
+#define VND_LCD_SYNC_COLOR_GREEN   2u
+#define VND_LCD_SYNC_COLOR_YELLOW  3u
+#define VND_LCD_SYNC_COLOR_BLUE    4u
+#define VND_LCD_SYNC_COLOR_CYAN    5u
+#define VND_LCD_SYNC_COLOR_WHITE   6u
+
+#define VND_LCD_SYNC_FLAG_SIGNAL_ALIVE      0x0001u
+#define VND_LCD_SYNC_FLAG_SYNC_OK_VISUAL    0x0002u
+#define VND_LCD_SYNC_FLAG_COLOR_LOCKED      0x0004u
+#define VND_LCD_SYNC_FLAG_DISPLAY_FALLBACK  0x0008u
+#define VND_LCD_SYNC_FLAG_HOST_FORCED       0x0010u
+
+#define VND_DC_MODE_FREEZE     0u /* apply stored DC, do not learn */
+#define VND_DC_MODE_WORK       1u /* normal slow tracking */
+#define VND_DC_MODE_DETECT     2u /* medium tracking while host detects a tag */
+#define VND_DC_MODE_BOOT_FAST  3u /* fast tracking window, then automatic WORK */
+
+#define VND_DC_CFG_FLAG_ADAPT_ENABLED 0x0001u
+#define VND_DC_CFG_FLAG_AUTO_FREEZE   0x0002u
+#define VND_DC_CFG_FLAG_DIRTY         0x0004u
+
+typedef struct {
+    uint8_t  raw_mode;           /* 0=master, 1=slave, 2=off */
+    uint8_t  display_mode;       /* what LCD currently shows */
+    uint8_t  display_value;      /* 0..31, rendered as two digits for M/S */
+    uint8_t  slave_count;        /* raw rs485_slave_count_estimate */
+    uint8_t  node_id;            /* raw rs485_local_node_id */
+    uint8_t  display_char;       /* 'M', 'S' or 'O' */
+    uint8_t  display_color_id;   /* VND_LCD_SYNC_COLOR_* */
+    uint8_t  sync_signal_alive;  /* 1 if LCD logic considers sync present */
+    uint8_t  sync_ok_visual;     /* 1 if LCD logic considers sync "good" */
+    uint8_t  sync_color_locked;  /* 1 when green is latched */
+    uint16_t display_rgb565;     /* actual LCD RGB565 color */
+    uint32_t sync_age_ms;        /* 0xFFFFFFFF if no edge timestamp */
+} vnd_lcd_sync_snapshot_t;
+
 /* Статус v1 согласно USBprotocol.txt (<=64B) */
 #pragma pack(push,1)
+typedef struct {
+    char     sig[4];            /* 'LCDS' */
+    uint8_t  version;           /* 1 */
+    uint8_t  raw_mode;          /* 0=master,1=slave,2=off */
+    uint8_t  display_mode;      /* what LCD currently shows */
+    uint8_t  display_value;     /* 0..31 */
+    uint8_t  slave_count;       /* raw slave count */
+    uint8_t  node_id;           /* raw local node id */
+    uint8_t  display_color_id;  /* VND_LCD_SYNC_COLOR_* */
+    uint8_t  display_char;      /* 'M', 'S' or 'O' */
+    uint16_t display_rgb565;    /* LCD color in RGB565 */
+    uint16_t flags;             /* VND_LCD_SYNC_FLAG_* */
+    uint32_t sync_age_ms;       /* age of last sync edge or 0xFFFFFFFF */
+    char     text[4];           /* exact LCD text prefix, e.g. "M03" or "O  " */
+} vnd_lcd_status_v1_t;
+
+typedef struct {
+    char     sig[4];            /* 'DCCF' */
+    uint8_t  version;           /* 1 */
+    uint8_t  mode;              /* VND_DC_MODE_* effective/current mode */
+    uint16_t flags;             /* VND_DC_CFG_FLAG_* */
+    uint32_t work_settle_ms;    /* slow work-mode time constant */
+    uint32_t detect_settle_ms;  /* medium tag-detection time constant */
+    uint32_t fast_settle_ms;    /* fast boot/calibration time constant */
+    uint32_t fast_duration_ms;  /* BOOT_FAST duration before auto WORK */
+    uint32_t active_settle_ms;  /* currently used time constant */
+    uint32_t mode_enter_ms;     /* HAL_GetTick() when current mode was entered */
+    uint32_t fast_until_ms;     /* HAL_GetTick() deadline for BOOT_FAST, 0 otherwise */
+    uint32_t adapt_updates;     /* accepted DC learning updates since boot */
+} vnd_dc_config_v1_t;
+
 typedef struct {
     char     sig[4];            /* 'STAT' */
     uint8_t  version;           /* 1 */
@@ -115,11 +195,15 @@ typedef struct {
          */
         uint16_t flags2;
     uint8_t  sending_ch;        /* 0=A,1=B,0xFF=нет */
-    uint8_t  reserved2;         /* выравнивание */
+    uint8_t  reserved2;         /* диагностика пайплайна (упакованные nibble, см. реализацию) */
     uint16_t pair_idx;          /* pair_fill_idx (hi8) <<8 | pair_send_idx (lo8) */
     uint16_t last_tx_len;       /* длина последней передачи */
     uint32_t cur_stream_seq;    /* текущее значение stream_seq */
-    uint16_t reserved3;         /* паддинг до 64 байт (v1 legacy конец) */
+     /* packed optic state:
+         [1:0]  bit0=optic_active (срабатывание фотоприёмника), bit1=tx_enable
+         [7:2]  optic_hold_seconds rounded up (1..63) — legacy view; v5 has optic_hold_ds
+         [15:8] optic_power (0..255) — текущее установленное значение чувствительности/мощности TX */
+     uint16_t reserved3;
     /* === Расширение v2 (добавлено после 64B, хосты, ожидающие 64B, работают как прежде) === */
     uint32_t stage_alt1_ms;     /* метка HAL_GetTick() при последнем SET_INTERFACE alt=1 */
     uint32_t stage_start_ms;    /* метка START_STREAM (start_cmd_ms) */
@@ -131,9 +215,18 @@ typedef struct {
     uint32_t now_ms;           /* текущее HAL_GetTick() при формировании STAT */
     uint32_t last_full0_ms;    /* HAL_GetTick() последнего полного DMA кадра ADC1 */
     uint32_t last_full1_ms;    /* HAL_GetTick() последнего полного DMA кадра ADC2 */
-} vnd_status_v1_t; /* 64B (v1) + 12B (v2) + 8B (v3) + 12B (v4) = 96 байт */
+    /* === Расширение v5 (RPI optic/sync/LED control status) === */
+    uint16_t optic_hold_ds;    /* hold time in 0.1 s units; default 30 = 3.0 s */
+    uint8_t  led_pattern;      /* current host-selectable dynamic LED pattern */
+    uint8_t  sync_local_status;/* local RS485 status byte: id[4:0], optic bit5, tx bit6 */
+    uint32_t sync_seen_mask;   /* bit0=node1 ... bit30=node31 present in sync_status_bytes */
+    uint8_t  sync_node_count;  /* number of active status bytes in sync_seen_mask */
+    uint8_t  sync_status_bytes[31]; /* status byte by node id: index 0=node1 ... index30=node31 */
+} vnd_status_v1_t; /* 64B(v1)+12B(v2)+8B(v3)+12B(v4)+40B(v5)=136 bytes */
 #pragma pack(pop)
-_Static_assert(sizeof(vnd_status_v1_t) == 96, "vnd_status_v1_t must be 96 bytes (v4 extended)");
+_Static_assert(sizeof(vnd_lcd_status_v1_t) == 24, "vnd_lcd_status_v1_t must be 24 bytes");
+_Static_assert(sizeof(vnd_dc_config_v1_t) == 40, "vnd_dc_config_v1_t must be 40 bytes");
+_Static_assert(sizeof(vnd_status_v1_t) == 136, "vnd_status_v1_t must be 136 bytes (v5 extended)");
 
 /* Публичные переменные */
 extern volatile uint8_t vnd_tx_kick; /* Флаг пробуждения таска после события */
@@ -145,6 +238,9 @@ uint8_t vnd_is_streaming(void);
 uint8_t vnd_is_tx_enabled(void);
 /* Построить статус в буфере (возвращает длину или 0 при ошибке) */
 uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len);
+uint16_t vnd_build_lcd_status(uint8_t *dst, uint16_t max_len);
+uint16_t vnd_build_dc_config(uint8_t *dst, uint16_t max_len);
+void vnd_get_lcd_sync_snapshot(vnd_lcd_sync_snapshot_t *out);
 /* Диагностическая одноразовая отправка 64B шаблона (оставляем) */
 void vnd_diag_send64_once(void);
 /* ISR уведомление о появлении новых кадров (override слабого hook из adc_stream) */
@@ -190,7 +286,7 @@ extern volatile uint8_t  vnd_dc_save_last_result; /* 0=none, 1=ok, 2=fail */
 /* DC Adaptation control (can be frozen by host during signal detection) */
 extern volatile uint8_t  vnd_dc_adapt_enabled; /* 1=active (learning), 0=freeze (keep current values) */
 
-/* Auto-freeze when signal swing is below threshold (no DC save/progress) */
+/* Auto-freeze when signal swing is too large for reliable DC learning. */
 extern volatile uint8_t  vnd_dc_auto_freeze; /* 1=auto-freeze by amplitude gate */
 
 /* Monotonic counter stored in Flash blob (loaded on boot, incremented on each save attempt). */
@@ -212,6 +308,7 @@ extern volatile uint32_t vnd_dc_save_last_sector;       /* FLASH_SECTOR_x */
 extern volatile uint8_t  vnd_dc_load_flags_public;
 extern volatile uint16_t vnd_dc_loaded_crc16_public;
 extern volatile uint32_t vnd_dc_flash_next_off_public;
+void vnd_dc_note_flash_fault(uint32_t fault_addr, uint32_t cfsr);
 
 /* Sync master/slave status for LCD */
 extern volatile uint8_t  vnd_sync_mode_public; /* 0=master,1=slave,2=off */

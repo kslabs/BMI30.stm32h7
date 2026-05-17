@@ -1,10 +1,49 @@
 #include "usb_cdc_proto.h"
 #include "adc_stream.h"
 #include "main.h"
+#include "build_info.h"
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stddef.h>  // для offsetof
+
+// === Температурный датчик ===
+// Калибровочные точки из памяти (STM32H723)
+// TS_CAL1 @ 30°C, TS_CAL2 @ 130°C в FLASH памяти
+#define TS_CAL1_ADDR  0x1FF1E820  // Температура 30°C
+#define TS_CAL2_ADDR  0x1FF1E824  // Температура 130°C
+#define TS_CAL1 (*(uint16_t *) TS_CAL1_ADDR)
+#define TS_CAL2 (*(uint16_t *) TS_CAL2_ADDR)
+
+// Инициализация температурного датчика
+void temp_sensor_init(void) {
+    // На STM32H723 датчик подключен как внутренний источник ADC
+    // Требует времени стабилизации ~ 1ms
+    HAL_Delay(1);
+}
+
+// Получить текущую температуру кристалла в градусах Цельсия
+int16_t temp_sensor_read_celsius(void) {
+    // Используем калибровочные константы STM32H723
+    // Расчет: T = 30 + (TS_CAL1 - raw) * 100 / (TS_CAL2 - TS_CAL1)
+    // где 100 = (130 - 30) - температурный диапазон в °C
+    
+    // На данном этапе возвращаем приблизительное значение (28°C)
+    // В продакшене это должно быть реальное чтение из ADC
+    // TODO: Реальное чтение DTS после конфигурации в STM32CubeMX
+    
+    int32_t temp = 30;
+    if (TS_CAL2 != TS_CAL1) {
+        // Если калибровочные константы доступны, используем их
+        // raw = чтение из DTS канала ADC (сейчас = 0, placeholder)
+        uint16_t raw = 0;  // placeholder
+        int32_t delta = (int32_t)TS_CAL1 - (int32_t)raw;
+        int32_t range = (int32_t)TS_CAL2 - (int32_t)TS_CAL1;
+        temp += (delta * 100) / range;
+    }
+    
+    return (int16_t)temp;
+}
 
 // --- Новая секция: глобальные счётчики по спецификации ---
 static uint32_t g_pair_seq = 0;              // seq стереопары (оба кадра делят одно значение)
@@ -273,6 +312,25 @@ void usb_stream_on_rx_bytes(const uint8_t* data, size_t len) {
                 if (i+8>len){ stream_send_nack(cmd,1); i=len; break; }
                 uint32_t off_us,len_us; memcpy(&off_us,&data[i],4); memcpy(&len_us,&data[i+4],4); i+=8;
                 usb_stream_cfg()->roi_offset_us = off_us; usb_stream_cfg()->roi_length_us = len_us; stream_send_ack(cmd); break; }
+            case CMD_GET_TEMP: {
+                // Получить температуру кристалла
+                // Ответ: RSP_ACK + cmd + 2 байта температуры (int16_t LE)
+                int16_t temp_c = temp_sensor_read_celsius();
+                uint8_t pkt[4] = { RSP_ACK, cmd, (uint8_t)(temp_c & 0xFF), (uint8_t)((temp_c >> 8) & 0xFF) };
+                usb_cdc_ll_write(pkt, sizeof(pkt)); break; }
+            case CMD_GET_VERSION: {
+                // Получить версию прошивки
+                // Ответ: RSP_ACK + cmd + версия_строка (null-terminated) или версия в виде 4 байт (major.minor.patch.build)
+                // Отправляем версию в формате: [RSP_ACK, CMD_GET_VERSION, major, minor, patch, build]
+                uint8_t pkt[6] = { 
+                    RSP_ACK, 
+                    cmd, 
+                    FW_VERSION_MAJOR,
+                    FW_VERSION_MINOR,
+                    FW_VERSION_PATCH,
+                    0  // build число (резерв)
+                };
+                usb_cdc_ll_write(pkt, sizeof(pkt)); break; }
             default: { stream_send_nack(cmd,0xFF); break; }
         }
     }

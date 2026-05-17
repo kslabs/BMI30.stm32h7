@@ -80,6 +80,25 @@ CMD_DEEP_RESET = 0x7F  # control OUT (no data)
 CMD_GET_STATUS=0x30
 CMD_GET_STATUS_IMM=0x31
 
+CMD_NAMES = {
+    CMD_START: 'START',
+    CMD_STOP: 'STOP',
+    CMD_SET_WINDOWS: 'SET_WINDOWS',
+    CMD_SET_BLOCK_HZ: 'SET_BLOCK_HZ',
+    CMD_SET_TRUNC_SAMPLES: 'SET_TRUNC_SAMPLES',
+    CMD_SET_FRAME_SAMPLES: 'SET_FRAME_SAMPLES',
+    CMD_SET_FULL_MODE: 'SET_FULL_MODE',
+    CMD_SET_PROFILE: 'SET_PROFILE',
+    CMD_SET_CHMODE: 'SET_CHMODE',
+    CMD_SET_ASYNC_MODE: 'SET_ASYNC_MODE',
+    CMD_DEVICE_RESET: 'DEVICE_RESET',
+    CMD_SOFT_RESET: 'SOFT_RESET',
+    CMD_DEEP_RESET: 'DEEP_RESET',
+    CMD_GET_STATUS: 'GET_STATUS',
+    CMD_GET_STATUS_IMM: 'GET_STATUS_IMM',
+}
+CMD_TRACE_PATH = os.path.join(os.path.dirname(__file__), 'rpi_usb_cmd_trace.log')
+
 HDR_SIZE=16  # Реальный размер заголовка: magic(2) ver(1) flags(1) seq(4) ts(4) ns(2) zc(2)
 
 def le16(x:int):
@@ -147,6 +166,16 @@ class DevHandle:
 
 def send_cmd(dev: Device, data: bytes, timeout_ms: int = 500):
     """Send command with short timeout, ignore Windows USB timeout errors"""
+    try:
+        cmd = int(data[0]) if data else 0
+        payload = bytes(data[1:]).hex() if len(data) > 1 else ''
+        ts = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+        frac_ms = int((time.time() % 1.0) * 1000.0)
+        name = CMD_NAMES.get(cmd & 0xFF, 'UNKNOWN')
+        with open(CMD_TRACE_PATH, 'a', encoding='ascii', errors='ignore') as f:
+            f.write(f"{ts}.{frac_ms:03d} cmd=0x{cmd & 0xFF:02X} name={name} len={max(0, len(data) - 1)} payload={payload}\n")
+    except Exception:
+        pass
     try:
         dev.write(EP_OUT, data, timeout=timeout_ms)  # type: ignore[attr-defined]
     except usb.core.USBError as e:

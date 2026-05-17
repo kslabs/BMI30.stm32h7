@@ -84,7 +84,6 @@ extern PCD_HandleTypeDef hpcd_USB_OTG_HS;
 extern DMA_HandleTypeDef hdma_adc1;
 extern DMA_HandleTypeDef hdma_adc2;
 extern DMA_HandleTypeDef hdma_spi3_tx;
-extern DMA_HandleTypeDef hdma_usart2_rx;
 extern DAC_HandleTypeDef hdac1;
 extern SPI_HandleTypeDef hspi3;
 extern TIM_HandleTypeDef htim2;
@@ -93,6 +92,7 @@ extern TIM_HandleTypeDef htim15;
 extern TIM_HandleTypeDef htim16;
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
+extern void rs485_usart2_irq_rx_service(void);
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -259,18 +259,15 @@ void USART2_IRQHandler(void)
   uint32_t isr = huart2.Instance->ISR;
 
   if ((isr & (USART_ISR_PE | USART_ISR_FE | USART_ISR_NE | USART_ISR_ORE | USART_ISR_RXNE_RXFNE)) != 0u) {
-    HAL_UART_IRQHandler(&huart2);
-    return;
+    rs485_usart2_irq_rx_service();
+    isr = huart2.Instance->ISR;
   }
 
-  if (((huart2.Instance->ISR & USART_ISR_TC) != 0u) &&
+  if (((isr & USART_ISR_TC) != 0u) &&
       ((huart2.Instance->CR1 & USART_CR1_TCIE) != 0u)) {
     huart2.Instance->ICR = USART_ICR_TCCF;
     HAL_UART_TxCpltCallback(&huart2);
-    return;
   }
-
-  HAL_UART_IRQHandler(&huart2);
 }
 /* Add here the Interrupt Handlers for the used peripherals.                  */
 /* For the available peripheral interrupt handler names,                      */
@@ -303,20 +300,6 @@ void DMA1_Stream1_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Stream1_IRQn 1 */
 
   /* USER CODE END DMA1_Stream1_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA1 stream2 global interrupt.
-  */
-void DMA1_Stream2_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Stream2_IRQn 0 */
-  /* USART2 RX DMA: обычно без HT/TC, оставлено для ошибок */
-  /* USER CODE END DMA1_Stream2_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_usart2_rx);
-  /* USER CODE BEGIN DMA1_Stream2_IRQn 1 */
-
-  /* USER CODE END DMA1_Stream2_IRQn 1 */
 }
 
 /**
@@ -425,12 +408,89 @@ void OTG_HS_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+#ifndef HARDFAULT_VERBOSE_PRINTF
+#define HARDFAULT_VERBOSE_PRINTF 0u
+#endif
+
+static void hf_delay(volatile uint32_t cycles)
+{
+  while(cycles-- != 0u){ __NOP(); }
+}
+
+static uint32_t hf_pin_shift(uint32_t pin)
+{
+  uint32_t shift = 0u;
+  while(((pin >> shift) & 1u) == 0u && shift < 16u){ shift++; }
+  return shift * 2u;
+}
+
+static void hf_gpio_output(GPIO_TypeDef *port, uint32_t pin)
+{
+  uint32_t shift = hf_pin_shift(pin);
+  port->MODER = (port->MODER & ~(3u << shift)) | (1u << shift);
+  port->OTYPER &= ~pin;
+  port->OSPEEDR = (port->OSPEEDR & ~(3u << shift)) | (2u << shift);
+  port->PUPDR &= ~(3u << shift);
+}
+
+static void hf_fault_indicator_init(void)
+{
+#if defined(RCC_AHB4ENR_GPIOEEN)
+  RCC->AHB4ENR |= RCC_AHB4ENR_GPIOEEN;
+  (void)RCC->AHB4ENR;
+#else
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+#endif
+  hf_gpio_output(Led_Test_GPIO_Port, Led_Test_Pin);
+  hf_gpio_output(LCD_Led_GPIO_Port, LCD_Led_Pin);
+}
+
+static void hf_fault_indicator_set(uint8_t on)
+{
+  if(on != 0u){
+    Led_Test_GPIO_Port->BSRR = Led_Test_Pin;
+    LCD_Led_GPIO_Port->BSRR = (uint32_t)LCD_Led_Pin << 16; /* active-low backlight */
+  } else {
+    Led_Test_GPIO_Port->BSRR = (uint32_t)Led_Test_Pin << 16;
+    LCD_Led_GPIO_Port->BSRR = LCD_Led_Pin;
+  }
+}
+
+static void hf_fault_blink_forever(void) __attribute__((noreturn));
+static void hf_fault_blink_forever(void)
+{
+  __disable_irq();
+  hf_fault_indicator_init();
+  for(;;){
+    hf_fault_indicator_set(1u);
+    hf_delay(12000000u);
+    hf_fault_indicator_set(0u);
+    hf_delay(12000000u);
+  }
+}
+
 // Вспомогательная функция форматирования 32-битного значения в HEX (8 символов)
 static void hf_hex(char *dst, uint32_t v){
     static const char *hx = "0123456789ABCDEF";
     for(int i=0;i<8;i++){ dst[7-i] = hx[v & 0xF]; v >>= 4; }
     dst[8] = 0;
 }
+
+static void hf_raw_puts(const char *s)
+{
+  while(*s != 0){ uart1_raw_putc(*s++); }
+}
+
+static void hf_raw_hex_line(const char *label, uint32_t val)
+{
+  char hex[9];
+  hf_hex(hex, val);
+  hf_raw_puts(label);
+  hf_raw_puts(":");
+  hf_raw_puts(hex);
+  hf_raw_puts("\r\n");
+}
+
 // Печать регистра на заданной строке: label + ':' + hex
 static void hf_print_line(uint16_t y, const char *label, uint32_t val){
     char buf[20];
@@ -456,14 +516,34 @@ static void HardFault_Display(void){
 // Реализация захвата контекста HardFault
 void HardFault_Capture(uint32_t *stack_addr)
 {
+  hf_fault_indicator_init();
+  hf_fault_indicator_set(1u);
+
+  hardfault_r0  = stack_addr[0];
+  hardfault_r1  = stack_addr[1];
+  hardfault_r2  = stack_addr[2];
+  hardfault_r3  = stack_addr[3];
+  hardfault_r12 = stack_addr[4];
+  hardfault_lr  = stack_addr[5];
+  hardfault_pc  = stack_addr[6];
   hardfault_psr = stack_addr[7];
   // Чтение системных регистров Fault
   hardfault_cfsr = SCB->CFSR;
   hardfault_hfsr = SCB->HFSR;
   hardfault_bfar = SCB->BFAR;
   hardfault_mmfar= SCB->MMFAR;
+  vnd_dc_note_flash_fault(hardfault_bfar, hardfault_cfsr);
   hardfault_active = 1;
-  
+
+  hf_raw_puts("\r\nHARDFAULT\r\n");
+  hf_raw_hex_line("PC", hardfault_pc);
+  hf_raw_hex_line("LR", hardfault_lr);
+  hf_raw_hex_line("CFSR", hardfault_cfsr);
+  hf_raw_hex_line("BFAR", hardfault_bfar);
+  hf_raw_hex_line("HFSR", hardfault_hfsr);
+  hf_raw_puts("LCD backlight blink active\r\n");
+
+#if HARDFAULT_VERBOSE_PRINTF
   // ========== ВЫВОД ДИАГНОСТИКИ В COM4 (USART1) ==========
   // Используем printf который перенаправлен на huart1 в syscalls.c
   printf("\r\n");
@@ -538,14 +618,13 @@ void HardFault_Capture(uint32_t *stack_addr)
   printf("System halted. LED will blink to indicate HardFault state.\r\n");
   printf("======================================================================\r\n");
   printf("\r\n");
-  
+#endif
+
   // Пытаемся вывести на LCD (если инициализирован)
-  HardFault_Display();
-  
-  // Мигание LED для индикации HardFault
-  while(1){
-    HAL_GPIO_TogglePin(Led_Test_GPIO_Port, Led_Test_Pin);
-    for(volatile uint32_t d=0; d<500000; ++d){ __NOP(); }
+  if(lcd_ready != 0u){
+    HardFault_Display();
   }
+
+  hf_fault_blink_forever();
 }
 /* USER CODE END 1 */

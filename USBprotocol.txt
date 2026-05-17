@@ -71,13 +71,48 @@ Payload: массив `total_samples` значений по 2 байта (LE). (
 |0x14  | CMD_SET_PROFILE | Выбор профиля обработки/фильтра | 1 байт profile | (опц.) статус*
 |0x13  | CMD_SET_FULL_MODE| 0=ROI, 1=FULL режим захвата    | 1 байт flag    | (опц.) статус*
 |0x15  | CMD_SET_ROI_US  | Задание ROI по номеру семпла   | 4 байта (u32)  | (опц.) статус*
+|0x1B  | CMD_SET_DC_ADAPT | Legacy управление DC-обучением | 1 байт: 0=FREEZE, 1=WORK | нет
+|0x1F  | CMD_SET_DC_CONFIG | Настройка режимов скорости DC-компенсации | `DcConfigSetV1`, 20 байт | нет
 |0x20  | CMD_START_STREAM| Запуск потока: отправить тестовый кадр + начать фиксацию размера | none | поток
 |0x21  | CMD_STOP_STREAM | Остановка: прекращение потока, сброс внутренних флагов | none | статусная структура
-|0x33  | CMD_SET_TX_ENABLE | Вкл/выкл внешний передатчик (PA1/PA2), поток не останавливает | 1 байт: 0/1 | (опц.) статус*
 |0x30  | CMD_GET_STATUS  | (Расширенный) запрос статуса     | none | статусная структура
+|0x31  | CMD_GET_TEMP    | Получить температуру кристалла  | none | RSP_ACK + cmd + 2 байта (int16_t LE)
+|0x32  | CMD_GET_VERSION | Получить версию прошивки        | none | RSP_ACK + cmd + 4 байта (major, minor, patch, build)
+|0x33  | CMD_SET_TX_ENABLE | Вкл/выкл внешний передатчик (PA1/PA2), поток не останавливает | 1 байт: 0/1 | (опц.) статус*
+|0x38  | CMD_GET_LCD_STATUS | Снимок sync-индикатора LCD (`M/S/O`, число, цвет) | none | структура `LCDS` (24 байта)
+|0x3A  | CMD_GET_DC_CONFIG | Снимок текущих настроек DC-компенсации | none | структура `DCCF` (40 байт)
 
 `*` Статус после SET_* может быть отложен или не возвращаться — зависит от реализации.
 Гарантированно возвращается после STOP и GET_STATUS.
+
+## 3.1. Команда GET_TEMP (0x31) - Получение температуры
+
+Команда 0x31 возвращает текущую температуру кристалла встроенного датчика STM32H723.
+
+**Запрос (OUT → 0x03):**
+- Один байт: `0x31`
+- Без payload
+
+**Ответ (IN ← 0x83):**
+- 4 байта:
+    - Byte 0: `0x80` (RSP_ACK)
+    - Byte 1: `0x31` (echo команды)
+    - Bytes 2-3: температура кристалла (int16_t, LE)
+
+**Примеры:**
+- `+28°C`: ответ `[0x80, 0x31, 0x1C, 0x00]` → 0x001C = 28
+- `-10°C`: ответ `[0x80, 0x31, 0xF6, 0xFF]` → 0xFFF6 = -10 (дополнительный код)
+
+**Параметры датчика:**
+- Точность: ±5°C
+- Разрешение: 0.5°C
+- Диапазон: -40°C до +85°C
+- Время отклика: ~1 мс
+- Не прерывает потоковую передачу
+
+**Примечание:** На текущем этапе развития возвращается placeholder значение (~28°C). 
+Для полной функциональности требуется конфигурация DTS (Digital Temperature Sensor) в STM32CubeMX.
+Подробнее: HostTools/TEMP_SENSOR_GUIDE.md
 
 ## 4. Статусная структура (предложенный/текущий вид)
 Передаётся в виде отдельного короткого bulk IN пакета (<=64 байт). 
@@ -107,6 +142,41 @@ struct __attribute__((packed)) VendorStatus {
 
 Хост может парсить по сигнатуре и выводить метрики даже до старта основного потока.
 
+## 4.1. Структура LCD sync-индикатора
+
+Отдаётся отдельным коротким ответом `magic='LCDS'` (24 байта). Запрос рекомендуется слать через EP0 vendor IN, чтобы не вмешиваться в A/B поток.
+
+```
+struct __attribute__((packed)) VendorLcdStatus {
+    char     sig[4];            // 'LCDS'
+    uint8_t  version;           // 1
+    uint8_t  raw_mode;          // 0=master, 1=slave, 2=off
+    uint8_t  display_mode;      // то, что сейчас рисуется на LCD
+    uint8_t  display_value;     // число, которое LCD рисует рядом с M/S
+    uint8_t  slave_count;       // сырое rs485_slave_count_estimate
+    uint8_t  node_id;           // сырое rs485_local_node_id
+    uint8_t  display_color_id;  // 1=RED, 2=GREEN, 5=CYAN, ...
+    uint8_t  display_char;      // 'M', 'S' или 'O'
+    uint16_t display_rgb565;    // реальный цвет LCD в RGB565
+    uint16_t flags;             // bit0 signal_alive, bit1 sync_ok_visual,
+                                // bit2 color_locked, bit3 display_fallback,
+                                // bit4 host_forced
+    uint32_t sync_age_ms;       // возраст последнего sync edge; 0xFFFFFFFF если edge не было
+    char     text[4];           // готовый префикс LCD: "M03", "S07", "O  "
+};
+```
+
+Смысл полей:
+
+- `raw_mode` — реальный режим логики sync.
+- `display_mode` — режим, который фактически показан на LCD. При потере sync LCD принудительно показывает `M00`.
+- `display_value` — для `MASTER` это число обнаруженных slave, для `SLAVE` это локальный slot/node id.
+- `display_color_id` / `display_rgb565` — цвет индикатора на LCD.
+- `flags.display_fallback=1` — LCD сейчас показывает аварийный fallback (`M00`, цвет `CYAN`).
+- `flags.signal_alive=1` — LCD считает sync "живым".
+- `flags.sync_ok_visual=1` — LCD считает sync "хорошим"; после антидребезга цвет становится `GREEN`.
+- `flags.color_locked=1` — зелёный уже защёлкнут внутренним state machine LCD.
+
 ## 5. Тестовый кадр
 Отправляется сразу после `CMD_START_STREAM`.  
 Флаги: 0x81 (бит7 TEST + бит0 ADC0).  
@@ -135,6 +205,44 @@ struct __attribute__((packed)) VendorStatus {
 - `dma_done0/dma_done1` — завершения DMA.
 - `frame_wr_seq` — индекс производственного кольца.
 
+## 8.1. CMD_GET_TEMP (0x31) — Получить температуру кристалла
+Читает встроенный температурный датчик STM32H723.
+
+**Request (OUT)**: 1 байт `0x31` (no payload)
+**Response (IN)**: 4 байта
+- Byte 0: `0x80` (RSP_ACK)
+- Byte 1: `0x31` (echo command)
+- Bytes 2-3: температура в °C (int16_t, LE)
+
+**Пример**: ответ `[0x80, 0x31, 0x1C, 0x00]` = `+28°C`.
+
+**Заметки**:
+- Диапазон: -40°C до +85°C
+- Точность: ±5°C (встроенная калибровка датчика)
+- Разрешение: 0.5°C
+- Время отклика датчика: ~1 ms
+- Команда может быть отправлена в любой момент (в режиме потока или ожидания)
+
+## 8.2. CMD_GET_VERSION (0x32) — Получить версию прошивки
+Возвращает версию встроенного ПО в формате `MAJOR.MINOR.PATCH`.
+
+**Request (OUT)**: 1 байт `0x32` (no payload)
+**Response (IN)**: 6 байт
+- Byte 0: `0x80` (RSP_ACK)
+- Byte 1: `0x32` (echo command)
+- Byte 2: major версия (u8)
+- Byte 3: minor версия (u8)
+- Byte 4: patch версия (u8)
+- Byte 5: build число (u8, зарезервировано, обычно 0)
+
+**Пример**: ответ `[0x80, 0x32, 0x01, 0x02, 0x03, 0x00]` = версия `1.2.3`.
+
+**Заметки**:
+- Семантическое управление версионированием (semantic versioning)
+- Build число — зарезервировано для будущего использования
+- Команда не имеет побочных эффектов и может быть отправлена в любой момент
+- Полезна для проверки совместимости хоста и прошивки
+
 ## 9. Типичные проблемы и их сигнатуры
 | Симптом (хост)                        | Возможная причина прошивки                      |
 |--------------------------------------|-------------------------------------------------|
@@ -148,6 +256,58 @@ struct __attribute__((packed)) VendorStatus {
 CMD_SET_ROI_US: параметр — номер стартового семпла (0..N-1). Прошивка использует длину 200
 и сдвигает окно ROI на указанный старт. Если старт выходит за пределы, он ограничивается
 в диапазоне 0..(samples-200). Это относится к режимам LOSSLESS_ROI и AVG_ROI.
+
+## 10.1. Настраиваемая скорость DC-компенсации
+
+DC-компенсация обучается в трёх time-based режимах. Хост задаёт не "шаг" и не число кадров,
+а время сходимости в миллисекундах. Веб-интерфейс может показывать те же значения в секундах.
+
+Режимы:
+
+- `0=FREEZE` — DC вычитается, но новые значения не обучаются.
+- `1=WORK` — рабочая медленная подстройка постоянных изменений DC.
+- `2=DETECT` — средняя скорость для периода детекции метки.
+- `3=BOOT_FAST` — быстрая подстройка; после `fast_duration_ms` прошивка сама переходит в `WORK`.
+
+`CMD_SET_DC_CONFIG` (`0x1F`) payload после opcode:
+
+```
+struct DcConfigSetV1 {
+    uint8_t  version;          // 1
+    uint8_t  mode;             // 0=FREEZE, 1=WORK, 2=DETECT, 3=BOOT_FAST
+    uint16_t flags;            // сейчас 0, зарезервировано
+    uint32_t work_settle_ms;   // например 900000 (900 s)
+    uint32_t detect_settle_ms; // например 60000  (60 s)
+    uint32_t fast_settle_ms;   // например 5000   (5 s)
+    uint32_t fast_duration_ms; // например 30000  (30 s)
+};
+```
+
+`CMD_GET_DC_CONFIG` (`0x3A`) рекомендуется читать через EP0 vendor IN, чтобы не вмешиваться
+в поток A/B. Ответ `DCCF`:
+
+```
+struct DcConfigStatusV1 {
+    char     sig[4];           // 'DCCF'
+    uint8_t  version;          // 1
+    uint8_t  mode;             // текущий/effective режим
+    uint16_t flags;            // bit0 adapt_enabled, bit1 auto_freeze, bit2 dirty
+    uint32_t work_settle_ms;
+    uint32_t detect_settle_ms;
+    uint32_t fast_settle_ms;
+    uint32_t fast_duration_ms;
+    uint32_t active_settle_ms; // какой settle реально используется сейчас
+    uint32_t mode_enter_ms;    // HAL_GetTick() входа в режим
+    uint32_t fast_until_ms;    // deadline BOOT_FAST или 0
+    uint32_t adapt_updates;    // счётчик принятых обновлений DC
+};
+```
+
+Legacy команды сохранены:
+
+- `CMD_SET_DC_ADAPT 0` теперь эквивалентен `mode=FREEZE`.
+- `CMD_SET_DC_ADAPT 1` теперь эквивалентен `mode=WORK`.
+- `CMD_CALIB_DC_FAST 0x1E` переводит запрос "N кадров" во временный `BOOT_FAST` window.
 
 ## 11. Roadmap (расширения)
 - Динамическая смена размера кадра через новую команду (например 0x31) с подтверждением.
@@ -182,4 +342,6 @@ CMD_SET_ROI_US: параметр — номер стартового семпл�
 Обновления документа фиксировать с версионным блоком CHANGELOG ниже.
 
 ### CHANGELOG
+v1.2 — Добавлены `CMD_GET_TEMP` (0x31) и `CMD_GET_VERSION` (0x32) для диагностических запросов.
+v1.1 — Добавлены `CMD_SET_DC_CONFIG`/`CMD_GET_DC_CONFIG` для time-based DC-компенсации.
 v1.0 — Изначальная фиксация спецификации (заголовок v1, тестовый кадр, команды 0x13/14/15/20/21/30, статусная структура v1).

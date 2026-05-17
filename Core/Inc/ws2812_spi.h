@@ -57,6 +57,7 @@ void ws2812_spi_set_pattern(ws2812_pattern_t pattern);
 ws2812_pattern_t ws2812_spi_get_pattern(void);
 void ws2812_spi_trigger_event(ws2812_event_t event, uint16_t duration_ms);
 void ws2812_spi_service(uint32_t now_ms);
+void ws2812_spi_on_adc_buffer_complete(void);
 void ws2812_spi_dma_irq_trace(void);
 void ws2812_spi_spi_irq_trace(void);
 

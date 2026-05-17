@@ -8,7 +8,23 @@ import usb.core
 import usb.util
 import struct
 import time
+import os
+import sys
 from collections import defaultdict
+
+_this_dir = os.path.dirname(__file__)
+_proj_root = os.path.abspath(os.path.join(_this_dir, os.pardir))
+if _proj_root not in sys.path:
+    sys.path.insert(0, _proj_root)
+
+from usb_vendor.usb_stream import (
+    CMD_ASYNC,
+    CMD_CHMODE,
+    CMD_FULL_MODE,
+    CMD_SET_PROFILE,
+    CMD_START_STREAM,
+    CMD_STOP_STREAM,
+)
 
 VID = 0xCAFE
 PID = 0x4001
@@ -67,18 +83,18 @@ def main():
     
     # Send initialization sequence
     print("\n[CMD] Sending STOP...")
-    send_command(dev, bytes([0x21]))  # STOP
+    send_command(dev, bytes([CMD_STOP_STREAM]))  # STOP
     time.sleep(0.1)
     
     print("[CMD] Configuring device...")
-    send_command(dev, bytes([0x18, 0x80]))  # SET_ASYNC_MODE (async=1)
-    send_command(dev, bytes([0x19, 0x02]))  # SET_CHMODE (dual channel)
-    send_command(dev, bytes([0x1A, 0x01]))  # SET_FULL_MODE
-    send_command(dev, bytes([0x1B, 0x00]))  # SET_PROFILE (profile 0)
+    send_command(dev, bytes([CMD_ASYNC, 0x80]))      # SET_ASYNC_MODE (paired + strict)
+    send_command(dev, bytes([CMD_CHMODE, 0x02]))     # SET_CHMODE (dual channel)
+    send_command(dev, bytes([CMD_FULL_MODE, 0x01]))  # SET_FULL_MODE (full stream)
+    send_command(dev, bytes([CMD_SET_PROFILE, 0x00]))  # SET_PROFILE (profile 0)
     time.sleep(0.2)
     
     print("[CMD] Sending START...")
-    send_command(dev, bytes([0x20]))  # START
+    send_command(dev, bytes([CMD_START_STREAM]))  # START
     time.sleep(0.5)
     
     # Read frames for 10 seconds
@@ -93,12 +109,13 @@ def main():
     while time.time() - start_time < test_duration:
         try:
             data = dev.read(EP_IN, 4096, timeout=500)
-            if len(data) < 16:
+            if len(data) < 32:
                 continue
             
-            # Parse header
-            magic, ver, flags, seq = struct.unpack_from('<HBBH', data, 0)
-            ns = struct.unpack_from('<H', data, 8)[0]
+            # Parse header (v1, 32 bytes)
+            magic, ver, flags, seq, ts, ns, zone_cnt, zone_off, zone_len, reserved, reserved2, crc16 = struct.unpack_from(
+                '<HBBIIHHIIIHH', data, 0
+            )
             
             if magic != 0xA55A:
                 print(f"[WARN] Invalid magic: 0x{magic:04X}")
@@ -108,8 +125,9 @@ def main():
             ch_mask = flags & 0x03
             ch_name = 'A' if ch_mask == 0x01 else 'B'
             
-            # Determine parity
-            parity_bit = (flags >> 7) & 0x01
+            # Determine parity from reserved2 (buffer_index & 1).
+            # bit7 flags is TEST marker in current firmware.
+            parity_bit = reserved2 & 0x01
             parity_name = 'odd' if parity_bit else 'even'
             
             # Frame type
@@ -131,7 +149,7 @@ def main():
     
     # Send STOP
     print("\n[CMD] Sending STOP...")
-    send_command(dev, bytes([0x21]))
+    send_command(dev, bytes([CMD_STOP_STREAM]))
     
     # Print statistics
     print("\n" + "=" * 60)

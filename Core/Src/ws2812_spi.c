@@ -36,6 +36,7 @@ enum {
   WS2812_ALERT_STEP_FRAMES = 20u,
   WS2812_DRIP_STEP_FRAMES = 20u,
   WS2812_TEST_STEP_FRAMES = 200u,
+  WS2812_STATUS_BLINK_HALF_FRAMES = (WS2812_FRAME_RATE_HZ * 3u) / 4u,
   WS2812_SPI_CODE_0 = 0x8u, /* 1000 */
   WS2812_SPI_CODE_1 = 0xEu  /* 1110 */
 };
@@ -59,6 +60,8 @@ static uint8_t s_pixels[WS2812_LED_COUNT][3];
 static uint8_t s_tx_buf[WS2812_TX_BUF_SIZE]
   __attribute__((section(".ram_d2"), aligned(32)));
 static volatile uint8_t s_busy = 0u;
+static volatile uint8_t s_tx_frame_ready = 0u;
+static volatile uint8_t s_tx_buffer_building = 0u;
 static volatile ws2812_pattern_t s_active_pattern = WS2812_PATTERN_OFF;
 static volatile ws2812_pattern_t s_requested_pattern = WS2812_PATTERN_OFF;
 static volatile uint8_t s_pattern_force_send = 1u;
@@ -69,6 +72,9 @@ static volatile uint16_t s_pattern_frame_repeat = 0u;
 static volatile uint32_t s_pattern_frame_counter = 0u;
 static volatile ws2812_pattern_t s_override_pattern = WS2812_PATTERN_OFF;
 static volatile uint32_t s_override_until_ms = 0u;
+static ws2812_pattern_t s_rendered_pattern = WS2812_PATTERN_COUNT;
+static uint16_t s_rendered_anim_step = 0xFFFFu;
+static uint32_t s_rendered_status_key = 0xFFFFFFFFu;
 
 static const ws2812_frame_def_t s_pattern_off[] = {
   { 0u, 0u, 0u, 0u, 0u, 0u, 200u }
@@ -160,6 +166,63 @@ static const ws2812_pattern_def_t s_pattern_defs[WS2812_PATTERN_COUNT] = {
   { s_pattern_test_color_cycle, (uint8_t)(sizeof(s_pattern_test_color_cycle) / sizeof(s_pattern_test_color_cycle[0])) }
 };
 
+static uint32_t ws2812_irq_save(void)
+{
+  uint32_t primask = __get_PRIMASK();
+  __disable_irq();
+  return primask;
+}
+
+static void ws2812_irq_restore(uint32_t primask)
+{
+  __set_PRIMASK(primask);
+}
+
+static uint8_t ws2812_begin_tx_buffer_update(void)
+{
+  uint32_t primask = ws2812_irq_save();
+
+  if ((s_busy != 0u) || (s_tx_buffer_building != 0u)) {
+    ws2812_irq_restore(primask);
+    return 0u;
+  }
+
+  s_tx_buffer_building = 1u;
+  ws2812_irq_restore(primask);
+  return 1u;
+}
+
+static void ws2812_end_tx_buffer_update(void)
+{
+  uint32_t primask = ws2812_irq_save();
+  s_tx_buffer_building = 0u;
+  ws2812_irq_restore(primask);
+}
+
+static uint8_t ws2812_try_mark_busy(void)
+{
+  uint32_t primask = ws2812_irq_save();
+
+  if ((hspi3.Instance != SPI3) ||
+      (s_busy != 0u) ||
+      (s_tx_buffer_building != 0u) ||
+      (s_tx_frame_ready == 0u)) {
+    ws2812_irq_restore(primask);
+    return 0u;
+  }
+
+  s_busy = 1u;
+  ws2812_irq_restore(primask);
+  return 1u;
+}
+
+static void ws2812_clear_busy(void)
+{
+  uint32_t primask = ws2812_irq_save();
+  s_busy = 0u;
+  ws2812_irq_restore(primask);
+}
+
 static void ws2812_scope_pin_init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -221,28 +284,24 @@ static HAL_StatusTypeDef ws2812_wait_spi_flush(uint32_t timeout_ms)
 
 static void ws2812_pin_spi_mode(void)
 {
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-
   __HAL_RCC_GPIOB_CLK_ENABLE();
-  GPIO_InitStruct.Pin = GPIO_PIN_2;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF7_SPI3;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  GPIOB->OTYPER &= ~GPIO_PIN_2;
+  GPIOB->OSPEEDR = (GPIOB->OSPEEDR & ~(3u << (2u * 2u))) | (3u << (2u * 2u));
+  GPIOB->PUPDR &= ~(3u << (2u * 2u));
+  GPIOB->AFR[0] = (GPIOB->AFR[0] & ~(0xFu << (2u * 4u))) | (GPIO_AF7_SPI3 << (2u * 4u));
+  GPIOB->MODER = (GPIOB->MODER & ~(3u << (2u * 2u))) | (2u << (2u * 2u));
 }
 
 static void ws2812_pin_gpio_low_mode(void)
 {
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-
   __HAL_RCC_GPIOB_CLK_ENABLE();
-  GPIO_InitStruct.Pin = GPIO_PIN_2;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_RESET);
+
+  GPIOB->BSRR = ((uint32_t)GPIO_PIN_2 << 16);
+  GPIOB->OTYPER &= ~GPIO_PIN_2;
+  GPIOB->OSPEEDR = (GPIOB->OSPEEDR & ~(3u << (2u * 2u))) | (3u << (2u * 2u));
+  GPIOB->PUPDR &= ~(3u << (2u * 2u));
+  GPIOB->MODER = (GPIOB->MODER & ~(3u << (2u * 2u))) | (1u << (2u * 2u));
 }
 
 static void ws2812_encode_byte(uint8_t src, uint8_t *dst)
@@ -528,59 +587,141 @@ static void ws2812_render_strip_drip(uint16_t anim_step)
   }
 }
 
-static void ws2812_apply_onboard_status_overlay(void)
+static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
+                                              uint8_t *green_out,
+                                              uint8_t *blue_out)
 {
   extern volatile uint8_t vnd_sync_mode_public;
-  extern uint8_t ws2812_onboard_slave_blue_active(uint8_t dark_phase, uint32_t now_ms);
   extern volatile uint8_t need_recovery;
   extern volatile uint8_t need_hard_reset;
   enum {
-    WS2812_STATUS_TX_ACTIVE_MS = 500u,
-    WS2812_STATUS_HOST_ACK_MS = 1500u,
-    WS2812_STATUS_GREEN_MAX = 96u,
-    WS2812_STATUS_RED_MAX = 96u,
-    WS2812_STATUS_BLUE_MAX = 96u,
-    WS2812_STATUS_BLUE_PULSE = 120u
+    WS2812_STATUS_GREEN_R = 0u,
+    WS2812_STATUS_GREEN_G = 96u,
+    WS2812_STATUS_GREEN_B = 0u,
+    WS2812_STATUS_BLUE_R = 0u,
+    WS2812_STATUS_BLUE_G = 0u,
+    WS2812_STATUS_BLUE_B = 96u,
+    WS2812_STATUS_AMBER_R = 96u,
+    WS2812_STATUS_AMBER_G = 36u,
+    WS2812_STATUS_AMBER_B = 0u,
+    WS2812_STATUS_WHITE_R = 72u,
+    WS2812_STATUS_WHITE_G = 72u,
+    WS2812_STATUS_WHITE_B = 72u,
+    WS2812_STATUS_ALARM_R = 128u,
+    WS2812_STATUS_ALARM_G = 0u,
+    WS2812_STATUS_ALARM_B = 0u
   };
-  const uint32_t breathe_phase = s_pattern_frame_counter % 800u;
-  uint32_t ramp = 0u;
-  uint8_t breathe_level = 0u;
-  uint8_t dark_phase = 0u;
-  uint32_t now_ms = HAL_GetTick();
-  uint32_t last_frame_txcplt_ms = vnd_get_last_frame_txcplt_ms();
-  uint32_t last_host_rx_ack_ms = vnd_get_last_host_rx_ack_ms();
+  const uint32_t blink_half_frames = (WS2812_STATUS_BLINK_HALF_FRAMES != 0u)
+    ? WS2812_STATUS_BLINK_HALF_FRAMES
+    : 1u;
   uint32_t last_error = vnd_get_last_error();
+  uint8_t alarm_active = (uint8_t)(((need_recovery != 0u) ||
+                                    (need_hard_reset != 0u) ||
+                                    (last_error != 0u)) ? 1u : 0u);
+  uint8_t slave_mode = (uint8_t)((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) ? 1u : 0u);
+  uint8_t optic_active = (uint8_t)((optic_sensor_get_state() != 0u) ? 1u : 0u);
+  uint8_t tx_enabled = (uint8_t)((vnd_is_tx_enabled() != 0u) ? 1u : 0u);
+  uint8_t alarm_gate_on = 1u;
+  uint8_t smooth_level = 255u;
   uint8_t red = 0u;
   uint8_t green = 0u;
   uint8_t blue = 0u;
 
-  if (breathe_phase < 400u) {
-    ramp = (breathe_phase * 255u) / 399u;
-  } else {
-    ramp = ((799u - breathe_phase) * 255u) / 399u;
-  }
-  breathe_level = (uint8_t)((ramp * ramp * WS2812_STATUS_GREEN_MAX) / 65025u);
-
-  if (breathe_level <= 5u) {
-    dark_phase = 1u;
+  if ((alarm_active != 0u) &&
+      (((s_pattern_frame_counter / blink_half_frames) & 1u) != 0u)) {
+    alarm_gate_on = 0u;
   }
 
-  if ((need_recovery != 0u) || (need_hard_reset != 0u) || (last_error != 0u)) {
-    red = (uint8_t)((ramp * ramp * WS2812_STATUS_RED_MAX) / 65025u);
-  } else if ((last_frame_txcplt_ms != 0u) &&
-             (last_host_rx_ack_ms != 0u) &&
-             ((uint32_t)(now_ms - last_host_rx_ack_ms) <= WS2812_STATUS_HOST_ACK_MS) &&
-             ((uint32_t)(now_ms - last_frame_txcplt_ms) <= WS2812_STATUS_TX_ACTIVE_MS)) {
-    green = breathe_level;
+  if ((alarm_active == 0u) && (tx_enabled != 0u)) {
+    uint32_t period_frames = blink_half_frames * 2u;
+    uint32_t phase = (period_frames != 0u) ? (s_pattern_frame_counter % period_frames) : 0u;
+    uint32_t ramp = 0u;
+
+    if (phase < blink_half_frames) {
+      ramp = (blink_half_frames > 1u) ? ((phase * 255u) / (blink_half_frames - 1u)) : 255u;
+    } else {
+      uint32_t fall_phase = phase - blink_half_frames;
+      ramp = (blink_half_frames > 1u) ? (((blink_half_frames - 1u - fall_phase) * 255u) / (blink_half_frames - 1u)) : 0u;
+    }
+
+    smooth_level = (uint8_t)(((ramp * ramp * (765u - (2u * ramp))) + 32512u) / 65025u);
+  }
+
+  if (alarm_active != 0u) {
+    if (alarm_gate_on != 0u) {
+      red = WS2812_STATUS_ALARM_R;
+      green = WS2812_STATUS_ALARM_G;
+      blue = WS2812_STATUS_ALARM_B;
+    }
   } else {
-    blue = (uint8_t)((ramp * ramp * WS2812_STATUS_BLUE_MAX) / 65025u);
-    if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
-        (ws2812_onboard_slave_blue_active(dark_phase, now_ms) != 0u) &&
-        (blue < WS2812_STATUS_BLUE_PULSE)) {
-      blue = WS2812_STATUS_BLUE_PULSE;
+    if (slave_mode != 0u) {
+      if (optic_active != 0u) {
+        red = WS2812_STATUS_AMBER_R;
+        green = WS2812_STATUS_AMBER_G;
+        blue = WS2812_STATUS_AMBER_B;
+      } else {
+        red = WS2812_STATUS_WHITE_R;
+        green = WS2812_STATUS_WHITE_G;
+        blue = WS2812_STATUS_WHITE_B;
+      }
+    } else {
+      if (optic_active != 0u) {
+        red = WS2812_STATUS_GREEN_R;
+        green = WS2812_STATUS_GREEN_G;
+        blue = WS2812_STATUS_GREEN_B;
+      } else {
+        red = WS2812_STATUS_BLUE_R;
+        green = WS2812_STATUS_BLUE_G;
+        blue = WS2812_STATUS_BLUE_B;
+      }
+    }
+
+    if (tx_enabled != 0u) {
+      red = (uint8_t)(((uint32_t)red * smooth_level) / 255u);
+      green = (uint8_t)(((uint32_t)green * smooth_level) / 255u);
+      blue = (uint8_t)(((uint32_t)blue * smooth_level) / 255u);
     }
   }
 
+  if (red_out != NULL) {
+    *red_out = red;
+  }
+  if (green_out != NULL) {
+    *green_out = green;
+  }
+  if (blue_out != NULL) {
+    *blue_out = blue;
+  }
+
+  return ((uint32_t)alarm_active << 0) |
+         ((uint32_t)slave_mode << 1) |
+         ((uint32_t)optic_active << 2) |
+         ((uint32_t)tx_enabled << 3) |
+         ((uint32_t)alarm_gate_on << 4) |
+         ((uint32_t)red << 8) |
+         ((uint32_t)green << 16) |
+         ((uint32_t)blue << 24);
+}
+
+static void ws2812_update_onboard_status_in_tx_buffer(void)
+{
+  uint8_t red = 0u;
+  uint8_t green = 0u;
+  uint8_t blue = 0u;
+
+  (void)ws2812_get_onboard_status_rgb(&red, &green, &blue);
+  ws2812_encode_led_rgb(s_tx_buf + WS2812_PREFIX_BYTES, red, green, blue);
+  ws2812_clean_dcache_region(s_tx_buf,
+                             (uint32_t)(WS2812_PREFIX_BYTES + WS2812_BYTES_PER_LED));
+}
+
+static void ws2812_apply_onboard_status_overlay(void)
+{
+  uint8_t red = 0u;
+  uint8_t green = 0u;
+  uint8_t blue = 0u;
+
+  (void)ws2812_get_onboard_status_rgb(&red, &green, &blue);
   ws2812_pixels_set_onboard_rgb(red, green, blue);
 }
 
@@ -727,11 +868,10 @@ static uint8_t ws2812_start_transfer(uint8_t *tx_buf, uint16_t tx_len)
 {
   HAL_StatusTypeDef st;
 
-  if ((hspi3.Instance != SPI3) || (s_busy != 0u)) {
+  if (ws2812_try_mark_busy() == 0u) {
     return 0u;
   }
 
-  s_busy = 1u;
   ws2812_scope_sync_begin();
   ws2812_pin_spi_mode();
 #if WS2812_SPI_USE_DMA
@@ -739,7 +879,7 @@ static uint8_t ws2812_start_transfer(uint8_t *tx_buf, uint16_t tx_len)
   if (st != HAL_OK) {
     ws2812_scope_pulse_count(5u);
     ws2812_pin_gpio_low_mode();
-    s_busy = 0u;
+    ws2812_clear_busy();
     return 0u;
   }
 #else
@@ -754,7 +894,7 @@ static uint8_t ws2812_start_transfer(uint8_t *tx_buf, uint16_t tx_len)
   __enable_irq();
 #endif
   ws2812_pin_gpio_low_mode();
-  s_busy = 0u;
+  ws2812_clear_busy();
   if (st != HAL_OK) {
     return 0u;
   }
@@ -778,8 +918,14 @@ void ws2812_spi_init(void)
   s_last_frame_cycles = DWT->CYCCNT;
   s_pattern_anim_step = 0u;
   s_pattern_frame_repeat = 0u;
+  s_pattern_frame_counter = 0u;
   s_override_pattern = WS2812_PATTERN_OFF;
   s_override_until_ms = 0u;
+  s_tx_frame_ready = 0u;
+  s_tx_buffer_building = 0u;
+  s_rendered_pattern = WS2812_PATTERN_COUNT;
+  s_rendered_anim_step = 0xFFFFu;
+  s_rendered_status_key = 0xFFFFFFFFu;
 }
 
 void ws2812_spi_clear(void)
@@ -811,8 +957,14 @@ void ws2812_spi_set_rgb(uint16_t index, uint8_t r, uint8_t g, uint8_t b)
 
 uint8_t ws2812_spi_show(void)
 {
+  if (ws2812_begin_tx_buffer_update() == 0u) {
+    return 0u;
+  }
+
   ws2812_build_tx_buffer();
   ws2812_clean_dcache_region(s_tx_buf, (uint32_t)sizeof(s_tx_buf));
+  s_tx_frame_ready = 1u;
+  ws2812_end_tx_buffer_update();
   return ws2812_start_transfer(s_tx_buf, (uint16_t)sizeof(s_tx_buf));
 }
 
@@ -884,13 +1036,8 @@ void ws2812_spi_trigger_event(ws2812_event_t event, uint16_t duration_ms)
 
 void ws2812_spi_service(uint32_t now_ms)
 {
-  uint16_t step_frames;
-  uint32_t now_cycles = DWT->CYCCNT;
   ws2812_pattern_t effective_pattern = s_requested_pattern;
-
-  if (s_busy != 0u) {
-    return;
-  }
+  uint32_t status_key = 0u;
 
   if ((s_override_pattern != WS2812_PATTERN_OFF) &&
       ((int32_t)(s_override_until_ms - now_ms) > 0)) {
@@ -908,26 +1055,64 @@ void ws2812_spi_service(uint32_t now_ms)
     s_pattern_force_send = 1u;
   }
 
+  status_key = ws2812_get_onboard_status_rgb(NULL, NULL, NULL);
   if ((s_pattern_force_send == 0u) &&
-      ((uint32_t)(now_cycles - s_last_frame_cycles) < s_frame_period_cycles)) {
+      (s_rendered_pattern == s_active_pattern) &&
+      (s_rendered_anim_step == s_pattern_anim_step) &&
+      (s_rendered_status_key == status_key)) {
     return;
   }
 
+  if (ws2812_begin_tx_buffer_update() == 0u) {
+    return;
+  }
+
+  status_key = ws2812_get_onboard_status_rgb(NULL, NULL, NULL);
   ws2812_render_pattern(s_active_pattern, s_pattern_anim_step);
   ws2812_build_tx_buffer();
   ws2812_clean_dcache_region(s_tx_buf, (uint32_t)sizeof(s_tx_buf));
-  if (ws2812_start_transfer(s_tx_buf, (uint16_t)WS2812_TX_BUF_SIZE) == 0u) {
-    return;
-  }
-
-  s_last_frame_cycles = now_cycles;
+  s_tx_frame_ready = 1u;
+  s_rendered_pattern = s_active_pattern;
+  s_rendered_anim_step = s_pattern_anim_step;
+  s_rendered_status_key = status_key;
   s_pattern_force_send = 0u;
+  ws2812_end_tx_buffer_update();
+}
+
+static void ws2812_note_transfer_started(void)
+{
+  uint16_t step_frames;
+
+  s_last_frame_cycles = DWT->CYCCNT;
   s_pattern_frame_counter++;
   step_frames = ws2812_pattern_step_frames(s_active_pattern);
+  if (step_frames == 0u) {
+    step_frames = 1u;
+  }
+
   s_pattern_frame_repeat++;
   if (s_pattern_frame_repeat >= step_frames) {
     s_pattern_frame_repeat = 0u;
     s_pattern_anim_step++;
+    s_pattern_force_send = 1u;
+  }
+
+  if ((WS2812_STATUS_BLINK_HALF_FRAMES != 0u) &&
+      ((s_pattern_frame_counter % WS2812_STATUS_BLINK_HALF_FRAMES) == 0u)) {
+    s_pattern_force_send = 1u;
+  }
+}
+
+void ws2812_spi_on_adc_buffer_complete(void)
+{
+  if ((s_busy != 0u) || (s_tx_buffer_building != 0u) || (s_tx_frame_ready == 0u)) {
+    return;
+  }
+
+  ws2812_update_onboard_status_in_tx_buffer();
+
+  if (ws2812_start_transfer(s_tx_buf, (uint16_t)WS2812_TX_BUF_SIZE) != 0u) {
+    ws2812_note_transfer_started();
   }
 }
 
@@ -939,7 +1124,7 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
       __HAL_SPI_CLEAR_EOTFLAG(hspi);
     }
     ws2812_pin_gpio_low_mode();
-    s_busy = 0u;
+    ws2812_clear_busy();
   }
 }
 
@@ -948,7 +1133,7 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
   if ((hspi != NULL) && (hspi->Instance == SPI3)) {
     ws2812_scope_pulse_count(5u);
     ws2812_pin_gpio_low_mode();
-    s_busy = 0u;
+    ws2812_clear_busy();
   }
 }
 
