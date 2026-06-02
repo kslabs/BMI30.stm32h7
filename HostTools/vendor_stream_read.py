@@ -74,8 +74,8 @@ def claim_interface(dev, intf_num):
     return intf
 
 
-def send_cmd(dev, ep_out, data: bytes):
-    dev.write(ep_out, data, timeout=1000)
+def send_cmd(dev, ep_out, data: bytes, timeout: int = 1000):
+    dev.write(ep_out, data, timeout=int(timeout))
 
 
 def le16(v):
@@ -191,7 +191,7 @@ def main():
     ap.add_argument('--win1-start', type=int, default=280)
     ap.add_argument('--win1-len', type=int, default=200)
     ap.add_argument('--status-interval', type=float, default=0.5, help='Request GET_STATUS every N seconds (0=off)')
-    ap.add_argument('--rx-ack-interval', type=float, default=0.25, help='Send HOST_RX_ACK every N seconds when new A/B frames were parsed (0=off)')
+    ap.add_argument('--rx-ack-interval', type=float, default=0.0, help='Send HOST_RX_ACK every N seconds when new A/B frames were parsed (0=off)')
     ap.add_argument('--ctrl-status', action='store_true', help='Use control transfer for GET_STATUS (works even mid-pair)')
     ap.add_argument('--status-print', action='store_true', help='Print periodic STAT lines even with --quiet')
     ap.add_argument('--print-errors', action='store_true', help='Print USB read/control errors even with --quiet')
@@ -201,7 +201,7 @@ def main():
     ap.add_argument('--fail-fast', action='store_true', help='Exit immediately on first violation (default: count and continue)')
     ap.add_argument('--verify', choices=['pair', 'mono'], default=None, help='Verification mode: pair=A->B strict pairs, mono=single stream seq continuity')
     ap.add_argument('--stream-mode', type=int, default=0, help='0=latest (lossy), 1=LOSSLESS_ROI, 2=AVG_ROI')
-    ap.add_argument('--avg-n', type=int, default=1, help='AVG_ROI parameter (1..32), used when --stream-mode=2')
+    ap.add_argument('--avg-n', type=int, default=24, help='AVG_ROI parameter (16..64), used when --stream-mode=2')
     ap.add_argument('--async-mode', dest='async_mode', type=int, choices=[0, 1], default=None, help='Set ASYNC mode (0/1). In LOSSLESS_ROI firmware may force 0.')
     ap.add_argument('--chmode', type=int, choices=[0, 1, 2, 3], default=None, help='Set channel mode (firmware-defined).')
     ap.add_argument('--tx-enable', type=int, choices=[0, 1], default=None, help='Set external TX gate (0=disable, 1=enable) via CMD 0x33.')
@@ -230,10 +230,10 @@ def main():
         sm = int(args.stream_mode) & 0xFF
         if sm == 2:
             n = int(args.avg_n)
-            if n < 1:
-                n = 1
-            if n > 32:
-                n = 32
+            if n < 16:
+                n = 16
+            if n > 64:
+                n = 64
             send_cmd(dev, ep_out, bytes([VND_CMD_SET_STREAM_MODE, sm, n & 0xFF]))
         else:
             send_cmd(dev, ep_out, bytes([VND_CMD_SET_STREAM_MODE, sm]))
@@ -452,16 +452,20 @@ def main():
                     progressed = True
                     continue
                 total_len = 32 + total_samples * 2
-                # В DIAG-режиме устройство может паддировать кадры до кратности 512 (HS MPS)
-                padded_len = total_len
-                if not args.full_mode:
-                    unit = 512  # HS max packet size
-                    padded_len = ((total_len + (unit - 1)) // unit) * unit
-                # Если в буфере уже есть весь паддированный кадр — заберём его целиком,
-                # а для парсинга возьмём только полезную часть (без паддинга).
-                if len(acc) >= padded_len and padded_len > total_len:
-                    fbuf_full = pop(padded_len)
-                    fbuf = fbuf_full[:total_len]
+                # Устройство может паддировать кадры до 512 байт, чтобы bulk IN
+                # завершался ZLP, а не коротким пакетом. Для full-mode съедаем
+                # паддинг только если он нулевой, чтобы не проглотить следующий кадр.
+                unit = 512  # HS max packet size; also multiple of FS 64-byte MPS
+                padded_len = ((total_len + (unit - 1)) // unit) * unit
+                if padded_len > total_len and len(acc) >= padded_len:
+                    padding = acc[total_len:padded_len]
+                    if (not args.full_mode) or all(b == 0 for b in padding):
+                        fbuf_full = pop(padded_len)
+                        fbuf = fbuf_full[:total_len]
+                    elif len(acc) >= total_len:
+                        fbuf = pop(total_len)
+                    else:
+                        break
                 elif len(acc) >= total_len:
                     fbuf = pop(total_len)
                 else:
@@ -605,7 +609,7 @@ def main():
                     total_host_frames > last_rx_ack_frames and
                     (now - last_rx_ack) >= args.rx_ack_interval):
                 try:
-                    send_cmd(dev, ep_out, bytes([VND_CMD_HOST_RX_ACK]) + le32(total_host_frames))
+                    send_cmd(dev, ep_out, bytes([VND_CMD_HOST_RX_ACK]) + le32(total_host_frames), timeout=20)
                     last_rx_ack = now
                     last_rx_ack_frames = total_host_frames
                 except usb.core.USBError as e:

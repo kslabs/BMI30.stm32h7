@@ -105,7 +105,7 @@ extern "C" {
 #define VND_DC_MODE_FREEZE     0u /* apply stored DC, do not learn */
 #define VND_DC_MODE_WORK       1u /* normal slow tracking */
 #define VND_DC_MODE_DETECT     2u /* medium tracking while host detects a tag */
-#define VND_DC_MODE_BOOT_FAST  3u /* fast tracking window, then automatic WORK */
+#define VND_DC_MODE_BOOT_FAST  3u /* fastest tracking until host selects another mode */
 
 #define VND_DC_CFG_FLAG_ADAPT_ENABLED 0x0001u
 #define VND_DC_CFG_FLAG_AUTO_FREEZE   0x0002u
@@ -149,13 +149,13 @@ typedef struct {
     uint8_t  version;           /* 1 */
     uint8_t  mode;              /* VND_DC_MODE_* effective/current mode */
     uint16_t flags;             /* VND_DC_CFG_FLAG_* */
-    uint32_t work_settle_ms;    /* slow work-mode time constant */
-    uint32_t detect_settle_ms;  /* medium tag-detection time constant */
-    uint32_t fast_settle_ms;    /* fast boot/calibration time constant */
-    uint32_t fast_duration_ms;  /* BOOT_FAST duration before auto WORK */
-    uint32_t active_settle_ms;  /* currently used time constant */
+    uint32_t work_settle_ms;    /* WORK full 16-bit SAR pass time */
+    uint32_t detect_settle_ms;  /* DETECT full 16-bit SAR pass time */
+    uint32_t fast_settle_ms;    /* BOOT_FAST full 16-bit SAR pass time */
+    uint32_t fast_duration_ms;  /* legacy wire name: last adapt_settle_ms alias, not a timer */
+    uint32_t active_settle_ms;  /* currently used SAR pass time */
     uint32_t mode_enter_ms;     /* HAL_GetTick() when current mode was entered */
-    uint32_t fast_until_ms;     /* HAL_GetTick() deadline for BOOT_FAST, 0 otherwise */
+    uint32_t fast_until_ms;     /* legacy field; always 0 in continuous-speed model */
     uint32_t adapt_updates;     /* accepted DC learning updates since boot */
 } vnd_dc_config_v1_t;
 
@@ -233,6 +233,9 @@ extern volatile uint8_t vnd_tx_kick; /* Флаг пробуждения таск
 
 /* Публичные функции */
 void Vendor_Stream_Task(void);
+void Vendor_Control_Task(void);
+void Vendor_Status_Task(void);
+void Vendor_Maintenance_Task(void);
 void usb_vendor_periodic_tick(void); /* тик от TIM6 */
 uint8_t vnd_is_streaming(void);
 uint8_t vnd_is_tx_enabled(void);
@@ -252,6 +255,7 @@ uint32_t vnd_get_last_txcplt_ms(void);
 uint32_t vnd_get_last_frame_txcplt_ms(void);
 uint32_t vnd_get_last_host_rx_ack_ms(void);
 uint32_t vnd_get_last_error(void);
+void vnd_log_usb_close_snapshot(const char *reason);
 /* Получить частоту буферов профиля (Fs блоков/с): прокси к adc_stream */
 uint16_t adc_stream_get_buf_rate(void);
 
@@ -309,6 +313,7 @@ extern volatile uint8_t  vnd_dc_load_flags_public;
 extern volatile uint16_t vnd_dc_loaded_crc16_public;
 extern volatile uint32_t vnd_dc_flash_next_off_public;
 void vnd_dc_note_flash_fault(uint32_t fault_addr, uint32_t cfsr);
+void vnd_dc_request_save_to_flash(void);
 
 /* Sync master/slave status for LCD */
 extern volatile uint8_t  vnd_sync_mode_public; /* 0=master,1=slave,2=off */

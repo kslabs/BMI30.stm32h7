@@ -162,7 +162,7 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 /* Режимы стриминга (поведение выбора кадров/окна)
      SET_STREAM_MODE payload:
          - [1] u8 mode: 0=LATEST (lossy), 1=LOSSLESS_ROI, 2=AVG_ROI
-         - [2] u8 avg_n (опционально, только для mode=2): 1..32, default=20
+         - [2] u8 avg_n (опционально, только для mode=2): 1..64, default=24
 */
 #define VND_CMD_SET_STREAM_MODE  0x1Au
 /* DC Adaptation control: 0x00=freeze (stop learning), 0x01=active (resume learning) */
@@ -171,6 +171,7 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #define VND_CMD_CALIB_DC_FAST    0x1Eu
 /* DC timing config: host sets/read time-based adaptation modes */
 #define VND_CMD_SET_DC_CONFIG    0x1Fu
+#define VND_CMD_SAVE_DC_TO_FLASH 0x2Bu
 #define VND_CMD_GET_DC_CONFIG    0x3Au
 
 #define VND_SYNC_MODE_MASTER 0u
@@ -180,8 +181,55 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #define VND_STREAM_MODE_LOSSLESS_ROI  1u
 #define VND_STREAM_MODE_AVG_ROI       2u
 #define VND_AVG_MAX_N                 64u  /* Максимум 64 буфера для усреднения (шаг 8: 8/16/24/32/40/48/56/64) */
+#ifndef VND_AVG_MIN_N
+#define VND_AVG_MIN_N                 24u
+#endif
+#ifndef VND_AVG_LATEST_WINS
+/* AVG_ROI is a live stream, not a backlog. If USB falls behind, keep only the
+   newest averaged ROI pair and drop stale queued pairs. */
+#define VND_AVG_LATEST_WINS           1u
+#endif
 #define VND_AVG_OUT_Q                 4u
 #define VND_HOST_RX_ACK_TIMEOUT_MS    1500u
+#ifndef VND_USB_IN_BUSY_STALL_MS
+#define VND_USB_IN_BUSY_STALL_MS       220u
+#endif
+#ifndef VND_USB_IN_NO_PROGRESS_MS
+#define VND_USB_IN_NO_PROGRESS_MS      300u
+#endif
+#ifndef VND_USB_IN_RECOVERY_COOLDOWN_MS
+#define VND_USB_IN_RECOVERY_COOLDOWN_MS 250u
+#endif
+#ifndef VND_USB_IN_ACTIVE_HARD_STALL_MS
+/* Active USB IN нельзя часто отменять: HAL_PCD_EP_Abort() рвёт pending bulk read на хосте. */
+#define VND_USB_IN_ACTIVE_HARD_STALL_MS 1200u
+#endif
+#ifndef VND_USB_IN_ABORT_ACTIVE_STREAM
+/* In normal streaming an active USB IN is already owned by the USB core. Aborting it
+   breaks the host's pending bulk read; keep aborts for explicit START/STOP/reset only. */
+#define VND_USB_IN_ABORT_ACTIVE_STREAM 0u
+#endif
+#ifndef VND_USB_IN_ACTIVE_HOLD_LOG_MS
+#define VND_USB_IN_ACTIVE_HOLD_LOG_MS 1000u
+#endif
+#ifndef VND_USB_FRAME_PACE_MS
+/* Старый host пишет HOST_RX_ACK почти на каждый кадр. Короткий зазор между IN
+   кадрами убирает гонку A->B на FS bulk без повторной отправки старых данных. */
+#define VND_USB_FRAME_PACE_MS 4u
+#endif
+#ifndef VND_USB_AFTER_HOST_ACK_PACE_MS
+/* HOST_RX_ACK приходит OUT-пакетом из старого синхронного host-loop. Не ставим
+   следующий IN сразу в тот же слот: даём хосту снова выставить bulk read. */
+#define VND_USB_AFTER_HOST_ACK_PACE_MS 12u
+#endif
+#ifndef VND_USB_ROI_PAD_TO_MPS
+/* ROI frames must finish with a short FS bulk packet. Padding 432-byte frames to
+   512 can leave old host readers waiting for more data until their timeout. */
+#define VND_USB_ROI_PAD_TO_MPS 0u
+#endif
+#ifndef VND_USB_ROI_PAD_BYTES
+#define VND_USB_ROI_PAD_BYTES 512u
+#endif
 
 /* Параметры */
 #define VND_DEFAULT_TEST_SAMPLES   80u
@@ -191,7 +239,7 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 /* ---------------- Глобальные переменные состояния (централизовано) ---------------- */
 /* Видимая снаружи (CDC) метка стриминга */
 volatile uint8_t streaming = 0;
-static volatile uint8_t vnd_tx_enable = 0; /* 1=передатчик включён (PA1=0), 0=выкл (PA1=1); по умолчанию выключен */
+static volatile uint8_t vnd_tx_enable = 0; /* 1=разрешить физические TX-маркеры PA2/PC7 и инверсный PA1; 0=зажать PA2/PC7 LOW, PA1 HIGH */
 /* Последовательность пар (инкремент только после успешного завершения B) */
 volatile uint32_t stream_seq = 0;
 /* Фактически зафиксированный размер кадров и ожидаемый размер байт */
@@ -237,6 +285,21 @@ static volatile uint32_t vnd_last_frame_txcplt_ms = 0; /* время после�
 static volatile uint32_t vnd_last_host_rx_ack_ms = 0;  /* время последнего подтверждения чтения потока от хоста */
 static volatile uint32_t vnd_host_rx_last_counter = 0; /* последний принятый счётчик host-received frames */
 static volatile uint8_t  vnd_host_rx_counter_valid = 0;
+static inline uint8_t vnd_tick_age_ms(uint32_t now_ms, uint32_t before_ms, uint32_t *age_ms)
+{
+    if(before_ms == 0u){
+        if(age_ms) *age_ms = 0xFFFFFFFFu;
+        return 0u;
+    }
+    /* If an ISR wrote before_ms after the local now_ms snapshot, do not treat it as a 49-day timeout. */
+    int32_t age = (int32_t)(now_ms - before_ms);
+    if(age < 0){
+        if(age_ms) *age_ms = 0u;
+        return 0u;
+    }
+    if(age_ms) *age_ms = (uint32_t)age;
+    return 1u;
+}
 /* Счётчик переданных семплов (оба канала суммарно) */
 static volatile uint64_t vnd_total_tx_samples = 0ULL;
 /* Новые маркеры состояния запуска потока */
@@ -245,8 +308,8 @@ static volatile uint64_t vnd_total_tx_samples = 0ULL;
     через флаг need_recovery, если включено. Это предотвращает полное исчезновение устройства с шины
     при частых запросах 0x22 и снижает влияние на отладку. */
 #ifndef VND_DEVICE_RESET_SOFT_ONLY
-/* ВРЕМЕННО: разрешаем полный аппаратный reset по команде 0x22 (через флаг need_hard_reset в main) */
-#define VND_DEVICE_RESET_SOFT_ONLY 0
+/* Жёсткий reset по 0x22 отключён: только мягкое восстановление USB без NVIC_SystemReset. */
+#define VND_DEVICE_RESET_SOFT_ONLY 1
 #endif
 
 /* Флаг восстановления (определён в main.c) */
@@ -286,7 +349,7 @@ static volatile uint32_t vnd_sync_tick_hz = 1000000u; /* TIM16 IC tick (Hz) */
 static volatile uint32_t vnd_sync_last_capture_ms = 0;
 
 /* DC Control Globals */
-volatile uint16_t vnd_dc_fast_frames = 0;   /* Countdown for fast calibration mode */
+volatile uint16_t vnd_dc_fast_frames = 0;   /* legacy CALIB_DC_FAST request value */
 
 /* Public status for LCD */
 volatile uint8_t  vnd_sync_mode_public = VND_SYNC_MODE_SLAVE;
@@ -320,6 +383,8 @@ static volatile uint16_t vnd_trunc_samples = 0;
 static volatile uint16_t vnd_frame_samples_req = 0; /* если 0 — вычислять по умолчанию под ~20 FPS */
 static volatile uint16_t vnd_pair_period_ms = 50;   /* целевой период пары A+B в миллисекундах */
 static volatile uint32_t vnd_next_pair_ms = 0;      /* следующий момент разрешения отправки A новой пары */
+static volatile uint32_t vnd_next_frame_tx_ms = 0;  /* минимальный момент старта следующего A/B IN */
+static volatile uint8_t  vnd_last_tx_pace_busy = 0;
 /* Флаг: первая полноценная пара (A->B) завершена. До этого STAT между парами стараемся не слать. */
 static volatile uint8_t first_pair_done = 0;
 /* Базовая отметка суммарных байт на момент START для вычисления дельты к STOP */
@@ -364,6 +429,17 @@ static volatile uint8_t stop_stat_inflight = 0;   /* Сейчас в полёт�
 static volatile uint32_t dbg_prepare_calls = 0;
 static volatile uint32_t dbg_prepare_ok = 0;
 static volatile uint32_t dbg_task_calls = 0; /* сколько раз заходили в Vendor_Stream_Task */
+static volatile uint32_t dbg_task_gap_count = 0;
+static volatile uint32_t dbg_task_gap_last_ms = 0;
+static volatile uint32_t dbg_task_gap_max_ms = 0;
+static volatile uint32_t dbg_tx_force_idle_count = 0;
+static volatile uint32_t dbg_tx_force_idle_last_ms = 0;
+static volatile uint32_t dbg_tx_drop_recovery_count = 0;
+static volatile uint32_t dbg_tx_drop_recovery_last_ms = 0;
+static volatile uint32_t dbg_tx_drop_recovery_request_count = 0;
+static volatile uint32_t dbg_tx_active_hold_count = 0;
+static volatile uint32_t dbg_tx_active_hold_last_ms = 0;
+static volatile uint8_t  vnd_tx_drop_recovery_request = 0;
 /* Счётчик пропущенных кадров (last-buffer-wins): сколько кадров FIFO было перескочено */
 static volatile uint32_t dbg_skipped_frames = 0;
 
@@ -441,8 +517,42 @@ static void vnd_apply_auto_roi_window(void)
 /* Текущий режим стриминга (по умолчанию оставляем текущий "последний буфер") */
 static volatile uint8_t vnd_stream_mode = VND_STREAM_MODE_LATEST;
 
+static inline uint8_t vnd_frame_pace_applies(void)
+{
+#if VND_USB_FRAME_PACE_MS > 0
+    if(!streaming || diag_mode_active) return 0u;
+    return (vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI ||
+            vnd_stream_mode == VND_STREAM_MODE_AVG_ROI) ? 1u : 0u;
+#else
+    return 0u;
+#endif
+}
+
+static inline uint8_t vnd_frame_pace_ready(uint32_t now_ms)
+{
+    if(!vnd_frame_pace_applies()) return 1u;
+#if VND_USB_AFTER_HOST_ACK_PACE_MS > 0
+    if(vnd_last_host_rx_ack_ms != 0u){
+        uint32_t ack_age_ms = 0u;
+        if(vnd_tick_age_ms(now_ms, vnd_last_host_rx_ack_ms, &ack_age_ms) &&
+           ack_age_ms < (uint32_t)VND_USB_AFTER_HOST_ACK_PACE_MS){
+            return 0u;
+        }
+    }
+#endif
+    if(vnd_next_frame_tx_ms == 0u) return 1u;
+    return ((int32_t)(now_ms - vnd_next_frame_tx_ms) >= 0) ? 1u : 0u;
+}
+
+static inline void vnd_frame_pace_arm(uint32_t now_ms)
+{
+    if(vnd_frame_pace_applies()){
+        vnd_next_frame_tx_ms = now_ms + (uint32_t)VND_USB_FRAME_PACE_MS;
+    }
+}
+
 /* stream_mode=2: усреднение ROI по N буферам, раздельно для even/odd. */
-static volatile uint8_t vnd_avg_n = 20; /* 1..64 (рекомендуемые значения: 8/16/24/32/40/48/56/64) */
+static volatile uint8_t vnd_avg_n = 24; /* 16..64 (рабочие значения: 16/24/32/40/48/56/64) */
 static uint8_t vnd_avg_cnt[2] = {0,0};
 static uint8_t vnd_avg_next_parity = 0; /* 0=even, 1=odd (legacy; не используется для выпуска кадров) */
 static uint32_t vnd_avg_last_dma_seq[2] = {0,0};
@@ -485,8 +595,8 @@ static uint32_t dbg_avg_in_last = 0, dbg_avg_out_last = 0, dbg_avg_tx_last = 0;
 #define VND_DC_ADAPT_HOLDOFF_MS (2000u)
 #endif
 
-/* Time-based DC adaptation. Host-visible units are milliseconds; host UI can show seconds.
-    Значения трактуются как время выхода примерно на 99% к целевому уровню 32767:
+/* Time-based DC SAR adaptation. Host-visible units are milliseconds; host UI can show seconds.
+    Значения трактуются как время полного прохода 16 SAR-битов к целевому уровню 32767:
     larger value means slower tracking. */
 #ifndef VND_DC_WORK_SETTLE_MS
 #define VND_DC_WORK_SETTLE_MS   (15u*60u*1000u) /* 900 s */
@@ -497,47 +607,23 @@ static uint32_t dbg_avg_in_last = 0, dbg_avg_out_last = 0, dbg_avg_tx_last = 0;
 #ifndef VND_DC_FAST_SETTLE_MS
 #define VND_DC_FAST_SETTLE_MS   (5u*1000u)      /* 5 s */
 #endif
-#ifndef VND_DC_FAST_DURATION_MS
-#define VND_DC_FAST_DURATION_MS (30u*1000u)     /* 30 s after reboot */
-#endif
 #ifndef VND_DC_SETTLE_MIN_MS
-#define VND_DC_SETTLE_MIN_MS    (1000u)
+#define VND_DC_SETTLE_MIN_MS    (1u)
 #endif
 #ifndef VND_DC_SETTLE_MAX_MS
 #define VND_DC_SETTLE_MAX_MS    (24u*60u*60u*1000u)
-#endif
-#ifndef VND_DC_FAST_DURATION_MAX_MS
-#define VND_DC_FAST_DURATION_MAX_MS (60u*60u*1000u)
 #endif
 #ifndef VND_DC_ADAPT_DT_MAX_MS
 #define VND_DC_ADAPT_DT_MAX_MS  (1000u)
 #endif
 
-/* ln(100) в формате Q16: нужен, чтобы settle_ms означал время выхода на ~99%.
-    Если alpha = dt / settle, то за settle устройство доходит только до ~63%,
-    что не соответствует ожидаемой пользователем семантике. */
-#ifndef VND_DC_SETTLE_99_LN100_Q16
-#define VND_DC_SETTLE_99_LN100_Q16 301804u
+/* За settle_ms выполняется полный 16-битный SAR-проход. При очень малом settle_ms
+    бюджет набирает все биты за один кадр, что даёт максимально быструю адаптацию. */
+#ifndef VND_DC_SAR_BITS
+#define VND_DC_SAR_BITS (16u)
 #endif
-
-#ifndef VND_DC_FAST_ALPHA_MIN_Q16
-/* В BOOT_FAST держим минимум 10% от текущей ошибки за одно обновление.
-    Шаг остаётся динамическим, потому что сама коррекция пропорциональна err[i]. */
-#define VND_DC_FAST_ALPHA_MIN_Q16 6554u
-#endif
-
-/* Быстрая поиндексная (per-sample) подстройка DC.
-    Важно: DC хранится как 4 массива по 200 значений (канал×чет/нечет), и корректировка
-    должна быть по каждому семплу, а не только одним числом.
-    Эти параметры задают «скорость» поиндексной адаптации и ограничение шага. */
-#ifndef VND_DC_SAMPLE_GAIN_DIV
-/* Поиндексная адаптация: шаг ~= err/div. Меньше div -> быстрее.
-    Важно: это НЕ «общий» шаг для всего окна, а индивидуально для каждого i. */
-#define VND_DC_SAMPLE_GAIN_DIV (256)
-#endif
-#ifndef VND_DC_SAMPLE_STEP_MAX
-/* Скорость по просьбе: шаг адаптации ±1 на один вызов. */
-#define VND_DC_SAMPLE_STEP_MAX (1)
+#ifndef VND_DC_SAR_MAX_BITS_PER_UPDATE
+#define VND_DC_SAR_MAX_BITS_PER_UPDATE (16u)
 #endif
 
 /* Deadband для адаптации DC вокруг midscale.
@@ -582,6 +668,22 @@ typedef struct __attribute__((packed)) {
 #define VND_DC_COMMIT_OFFSET     ((uint32_t)offsetof(vnd_dc_blob_t, _pad) + 28u)
 #define VND_DC_RECOVERY_MAGIC    0x44524356u /* 'VCRD' little-endian */
 
+#ifndef VND_DC_SAVE_DRY_RUN
+#define VND_DC_SAVE_DRY_RUN      0u
+#endif
+
+#ifndef VND_DC_SAVE_UNLOCK_TEST
+#define VND_DC_SAVE_UNLOCK_TEST  0u
+#endif
+
+#ifndef VND_DC_SAVE_ERASE_ENABLE
+#define VND_DC_SAVE_ERASE_ENABLE 1u
+#endif
+
+#ifndef VND_DC_SAVE_ERASE_ONLY_TEST
+#define VND_DC_SAVE_ERASE_ONLY_TEST 0u
+#endif
+
 static int16_t  vnd_dc_buf[2][2][VND_DC_ROI_LEN];
 static uint8_t  vnd_dc_pos[2][2];
 static uint8_t  vnd_dc_loaded = 0;
@@ -591,9 +693,9 @@ static uint32_t vnd_dc_flash_next_off = 0;
 static uint32_t vnd_dc_last_save_ms = 0;
 static uint32_t vnd_dc_last_dirty_log_ms = 0;
 static volatile uint8_t vnd_dc_load_request = 0;
-static int32_t  vnd_dc_accum_q16[2][2][VND_DC_ROI_LEN];
-static uint8_t  vnd_dc_accum_valid = 0;
+static volatile uint8_t vnd_dc_save_request = 0;
 static uint32_t vnd_dc_last_adapt_ms[2][2];
+static uint32_t vnd_dc_sar_budget_q16[2][2];
 
 static volatile uint8_t  vnd_dc_mode = VND_DC_MODE_BOOT_FAST;
 /* Режим, в который возвращаемся после FREEZE по команде SET_DC_ADAPT=1. */
@@ -601,9 +703,9 @@ static volatile uint8_t  vnd_dc_resume_mode = VND_DC_MODE_BOOT_FAST;
 static volatile uint32_t vnd_dc_work_settle_ms = (uint32_t)VND_DC_WORK_SETTLE_MS;
 static volatile uint32_t vnd_dc_detect_settle_ms = (uint32_t)VND_DC_DETECT_SETTLE_MS;
 static volatile uint32_t vnd_dc_fast_settle_ms = (uint32_t)VND_DC_FAST_SETTLE_MS;
-static volatile uint32_t vnd_dc_fast_duration_ms = (uint32_t)VND_DC_FAST_DURATION_MS;
+static volatile uint32_t vnd_dc_adapt_settle_ms = 0u;
 static volatile uint32_t vnd_dc_mode_enter_ms = 0;
-static volatile uint32_t vnd_dc_fast_until_ms = (uint32_t)VND_DC_FAST_DURATION_MS;
+static volatile uint32_t vnd_dc_fast_until_ms = 0u;
 static volatile uint32_t vnd_dc_adapt_updates = 0;
 
 /* После reboot "чет/нечет" (parity) может оказаться инвертирован относительно того, что было
@@ -652,6 +754,11 @@ volatile uint32_t vnd_dc_flash_next_off_public = 0;
 
 static uint32_t vnd_dc_adapt_block_until_ms = 0;
 
+void vnd_dc_request_save_to_flash(void)
+{
+    vnd_dc_save_request = 1u;
+}
+
 static uint32_t vnd_dc_clamp_settle_ms(uint32_t value_ms)
 {
     if(value_ms < (uint32_t)VND_DC_SETTLE_MIN_MS) return (uint32_t)VND_DC_SETTLE_MIN_MS;
@@ -659,59 +766,26 @@ static uint32_t vnd_dc_clamp_settle_ms(uint32_t value_ms)
     return value_ms;
 }
 
-static uint32_t vnd_dc_clamp_fast_duration_ms(uint32_t value_ms)
-{
-    if(value_ms > (uint32_t)VND_DC_FAST_DURATION_MAX_MS) return (uint32_t)VND_DC_FAST_DURATION_MAX_MS;
-    return value_ms;
-}
-
-static uint32_t vnd_dc_legacy_fast_rate_hz(void)
-{
-    uint32_t rate = adc_stream_get_buf_rate();
-    if(rate == 0u) rate = 50u;
-
-    if(vnd_stream_mode == VND_STREAM_MODE_AVG_ROI){
-        uint32_t avg_n = (uint32_t)vnd_avg_n;
-        uint32_t denom;
-        if(avg_n == 0u) avg_n = 1u;
-        denom = avg_n * 2u;
-        rate = (rate + denom - 1u) / denom;
-        if(rate == 0u) rate = 1u;
-    }
-
-    return rate;
-}
-
 static void vnd_dc_reset_adapt_timestamps(void)
 {
     memset(vnd_dc_last_adapt_ms, 0, sizeof(vnd_dc_last_adapt_ms));
+    memset(vnd_dc_sar_budget_q16, 0, sizeof(vnd_dc_sar_budget_q16));
 }
 
-static void vnd_dc_sync_accum_from_buf(void)
+static uint32_t vnd_dc_floor_pow2_u32(uint32_t value)
 {
-    for(uint8_t ch = 0; ch < 2u; ch++){
-        for(uint8_t p = 0; p < 2u; p++){
-            for(uint16_t i = 0; i < (uint16_t)VND_DC_ROI_LEN; i++){
-                vnd_dc_accum_q16[ch][p][i] = (int32_t)((int64_t)vnd_dc_buf[ch][p][i] * 65536LL);
-            }
-        }
+    uint32_t p = 1u;
+    while(value >= 2u && p <= (0x80000000u >> 1)){
+        uint32_t next = p << 1;
+        if(next > value) break;
+        p = next;
     }
-    vnd_dc_accum_valid = 1u;
+    return p;
+}
+
+static void vnd_dc_reset_adapt_state(void)
+{
     vnd_dc_reset_adapt_timestamps();
-}
-
-static int16_t vnd_dc_q16_to_i16(int32_t q16)
-{
-    int64_t q = (int64_t)q16;
-    int32_t v;
-    if(q >= 0){
-        v = (int32_t)((q + 32768LL) / 65536LL);
-    } else {
-        v = (int32_t)(-(((-q) + 32768LL) / 65536LL));
-    }
-    if(v < -32768) v = -32768;
-    else if(v > 32767) v = 32767;
-    return (int16_t)v;
 }
 
 static void vnd_dc_set_mode(uint8_t mode)
@@ -723,31 +797,16 @@ static void vnd_dc_set_mode(uint8_t mode)
     }
     vnd_dc_mode = mode;
     vnd_dc_mode_enter_ms = now_ms;
-    if(mode == VND_DC_MODE_BOOT_FAST && vnd_dc_fast_duration_ms != 0u){
-        vnd_dc_fast_until_ms = now_ms + vnd_dc_fast_duration_ms;
-    } else {
-        vnd_dc_fast_until_ms = 0u;
-    }
+    vnd_dc_fast_until_ms = 0u;
     vnd_dc_adapt_enabled = (mode == VND_DC_MODE_FREEZE) ? 0u : 1u;
     vnd_dc_reset_adapt_timestamps();
 }
 
 static uint8_t vnd_dc_effective_mode(uint32_t now_ms)
 {
+    (void)now_ms;
     uint8_t mode = vnd_dc_mode;
-    if(mode == VND_DC_MODE_BOOT_FAST){
-        uint32_t dur = vnd_dc_fast_duration_ms;
-        if(dur == 0u || (uint32_t)(now_ms - vnd_dc_mode_enter_ms) >= dur){
-            mode = VND_DC_MODE_WORK;
-            vnd_dc_mode = mode;
-            vnd_dc_mode_enter_ms = now_ms;
-            vnd_dc_fast_until_ms = 0u;
-            vnd_dc_fast_frames = 0u; /* legacy indicator */
-            vnd_dc_reset_adapt_timestamps();
-        } else {
-            vnd_dc_fast_until_ms = vnd_dc_mode_enter_ms + dur;
-        }
-    }
+    vnd_dc_fast_until_ms = 0u;
     vnd_dc_adapt_enabled = (mode == VND_DC_MODE_FREEZE) ? 0u : 1u;
     return mode;
 }
@@ -782,12 +841,28 @@ static void vnd_dc_apply_config_payload(const uint8_t *payload, uint32_t payload
         uint32_t work_ms = vnd_dc_rd_le32(payload + 4);
         uint32_t detect_ms = vnd_dc_rd_le32(payload + 8);
         uint32_t fast_ms = vnd_dc_rd_le32(payload + 12);
-        uint32_t fast_duration_ms = vnd_dc_rd_le32(payload + 16);
+        uint32_t adapt_settle_ms = vnd_dc_rd_le32(payload + 16);
 
         vnd_dc_work_settle_ms = vnd_dc_clamp_settle_ms(work_ms);
         vnd_dc_detect_settle_ms = vnd_dc_clamp_settle_ms(detect_ms);
         vnd_dc_fast_settle_ms = vnd_dc_clamp_settle_ms(fast_ms);
-        vnd_dc_fast_duration_ms = vnd_dc_clamp_fast_duration_ms(fast_duration_ms);
+
+        /* Backward-compatible meaning of the last u32: host-side UI may call it
+           "adaptation duration". It is not a run timer; it is a settle time for
+           the selected mode, i.e. speed of continuous SAR adaptation. */
+        if(adapt_settle_ms != 0u){
+            uint32_t settle_ms = vnd_dc_clamp_settle_ms(adapt_settle_ms);
+            if(mode == VND_DC_MODE_DETECT){
+                vnd_dc_detect_settle_ms = settle_ms;
+            } else if(mode == VND_DC_MODE_BOOT_FAST){
+                vnd_dc_fast_settle_ms = settle_ms;
+            } else if(mode == VND_DC_MODE_WORK){
+                vnd_dc_work_settle_ms = settle_ms;
+            }
+            vnd_dc_adapt_settle_ms = settle_ms;
+        } else {
+            vnd_dc_adapt_settle_ms = 0u;
+        }
     }
 
     vnd_dc_set_mode(mode);
@@ -1149,8 +1224,7 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
     if(roi_len == 0u) return;
     if(roi_len != (uint16_t)VND_DC_ROI_LEN) return;
 
-     /* Обновляемся на каждом новом FIFO-кадре (без искусственного лимита 50 Гц),
-         чтобы адаптация шла с реальной частотой заполнения even/odd буферов. */
+     /* Обновляемся на каждом новом FIFO-кадре; скорость обучения задаёт host через settle_ms. */
     static uint32_t last_seq = 0xFFFFFFFFu;
 
     uint16_t *a_ptr = NULL, *b_ptr = NULL; uint16_t ns = 0; uint32_t dma_seq = 0;
@@ -1388,10 +1462,10 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
         return;
     }
 
-     /* 2) Адаптация DC: строго поиндексная (per-sample), time-based.
-         Host задаёт settle time в миллисекундах: чем больше время, тем медленнее
-         dc[i] приближается к значению, которое центрирует out[i] около 32767.
-         Модель: out = raw + dc[i]; если out[i] слишком велик -> dc[i] делаем более отрицательным. */
+     /* 2) Адаптация DC: строго поиндексная (per-sample), time-based SAR.
+         Host задаёт settle time в миллисекундах: за это время набирается бюджет
+         на полный 16-битный проход последовательного приближения. Модель:
+         out = raw + dc[i]; если out[i] слишком велик -> dc[i] делаем более отрицательным. */
     int64_t sum = 0;
     for(uint16_t i=0;i<roi_len;i++) sum += (int32_t)out[i];
     int32_t mean = (int32_t)(sum / (int32_t)roi_len);
@@ -1406,10 +1480,6 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
         return;
     }
     settle_ms = vnd_dc_clamp_settle_ms(settle_ms);
-    if(!vnd_dc_accum_valid){
-        vnd_dc_sync_accum_from_buf();
-    }
-
     uint32_t last_ms = vnd_dc_last_adapt_ms[ch][p];
     uint32_t dt_ms = (last_ms == 0u) ? 20u : (uint32_t)(now_ms - last_ms);
     vnd_dc_last_adapt_ms[ch][p] = now_ms;
@@ -1423,29 +1493,54 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
         dt_ms = settle_ms;
     }
 
-    uint32_t alpha_q16 = (uint32_t)(((uint64_t)dt_ms * (uint64_t)VND_DC_SETTLE_99_LN100_Q16) / (uint64_t)settle_ms);
-    if(alpha_q16 == 0u){
-        alpha_q16 = 1u;
-    } else if(alpha_q16 > 65536u){
-        alpha_q16 = 65536u;
+    uint32_t budget_add_q16 = (uint32_t)(((uint64_t)dt_ms * (uint64_t)VND_DC_SAR_BITS * 65536ULL) / (uint64_t)settle_ms);
+    if(budget_add_q16 == 0u){
+        budget_add_q16 = 1u;
     }
-    if(mode == VND_DC_MODE_BOOT_FAST && alpha_q16 < (uint32_t)VND_DC_FAST_ALPHA_MIN_Q16){
-        alpha_q16 = (uint32_t)VND_DC_FAST_ALPHA_MIN_Q16;
+    uint32_t budget_q16 = vnd_dc_sar_budget_q16[ch][p] + budget_add_q16;
+    uint32_t max_budget_q16 = (uint32_t)VND_DC_SAR_MAX_BITS_PER_UPDATE * 65536u;
+    if(budget_q16 > max_budget_q16){
+        budget_q16 = max_budget_q16;
     }
+    uint32_t sar_bits = budget_q16 >> 16;
+    if(sar_bits == 0u){
+        vnd_dc_sar_budget_q16[ch][p] = budget_q16;
+        return;
+    }
+    if(sar_bits > (uint32_t)VND_DC_SAR_MAX_BITS_PER_UPDATE){
+        sar_bits = (uint32_t)VND_DC_SAR_MAX_BITS_PER_UPDATE;
+    }
+    vnd_dc_sar_budget_q16[ch][p] = budget_q16 - (sar_bits << 16);
 
-    /* per-sample correction */
+    /* per-sample SAR correction */
     {
         for(uint16_t i=0;i<roi_len;i++){
             int32_t e = (int32_t)out[i] - 32767;
             if(e > -dead && e < dead) continue;
 
-            int64_t q = (int64_t)vnd_dc_accum_q16[ch][p][i];
-            q -= (int64_t)e * (int64_t)alpha_q16;
-            if(q < -2147483648LL) q = -2147483648LL;
-            else if(q > 2147418112LL) q = 2147418112LL;
+            int32_t dc_i32 = (int32_t)vnd_dc_buf[ch][p][i];
+            for(uint32_t bit = 0u; bit < sar_bits; bit++){
+                uint32_t abs_e = (e < 0) ? (uint32_t)(-e) : (uint32_t)e;
+                if(abs_e <= (uint32_t)dead) break;
+                uint32_t step = vnd_dc_floor_pow2_u32(abs_e);
+                if(e > 0){
+                    dc_i32 -= (int32_t)step;
+                    e -= (int32_t)step;
+                } else {
+                    dc_i32 += (int32_t)step;
+                    e += (int32_t)step;
+                }
+                if(dc_i32 < -32768){
+                    dc_i32 = -32768;
+                    break;
+                }
+                if(dc_i32 > 32767){
+                    dc_i32 = 32767;
+                    break;
+                }
+            }
 
-            vnd_dc_accum_q16[ch][p][i] = (int32_t)q;
-            int16_t nv = vnd_dc_q16_to_i16((int32_t)q);
+            int16_t nv = (int16_t)dc_i32;
             if(nv != vnd_dc_buf[ch][p][i]){
                 vnd_dc_buf[ch][p][i] = nv;
                 changed = 1;
@@ -1463,12 +1558,12 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
             uint32_t now_ms = HAL_GetTick();
             if(vnd_dc_last_dirty_log_ms == 0u || (now_ms - vnd_dc_last_dirty_log_ms) > 1000u){
                 vnd_dc_last_dirty_log_ms = now_ms;
-                   VND_DC_LOGF("[DC] DIRTY: ch=%u p=%u mode=%u settle=%lums dt=%lums alpha_q16=%lu mean=%ld err=%ld\r\n",
+                   VND_DC_LOGF("[DC] DIRTY: ch=%u p=%u mode=%u settle=%lums dt=%lums sar_bits=%lu mean=%ld err=%ld\r\n",
                        (unsigned)ch, (unsigned)p,
                        (unsigned)mode,
                        (unsigned long)settle_ms,
                        (unsigned long)dt_ms,
-                       (unsigned long)alpha_q16,
+                       (unsigned long)sar_bits,
                        (long)mean, (long)err);
             }
         }
@@ -1543,13 +1638,13 @@ static void vnd_dc_load_once(void)
         vnd_dc_load_flags_public = 0;
         vnd_dc_loaded_crc16_public = 0;
         vnd_dc_last_save_ms = HAL_GetTick();
-        vnd_dc_sync_accum_from_buf();
+        vnd_dc_reset_adapt_state();
         return;
     }
 
     memcpy(vnd_dc_buf, best->dc, sizeof(vnd_dc_buf));
     memcpy(vnd_dc_pos, best->pos, sizeof(vnd_dc_pos));
-    vnd_dc_sync_accum_from_buf();
+    vnd_dc_reset_adapt_state();
     vnd_dc_parity_swap_valid = 0u; /* пересчитаем после загрузки на первом кадре */
     vnd_dc_write_counter = best->write_counter;
     vnd_dc_write_counter_public = vnd_dc_write_counter;
@@ -1575,26 +1670,31 @@ static void vnd_dc_load_once(void)
 
 static void vnd_dc_try_save_periodic(void)
 {
-    if(vnd_dc_auto_freeze) return; /* auto-freeze: no saving while signal is too dynamic/saturated */
+    uint8_t manual_save = 0u;
+    if(vnd_dc_save_request){
+        vnd_dc_save_request = 0u;
+        manual_save = 1u;
+    }
+    if(vnd_dc_auto_freeze && !manual_save) return; /* auto-freeze: no saving while signal is too dynamic/saturated */
     /* Привязываем период к моменту, когда DC стал dirty (и к LCD-прогрессу).
        Это устраняет ситуацию, когда прогресс дошёл до конца, а попытка save не делается.
        Условие: если dirty и прошло >= period с dirty_since_ms — пытаемся писать.
        При FAIL: НЕ очищаем dirty, но перезапускаем отсчёт (следующая попытка через period).
        При OK: очищаем dirty и сбрасываем dirty_since_ms.
      */
-    if(!vnd_dc_dirty_public) return;
-    if(!vnd_dc_dirty) return;
+    if(!manual_save && !vnd_dc_dirty_public) return;
+    if(!manual_save && !vnd_dc_dirty) return;
     uint32_t now = HAL_GetTick();
     uint32_t period = (vnd_dc_write_counter == 0u)
                       ? (uint32_t)VND_DC_SAVE_PERIOD_FIRST_MS
                       : (uint32_t)VND_DC_SAVE_PERIOD_MS;
     vnd_dc_save_period_ms = period;
-    if(period == 0u) period = 1u;
-    if(vnd_dc_dirty_since_ms == 0u){
+    if(!manual_save && period == 0u) return;
+    if(!manual_save && vnd_dc_dirty_since_ms == 0u){
         vnd_dc_dirty_since_ms = now;
         return;
     }
-    if((now - vnd_dc_dirty_since_ms) < period) return;
+    if(!manual_save && (now - vnd_dc_dirty_since_ms) < period) return;
 
     vnd_dc_blob_t blob;
     memset(&blob, 0, sizeof(blob));
@@ -1616,8 +1716,36 @@ static void vnd_dc_try_save_periodic(void)
               (unsigned)vnd_dc_bank_crc16(0u,0u), (unsigned)vnd_dc_bank_crc16(0u,1u),
               (unsigned)vnd_dc_bank_crc16(1u,0u), (unsigned)vnd_dc_bank_crc16(1u,1u));
 
+#if VND_DC_SAVE_DRY_RUN
+    vnd_dc_dirty = 0;
+    vnd_dc_dirty_public = 0;
+    vnd_dc_dirty_since_ms = 0;
+    vnd_dc_last_save_ms = now;
+    vnd_dc_save_ok_count++;
+    vnd_dc_save_last_result = 1;
+    vnd_dc_save_last_ms = now;
+    vnd_dc_loaded_crc16_public = blob.crc16;
+    VND_DC_LOGF("[DC] SAVE DRYRUN OK: cnt=%lu crc=0x%04X\r\n",
+           (unsigned long)vnd_dc_write_counter, (unsigned)blob.crc16);
+    return;
+#endif
+
     /* Запись во Flash: journal append. Стираем сектор ТОЛЬКО когда он заполнится/повреждён. */
-    HAL_FLASH_Unlock();
+    HAL_StatusTypeDef unlock_st = HAL_FLASH_Unlock();
+    if(unlock_st != HAL_OK){
+        uint32_t err = 0;
+#if defined(HAL_FLASH_GetError)
+        err = HAL_FLASH_GetError();
+#endif
+        vnd_dc_save_last_err = err;
+        vnd_dc_save_fail_count++;
+        vnd_dc_save_last_result = 2;
+        vnd_dc_save_last_ms = now;
+        vnd_dc_dirty_since_ms = now;
+        VND_DC_LOGF("[DC] SAVE FAIL: unlock st=%lu err=0x%08lX\r\n",
+               (unsigned long)unlock_st, (unsigned long)err);
+        return;
+    }
     /* HAL версии отличаются по именам флагов ошибок. */
 #if defined(FLASH_FLAG_ALL_ERRORS)
     __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS);
@@ -1628,6 +1756,28 @@ static void vnd_dc_try_save_periodic(void)
     #endif
 #else
     /* Fallback: ничего не чистим явно */
+#endif
+
+#if VND_DC_SAVE_UNLOCK_TEST
+    {
+        uint32_t err = 0;
+#if defined(HAL_FLASH_GetError)
+        err = HAL_FLASH_GetError();
+#endif
+        vnd_dc_save_last_err = err;
+        HAL_FLASH_Lock();
+        vnd_dc_dirty = 0;
+        vnd_dc_dirty_public = 0;
+        vnd_dc_dirty_since_ms = 0;
+        vnd_dc_last_save_ms = now;
+        vnd_dc_save_ok_count++;
+        vnd_dc_save_last_result = 1;
+        vnd_dc_save_last_ms = now;
+        vnd_dc_loaded_crc16_public = blob.crc16;
+        VND_DC_LOGF("[DC] SAVE UNLOCK_TEST OK: cnt=%lu err=0x%08lX crc=0x%04X\r\n",
+               (unsigned long)vnd_dc_write_counter, (unsigned long)err, (unsigned)blob.crc16);
+        return;
+    }
 #endif
 
             /* Определяем bank/sector по адресу (STM32H723, 1MB FLASH, 128KB sectors).
@@ -1661,6 +1811,17 @@ static void vnd_dc_try_save_periodic(void)
     /* Determine write offset. If sector is full/corrupted, erase once and restart from 0. */
     uint32_t write_off = vnd_dc_flash_next_off;
     if(write_off > (VND_DC_FLASH_SECTOR_SIZE - VND_DC_SLOT_SIZE)){
+#if !VND_DC_SAVE_ERASE_ENABLE
+        vnd_dc_save_last_err = 0;
+        vnd_dc_save_fail_count++;
+        vnd_dc_save_last_result = 2;
+        vnd_dc_save_last_ms = now;
+        vnd_dc_dirty_since_ms = now;
+        VND_DC_LOGF("[DC] SAVE SKIP: erase disabled next_off=%lu\r\n",
+               (unsigned long)write_off);
+        HAL_FLASH_Lock();
+        return;
+#else
         FLASH_EraseInitTypeDef e;
         uint32_t sector_error = 0;
         memset(&e, 0, sizeof(e));
@@ -1687,6 +1848,22 @@ static void vnd_dc_try_save_periodic(void)
         }
         write_off = 0;
         vnd_dc_flash_next_off = 0;
+    #if VND_DC_SAVE_ERASE_ONLY_TEST
+        vnd_dc_flash_next_off_public = 0;
+        vnd_dc_dirty = 0;
+        vnd_dc_dirty_public = 0;
+        vnd_dc_dirty_since_ms = 0;
+        vnd_dc_last_save_ms = now;
+        vnd_dc_save_ok_count++;
+        vnd_dc_save_last_result = 1;
+        vnd_dc_save_last_ms = now;
+        vnd_dc_load_flags_public = 0u;
+        HAL_FLASH_Lock();
+        VND_DC_LOGF("[DC] SAVE ERASE_TEST OK: bank=%lu sector=%lu\r\n",
+               (unsigned long)erase_bank, (unsigned long)erase_sector);
+        return;
+    #endif
+#endif
     }
 
     /* Программирование flashword: 32 bytes */
@@ -1841,6 +2018,7 @@ static uint32_t vnd_avg_q_dma_seq[VND_AVG_OUT_Q];
 static uint32_t vnd_avg_q_ts_ms[VND_AVG_OUT_Q];
 static uint8_t vnd_avg_q_bufidx[VND_AVG_OUT_Q]; /* 0..7, где bit0 = parity (even/odd) */
 static uint8_t vnd_avg_gui_ctr = 0; /* 0,2,4,6 — для формирования 0..7 с parity битом */
+static volatile uint32_t dbg_avg_drop_frames = 0;
 
 static void vnd_avg_drain_fifo(uint16_t roi_start, uint16_t roi_len);
 
@@ -1855,6 +2033,7 @@ static void vnd_avg_reset(void)
     dbg_avg_in_frames = 0;
     dbg_avg_out_frames = 0;
     dbg_avg_tx_pairs = 0;
+    dbg_avg_drop_frames = 0;
     dbg_avg_last_print_ms = 0;
     dbg_avg_in_last = 0; dbg_avg_out_last = 0; dbg_avg_tx_last = 0;
     memset(&vnd_dsp, 0, sizeof(vnd_dsp));
@@ -1870,14 +2049,26 @@ static void vnd_avg_drain_fifo(uint16_t roi_start, uint16_t roi_len)
     if(roi_len > MAX_FRAME_SAMPLES) roi_len = MAX_FRAME_SAMPLES;
 
     uint8_t avg_n = vnd_avg_n;
-    if(avg_n < 1) avg_n = 1;
+    if(avg_n < (uint8_t)VND_AVG_MIN_N) avg_n = (uint8_t)VND_AVG_MIN_N;
     if(avg_n > VND_AVG_MAX_N) avg_n = VND_AVG_MAX_N;
 
-    /* Ограничим работу за один проход, чтобы не забивать main-loop */
-    for(uint8_t iter = 0; iter < 16u; ++iter)
+    /* Для основных режимов 24+ быстро догоняем FIFO; 16 держим безопасным режимом.
+       Когда USB уже держит IN/pending_B, не делаем длинный CPU burst перед обслуживанием B. */
+    uint8_t drain_limit = 64u;
+    if(avg_n <= 16u) drain_limit = 16u;
     {
-        if(vnd_avg_q_count >= VND_AVG_OUT_Q) break;
+        extern uint8_t USBD_VND_TxIsBusy(void);
+        uint8_t usb_active = (vnd_ep_busy || vnd_inflight || USBD_VND_TxIsBusy()) ? 1u : 0u;
+        if(usb_active){
+            drain_limit = (avg_n <= 16u) ? 4u : 8u;
+        }
+        if(vnd_avg_q_count >= (uint8_t)(VND_AVG_OUT_Q - 1u) && drain_limit > 4u){
+            drain_limit = 4u;
+        }
+    }
 
+    for(uint8_t iter = 0; iter < drain_limit; ++iter)
+    {
         uint16_t *a_ptr = NULL, *b_ptr = NULL; uint16_t ns = 0; uint32_t dma_seq = 0;
         if(!adc_peek_frame_pair_fifo(&a_ptr, &b_ptr, &ns, &dma_seq)){
             break; /* нет новых кадров */
@@ -1912,6 +2103,20 @@ static void vnd_avg_drain_fifo(uint16_t roi_start, uint16_t roi_len)
            Каждый входной кадр должен попасть ровно в одну группу (по своей parity). */
         if(vnd_avg_cnt[parity] >= avg_n)
         {
+#if VND_AVG_LATEST_WINS
+            if(vnd_avg_q_count != 0u){
+                dbg_avg_drop_frames += (uint32_t)vnd_avg_q_count;
+                vnd_avg_q_head = vnd_avg_q_tail;
+                vnd_avg_q_count = 0u;
+            }
+#else
+            if(vnd_avg_q_count >= VND_AVG_OUT_Q){
+                vnd_avg_q_head = (uint8_t)((vnd_avg_q_head + 1u) % VND_AVG_OUT_Q);
+                vnd_avg_q_count--;
+                dbg_avg_drop_frames++;
+            }
+#endif
+
             uint8_t out_parity = parity;
             uint8_t q = vnd_avg_q_tail;
             uint8_t avg_gate_a = 0u;
@@ -1949,7 +2154,9 @@ static void vnd_avg_drain_fifo(uint16_t roi_start, uint16_t roi_len)
                     Нельзя вычислять parity позже по dma_seq, потому что s_buffer_parity[] — кольцевой буфер.
                     Поэтому сохраняем метку 0..7 прямо в очереди. */
                 vnd_avg_q_bufidx[q] = (uint8_t)((vnd_avg_gui_ctr & 0x06u) | (out_parity & 1u));
-                vnd_avg_gui_ctr = (uint8_t)((vnd_avg_gui_ctr + 2u) & 0x06u);
+                if((out_parity & 1u) != 0u){
+                    vnd_avg_gui_ctr = (uint8_t)((vnd_avg_gui_ctr + 2u) & 0x06u);
+                }
 
             vnd_avg_q_tail = (uint8_t)((vnd_avg_q_tail + 1u) % VND_AVG_OUT_Q);
             vnd_avg_q_count++;
@@ -2219,6 +2426,7 @@ static void vnd_log_dc_cmd_rx(const uint8_t *data, uint32_t len)
     if(cmd != VND_CMD_SET_DC_ADAPT &&
        cmd != VND_CMD_SET_DC_CONFIG &&
        cmd != VND_CMD_GET_DC_CONFIG &&
+         cmd != VND_CMD_SAVE_DC_TO_FLASH &&
        cmd != VND_CMD_CALIB_DC_FAST &&
        cmd != VND_CMD_SET_STREAM_MODE){
         return;
@@ -2537,6 +2745,8 @@ static void vnd_build_frame(ChanFrame *cf);
 static uint8_t vnd_get_active_stream_slot(uint8_t want_b);
 void USBD_VND_TxCplt(void);
 static void vnd_consume_strict_fifo_pair(uint8_t slot);
+static void vnd_clear_pair_slot(uint8_t slot);
+static int vnd_find_pair_by_seq(uint32_t seq);
 static void vnd_try_start_tx(void);
 static int  vnd_validate_frame(const uint8_t *buf, uint16_t len, uint8_t expect_test, uint8_t allow_zero_samples);
 static USBD_StatusTypeDef vnd_transmit_frame(uint8_t *buf, uint16_t len, uint8_t is_test, uint8_t allow_zero_samples, const char *tag);
@@ -2564,6 +2774,265 @@ static inline uint8_t vnd_tx_meta_depth(void){
     if(h>=t) return (uint8_t)(h - t);
     return (uint8_t)(VND_TX_META_FIFO - (t - h));
 }
+
+static inline uint32_t vnd_delta_u32(uint32_t cur, uint32_t prev)
+{
+    return (cur >= prev) ? (cur - prev) : cur;
+}
+
+static void vnd_note_task_entry(uint32_t now_ms)
+{
+    static uint32_t prev_ms = 0u;
+    static uint8_t prev_streaming = 0u;
+
+    if(prev_ms != 0u){
+        uint32_t gap_ms = (uint32_t)(now_ms - prev_ms);
+        if(gap_ms > dbg_task_gap_max_ms){
+            dbg_task_gap_max_ms = gap_ms;
+        }
+        if(gap_ms > 100u){
+            dbg_task_gap_count++;
+            dbg_task_gap_last_ms = gap_ms;
+            if(prev_streaming && gap_ms > 500u){
+                printf("[TASKGAP] t=%lu gap=%lu prev_stream=1 stream=%u task=%lu\r\n",
+                       (unsigned long)now_ms,
+                       (unsigned long)gap_ms,
+                       (unsigned)streaming,
+                       (unsigned long)dbg_task_calls);
+            }
+        }
+    }
+
+    prev_ms = now_ms;
+    prev_streaming = streaming ? 1u : 0u;
+}
+
+static void vnd_uart_stream_stats(uint32_t now_ms)
+{
+    static uint32_t last_ms = 0u;
+    static uint32_t prev_task = 0u;
+    static uint32_t prev_hb = 0u;
+    static uint32_t prev_txcplt = 0u;
+    static uint32_t prev_sent_a = 0u;
+    static uint32_t prev_sent_b = 0u;
+    static uint32_t prev_wr = 0u;
+    static uint32_t prev_rd = 0u;
+    static uint32_t prev_avg_in = 0u;
+    static uint32_t prev_avg_out = 0u;
+    static uint32_t prev_avg_tx = 0u;
+    static uint32_t prev_data_in = 0u;
+
+    if(!streaming){
+        last_ms = 0u;
+        prev_task = dbg_task_calls;
+        extern volatile uint32_t main_loop_heartbeat;
+        prev_hb = main_loop_heartbeat;
+        prev_txcplt = dbg_tx_cplt;
+        prev_sent_a = dbg_sent_ch0_total;
+        prev_sent_b = dbg_sent_ch1_total;
+        prev_wr = frame_wr_seq;
+        prev_rd = frame_rd_seq;
+        prev_avg_in = dbg_avg_in_frames;
+        prev_avg_out = dbg_avg_out_frames;
+        prev_avg_tx = dbg_avg_tx_pairs;
+        prev_data_in = USBD_VND_DataInCount();
+        return;
+    }
+
+    if(last_ms != 0u && (uint32_t)(now_ms - last_ms) < 1000u){
+        return;
+    }
+
+    uint32_t dt_ms = (last_ms == 0u) ? 1000u : (uint32_t)(now_ms - last_ms);
+    last_ms = now_ms;
+    if(dt_ms == 0u){ dt_ms = 1u; }
+
+    uint32_t txcplt = dbg_tx_cplt;
+    uint32_t sent_a = dbg_sent_ch0_total;
+    uint32_t sent_b = dbg_sent_ch1_total;
+    uint32_t wr = frame_wr_seq;
+    uint32_t rd = frame_rd_seq;
+    uint32_t avg_in = dbg_avg_in_frames;
+    uint32_t avg_out = dbg_avg_out_frames;
+    uint32_t avg_tx = dbg_avg_tx_pairs;
+    uint32_t data_in = USBD_VND_DataInCount();
+    uint32_t task = dbg_task_calls;
+    extern volatile uint32_t main_loop_heartbeat;
+    extern volatile uint32_t last_heartbeat_ms;
+    extern volatile uint32_t loop_cycle_last_avg;
+    extern volatile uint32_t g_usb_last_sof_ms;
+    uint32_t hb = main_loop_heartbeat;
+
+    uint32_t d_txcplt = vnd_delta_u32(txcplt, prev_txcplt);
+    uint32_t d_a = vnd_delta_u32(sent_a, prev_sent_a);
+    uint32_t d_b = vnd_delta_u32(sent_b, prev_sent_b);
+    uint32_t d_wr = vnd_delta_u32(wr, prev_wr);
+    uint32_t d_rd = vnd_delta_u32(rd, prev_rd);
+    uint32_t d_avg_in = vnd_delta_u32(avg_in, prev_avg_in);
+    uint32_t d_avg_out = vnd_delta_u32(avg_out, prev_avg_out);
+    uint32_t d_avg_tx = vnd_delta_u32(avg_tx, prev_avg_tx);
+    uint32_t d_data_in = vnd_delta_u32(data_in, prev_data_in);
+    uint32_t d_task = vnd_delta_u32(task, prev_task);
+    uint32_t d_hb = vnd_delta_u32(hb, prev_hb);
+
+    prev_task = task;
+    prev_hb = hb;
+    prev_txcplt = txcplt;
+    prev_sent_a = sent_a;
+    prev_sent_b = sent_b;
+    prev_wr = wr;
+    prev_rd = rd;
+    prev_avg_in = avg_in;
+    prev_avg_out = avg_out;
+    prev_avg_tx = avg_tx;
+    prev_data_in = data_in;
+
+    extern uint8_t USBD_VND_TxIsBusy(void);
+    uint8_t ll_busy = USBD_VND_TxIsBusy();
+    uint32_t last_age = 0xFFFFFFFFu;
+    (void)vnd_tick_age_ms(now_ms, vnd_last_txcplt_ms, &last_age);
+    uint32_t frame_age = 0xFFFFFFFFu;
+    (void)vnd_tick_age_ms(now_ms, vnd_last_frame_txcplt_ms, &frame_age);
+    uint32_t tx_age = 0u;
+    if(!vnd_tick_age_ms(now_ms, vnd_last_tx_start_ms, &tx_age)){
+        tx_age = 0u;
+    }
+    uint32_t hb_age = 0xFFFFFFFFu;
+    (void)vnd_tick_age_ms(now_ms, last_heartbeat_ms, &hb_age);
+    uint32_t sof_age = 0xFFFFFFFFu;
+    (void)vnd_tick_age_ms(now_ms, g_usb_last_sof_ms, &sof_age);
+    uint32_t host_rx_age = 0xFFFFFFFFu;
+    (void)vnd_tick_age_ms(now_ms, vnd_last_host_rx_ack_ms, &host_rx_age);
+    uint32_t force_idle_age = 0xFFFFFFFFu;
+    (void)vnd_tick_age_ms(now_ms, dbg_tx_force_idle_last_ms, &force_idle_age);
+    uint16_t in_total_len = USBD_VND_InTotalLength();
+    char role = (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) ? 'M' :
+                (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) ? 'S' : 'O';
+
+    printf("[USBSTAT] t=%lu role=%c stream=%u mode=%u async=%u ch=%u dt=%lu task=%lu(+%lu) gap=%lu/%lu/%lu hb=%lu(+%lu) hbage=%lu sof=%lu loop=%lu ep=%u ll=%u infl=%u pendB=%u err=%lu kick=%u meta=%u q=%u last=%lu frame=%lu txage=%lu len=%u tl=%u din=%lu(+%lu) unst=%lu/%lu rxage=%lu rx=%lu txcplt=%lu(+%lu) A=%lu(+%lu) B=%lu(+%lu) wr=%lu(+%lu) rd=%lu(+%lu) avg=%lu/%lu/%lu(+%lu/%lu/%lu)\r\n",
+           (unsigned long)now_ms,
+           role,
+           (unsigned)streaming,
+           (unsigned)vnd_stream_mode,
+           (unsigned)async_mode,
+           (unsigned)vnd_ch_mode,
+           (unsigned long)dt_ms,
+           (unsigned long)task,
+           (unsigned long)d_task,
+           (unsigned long)dbg_task_gap_last_ms,
+           (unsigned long)dbg_task_gap_max_ms,
+           (unsigned long)dbg_task_gap_count,
+           (unsigned long)hb,
+           (unsigned long)d_hb,
+           (unsigned long)hb_age,
+           (unsigned long)sof_age,
+           (unsigned long)loop_cycle_last_avg,
+           (unsigned)vnd_ep_busy,
+           (unsigned)ll_busy,
+           (unsigned)vnd_inflight,
+           (unsigned)pending_B,
+           (unsigned long)vnd_last_error,
+           (unsigned)vnd_tx_kick,
+           (unsigned)vnd_tx_meta_depth(),
+           (unsigned)vnd_avg_q_count,
+           (unsigned long)last_age,
+           (unsigned long)frame_age,
+           (unsigned long)tx_age,
+           (unsigned)vnd_last_tx_len,
+           (unsigned)in_total_len,
+           (unsigned long)data_in,
+           (unsigned long)d_data_in,
+           (unsigned long)dbg_tx_force_idle_count,
+           (unsigned long)force_idle_age,
+           (unsigned long)host_rx_age,
+           (unsigned long)vnd_host_rx_last_counter,
+           (unsigned long)txcplt,
+           (unsigned long)d_txcplt,
+           (unsigned long)sent_a,
+           (unsigned long)d_a,
+           (unsigned long)sent_b,
+           (unsigned long)d_b,
+           (unsigned long)wr,
+           (unsigned long)d_wr,
+           (unsigned long)rd,
+           (unsigned long)d_rd,
+           (unsigned long)avg_in,
+           (unsigned long)avg_out,
+           (unsigned long)avg_tx,
+           (unsigned long)d_avg_in,
+           (unsigned long)d_avg_out,
+           (unsigned long)d_avg_tx);
+}
+
+static void vnd_recover_avg_pending_b_stall(uint32_t now_ms)
+{
+    if(!streaming || !full_mode || diag_mode_active) return;
+    if(vnd_stream_mode != VND_STREAM_MODE_AVG_ROI) return;
+    if(!pending_B) return;
+
+    extern uint8_t USBD_VND_TxIsBusy(void);
+    uint8_t ll_busy = USBD_VND_TxIsBusy();
+    if(vnd_ep_busy || ll_busy || vnd_inflight) return;
+
+    uint32_t frame_age = 0u;
+    if(!vnd_tick_age_ms(now_ms, vnd_last_frame_txcplt_ms, &frame_age)){
+        frame_age = 0u;
+    }
+    uint32_t pend_age = 0u;
+    if(!vnd_tick_age_ms(now_ms, pending_B_since_ms, &pend_age)){
+        pend_age = 0u;
+    }
+
+    uint8_t b_slot = vnd_get_active_stream_slot(1u);
+    ChanFrame *fA = &g_frames[b_slot][0];
+    ChanFrame *fB = &g_frames[b_slot][1];
+
+    if(fB->st == FB_READY) return;
+    if(fB->st == FB_SENDING && vnd_last_tx_start_ms != 0u){
+        uint32_t b_tx_age = 0u;
+        if(!vnd_tick_age_ms(now_ms, vnd_last_tx_start_ms, &b_tx_age) || b_tx_age <= 250u){
+            return;
+        }
+    }
+
+    uint8_t queue_ready = (vnd_avg_q_count != 0u) ? 1u : 0u;
+    if(!((queue_ready && (frame_age > 350u || pend_age > 350u)) ||
+         frame_age > 1200u || pend_age > 1200u)){
+        return;
+    }
+
+    printf("[USBRECOVER] avg_pendB age=%lu pend=%lu slot=%u A=%u B=%u q=%u meta=%u seq=%lu\r\n",
+           (unsigned long)frame_age,
+           (unsigned long)pend_age,
+           (unsigned)b_slot,
+           (unsigned)fA->st,
+           (unsigned)fB->st,
+           (unsigned)vnd_avg_q_count,
+           (unsigned)vnd_tx_meta_depth(),
+           (unsigned long)stream_seq);
+    VND_LOG("AVG_PENDB_RECOVER age=%lums pend=%lums slot=%u A=%u B=%u q=%u",
+            (unsigned long)frame_age,
+            (unsigned long)pend_age,
+            (unsigned)b_slot,
+            (unsigned)fA->st,
+            (unsigned)fB->st,
+            (unsigned)vnd_avg_q_count);
+
+    vnd_tx_meta_head = vnd_tx_meta_tail = 0;
+    vnd_ep_busy = 0;
+    vnd_tx_ready = 1;
+    vnd_inflight = 0;
+    vnd_last_tx_start_ms = 0;
+    inflight_is_frame = 0;
+    inflight_flags = 0;
+    inflight_seq = 0;
+    vnd_reset_buffers();
+
+    stream_seq++;
+    dbg_produced_seq++;
+    vnd_tx_kick = 1;
+}
+
 static inline void vnd_tx_meta_push(uint8_t is_frame, uint8_t flags, uint32_t seq_field){
     uint8_t next = (uint8_t)((vnd_tx_meta_head + 1u) % VND_TX_META_FIFO);
     if(next == vnd_tx_meta_tail){
@@ -2590,6 +3059,28 @@ static inline int vnd_tx_meta_pop(vnd_tx_meta_t *out){
     meta_pop_total++;
     return 1;
 }
+
+static inline void vnd_clear_inflight_meta(void)
+{
+    inflight_is_frame = 0;
+    inflight_flags = 0;
+    inflight_seq = 0;
+}
+
+static inline void vnd_mark_service_inflight(void)
+{
+    vnd_inflight = 1;
+    vnd_clear_inflight_meta();
+}
+
+static inline void vnd_rollback_tx_start(void)
+{
+    vnd_tx_ready = 1;
+    vnd_ep_busy = 0;
+    vnd_inflight = 0;
+    vnd_clear_inflight_meta();
+}
+
 /* Унифицированная фиксация метаданных после успешного запуска передачи */
 static inline void vnd_tx_meta_after(uint8_t *buf, uint16_t len){
     uint8_t is_frame = 0, flags = 0; uint32_t seq_field = 0;
@@ -2603,7 +3094,7 @@ static inline void vnd_tx_meta_after(uint8_t *buf, uint16_t len){
 }
 /* Нейтрализовать «застрявшую» запись в meta-FIFO (например, после ForceTxIdle),
    чтобы последующий TxCplt не принял её за реальный кадр и не исказил порядок. */
-static void vnd_meta_neutralize(uint8_t flags_mask, uint32_t seq_field)
+static __attribute__((unused)) void vnd_meta_neutralize(uint8_t flags_mask, uint32_t seq_field)
 {
     uint8_t t = vnd_tx_meta_tail;
     while(t != vnd_tx_meta_head){
@@ -2614,6 +3105,336 @@ static void vnd_meta_neutralize(uint8_t flags_mask, uint32_t seq_field)
             break;
         }
         t = (uint8_t)((t + 1u) % VND_TX_META_FIFO);
+    }
+}
+
+static uint8_t vnd_slot_has_active_frames(uint8_t slot)
+{
+    if(slot >= VND_PAIR_BUFFERS) return 0u;
+    return (g_frames[slot][0].st != FB_FILL || g_frames[slot][1].st != FB_FILL) ? 1u : 0u;
+}
+
+static uint8_t vnd_usb_in_active_slot_for_recovery(uint32_t seq_field, uint8_t flags)
+{
+    uint8_t ch_bits = (uint8_t)(flags & 0x03u);
+    if(ch_bits != 0u){
+        int seq_slot = vnd_find_pair_by_seq(seq_field);
+        if(seq_slot >= 0){
+            return (uint8_t)seq_slot;
+        }
+    }
+
+    return vnd_get_active_stream_slot((pending_B || sending_channel == 1u || ch_bits == 0x02u) ? 1u : 0u);
+}
+
+static uint8_t vnd_usb_in_has_recoverable_state(void)
+{
+    if(vnd_ep_busy || vnd_inflight || pending_B || sending_channel != 0xFFu || vnd_tx_meta_depth() != 0u){
+        return 1u;
+    }
+
+    return vnd_slot_has_active_frames(vnd_get_active_stream_slot(0u));
+}
+
+static uint8_t vnd_usb_in_active_abort_allowed(uint8_t ll_busy, uint32_t age_ms)
+{
+    if(!ll_busy){
+        return 1u;
+    }
+
+#if VND_USB_IN_ABORT_ACTIVE_STREAM
+    return (age_ms >= (uint32_t)VND_USB_IN_ACTIVE_HARD_STALL_MS) ? 1u : 0u;
+#else
+    (void)age_ms;
+    return 0u;
+#endif
+}
+
+static void vnd_usb_in_note_active_hold(const char *reason, uint32_t now_ms, uint32_t age_ms)
+{
+    uint32_t log_age_ms = 0u;
+
+    dbg_tx_active_hold_count++;
+    if(dbg_tx_active_hold_last_ms != 0u &&
+       vnd_tick_age_ms(now_ms, dbg_tx_active_hold_last_ms, &log_age_ms) &&
+       log_age_ms < (uint32_t)VND_USB_IN_ACTIVE_HOLD_LOG_MS){
+        return;
+    }
+    dbg_tx_active_hold_last_ms = now_ms;
+
+    extern uint8_t USBD_VND_TxIsBusy(void);
+    extern uint16_t USBD_VND_InTotalLength(void);
+    USBD_VND_InHwState hw;
+    USBD_VND_GetInHwState(&hw);
+    printf("[WARN EP_HOLD] kind=%s age=%lu len=%u tl=%u ll=%u ep=%u infl=%u ch=%u pendB=%u meta=%u q=%u hwctl=0x%08lX hwsz=0x%08lX hwint=0x%08lX hsts=0x%08lX hemp=0x%08lX xfer=%lu/%lu cnt=%lu\r\n",
+           reason ? reason : "?",
+           (unsigned long)age_ms,
+           (unsigned)vnd_last_tx_len,
+           (unsigned)USBD_VND_InTotalLength(),
+           (unsigned)USBD_VND_TxIsBusy(),
+           (unsigned)vnd_ep_busy,
+           (unsigned)vnd_inflight,
+           (unsigned)sending_channel,
+           (unsigned)pending_B,
+           (unsigned)vnd_tx_meta_depth(),
+           (unsigned)vnd_avg_q_count,
+           (unsigned long)hw.diepctl,
+           (unsigned long)hw.dieptsiz,
+           (unsigned long)hw.diepint,
+           (unsigned long)hw.dtxfsts,
+           (unsigned long)hw.diepempmsk,
+           (unsigned long)hw.xfer_count,
+           (unsigned long)hw.xfer_len,
+           (unsigned long)dbg_tx_active_hold_count);
+}
+
+static uint8_t vnd_drop_current_stream_unit(uint8_t slot, uint8_t flags)
+{
+    uint8_t ch_bits = (uint8_t)(flags & 0x03u);
+
+    if(slot >= VND_PAIR_BUFFERS){
+        slot = pair_send_idx;
+    }
+
+    if(vnd_stream_mode == VND_STREAM_MODE_LATEST){
+        uint8_t had_sending = 0u;
+        for(uint8_t i = 0u; i < VND_PAIR_BUFFERS; i++){
+            if(vnd_slot_has_active_frames(i)){
+                if(g_frames[i][0].st == FB_SENDING || g_frames[i][1].st == FB_SENDING){
+                    had_sending = 1u;
+                    break;
+                }
+            }
+        }
+        uint8_t data_context = (ch_bits != 0u || sending_channel != 0xFFu || had_sending) ? 1u : 0u;
+        if(data_context){
+            vnd_reset_buffers();
+            stream_seq++;
+            dbg_produced_seq++;
+            return 1u;
+        }
+        return 0u;
+    }
+
+    uint8_t had_slot = vnd_slot_has_active_frames(slot);
+    uint8_t had_sending = (had_slot &&
+                           (g_frames[slot][0].st == FB_SENDING || g_frames[slot][1].st == FB_SENDING)) ? 1u : 0u;
+    uint8_t should_drop = (ch_bits != 0u || sending_channel != 0xFFu || had_sending) ? 1u : 0u;
+
+    if(should_drop && had_slot){
+        if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
+            vnd_consume_strict_fifo_pair(slot);
+        }
+        vnd_clear_pair_slot(slot);
+    }
+
+    if(should_drop){
+        pair_send_idx = (uint8_t)((slot + 1u) % VND_PAIR_BUFFERS);
+        pair_fill_idx = pair_send_idx;
+        pending_B = 0;
+        pending_B_since_ms = 0;
+        sending_channel = 0xFFu;
+        stream_seq++;
+        dbg_produced_seq++;
+        return 1u;
+    }
+
+    pending_B = 0;
+    pending_B_since_ms = 0;
+    sending_channel = 0xFFu;
+    return 0u;
+}
+
+static void vnd_usb_in_drop_recover(const char *reason, uint32_t now_ms, uint32_t age_ms)
+{
+    extern uint8_t USBD_VND_TxIsBusy(void);
+    extern void USBD_VND_ForceTxIdle(void);
+
+    uint8_t ll_busy_before = USBD_VND_TxIsBusy();
+    uint8_t ep_before = vnd_ep_busy;
+    uint8_t inflight_before = vnd_inflight;
+    uint8_t meta_before = vnd_tx_meta_depth();
+    uint8_t ch_before = sending_channel;
+    uint8_t pend_before = pending_B;
+    uint16_t stuck_len = vnd_last_tx_len;
+    uint8_t flags_before = inflight_flags;
+    uint32_t seq_before = inflight_seq;
+
+    if(!vnd_usb_in_active_abort_allowed(ll_busy_before, age_ms)){
+        vnd_tx_drop_recovery_request = 0u;
+        vnd_usb_in_note_active_hold(reason, now_ms, age_ms);
+        return;
+    }
+
+    if((flags_before & 0x03u) == 0u && last_tx_is_frame){
+        flags_before = last_tx_flags;
+        seq_before = last_tx_seq;
+    }
+
+    uint8_t recoverable_before = vnd_usb_in_has_recoverable_state();
+    uint8_t need_force_idle = (ll_busy_before || ep_before || inflight_before || meta_before != 0u) ? 1u : 0u;
+
+    if(!need_force_idle && !recoverable_before){
+        vnd_tx_drop_recovery_request = 0u;
+        return;
+    }
+
+    uint8_t slot = vnd_usb_in_active_slot_for_recovery(seq_before, flags_before);
+
+    if(!need_force_idle && ((flags_before & 0x03u) == 0u) && vnd_slot_has_active_frames(slot)){
+        if(g_frames[slot][0].st != FB_FILL){
+            flags_before = 0x01u;
+            seq_before = g_frames[slot][0].seq;
+        } else if(g_frames[slot][1].st != FB_FILL){
+            flags_before = 0x02u;
+            seq_before = g_frames[slot][1].seq;
+        }
+    }
+
+    if(need_force_idle){
+        USBD_VND_ForceTxIdle();
+        dbg_tx_force_idle_count++;
+        dbg_tx_force_idle_last_ms = now_ms;
+    }
+    dbg_tx_drop_recovery_count++;
+    dbg_tx_drop_recovery_last_ms = now_ms;
+
+    uint8_t dropped = vnd_drop_current_stream_unit(slot, flags_before);
+
+    vnd_tx_meta_head = vnd_tx_meta_tail = 0u;
+    vnd_clear_inflight_meta();
+    vnd_ep_busy = 0u;
+    vnd_tx_ready = 1u;
+    vnd_inflight = 0u;
+    vnd_last_tx_start_ms = 0u;
+    test_in_flight = 0u;
+    status_ack_pending = 0u;
+    start_stat_inflight = 0u;
+    start_ack_done = 1u;
+    vnd_tx_drop_recovery_request = 0u;
+    vnd_tx_kick = 1u;
+
+    printf("[WARN EP_DROP] kind=%s age=%lu len=%u force=%u ll=%u ep=%u infl=%u ch=%u pendB=%u slot=%u fl=0x%02X meta=%u mode=%u dropped=%u cnt=%lu req=%lu\r\n",
+           reason ? reason : "?",
+           (unsigned long)age_ms,
+           (unsigned)stuck_len,
+           (unsigned)need_force_idle,
+           (unsigned)ll_busy_before,
+           (unsigned)ep_before,
+           (unsigned)inflight_before,
+           (unsigned)ch_before,
+           (unsigned)pend_before,
+           (unsigned)slot,
+           (unsigned)flags_before,
+           (unsigned)meta_before,
+           (unsigned)vnd_stream_mode,
+           (unsigned)dropped,
+           (unsigned long)dbg_tx_drop_recovery_count,
+           (unsigned long)dbg_tx_drop_recovery_request_count);
+}
+
+static void vnd_usb_in_request_drop_recovery_from_status(uint32_t now_ms)
+{
+    if(!streaming || stop_request) return;
+
+    extern uint8_t USBD_VND_TxIsBusy(void);
+    uint8_t ll_busy = USBD_VND_TxIsBusy();
+    uint8_t busyish = (ll_busy || vnd_ep_busy || vnd_inflight || vnd_tx_meta_depth() != 0u) ? 1u : 0u;
+    uint32_t age_ms = 0u;
+
+    if(busyish &&
+       vnd_last_tx_start_ms != 0u &&
+       vnd_tick_age_ms(now_ms, vnd_last_tx_start_ms, &age_ms) &&
+       age_ms > VND_USB_IN_BUSY_STALL_MS){
+        if(!vnd_usb_in_active_abort_allowed(ll_busy, age_ms)){
+            vnd_usb_in_note_active_hold("status_busy", now_ms, age_ms);
+            return;
+        }
+        if(!vnd_tx_drop_recovery_request){
+            dbg_tx_drop_recovery_request_count++;
+        }
+        vnd_tx_drop_recovery_request = 1u;
+        vnd_tx_kick = 1u;
+        return;
+    }
+
+    if(vnd_stream_active &&
+       vnd_last_frame_txcplt_ms != 0u &&
+       vnd_usb_in_has_recoverable_state() &&
+       vnd_tick_age_ms(now_ms, vnd_last_frame_txcplt_ms, &age_ms) &&
+       age_ms > VND_USB_IN_NO_PROGRESS_MS){
+        if(!vnd_usb_in_active_abort_allowed(ll_busy, age_ms)){
+            vnd_usb_in_note_active_hold("status_no_progress", now_ms, age_ms);
+            return;
+        }
+        if(!vnd_tx_drop_recovery_request){
+            dbg_tx_drop_recovery_request_count++;
+        }
+        vnd_tx_drop_recovery_request = 1u;
+        vnd_tx_kick = 1u;
+    }
+}
+
+static void vnd_usb_in_drop_recovery_poll(uint32_t now_ms)
+{
+    if(!streaming || stop_request){
+        vnd_tx_drop_recovery_request = 0u;
+        return;
+    }
+
+    uint32_t cooldown_age = 0u;
+    uint32_t last_recovery_ms = dbg_tx_drop_recovery_last_ms;
+    if(last_recovery_ms == 0u){
+        last_recovery_ms = dbg_tx_force_idle_last_ms;
+    }
+    if(last_recovery_ms != 0u &&
+       vnd_tick_age_ms(now_ms, last_recovery_ms, &cooldown_age) &&
+       cooldown_age < VND_USB_IN_RECOVERY_COOLDOWN_MS){
+        return;
+    }
+
+    extern uint8_t USBD_VND_TxIsBusy(void);
+    uint8_t ll_busy = USBD_VND_TxIsBusy();
+    uint8_t busyish = (ll_busy || vnd_ep_busy || vnd_inflight || vnd_tx_meta_depth() != 0u) ? 1u : 0u;
+    uint32_t age_ms = 0u;
+
+    if(vnd_tx_drop_recovery_request){
+        if(vnd_last_tx_start_ms != 0u){
+            (void)vnd_tick_age_ms(now_ms, vnd_last_tx_start_ms, &age_ms);
+        } else if(vnd_last_frame_txcplt_ms != 0u){
+            (void)vnd_tick_age_ms(now_ms, vnd_last_frame_txcplt_ms, &age_ms);
+        }
+        if(!vnd_usb_in_active_abort_allowed(ll_busy, age_ms)){
+            vnd_tx_drop_recovery_request = 0u;
+            vnd_usb_in_note_active_hold("status", now_ms, age_ms);
+            return;
+        }
+        vnd_usb_in_drop_recover("status", now_ms, age_ms);
+        return;
+    }
+
+    if(busyish &&
+       vnd_last_tx_start_ms != 0u &&
+       vnd_tick_age_ms(now_ms, vnd_last_tx_start_ms, &age_ms) &&
+       age_ms > VND_USB_IN_BUSY_STALL_MS){
+        if(!vnd_usb_in_active_abort_allowed(ll_busy, age_ms)){
+            vnd_usb_in_note_active_hold("busy", now_ms, age_ms);
+            return;
+        }
+        vnd_usb_in_drop_recover("busy", now_ms, age_ms);
+        return;
+    }
+
+    if(vnd_stream_active &&
+       vnd_last_frame_txcplt_ms != 0u &&
+       vnd_usb_in_has_recoverable_state() &&
+       vnd_tick_age_ms(now_ms, vnd_last_frame_txcplt_ms, &age_ms) &&
+       age_ms > VND_USB_IN_NO_PROGRESS_MS){
+        if(!vnd_usb_in_active_abort_allowed(ll_busy, age_ms)){
+            vnd_usb_in_note_active_hold("no_progress", now_ms, age_ms);
+            return;
+        }
+        vnd_usb_in_drop_recover("no_progress", now_ms, age_ms);
     }
 }
 static __attribute__((unused)) void vnd_debug_force_status_tick(void);
@@ -2637,6 +3458,12 @@ extern void USBD_VND_ProcessControlRequests(void);
 /* Асинхронный планировщик A/B */
 static int vnd_async_try_tx(void);
 static int vnd_find_pair_by_seq(uint32_t seq);
+
+void Vendor_Control_Task(void)
+{
+    USBD_VND_ProcessControlRequests();
+}
+
 /* Вычисление периода пары по требуемым samples_per_frame и текущему профилю ADC (buf_rate_hz) */
 static void vnd_recompute_pair_timing(uint16_t samples_per_frame)
 {
@@ -2799,9 +3626,10 @@ static void vnd_try_send_pending_status_from_task(void)
     /* Нельзя отправлять STAT, если есть незавершённая передача (даже если busy временно сброшен) */
     if(vnd_ep_busy || vnd_inflight) return;
     uint16_t l = vnd_build_status((uint8_t*)status_buf, sizeof(status_buf));
-        if(!l) { pending_status = 0; return; } /* (очистка дублирующего кода STAT уже выполнена выше) */
+    if(!l) { pending_status = 0; return; } /* (очистка дублирующего кода STAT уже выполнена выше) */
     vnd_status_permit_once = 1;
     vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = l; vnd_last_tx_start_ms = HAL_GetTick();
+    vnd_mark_service_inflight();
     if(USBD_VND_Transmit(&hUsbDeviceHS, (uint8_t*)status_buf, l) == USBD_OK){
         vnd_tx_meta_after((uint8_t*)status_buf, l);
         VND_LOG("STAT_TX pending(task) len=%u depth=%u", l, (unsigned)vnd_tx_meta_depth());
@@ -2809,7 +3637,98 @@ static void vnd_try_send_pending_status_from_task(void)
         pending_status = 0;
     } else {
         VND_LOG("STAT_TX pending(task) busy/fail");
-        vnd_tx_ready = 1; vnd_ep_busy = 0;
+        vnd_status_permit_once = 0;
+        vnd_rollback_tx_start();
+    }
+}
+
+void Vendor_Status_Task(void)
+{
+    if(!streaming && !vnd_ep_busy && !vnd_inflight){
+        vnd_try_send_pending_status_from_task();
+    }
+}
+
+void Vendor_Maintenance_Task(void)
+{
+#ifndef VND_MAINT_ENABLE_DC_LOAD
+#define VND_MAINT_ENABLE_DC_LOAD 1u
+#endif
+#ifndef VND_MAINT_ENABLE_DC_BACKGROUND
+#define VND_MAINT_ENABLE_DC_BACKGROUND 1u
+#endif
+#ifndef VND_MAINT_ENABLE_DC_SAVE
+#define VND_MAINT_ENABLE_DC_SAVE 1u
+#endif
+#if VND_MAINT_ENABLE_DC_LOAD
+    vnd_dc_load_once();
+
+    if(vnd_dc_load_request){
+        vnd_dc_load_request = 0;
+        vnd_dc_load_once();
+    }
+#endif
+#if VND_MAINT_ENABLE_DC_BACKGROUND
+    {
+        uint16_t roi_start = win_start0;
+        uint16_t roi_len   = win_len0;
+        if(roi_len == 0u){
+            if(win_auto){
+                vnd_apply_auto_roi_window();
+                roi_start = win_start0;
+                roi_len = win_len0;
+            } else {
+                roi_start = (uint16_t)VND_ROI_BASE_START_200HZ;
+                roi_len = (uint16_t)VND_ROI_LEN_DEFAULT;
+            }
+        }
+        vnd_dc_background_step(roi_start, roi_len);
+#if VND_MAINT_ENABLE_DC_SAVE
+        vnd_dc_try_save_periodic();
+#endif
+    }
+#endif
+
+    {
+        uint32_t now_ms = HAL_GetTick();
+        if(vnd_sync_mode == VND_SYNC_MODE_MASTER){
+            uint16_t hz = adc_stream_get_buf_rate();
+            if(hz != 0u && hz != vnd_sync_last_hz){
+                vnd_sync_set_master(hz);
+            }
+            vnd_sync_ok_public = 1u;
+        } else if(vnd_sync_mode == VND_SYNC_MODE_SLAVE){
+            uint16_t hz = vnd_sync_pending_hz;
+            if(hz != 0u && (now_ms - vnd_sync_last_apply_ms) > 200u){
+                vnd_sync_pending_hz = 0;
+                vnd_sync_last_apply_ms = now_ms;
+                if(win_auto && (vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI)){
+                    uint16_t prev_start = win_start0;
+                    vnd_apply_auto_roi_window();
+                    if(win_start0 != prev_start){
+                        vnd_avg_reset();
+                        vnd_update_lcd_params();
+                    }
+                }
+            }
+            {
+                extern volatile uint32_t sync_last_edge_ms;
+                vnd_sync_ok_public = (uint8_t)((sync_last_edge_ms != 0u && (now_ms - sync_last_edge_ms) <= 1000u) ? 1u : 0u);
+            }
+        }
+    }
+
+    if (vnd_adc_restart_request) {
+        vnd_adc_restart_request = 0;
+        HAL_StatusTypeDef rrc = adc_stream_restart(NULL, NULL);
+        {
+            adc_stream_debug_t dbg;
+            adc_stream_get_debug(&dbg);
+            dma_snapshot_full0 = dbg.dma_full0;
+            dma_snapshot_full1 = dbg.dma_full1;
+        }
+        cdc_logf("EVT ADC_RESTART on MODE rc=%d", (int)rrc);
+        vnd_tx_kick = 1;
     }
 }
 
@@ -2827,6 +3746,7 @@ void vnd_request_adc_restart_from_isr(void)
  * - В on-wire протоколе поле hdr.seq должно отражать логическую последовательность кадра,
  *   привязанную к данным DMA (а не к счётчику отправок).
  * - Хостовый GUI использует (seq & 1) как even/odd, поэтому seq НЕ должен быть пер-канальным
+
  *   счётчиком передачи.
  */
 
@@ -2834,6 +3754,8 @@ void vnd_request_adc_restart_from_isr(void)
 static void vnd_reset_buffers(void){
     for(uint8_t p=0;p<VND_PAIR_BUFFERS;p++) for(uint8_t c=0;c<2;c++){ g_frames[p][c].st=FB_FILL; g_frames[p][c].samples=0; g_frames[p][c].flags = c?VND_FLAGS_ADC1:VND_FLAGS_ADC0; g_frames[p][c].frame_size=0; g_frames[p][c].seq=0; g_frames[p][c].dma_seq=0; g_frames[p][c].crc16=0; g_frames[p][c].crc_seq=0; memset(g_frames[p][c].buf,0xCC,sizeof(g_frames[p][c].buf)); }
     pair_fill_idx=pair_send_idx=0; sending_channel=0xFF; channel0_sent_curseq=channel1_sent_curseq=0; pending_B = 0; pending_B_since_ms = 0;
+    vnd_next_frame_tx_ms = 0;
+    vnd_last_tx_pace_busy = 0;
 }
 
 uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
@@ -2956,11 +3878,13 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
         g_status.now_ms = now_ms;
         g_status.last_full0_ms = adc_last_full0_ms;
         g_status.last_full1_ms = adc_last_full1_ms;
+        uint32_t host_rx_ack_age_ms = 0u;
         if (streaming &&
-            (vnd_last_host_rx_ack_ms != 0u) &&
-            ((uint32_t)(now_ms - vnd_last_host_rx_ack_ms) <= VND_HOST_RX_ACK_TIMEOUT_MS)) {
+            vnd_tick_age_ms(now_ms, vnd_last_host_rx_ack_ms, &host_rx_ack_age_ms) &&
+            host_rx_ack_age_ms <= VND_HOST_RX_ACK_TIMEOUT_MS) {
             g_status.flags_runtime |= VND_STFLAG_HOST_RX_ALIVE;
         }
+        vnd_usb_in_request_drop_recovery_from_status(now_ms);
     } while(0);
     /* v5 extension: RPI-facing sync and dynamic LED state */
     do {
@@ -3072,7 +3996,7 @@ uint16_t vnd_build_dc_config(uint8_t *dst, uint16_t max_len)
     st.work_settle_ms = vnd_dc_work_settle_ms;
     st.detect_settle_ms = vnd_dc_detect_settle_ms;
     st.fast_settle_ms = vnd_dc_fast_settle_ms;
-    st.fast_duration_ms = vnd_dc_fast_duration_ms;
+    st.fast_duration_ms = vnd_dc_adapt_settle_ms;
     st.active_settle_ms = active_settle_ms;
     st.mode_enter_ms = vnd_dc_mode_enter_ms;
     st.fast_until_ms = vnd_dc_fast_until_ms;
@@ -3087,12 +4011,9 @@ uint8_t vnd_is_tx_enabled(void){ return vnd_tx_enable; }
 
 static void vnd_apply_tx_enable_outputs(void)
 {
-    if(vnd_tx_enable){
-        /* Разрешаем внешний передатчик; маркер фазы не должен зависеть от USB START/STOP. */
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
-    } else {
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
-    }
+    /* USB START/STOP не управляет физическими TX-выводами.
+       Все уровни PA2/PC7/PA1 выставляет adc_stream_refresh_marker_output(),
+       чтобы PA1 не давал ложный короткий импульс при смене enable. */
     adc_stream_refresh_marker_output();
 }
 
@@ -3407,6 +4328,25 @@ static void vnd_prepare_pair(void)
     perf_stats.prepare_count++;
 }
 
+static uint16_t vnd_wire_frame_len(uint16_t useful_len)
+{
+#if VND_USB_ROI_PAD_TO_MPS
+    if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI ||
+       vnd_stream_mode == VND_STREAM_MODE_AVG_ROI){
+        const uint32_t unit = (uint32_t)VND_USB_ROI_PAD_BYTES;
+        if(unit != 0u){
+            uint32_t padded = (((uint32_t)useful_len + unit - 1u) / unit) * unit;
+            if(padded > (uint32_t)useful_len && padded <= (uint32_t)VND_FRAME_MAX_SIZE){
+                return (uint16_t)padded;
+            }
+        }
+    }
+#else
+    (void)useful_len;
+#endif
+    return useful_len;
+}
+
 static void vnd_build_frame(ChanFrame *cf)
 {
     if(cf->samples == 0){ cf->st = FB_FILL; return; }
@@ -3443,8 +4383,13 @@ static void vnd_build_frame(ChanFrame *cf)
     if(crc == 0 && payload_len){ crc = vnd_crc16_ccitt(cf->buf + VND_FRAME_HDR_SIZE, payload_len); }
     h->crc16 = crc;
     if(crc) h->flags |= 0x04; else h->flags &= (uint8_t)~0x04u;
-    cf->frame_size = (uint16_t)total;
-    if(cur_expected_frame_size && cf->frame_size != cur_expected_frame_size) dbg_size_mismatch++;
+    uint16_t useful_size = (uint16_t)total;
+    uint16_t wire_size = vnd_wire_frame_len(useful_size);
+    if(wire_size > useful_size){
+        memset(cf->buf + useful_size, 0, (uint32_t)wire_size - useful_size);
+    }
+    cf->frame_size = wire_size;
+    if(cur_expected_frame_size && useful_size != cur_expected_frame_size) dbg_size_mismatch++;
     dbg_any_valid_frame = 1; cf->st = FB_READY;
 }
 
@@ -3555,6 +4500,7 @@ static uint8_t vnd_strict_slot_ready_for_stream(uint8_t slot)
 /* Асинхронный выбор и отправка одного готового кадра (A или B) */
 /* Режим строгой парности по желанию: 0 — независимые каналы, 1 — строгая пара A&B на один seq */
 static uint8_t vnd_strict_pairing = 0;  /* ОТКЛЮЧЕНО: каналы независимы, отправляем как только готов */
+static volatile uint8_t vnd_async_state_reset_req = 0;
 
 static int vnd_async_try_tx(void)
 {
@@ -3585,6 +4531,41 @@ static int vnd_async_try_tx(void)
     typedef struct { uint8_t valid; uint8_t ch; uint16_t samples; uint32_t seq; uint32_t dma_seq; uint16_t frame_len; uint8_t buf[VND_FRAME_MAX_SIZE]; } tmp_frame_t;
     static tmp_frame_t tf[2];
 
+    if(vnd_async_state_reset_req){
+        vnd_async_state_reset_req = 0;
+        last_sent_ch = 1;
+        seq_mask = 0;
+        seq_mask_first_ms = 0;
+        seq_partial_cnt = 0;
+        tf[0].valid = 0;
+        tf[1].valid = 0;
+    }
+
+    if(vnd_stream_mode != VND_STREAM_MODE_LOSSLESS_ROI &&
+       vnd_ch_mode == 2 && vnd_strict_pairing && seq_mask != 0 && !vnd_ep_busy && seq_mask_first_ms != 0){
+        uint32_t now_reset = HAL_GetTick();
+        uint32_t partial_age = (now_reset >= seq_mask_first_ms) ? (now_reset - seq_mask_first_ms) : (0xFFFFFFFFu - seq_mask_first_ms + 1u + now_reset);
+        if(partial_age > 40u){
+            seq_mask = 0;
+            seq_mask_first_ms = 0;
+            seq_partial_cnt = 0;
+            last_sent_ch = 1;
+            tf[0].valid = 0;
+            tf[1].valid = 0;
+        }
+    }
+
+    uint16_t *roi_pair_ptr[2] = { NULL, NULL };
+    uint16_t roi_pair_samples = 0;
+    uint32_t roi_pair_dma_seq = 0;
+    uint8_t roi_pair_valid = 0;
+    if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI && vnd_ch_mode == 2 && vnd_strict_pairing &&
+       !tf[0].valid && !tf[1].valid){
+        if(adc_peek_frame_pair_fifo(&roi_pair_ptr[0], &roi_pair_ptr[1], &roi_pair_samples, &roi_pair_dma_seq)){
+            roi_pair_valid = 1;
+        }
+    }
+
     /* Обновить / заполнить структуру для канала, если данных ещё нет (valid=0) */
     for(int ch=0; ch<2; ++ch){
         if(ch==1 && vnd_ch_mode==0) continue; /* A-only */
@@ -3594,7 +4575,12 @@ static int vnd_async_try_tx(void)
         /* Снапшоты для staging, чтобы TC не перезаписал во время копирования */
         static uint16_t stage_copy_async[MAX_FRAME_SAMPLES];
         static uint16_t stage_copy_async_b[MAX_FRAME_SAMPLES];
-        if(adc_get_frame_ch((uint8_t)ch, &abuf, &samples, &dma_seq)){
+        if(roi_pair_valid){
+            abuf = roi_pair_ptr[ch];
+            samples = roi_pair_samples;
+            dma_seq = roi_pair_dma_seq;
+            synth = 0;
+        } else if(adc_get_frame_ch((uint8_t)ch, &abuf, &samples, &dma_seq)){
             synth = 0;
         } else if(TEST_OVERLAY_SAWTOOTH){
             /* Если реальный буфер временно не готов, синтезируем кадр, чтобы гарантировать 2 канала. */
@@ -3695,7 +4681,7 @@ static int vnd_async_try_tx(void)
             /* Заголовок */
             vnd_frame_hdr_t *h = (vnd_frame_hdr_t*)tf[ch].buf;
             h->magic = 0xA55A; h->ver = 0x01; h->flags = (ch==0)?0x01:0x02; 
-            h->seq = dma_seq;  /* seq привязан к DMA-кадру */
+            h->seq = (vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI) ? stream_seq : dma_seq;
             h->timestamp = HAL_GetTick(); h->total_samples = eff;
             if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
                 h->zone_count = 1;
@@ -3715,9 +4701,12 @@ static int vnd_async_try_tx(void)
             h->crc16 = crc; if(crc) h->flags |= 0x04; else h->flags &= (uint8_t)~0x04u;
             tf[ch].samples = eff; tf[ch].seq = stream_seq; tf[ch].dma_seq = dma_seq; tf[ch].frame_len = (uint16_t)(VND_FRAME_HDR_SIZE + eff*2u); tf[ch].ch = (uint8_t)ch; tf[ch].valid = 1;
 
-            /* LOSSLESS: adc_get_frame_ch() теперь делает peek; подтверждаем consume только после копирования */
-            if(!synth){ (void)adc_consume_frame_ch((uint8_t)ch, dma_seq); }
+            /* ROI strict FIFO: A/B берутся из одной DMA-пары; FIFO двигаем один раз после копирования пары. */
+            if(!synth && !roi_pair_valid){ (void)adc_consume_frame_ch((uint8_t)ch, dma_seq); }
         }
+    }
+    if(roi_pair_valid && tf[0].valid && tf[1].valid){
+        (void)adc_consume_frame_pair_fifo(roi_pair_dma_seq);
     }
 
     /* Выбор канала:
@@ -3746,7 +4735,7 @@ static int vnd_async_try_tx(void)
     
     /* Гарантируем согласованность метаданных заголовка с DMA-кадром */
     vnd_frame_hdr_t *h = (vnd_frame_hdr_t*)sel->buf;
-    h->seq = h->reserved; /* seq = dma_seq (32-битное значение) */
+    h->seq = (vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI) ? sel->seq : h->reserved;
     h->reserved2 = (uint16_t)(adc_get_buffer_parity(h->reserved) & 0x07u);
     
     if(vnd_transmit_frame(sel->buf, sel->frame_len, 0, 0, pick==0?"ADC0-ASY2":"ADC1-ASY2") == USBD_OK){
@@ -3831,10 +4820,14 @@ static int vnd_validate_frame(const uint8_t *buf, uint16_t len, uint8_t expect_t
     {
         uint16_t expected = (uint16_t)(VND_FRAME_HDR_SIZE + h->total_samples * 2u);
         if (len != expected) {
-            /* Разрешаем «припадиненные» кадры: длина >= expected и кратна 64 байтам (FS/HS совместимо) */
-            if ((allow_flags & 0x02) == 0) return 0;
+            /* Разрешаем нулевой паддинг до MPS: полезный размер берётся из total_samples. */
             if (len < expected) return 0;
             if ((len % 64u) != 0u) return 0;
+            if ((allow_flags & 0x02) == 0) {
+                for(uint16_t i = expected; i < len; i++){
+                    if(buf[i] != 0u) return 0;
+                }
+            }
         }
     }
     return 1;
@@ -3843,8 +4836,23 @@ static int vnd_validate_frame(const uint8_t *buf, uint16_t len, uint8_t expect_t
 static USBD_StatusTypeDef __attribute__((unused)) vnd_transmit_frame(uint8_t *buf, uint16_t len, uint8_t is_test, uint8_t allow_zero_samples, const char *tag)
 {
     (void)is_test; dbg_tx_attempt++;
+    vnd_last_tx_pace_busy = 0u;
     if(!vnd_validate_frame(buf, len, is_test, allow_zero_samples)){ dbg_tx_reject++; vnd_error_counter++; if(vnd_last_error == 0) vnd_last_error = 3; VND_LOG("TX_REJECT %s", tag ? tag : "?"); return USBD_FAIL; }
+    if(!vnd_frame_pace_ready(HAL_GetTick())){
+        vnd_last_tx_pace_busy = 1u;
+        vnd_tx_kick = 1u;
+        return USBD_BUSY;
+    }
     if(!vnd_tx_ready || vnd_ep_busy || vnd_inflight){ vnd_error_counter++; VND_LOG("TX_SKIP busy/inflight tag=%s", tag ? tag : "?"); return USBD_BUSY; }
+    {
+        extern uint8_t USBD_VND_TxIsBusy(void);
+        if(USBD_VND_TxIsBusy()){
+            dbg_resend_blocked++;
+            vnd_tx_kick = 1;
+            VND_LOG("TX_DEFER ll_busy tag=%s", tag ? tag : "?");
+            return USBD_BUSY;
+        }
+    }
     vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_inflight = 1; vnd_last_tx_len = len; vnd_last_tx_start_ms = HAL_GetTick();
 
     /* Фиксируем метаданные кадра; НЕ переписываем seq перед отправкой.
@@ -3861,16 +4869,18 @@ static USBD_StatusTypeDef __attribute__((unused)) vnd_transmit_frame(uint8_t *bu
     if(len >= VND_FRAME_HDR_SIZE){ const vnd_frame_hdr_t *hh = (const vnd_frame_hdr_t*)buf; if(hh->magic==0xA55A){ inflight_is_frame = 1; inflight_flags = hh->flags; inflight_seq = hh->seq; } else { inflight_is_frame = 0; inflight_flags = 0; inflight_seq = 0; } } else { inflight_is_frame = 0; inflight_flags = 0; inflight_seq = 0; }
     (void)flags; (void)seq_field; /* для сборок с отключёнными логами */
     USBD_StatusTypeDef rc = USBD_VND_Transmit(&hUsbDeviceHS, buf, len);
-    if(rc == USBD_BUSY){
-        dbg_resend_blocked++; vnd_error_counter++; if(vnd_last_error == 0) vnd_last_error = 4;
+    if(rc != USBD_OK){
+        dbg_resend_blocked++; vnd_error_counter++;
+        if(rc != USBD_BUSY && vnd_last_error == 0) vnd_last_error = 4;
         /* Диагностика LL: получим last rc/len и флаг занятости */
         extern uint8_t USBD_VND_TxIsBusy(void);
         extern uint8_t USBD_VND_LastTxRC(void);
         extern uint16_t USBD_VND_LastTxLen(void);
         uint8_t ll_busy = USBD_VND_TxIsBusy(); uint8_t ll_rc = USBD_VND_LastTxRC(); uint16_t ll_len = USBD_VND_LastTxLen();
         (void)ll_busy; (void)ll_rc; (void)ll_len;
-        VND_LOG("TX_BUSY tag=%s len=%u ll_busy=%u last_rc=%u last_len=%u", tag?tag:"?", (unsigned)len, (unsigned)ll_busy, (unsigned)ll_rc, (unsigned)ll_len);
-        vnd_tx_ready = 1; vnd_ep_busy = 0; vnd_inflight = 0;
+        VND_LOG("TX_FAIL tag=%s rc=%d len=%u ll_busy=%u last_rc=%u last_len=%u", tag?tag:"?", (int)rc, (unsigned)len, (unsigned)ll_busy, (unsigned)ll_rc, (unsigned)ll_len);
+        vnd_rollback_tx_start();
+        vnd_tx_kick = 1;
     }
     else {
         /* Фиксируем метаданные ТОЛЬКО после успешного запуска передачи, иначе не сместим FIFO зря */
@@ -4132,6 +5142,7 @@ void __attribute__((unused)) vnd_diag_send64_once(void)
 void __attribute__((unused)) Vendor_Stream_Task(void)
 {
     dbg_task_calls++;
+    vnd_note_task_entry(HAL_GetTick());
     /* Сервис EP0: выполняем отложенные SOFT/DEEP RESET без блокировки SETUP */
     USBD_VND_ProcessControlRequests();
 
@@ -4157,7 +5168,9 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
                 roi_len = (uint16_t)VND_ROI_LEN_DEFAULT;
             }
         }
-        vnd_dc_background_step(roi_start, roi_len);
+        if(!(streaming && full_mode && !diag_mode_active && vnd_stream_mode == VND_STREAM_MODE_AVG_ROI)){
+            vnd_dc_background_step(roi_start, roi_len);
+        }
         vnd_dc_try_save_periodic();
     }
 
@@ -4258,6 +5271,19 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
         return; /* ждём TxCplt ACK-STOP */
     }
 
+    vnd_usb_in_drop_recovery_poll(HAL_GetTick());
+
+    /* В AVG_ROI B должен уходить сразу после завершения A. Не ставим перед ним
+       фоновый drain/DSP, иначе короткий USB hiccup быстро превращается в q=4 и recovery. */
+    if(full_mode && !diag_mode_active && vnd_stream_mode == VND_STREAM_MODE_AVG_ROI){
+        if(pending_B && !vnd_ep_busy && !vnd_inflight){
+            if(vnd_try_send_B_immediate()){
+                if(vnd_tick_flag) vnd_tick_flag = 0;
+                return;
+            }
+        }
+    }
+
     /* stream_mode=2: постоянно дренируем FIFO и готовим усреднённые ROI кадры в очереди.
        Это критично для "lossless" поведения (потребление ADC не должно зависеть от скорости USB). */
     if(full_mode && !diag_mode_active && vnd_stream_mode == VND_STREAM_MODE_AVG_ROI){
@@ -4290,8 +5316,9 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
             dbg_avg_last_print_ms = now_ms;
                  uint32_t dsp_avg_us = (vnd_dsp.dsp_us_cnt ? (vnd_dsp.dsp_us_total / vnd_dsp.dsp_us_cnt) : 0u);
 #if VND_AVG_DIAG_PRINTF
-                                 printf("[AVG] n=%u q=%u cnt0=%u cnt1=%u in=%lu(+%lu/s) out=%lu(+%lu/s) tx=%lu(+%lu/s) dsp=%luus(avg) %luus(max) corr_eo=(%.3f,%.3f) corr_ab=(e=%.3f,o=%.3f)\r\n",
+                                 printf("[AVG] n=%u q=%u drop=%lu cnt0=%u cnt1=%u in=%lu(+%lu/s) out=%lu(+%lu/s) tx=%lu(+%lu/s) dsp=%luus(avg) %luus(max) corr_eo=(%.3f,%.3f) corr_ab=(e=%.3f,o=%.3f)\r\n",
                                      (unsigned)vnd_avg_n, (unsigned)vnd_avg_q_count,
+                                     (unsigned long)dbg_avg_drop_frames,
                                      (unsigned)vnd_avg_cnt[0], (unsigned)vnd_avg_cnt[1],
                                      (unsigned long)in_now, (unsigned long)din,
                                      (unsigned long)out_now, (unsigned long)dout,
@@ -4310,28 +5337,13 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
         }
     }
 
-    /* Агрессивные TX-recovery ретраи оставляем только для lossy/latest режима.
-       В lossless они могут повторно выпустить A/B и сломать строгую последовательность. */
-    if(vnd_stream_mode == VND_STREAM_MODE_LATEST){
-        /* Универсальная антиклин-разблокировка EP: если IN висит >200 мс — принудительно снимаем busy */
-        do {
-            uint32_t now_ms = HAL_GetTick();
-            extern uint8_t USBD_VND_TxIsBusy(void);
-            uint8_t vbusy = USBD_VND_TxIsBusy();
-            if ( (vnd_ep_busy || vbusy) && vnd_last_tx_start_ms != 0 && (now_ms - vnd_last_tx_start_ms) > 200) {
-                extern void USBD_VND_ForceTxIdle(void);
-                USBD_VND_ForceTxIdle();
-                vnd_ep_busy = 0; vnd_tx_ready = 1;
-                VND_LOG("EP_UNSTUCK after %lums (len=%u) vbusy=%u", (unsigned long)(now_ms - vnd_last_tx_start_ms), (unsigned)vnd_last_tx_len, (unsigned)vbusy);
-            }
-        } while(0);
-    }
-
     /* ACK-STAT на START: отключено, чтобы не занимать Vendor IN перед первой парой.
        Хост может опрашивать состояние через GET_STATUS (EP0). */
     if(status_ack_pending){ start_ack_done = 1; status_ack_pending = 0; }
 
     uint32_t now = HAL_GetTick();
+    vnd_uart_stream_stats(now);
+    vnd_recover_avg_pending_b_stall(now);
     /* Fallback: если ACK так и не ушёл в полёт (status_ack_pending держится),
        не ждём бесконечно — считаем ACK выполненным и продолжаем к TEST. */
     if(!test_sent && !start_ack_done && status_ack_pending){
@@ -4345,7 +5357,9 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
     }
 
     if(!test_sent && start_stat_inflight) {
-        if(now - vnd_last_tx_start_ms > 80) {
+        uint32_t start_stat_age_ms = 0u;
+        if(vnd_last_tx_start_ms == 0u ||
+           (vnd_tick_age_ms(now, vnd_last_tx_start_ms, &start_stat_age_ms) && start_stat_age_ms > 80u)) {
             /* На некоторых хостах ACK-STAT может не завершиться DataIn/ZLP. Разблокируем вручную. */
             start_stat_inflight = 0; start_ack_done = 1; vnd_ep_busy = 0; vnd_tx_ready = 1;
             extern void USBD_VND_ForceTxIdle(void); USBD_VND_ForceTxIdle();
@@ -4463,54 +5477,67 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
             }
         }
     }
-    /* CRITICAL WATCHDOG: Если TxCplt не пришёл > 500ms, принудительно сбрасываем inflight.
+    /* CRITICAL WATCHDOG: если TxCplt не пришёл слишком долго, сбрасываем inflight.
        Причина: на Windows хост может "забыть" забрать данные или ZLP не отправился.
        Без этого устройство зависает с vnd_inflight=1 навсегда. */
     if(vnd_stream_mode == VND_STREAM_MODE_LATEST && vnd_inflight){
-        uint32_t dt_ms = (now >= vnd_last_tx_start_ms) ? (now - vnd_last_tx_start_ms) : (0xFFFFFFFFu - vnd_last_tx_start_ms + 1u + now);
-        if(dt_ms > 500){
-            VND_LOG("WATCHDOG: vnd_inflight stuck for %lums, force reset", (unsigned long)dt_ms);
-        cdc_logf("!!! WATCHDOG: TX stuck, force reset (dt=%lu ms)", (unsigned long)dt_ms);
-        vnd_inflight = 0;
-        vnd_ep_busy = 0;
-        vnd_tx_ready = 1;
-        sending_channel = 0xFF;
-        /* Пытаемся восстановить передачу */
-            vnd_tx_kick = 1;
+        uint32_t dt_ms = 0u;
+        if(vnd_tick_age_ms(now, vnd_last_tx_start_ms, &dt_ms) && dt_ms > VND_USB_IN_BUSY_STALL_MS){
+            extern uint8_t USBD_VND_TxIsBusy(void);
+            uint8_t ll_busy = USBD_VND_TxIsBusy();
+            if(!vnd_usb_in_active_abort_allowed(ll_busy, dt_ms)){
+                vnd_usb_in_note_active_hold("latest_inflight", now, dt_ms);
+            } else {
+                VND_LOG("WATCHDOG: vnd_inflight stuck for %lums, drop current unit", (unsigned long)dt_ms);
+                cdc_logf("!!! WATCHDOG: TX stuck, drop current unit (dt=%lu ms)", (unsigned long)dt_ms);
+                vnd_usb_in_drop_recover("latest_inflight", now, dt_ms);
+            }
         }
     }
     if((vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI) &&
        vnd_inflight && vnd_last_tx_start_ms != 0 && sending_channel == 0 && pending_B){
-        uint32_t dt_ms = (now >= vnd_last_tx_start_ms) ? (now - vnd_last_tx_start_ms) : (0xFFFFFFFFu - vnd_last_tx_start_ms + 1u + now);
-        if(dt_ms > 1200){
+        uint32_t dt_ms = 0u;
+        if(vnd_tick_age_ms(now, vnd_last_tx_start_ms, &dt_ms) && dt_ms > VND_USB_IN_BUSY_STALL_MS){
             uint8_t wd_slot = vnd_get_active_stream_slot(pending_B ? 1u : 0u);
             ChanFrame *wdA = &g_frames[wd_slot][0];
+            uint32_t wd_seq = wdA->seq;
             extern uint8_t USBD_VND_TxIsBusy(void);
             uint8_t ll_busy = USBD_VND_TxIsBusy();
-            if(ll_busy){
+            if(!vnd_usb_in_active_abort_allowed(ll_busy, dt_ms)){
+                vnd_usb_in_note_active_hold("lossless_a_wd", now, dt_ms);
                 goto lossless_a_wd_done;
             }
-            extern void USBD_VND_ForceTxIdle(void); USBD_VND_ForceTxIdle();
-            vnd_inflight = 0;
-            vnd_ep_busy = 0;
-            vnd_tx_ready = 1;
-            if(wdA->st == FB_SENDING){
-                vnd_meta_neutralize(0x01, wdA->seq);
-                wdA->st = FB_FILL;
-            }
-            sending_channel = 0xFF;
-            if(vnd_ch_mode != 0){
-                pending_B = 1;
-                if(pending_B_since_ms == 0){ pending_B_since_ms = now; }
-            }
-            pair_send_idx = wd_slot;
-            vnd_tx_kick = 1;
-            VND_LOG("LOSSLESS_A_WD dt=%lums seq=%lu slot=%u", (unsigned long)dt_ms, (unsigned long)wdA->seq, (unsigned)wd_slot);
+            vnd_usb_in_drop_recover("lossless_a_wd", now, dt_ms);
+            (void)wd_seq;
+            VND_LOG("LOSSLESS_A_DROP dt=%lums seq=%lu slot=%u", (unsigned long)dt_ms, (unsigned long)wd_seq, (unsigned)wd_slot);
         }
     }
 lossless_a_wd_done:
+    if((vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI) &&
+       vnd_inflight && vnd_last_tx_start_ms != 0 && sending_channel == 1 && pending_B){
+        uint32_t dt_ms = 0u;
+        if(vnd_tick_age_ms(now, vnd_last_tx_start_ms, &dt_ms) && dt_ms > VND_USB_IN_BUSY_STALL_MS){
+            uint8_t wd_slot = vnd_get_active_stream_slot(1u);
+            ChanFrame *wdB = &g_frames[wd_slot][1];
+            uint32_t wd_seq = wdB->seq;
+            extern uint8_t USBD_VND_TxIsBusy(void);
+            uint8_t ll_busy = USBD_VND_TxIsBusy();
+            if(!vnd_usb_in_active_abort_allowed(ll_busy, dt_ms)){
+                vnd_usb_in_note_active_hold("lossless_b_wd", now, dt_ms);
+                goto lossless_b_wd_done;
+            }
+            vnd_usb_in_drop_recover("lossless_b_wd", now, dt_ms);
+            if(!first_pair_done){ first_pair_done = 1; }
+            (void)wd_seq;
+            VND_LOG("LOSSLESS_B_DROP dt=%lums seq=%lu slot=%u", (unsigned long)dt_ms, (unsigned long)wd_seq, (unsigned)wd_slot);
+        }
+    }
+lossless_b_wd_done:
     
-    if(test_in_flight && (now - vnd_last_tx_start_ms) > 100){
+    uint32_t test_tx_age_ms = 0u;
+    if(test_in_flight &&
+       vnd_tick_age_ms(now, vnd_last_tx_start_ms, &test_tx_age_ms) &&
+       test_tx_age_ms > 100u){
         /* На некоторых хостах (FS/RPi) DataIn может не вызваться после короткого TEST.
            Чтобы не зависнуть с занятым EP, снимаем busy и продолжаем. */
     test_in_flight = 0;
@@ -4627,7 +5654,7 @@ lossless_a_wd_done:
                 fB->st = FB_SENDING; sending_channel = 1; return;
             } else if (rcB == USBD_BUSY) {
                 static uint32_t b_busy_retry = 0; b_busy_retry++;
-                if (b_busy_retry == 1 || (b_busy_retry % 10) == 0) {
+                if (!vnd_last_tx_pace_busy && (b_busy_retry == 1 || (b_busy_retry % 10) == 0)) {
                     VND_LOG("B_BUSY_RETRY cnt=%lu", (unsigned long)b_busy_retry);
                 }
                 /* оставляем кадр в READY и попробуем позже */
@@ -4648,34 +5675,29 @@ lossless_a_wd_done:
                 uint8_t ll_busy = USBD_VND_TxIsBusy();
                 const char *stA = (g_frames[0][0].st==FB_READY?"READY":(g_frames[0][0].st==FB_SENDING?"SENDING":"FILL"));
                 const char *stB = (g_frames[0][1].st==FB_READY?"READY":(g_frames[0][1].st==FB_SENDING?"SENDING":"FILL"));
-                uint32_t age_ms = pending_B_since_ms? (now_ms - pending_B_since_ms) : 0;
+                uint32_t age_ms = 0u;
+                if(!vnd_tick_age_ms(now_ms, pending_B_since_ms, &age_ms)){
+                    age_ms = 0u;
+                }
                 cdc_logf("DBG WAIT_B age=%lums A=%s B=%s ep_busy=%u ll_busy=%u metaDepth=%u lastTX=%u", (unsigned long)age_ms, stA, stB, (unsigned)vnd_ep_busy, (unsigned)ll_busy, (unsigned)vnd_tx_meta_depth(), (unsigned)vnd_last_tx_len);
                 last_cdc_ms = now_ms;
             }
             /* Watchdog B: если B уже ушёл в полёт и TxCplt потерялся,
-               возвращаем кадр в READY и повторяем тот же B без продвижения seq.
-               В strict/lossless режимах нельзя "закрывать" B локально: поздний
-               callback потом приходит отдельно и ломает целостность пары. */
-            if(fB->st == FB_SENDING && (now_ms - vnd_last_tx_start_ms) > 1200){
+               считаем текущую единицу потока потерянной и идём дальше без повтора. */
+            uint32_t b_wd_age_ms = 0u;
+            if(fB->st == FB_SENDING &&
+               vnd_tick_age_ms(now_ms, vnd_last_tx_start_ms, &b_wd_age_ms) &&
+               b_wd_age_ms > VND_USB_IN_BUSY_STALL_MS){
+                uint32_t b_wd_seq = g_frames[b_slot][1].seq;
                 extern uint8_t USBD_VND_TxIsBusy(void);
                 uint8_t ll_busy = USBD_VND_TxIsBusy();
-                if(ll_busy){
+                if(!vnd_usb_in_active_abort_allowed(ll_busy, b_wd_age_ms)){
+                    vnd_usb_in_note_active_hold("b_txcplt_wd", now_ms, b_wd_age_ms);
                     goto wait_b_watchdog_done;
                 }
-                extern void USBD_VND_ForceTxIdle(void); USBD_VND_ForceTxIdle();
-                vnd_ep_busy = 0; vnd_tx_ready = 1; vnd_inflight = 0;
-                if(g_frames[b_slot][0].st == FB_SENDING){
-                    g_frames[b_slot][0].st = FB_FILL;
-                }
-                vnd_meta_neutralize(0x02, g_frames[b_slot][1].seq);
-                g_frames[b_slot][1].st = FB_READY; sending_channel = 0xFF;
-                pair_send_idx = b_slot;
-                VND_LOG("B_TXCPLT_WD (>1200ms) -> retry B seq=%lu slot=%u", (unsigned long)g_frames[b_slot][1].seq, (unsigned)b_slot);
-                /* Попробуем сразу переотправить */
-                ChanFrame *fB2 = &g_frames[b_slot][1];
-                if(!vnd_ep_busy && fB2->st == FB_READY){
-                    if(vnd_transmit_frame(fB2->buf, fB2->frame_size, 0, 0, "ADC1-RETRY") == USBD_OK){ fB2->st = FB_SENDING; sending_channel = 1; return; }
-                }
+                vnd_usb_in_drop_recover("b_txcplt_wd", now_ms, b_wd_age_ms);
+                (void)b_wd_seq;
+                VND_LOG("B_TXCPLT_DROP seq=%lu slot=%u age=%lums", (unsigned long)b_wd_seq, (unsigned)b_slot, (unsigned long)b_wd_age_ms);
             }
 wait_b_watchdog_done:
             /* Не синтезируем B: ждём реальные данные, пока EP свободен */
@@ -4683,8 +5705,11 @@ wait_b_watchdog_done:
         /* Дополнительный watchdog зависшего pending_B, даже если fB->st перешёл из READY в FILL из-за сброса */
         do {
             uint32_t now_ms2 = HAL_GetTick();
+            uint32_t last_txcplt_age_ms = 0u;
             if(vnd_stream_mode == VND_STREAM_MODE_LATEST &&
-               !vnd_ep_busy && sending_channel == 0xFF && (now_ms2 - vnd_last_txcplt_ms) > 40){
+               !vnd_ep_busy && sending_channel == 0xFF &&
+               vnd_tick_age_ms(now_ms2, vnd_last_txcplt_ms, &last_txcplt_age_ms) &&
+               last_txcplt_age_ms > 40u){
                 uint8_t chk_slot = vnd_get_active_stream_slot(1u);
                 ChanFrame *fBchk = &g_frames[chk_slot][1];
                 ChanFrame *fAchk = &g_frames[chk_slot][0];
@@ -4706,17 +5731,22 @@ wait_b_watchdog_done:
     uint8_t a_slot = vnd_get_active_stream_slot(0u);
     pair_send_idx = a_slot;
     ChanFrame *fA = &g_frames[a_slot][0];
-        /* Watchdog: если A завис в SENDING и долго нет TxCplt — считаем A завершённым и переходим к B */
+        /* Watchdog: если A завис в SENDING и долго нет TxCplt — сбрасываем его без повтора. */
         do {
             uint32_t now_ms = HAL_GetTick();
+            uint32_t a_wd_age_ms = 0u;
             if (vnd_stream_mode == VND_STREAM_MODE_LATEST &&
-                fA->st == FB_SENDING && (now_ms - vnd_last_tx_start_ms) > 120) {
-                /* Не считаем A завершённым — лишь снимаем busy, нейтрализуем старую мета и открываем ожидание B */
-                VND_LOG("A_TXCPLT_WD (>120ms) -> open pending_B, neutralize A meta, continue");
-                extern void USBD_VND_ForceTxIdle(void); USBD_VND_ForceTxIdle();
-                vnd_ep_busy = 0; vnd_tx_ready = 1; vnd_inflight = 0; sending_channel = 0xFF;
-                vnd_meta_neutralize(0x01, g_frames[a_slot][0].seq);
-                pending_B = 1; pending_B_since_ms = now_ms;
+                fA->st == FB_SENDING &&
+                vnd_tick_age_ms(now_ms, vnd_last_tx_start_ms, &a_wd_age_ms) &&
+                a_wd_age_ms > VND_USB_IN_BUSY_STALL_MS) {
+                extern uint8_t USBD_VND_TxIsBusy(void);
+                uint8_t ll_busy = USBD_VND_TxIsBusy();
+                if(!vnd_usb_in_active_abort_allowed(ll_busy, a_wd_age_ms)){
+                    vnd_usb_in_note_active_hold("a_txcplt_wd", now_ms, a_wd_age_ms);
+                } else {
+                    VND_LOG("A_TXCPLT_WD -> drop current unit");
+                    vnd_usb_in_drop_recover("a_txcplt_wd", now_ms, a_wd_age_ms);
+                }
             }
         } while(0);
         if(fA->st != FB_READY){ 
@@ -4791,18 +5821,7 @@ wait_b_watchdog_done:
     
     /* Периодическое обновление дисплея LCD с информацией о потоке */
     // stream_display_periodic_update();
-    /* Раньше здесь запрашивали мягкий ресет класса при отсутствии TXCPLT >1.5s.
-       Это приводило к незаметной для хоста остановке стрима (streaming=0) и последующим тайм‑ауторам.
-       Вместо софт‑ресета делаем бережный kick: снимаем busy и пробуем продолжить передачу.
-       Более глубокий kick есть ниже (WDG_KICK >3s). */
-    if((now - vnd_last_txcplt_ms) > 1500){
-        extern void USBD_VND_ForceTxIdle(void);
-        USBD_VND_ForceTxIdle();
-        vnd_ep_busy = 0; vnd_tx_ready = 1; vnd_inflight = 0; sending_channel = 0xFF;
-        /* не трогаем streaming/test/pending_B — даём пайплайну восстановиться */
-        vnd_last_txcplt_ms = now; /* предотвратить лавину */
-        VND_LOG("WDG_SOFT_RESET_BYPASS -> force idle");
-    }
+    vnd_usb_in_drop_recovery_poll(now);
     /* Аварийный keepalive тестом — только в диагностике; в полном режиме не посылаем TEST повторно */
     if(!full_mode){
         /* В DIAG режиме можно слать keepalive TEST — оставляем как было. */
@@ -4833,13 +5852,14 @@ wait_b_watchdog_done:
     }
 
     /* Ускоренный watchdog: считаем зависанием при > 3000мс без TXCPLT и мягко пинаем TX */
-    if(streaming && (now - vnd_last_txcplt_ms) > 3000){
-        VND_LOG("WDG_KICK (no TXCPLT >3s) try requeue");
-        /* Не делаем глубокий ресет, только разрешаем передачу и инициируем попытку */
-        vnd_ep_busy = 0; vnd_tx_ready = 1; vnd_inflight = 0; sending_channel = 0xFF;
-        test_sent = 1; test_in_flight = 0; start_ack_done = 1; status_ack_pending = 0;
-        vnd_last_txcplt_ms = now;
-        vnd_tx_kick = 1;
+    uint32_t txcplt_kick_age = 0u;
+    if(streaming &&
+       vnd_usb_in_has_recoverable_state() &&
+       vnd_tick_age_ms(now, vnd_last_txcplt_ms, &txcplt_kick_age) &&
+       txcplt_kick_age > 3000u){
+        VND_LOG("WDG_KICK (no TXCPLT >3s) drop current unit");
+        vnd_tx_drop_recovery_request = 1u;
+        vnd_usb_in_drop_recovery_poll(now);
         /* Важно: не использовать async-путь в ROI режимах, иначе он обходит prepare_pair/AVG очередь
            и начинает слать "сырой" поток. */
         if(async_mode && full_mode && !diag_mode_active && (vnd_stream_mode == VND_STREAM_MODE_LATEST)){
@@ -4991,28 +6011,31 @@ void USBD_VND_TxCplt(void)
     if(!streaming){ vnd_tx_kick = 1; return; }
 
     /* Первая успешная рабочая передача (A или B): зафиксировать метку, если ещё не установлена */
-    if(vnd_stage_first_frame_ms == 0 && eff_is_frame && (eff_flags == 0x01 || eff_flags == 0x02)){
+    uint8_t eff_ch_bits_pre = (uint8_t)(eff_flags & 0x03u);
+    if(vnd_stage_first_frame_ms == 0 && eff_is_frame && (eff_ch_bits_pre == 0x01 || eff_ch_bits_pre == 0x02)){
         vnd_stage_first_frame_ms = HAL_GetTick();
     }
-    if(eff_is_frame && (eff_flags == 0x01 || eff_flags == 0x02)){
+    if(eff_is_frame && (eff_ch_bits_pre == 0x01 || eff_ch_bits_pre == 0x02)){
         vnd_last_frame_txcplt_ms = now_txcplt;
+        vnd_frame_pace_arm(now_txcplt);
         if(vnd_last_error != 0u){
             vnd_last_error = 0;
         }
     }
-    /* НЕМЕДЛЕННАЯ ПОПЫТКА ОТПРАВКИ: если есть данные и EP свободен — отправить сразу.
-       Это обеспечивает максимальную скорость USB без ожидания periodic task. */
-    /* Критично: этот "fast kick" разрешён ТОЛЬКО для async режима в stream_mode=0 (LATEST).
-       В LOSSLESS_ROI/AVG_ROI async-путь обходит строгую парность и/или AVG очередь. */
-    if(streaming && !vnd_ep_busy && async_mode && full_mode && !diag_mode_active && (vnd_stream_mode == VND_STREAM_MODE_LATEST)){
+    if(eff_is_frame && ((eff_flags & 0x03u) == 0x01u || (eff_flags & 0x03u) == 0x02u)){
+        vnd_tx_kick = 1;
+    }
+    if(streaming && !vnd_ep_busy && async_mode && full_mode && !diag_mode_active &&
+       (vnd_stream_mode == VND_STREAM_MODE_LATEST)){
         (void)vnd_async_try_tx();
     }
-    
+
     /* Асинхронный режим: считаем канал по eff_flags, закрываем соответствующий подкадр.
        В A-only/B-only режиме закрываем сразу всю пару и сдвигаем seq. */
     if(async_mode && streaming && full_mode){
-        if(eff_is_frame && (eff_flags == 0x01 || eff_flags == 0x02)){
-            int ch = (eff_flags == 0x01) ? 0 : 1;
+        uint8_t eff_ch_bits = (uint8_t)(eff_flags & 0x03u);
+        if(eff_is_frame && (eff_ch_bits == 0x01 || eff_ch_bits == 0x02)){
+            int ch = (eff_ch_bits == 0x01) ? 0 : 1;
             if(vnd_pending_init){ vnd_pending_init = 0; }
             vnd_stream_active = 1;
             /* Учёт статистики по каналам (оценка сэмплов по текущему размеру кадра) */
@@ -5031,6 +6054,11 @@ void USBD_VND_TxCplt(void)
             /* Отпускаем канал */
             sending_channel = 0xFF;
             if(vnd_stage_first_frame_ms == 0){ vnd_stage_first_frame_ms = HAL_GetTick(); cdc_logf("EVT FIRST_FRAME ch=%c", ch==0?'A':'B'); }
+            vnd_tx_kick = 1;
+            if(!vnd_ep_busy && !diag_mode_active &&
+               (vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI)){
+                (void)vnd_async_try_tx();
+            }
         }
         return;
     }
@@ -5085,28 +6113,15 @@ void USBD_VND_TxCplt(void)
 
     /* Ниже — обычная ветка для полнофункционального режима */
     if(!eff_is_frame){
-        /* STAT или иной служебный пакет — используем предыдущее состояние канала как подсказку */
-        if(prev_sending == 0){
-            if(!pending_B){ pending_B = 1; pending_B_since_ms = HAL_GetTick(); VND_LOG("GUARD(NON-FRAME): pending_B"); }
-            sending_channel = 0xFF; vnd_tx_kick = 1; return;
-        } else if(prev_sending == 1){
-            /* Считаем, что завершился B: закрываем пару безопасно */
-        vnd_consume_strict_fifo_pair(pair_send_idx);
-        ChanFrame *f0 = &g_frames[pair_send_idx][0];
-        ChanFrame *f1 = &g_frames[pair_send_idx][1];
-        f0->st = f1->st = FB_FILL;
-        pair_send_idx = (pair_send_idx + 1u) % VND_PAIR_BUFFERS;
-        stream_seq++; dbg_produced_seq++;
-        pending_B = 0; pending_B_since_ms = 0; sending_channel = 0xFF;
-    /* Не планируем задержку следующей пары: передавать сразу при готовности */
-            if(!first_pair_done){ first_pair_done = 1; }
-            VND_LOG("GUARD(NON-FRAME): assume B done -> advance seq=%lu", (unsigned long)stream_seq);
-            vnd_tx_kick = 1; return;
-        } else {
-            sending_channel = 0xFF; vnd_tx_kick = 1; return;
-        }
+        /* STAT/DCCF/служебные ответы не должны закрывать A/B пару.
+           Раньше этот callback мог двигать pending_B/stream_seq по старому sending_channel,
+           что давало редкую рассинхронизацию после bulk GET_STATUS или позднего TxCplt. */
+        (void)prev_sending;
+        vnd_tx_kick = 1;
+        return;
     }
     uint8_t fl = eff_flags;
+    uint8_t fl_ch_bits = (uint8_t)(fl & 0x03u);
     if(fl == 0x80){
         /* TEST */
         sending_channel = 0xFF; /* тест одиночный */
@@ -5120,7 +6135,7 @@ void USBD_VND_TxCplt(void)
             tx_slot = (uint8_t)seq_slot;
         }
     }
-    if(fl == 0x01){
+    if(fl_ch_bits == 0x01){
         /* Это канал A */
         if(pending_B){ VND_LOG("WARN A_WHILE_PENDING_B seq=%lu hdr.seq=%lu", (unsigned long)stream_seq, (unsigned long)eff_seq); }
         if(eff_seq != stream_seq){
@@ -5151,8 +6166,9 @@ void USBD_VND_TxCplt(void)
                 /* Запускаем ожидание B ровно здесь */
                 pending_B = 1; pending_B_since_ms = HAL_GetTick();
             }
-            /* В strict/lossless режимах дальнейшую отправку делает только task,
-               чтобы не гоняться с IRQ TxCplt за pair_send_idx/g_frames. */
+            /* В AVG_ROI не стартуем следующий USB IN прямо из DataIn/TxCplt.
+               У master это редкое re-entrant окно оставляло B в FB_SENDING при уже свободном EP.
+               Vendor_Stream_Task отправит B на следующем проходе, сохранив порядок A->B. */
             if(vnd_stream_mode == VND_STREAM_MODE_LATEST){
                 if(!vnd_try_send_B_immediate()){
                     vnd_tx_kick = 1; return;
@@ -5160,7 +6176,7 @@ void USBD_VND_TxCplt(void)
             }
             vnd_tx_kick = 1; return;
         }
-    } else if(fl == 0x02){
+    } else if(fl_ch_bits == 0x02){
     /* Канал B завершён — закрываем пару */
         if(!pending_B){ VND_LOG("WARN B_WITHOUT_PENDING seq=%lu hdr.seq=%lu", (unsigned long)stream_seq, (unsigned long)eff_seq); }
         if(eff_seq != stream_seq){
@@ -5177,8 +6193,7 @@ void USBD_VND_TxCplt(void)
         }
         pending_B = 0; pending_B_since_ms = 0; sending_channel = 0xFF;
         if(!first_pair_done){ first_pair_done = 1; }
-        /* В strict/lossless режимах дальнейшую отправку делает только task,
-           чтобы избежать перестановок из-за гонки task <-> TxCplt. */
+        /* AVG_ROI продолжает из task-loop, без нового USB IN из TxCplt. */
         if(vnd_stream_mode == VND_STREAM_MODE_LATEST){
             if(!vnd_try_send_A_nextpair_immediate()){
                 /* Без планирования задержек: следующая пара начнётся как только готова */
@@ -5234,6 +6249,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 vnd_next_pair_ms = 0;
                 /* Состояние теста/ACK */
                 test_in_flight = 0; test_pending = 0;
+                vnd_async_state_reset_req = 1;
 #if VND_DISABLE_TEST
                 test_sent = 1; /* тест отключён: считать выполненным */
 #else
@@ -5309,10 +6325,10 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 vnd_strict_pairing = 0;
                 cdc_logf("START: TEST mode forces async=0 (pair pipeline)");
 #else
-                /* По умолчанию хотим async=1 для максимальной скорости, но START не должен перетирать
-                   явную настройку хоста (SET_ASYNC_MODE) и режим LOSSLESS_ROI. */
+                        /* LOSSLESS_ROI держим на парном FIFO-пути: DMA всегда 600, USB отдаёт ROI 200 без latest/snapshot. */
                 if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
-                    async_mode = 0;
+                            async_mode = 0;
+                            vnd_strict_pairing = 0;
                 } else if(!async_mode_host_set){
                     async_mode = 1;
                 }
@@ -5468,6 +6484,19 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 vnd_tx_ready = 1;
                 vnd_inflight = 0;
                 vnd_tx_kick = 0;  /* Сбросить флаг kick */
+                vnd_async_state_reset_req = 1;
+                inflight_is_frame = 0;
+                inflight_flags = 0;
+                inflight_seq = 0;
+
+                /* STOP должен полностью освобождать IN endpoint и кадры, включая ROI B_SENDING. */
+                do {
+                    extern void USBD_VND_ForceTxIdle(void);
+                    USBD_VND_ForceTxIdle();
+                    vnd_tx_meta_head = vnd_tx_meta_tail = 0;
+                    meta_push_total = meta_pop_total = meta_empty_events = meta_overflow_events = 0;
+                    vnd_reset_buffers();
+                } while(0);
                 
                 /* Сброс флагов пар и статусов */
                 first_pair_done = 0;
@@ -5534,9 +6563,15 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 if(l)
                 {
                     vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = l; vnd_last_tx_start_ms = HAL_GetTick();
-                    if(USBD_VND_Transmit(&hUsbDeviceHS, (uint8_t*)status_buf, l) == USBD_OK)
+                    vnd_mark_service_inflight();
+                    if(USBD_VND_Transmit(&hUsbDeviceHS, (uint8_t*)status_buf, l) == USBD_OK){
+                        vnd_tx_meta_after((uint8_t*)status_buf, l);
                         VND_LOG("STAT_TX req len=%u", l);
-                    else { VND_LOG("STAT_BUSY_FAIL"); vnd_tx_ready = 1; vnd_ep_busy = 0; }
+                    } else {
+                        VND_LOG("STAT_BUSY_FAIL");
+                        vnd_status_permit_once = 0;
+                        vnd_rollback_tx_start();
+                    }
                 }
             } else {
                 pending_status = 1; VND_LOG("STAT_PENDING on GET_STATUS");
@@ -5673,8 +6708,8 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
 
                 if(vnd_stream_mode == VND_STREAM_MODE_AVG_ROI){
                     /* avg_n: опционально */
-                    uint8_t n = (len >= 3) ? data[2] : 20;
-                    if(n < 1) n = 1;
+                    uint8_t n = (len >= 3) ? data[2] : 24;
+                    if(n < (uint8_t)VND_AVG_MIN_N) n = (uint8_t)VND_AVG_MIN_N;
                     if(n > VND_AVG_MAX_N) n = VND_AVG_MAX_N;
                     vnd_avg_n = n;
                     vnd_avg_reset();
@@ -5687,9 +6722,15 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 /* Печать в UART (COM4) — чтобы однозначно видеть применённый режим/avg_n */
                 printf("[CMD_IND] SET_STREAM_MODE m=%u len=%u avg_n=%u\r\n", (unsigned)vnd_stream_mode, (unsigned)len, (unsigned)vnd_avg_n);
 
-                /* LOSSLESS_ROI требует строгих A->B пар, поэтому принудительно выключаем async.
-                   Это делает переключение режима самодостаточным (GUI не обязан слать SET_ASYNC_MODE). */
-                if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI){
+                /* LOSSLESS_ROI идёт через обычный парный FIFO-путь. AVG_ROI остаётся
+                   на отдельной AVG-очереди; async для обоих ROI-режимов запрещён. */
+                if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
+                    vnd_ch_mode = 2;
+                    async_mode = 0;
+                    vnd_strict_pairing = 0;
+                    async_mode_host_set = 1;
+                } else if(vnd_stream_mode == VND_STREAM_MODE_AVG_ROI){
+                    vnd_ch_mode = 2;
                     async_mode = 0;
                     async_mode_host_set = 1;
                 }
@@ -5740,25 +6781,26 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             break;
 
         case VND_CMD_SET_DC_CONFIG:
-            /* Time-based DC config:
+                        /* Time-based DC config:
                payload after opcode:
                  u8 version=1, u8 mode, u16 flags,
-                 u32 work_settle_ms, detect_settle_ms, fast_settle_ms, fast_duration_ms. */
+                                 u32 work_settle_ms, detect_settle_ms, fast_settle_ms, adapt_settle_ms.
+                             adapt_settle_ms is a selected-mode settle time, not a run timer. */
             if(len >= 3)
             {
                 vnd_dc_apply_config_payload(&data[1], (uint32_t)(len - 1u));
-                printf("[CMD_IND] SET_DC_CONFIG mode=%u work=%lums detect=%lums fast=%lums dur=%lums\r\n",
+                                printf("[CMD_IND] SET_DC_CONFIG mode=%u work=%lums detect=%lums fast=%lums adapt=%lums\r\n",
                        (unsigned)vnd_dc_mode,
                        (unsigned long)vnd_dc_work_settle_ms,
                        (unsigned long)vnd_dc_detect_settle_ms,
                        (unsigned long)vnd_dc_fast_settle_ms,
-                       (unsigned long)vnd_dc_fast_duration_ms);
-                cdc_logf("EVT SET_DC_CONFIG mode=%u work=%lu detect=%lu fast=%lu dur=%lu",
+                                             (unsigned long)vnd_dc_adapt_settle_ms);
+                                cdc_logf("EVT SET_DC_CONFIG mode=%u work=%lu detect=%lu fast=%lu adapt=%lu",
                          (unsigned)vnd_dc_mode,
                          (unsigned long)vnd_dc_work_settle_ms,
                          (unsigned long)vnd_dc_detect_settle_ms,
                          (unsigned long)vnd_dc_fast_settle_ms,
-                         (unsigned long)vnd_dc_fast_duration_ms);
+                                                 (unsigned long)vnd_dc_adapt_settle_ms);
             }
             break;
 
@@ -5768,23 +6810,28 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 uint16_t l = vnd_build_dc_config(cfg, sizeof(cfg));
                 if(l && !vnd_ep_busy && !vnd_inflight){
                     vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = l; vnd_last_tx_start_ms = HAL_GetTick();
+                    vnd_mark_service_inflight();
                     if(USBD_VND_Transmit(&hUsbDeviceHS, cfg, l) == USBD_OK){
                         vnd_tx_meta_after(cfg, l);
                     } else {
-                        vnd_tx_ready = 1; vnd_ep_busy = 0;
+                        vnd_rollback_tx_start();
                     }
                 }
             }
             break;
+
+        case VND_CMD_SAVE_DC_TO_FLASH:
+            vnd_dc_request_save_to_flash();
+            printf("[CMD_IND] SAVE_DC_TO_FLASH requested\r\n");
+            cdc_logf("EVT SAVE_DC_TO_FLASH requested");
+            break;
             
         case VND_CMD_CALIB_DC_FAST:
-            /* Legacy: запустить быструю адаптацию DC на N кадров.
-               Внутри переводим это во временный BOOT_FAST window. */
+                /* Legacy: выбрать быструю скорость DC. Новая модель не ограничивает адаптацию окном:
+                    режим держится до следующей команды SET_DC_CONFIG/SET_DC_ADAPT. */
             if(len >= 2)
             {
                 uint16_t frames = (uint16_t)data[1];
-                uint8_t retrigger_ignored = 0u;
-                uint32_t remaining_ms = 0u;
                 if (len >= 3) frames |= ((uint16_t)data[2] << 8); // allow 16-bit
                 
                 if (frames > 1000) frames = 1000;
@@ -5793,36 +6840,15 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     vnd_dc_fast_frames = 0u;
                     vnd_dc_set_mode(VND_DC_MODE_WORK);
                 } else {
-                    uint32_t rate = vnd_dc_legacy_fast_rate_hz();
-                    uint32_t duration_ms = ((uint32_t)frames * 1000u) / rate;
-                    uint32_t now_ms = HAL_GetTick();
-                    if(duration_ms < 1000u) duration_ms = 1000u;
-                    vnd_dc_fast_duration_ms = vnd_dc_clamp_fast_duration_ms(duration_ms);
-                    if(vnd_dc_mode == VND_DC_MODE_BOOT_FAST && vnd_dc_fast_frames == frames){
-                        int32_t delta_ms = (int32_t)(vnd_dc_fast_until_ms - now_ms);
-                        if(delta_ms > 0){
-                            retrigger_ignored = 1u;
-                            remaining_ms = (uint32_t)delta_ms;
-                        }
-                    }
-
-                    if(!retrigger_ignored){
-                        vnd_dc_fast_frames = frames;
-                        vnd_dc_set_mode(VND_DC_MODE_BOOT_FAST);
-                    }
+                    vnd_dc_fast_frames = frames;
+                          vnd_dc_adapt_settle_ms = 0u;
+                    vnd_dc_set_mode(VND_DC_MODE_BOOT_FAST);
                 }
 
-                if(retrigger_ignored){
-                    printf("[CMD_IND] CALIB_DC_FAST frames=%u ignored rem=%lums\r\n",
-                           (unsigned)frames, (unsigned long)remaining_ms);
-                    cdc_logf("EVT CALIB_DC_FAST frames=%u ignored rem=%lu",
-                             (unsigned)frames, (unsigned long)remaining_ms);
-                } else {
-                    printf("[CMD_IND] CALIB_DC_FAST frames=%u duration=%lums\r\n",
-                           (unsigned)frames, (unsigned long)vnd_dc_fast_duration_ms);
-                    cdc_logf("EVT CALIB_DC_FAST frames=%u duration=%lu",
-                             (unsigned)frames, (unsigned long)vnd_dc_fast_duration_ms);
-                }
+                      printf("[CMD_IND] CALIB_DC_FAST frames=%u mode=%u\r\n",
+                          (unsigned)frames, (unsigned)vnd_dc_mode);
+                      cdc_logf("EVT CALIB_DC_FAST frames=%u mode=%u",
+                            (unsigned)frames, (unsigned)vnd_dc_mode);
             }
             break;
 
@@ -5883,11 +6909,17 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 async_mode_host_set = 1;
                 /* bit7 включает строгую парность (A&B на один seq); по умолчанию 0 = независимые каналы */
                 vnd_strict_pairing = (mode & 0x80) ? 1 : 0;
-                /* Режимы LOSSLESS_ROI/AVG_ROI требуют строгой A->B парности: не позволяем включить async. */
+                /* ROI-режимы требуют собственного FIFO/AVG пайплайна: async для них запрещён. */
                 if((vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI || vnd_stream_mode == VND_STREAM_MODE_AVG_ROI) && async_mode){
                     async_mode = 0;
                 }
-                /* Запретить async при одноканальном режиме (A-only/B-only) для стабильности */
+                if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
+                    vnd_ch_mode = 2;
+                    async_mode = 0;
+                    vnd_strict_pairing = 0;
+                }
+                /* Запретить async при одноканальном режиме (A-only/B-only) для стабильности.
+                   LOSSLESS_ROI сам принудительно включает BOTH выше. */
                 if(vnd_ch_mode != 2 && async_mode){ async_mode = 0; }
                 VND_LOG("SET_ASYNC_MODE async=%u strict_pair=%u", (unsigned)async_mode, (unsigned)vnd_strict_pairing);
                 cdc_logf("EVT SET_ASYNC async=%u strict=%u", (unsigned)async_mode, (unsigned)vnd_strict_pairing);
@@ -6064,6 +7096,84 @@ uint64_t vnd_get_total_tx_samples(void)
     return vnd_total_tx_samples;
 }
 
+void vnd_log_usb_close_snapshot(const char *reason)
+{
+    uint32_t now_ms = HAL_GetTick();
+    extern uint8_t USBD_VND_TxIsBusy(void);
+    extern uint16_t USBD_VND_InTotalLength(void);
+    extern uint32_t USBD_VND_DataInCount(void);
+    extern volatile uint32_t main_loop_heartbeat;
+    extern volatile uint32_t last_heartbeat_ms;
+    extern volatile uint32_t loop_cycle_last_avg;
+    extern volatile uint32_t g_usb_last_sof_ms;
+
+    uint32_t last_age = 0xFFFFFFFFu;
+    uint32_t frame_age = 0xFFFFFFFFu;
+    uint32_t tx_age = 0xFFFFFFFFu;
+    uint32_t host_rx_age = 0xFFFFFFFFu;
+    uint32_t hb_age = 0xFFFFFFFFu;
+    uint32_t sof_age = 0xFFFFFFFFu;
+    uint32_t force_idle_age = 0xFFFFFFFFu;
+    (void)vnd_tick_age_ms(now_ms, vnd_last_txcplt_ms, &last_age);
+    (void)vnd_tick_age_ms(now_ms, vnd_last_frame_txcplt_ms, &frame_age);
+    (void)vnd_tick_age_ms(now_ms, vnd_last_tx_start_ms, &tx_age);
+    (void)vnd_tick_age_ms(now_ms, vnd_last_host_rx_ack_ms, &host_rx_age);
+    (void)vnd_tick_age_ms(now_ms, last_heartbeat_ms, &hb_age);
+    (void)vnd_tick_age_ms(now_ms, g_usb_last_sof_ms, &sof_age);
+    (void)vnd_tick_age_ms(now_ms, dbg_tx_force_idle_last_ms, &force_idle_age);
+
+    adc_stream_debug_t dbg;
+    adc_stream_get_debug(&dbg);
+    const char *stA = (g_frames[0][0].st==FB_READY?"READY":(g_frames[0][0].st==FB_SENDING?"SENDING":"FILL"));
+    const char *stB = (g_frames[0][1].st==FB_READY?"READY":(g_frames[0][1].st==FB_SENDING?"SENDING":"FILL"));
+
+    printf("[USB_CLOSE_SNAPSHOT] reason=%s t=%lu stream=%u active=%u mode=%u async=%u ch=%u ep=%u ll=%u infl=%u pendB=%u sendch=%u meta=%u q=%u err=%lu kick=%u last=%lu frame=%lu txage=%lu len=%u tl=%u din=%lu rxage=%lu rx=%lu txcplt=%lu A=%lu B=%lu wr=%lu rd=%lu avg=%lu/%lu/%lu force=%lu/%lu drop=%lu/%lu hb=%lu hbage=%lu sof=%lu loop=%lu dma=%lu/%lu A_st=%s B_st=%s\r\n",
+           reason ? reason : "?",
+           (unsigned long)now_ms,
+           (unsigned)streaming,
+           (unsigned)vnd_stream_active,
+           (unsigned)vnd_stream_mode,
+           (unsigned)async_mode,
+           (unsigned)vnd_ch_mode,
+           (unsigned)vnd_ep_busy,
+           (unsigned)USBD_VND_TxIsBusy(),
+           (unsigned)vnd_inflight,
+           (unsigned)pending_B,
+           (unsigned)sending_channel,
+           (unsigned)vnd_tx_meta_depth(),
+           (unsigned)vnd_avg_q_count,
+           (unsigned long)vnd_last_error,
+           (unsigned)vnd_tx_kick,
+           (unsigned long)last_age,
+           (unsigned long)frame_age,
+           (unsigned long)tx_age,
+           (unsigned)vnd_last_tx_len,
+           (unsigned)USBD_VND_InTotalLength(),
+           (unsigned long)USBD_VND_DataInCount(),
+           (unsigned long)host_rx_age,
+           (unsigned long)vnd_host_rx_last_counter,
+           (unsigned long)dbg_tx_cplt,
+           (unsigned long)dbg_sent_ch0_total,
+           (unsigned long)dbg_sent_ch1_total,
+           (unsigned long)frame_wr_seq,
+           (unsigned long)frame_rd_seq,
+           (unsigned long)dbg_avg_in_frames,
+           (unsigned long)dbg_avg_out_frames,
+           (unsigned long)dbg_avg_tx_pairs,
+           (unsigned long)dbg_tx_force_idle_count,
+           (unsigned long)force_idle_age,
+           (unsigned long)dbg_tx_drop_recovery_count,
+           (unsigned long)dbg_tx_drop_recovery_request_count,
+           (unsigned long)main_loop_heartbeat,
+           (unsigned long)hb_age,
+           (unsigned long)sof_age,
+           (unsigned long)loop_cycle_last_avg,
+           (unsigned long)dbg.dma_full0,
+           (unsigned long)dbg.dma_full1,
+           stA,
+           stB);
+}
+
 /* Общая диагностическая функция: при обращении хоста за статусом проверяет признаки паузы
    и печатает STALL_WARN не чаще чем раз в 2 секунды. Вызывается как из bulk-пути, так и из EP0. */
 /* Беззнаковая разность тиков (обработка переполнения 32-бит HAL_GetTick()). */
@@ -6094,7 +7204,14 @@ void vnd_diag_log_possible_stall(void)
     } else if(pending_B){
         if(g_frames[0][1].st!=FB_READY && g_frames[0][1].st!=FB_SENDING){ stall_class = "WAIT_B_FILL"; }
         else if(g_frames[0][1].st==FB_READY && !vnd_ep_busy){ stall_class = "B_READY_NOT_TX"; }
-        else if(g_frames[0][1].st==FB_SENDING && (now_ms - vnd_last_tx_start_ms) > 120){ stall_class = "B_INFLIGHT_LONG"; }
+        else if(g_frames[0][1].st==FB_SENDING){
+            uint32_t b_age_ms = 0u;
+            if(vnd_tick_age_ms(now_ms, vnd_last_tx_start_ms, &b_age_ms) && b_age_ms > 120u){
+                stall_class = "B_INFLIGHT_LONG";
+            } else {
+                stall_class = "PEND_B";
+            }
+        }
         else stall_class = "PEND_B";
     } else if(!pending_B && g_frames[0][0].st==FB_READY && !vnd_ep_busy){
         stall_class = "A_READY_NOT_TX";

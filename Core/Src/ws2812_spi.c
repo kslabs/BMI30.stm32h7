@@ -591,7 +591,6 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
                                               uint8_t *green_out,
                                               uint8_t *blue_out)
 {
-  extern volatile uint8_t vnd_sync_mode_public;
   extern volatile uint8_t need_recovery;
   extern volatile uint8_t need_hard_reset;
   enum {
@@ -601,6 +600,9 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
     WS2812_STATUS_BLUE_R = 0u,
     WS2812_STATUS_BLUE_G = 0u,
     WS2812_STATUS_BLUE_B = 96u,
+    WS2812_STATUS_LIGHT_BLUE_R = 0u,
+    WS2812_STATUS_LIGHT_BLUE_G = 36u,
+    WS2812_STATUS_LIGHT_BLUE_B = 96u,
     WS2812_STATUS_AMBER_R = 96u,
     WS2812_STATUS_AMBER_G = 36u,
     WS2812_STATUS_AMBER_B = 0u,
@@ -614,11 +616,13 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
   const uint32_t blink_half_frames = (WS2812_STATUS_BLINK_HALF_FRAMES != 0u)
     ? WS2812_STATUS_BLINK_HALF_FRAMES
     : 1u;
+  vnd_lcd_sync_snapshot_t sync_snapshot;
   uint32_t last_error = vnd_get_last_error();
   uint8_t alarm_active = (uint8_t)(((need_recovery != 0u) ||
                                     (need_hard_reset != 0u) ||
                                     (last_error != 0u)) ? 1u : 0u);
-  uint8_t slave_mode = (uint8_t)((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) ? 1u : 0u);
+  uint8_t display_slave_mode;
+  uint8_t master_sync_active;
   uint8_t optic_active = (uint8_t)((optic_sensor_get_state() != 0u) ? 1u : 0u);
   uint8_t tx_enabled = (uint8_t)((vnd_is_tx_enabled() != 0u) ? 1u : 0u);
   uint8_t alarm_gate_on = 1u;
@@ -626,6 +630,11 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
   uint8_t red = 0u;
   uint8_t green = 0u;
   uint8_t blue = 0u;
+
+  vnd_get_lcd_sync_snapshot(&sync_snapshot);
+  display_slave_mode = (uint8_t)((sync_snapshot.display_mode == VND_SYNC_MODE_SLAVE) ? 1u : 0u);
+  master_sync_active = (uint8_t)(((sync_snapshot.display_mode == VND_SYNC_MODE_MASTER) &&
+                                  (sync_snapshot.sync_signal_alive != 0u)) ? 1u : 0u);
 
   if ((alarm_active != 0u) &&
       (((s_pattern_frame_counter / blink_half_frames) & 1u) != 0u)) {
@@ -654,7 +663,7 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
       blue = WS2812_STATUS_ALARM_B;
     }
   } else {
-    if (slave_mode != 0u) {
+    if (display_slave_mode != 0u) {
       if (optic_active != 0u) {
         red = WS2812_STATUS_AMBER_R;
         green = WS2812_STATUS_AMBER_G;
@@ -669,10 +678,14 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
         red = WS2812_STATUS_GREEN_R;
         green = WS2812_STATUS_GREEN_G;
         blue = WS2812_STATUS_GREEN_B;
-      } else {
+      } else if (master_sync_active != 0u) {
         red = WS2812_STATUS_BLUE_R;
         green = WS2812_STATUS_BLUE_G;
         blue = WS2812_STATUS_BLUE_B;
+      } else {
+        red = WS2812_STATUS_LIGHT_BLUE_R;
+        green = WS2812_STATUS_LIGHT_BLUE_G;
+        blue = WS2812_STATUS_LIGHT_BLUE_B;
       }
     }
 
@@ -694,10 +707,11 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
   }
 
   return ((uint32_t)alarm_active << 0) |
-         ((uint32_t)slave_mode << 1) |
+      ((uint32_t)display_slave_mode << 1) |
          ((uint32_t)optic_active << 2) |
          ((uint32_t)tx_enabled << 3) |
          ((uint32_t)alarm_gate_on << 4) |
+         ((uint32_t)master_sync_active << 5) |
          ((uint32_t)red << 8) |
          ((uint32_t)green << 16) |
          ((uint32_t)blue << 24);

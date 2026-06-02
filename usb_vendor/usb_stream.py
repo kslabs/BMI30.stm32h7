@@ -51,6 +51,8 @@ CMD_GET_LCD_STATUS = 0x38
 CMD_GET_DC_CONFIG = 0x3A
 CMD_SET_LED_PATTERN = 0x3B
 CMD_SET_ALT = 0x31
+CMD_HOST_RX_ACK = 0x36
+CMD_HOST_RX_CLEAR = 0x37
 CMD_SOFT_RESET = 0x7E
 CMD_DEEP_RESET = 0x7F
 
@@ -77,6 +79,8 @@ _CMD_NAMES = {
     CMD_SET_OPTIC_HOLD: "SET_OPTIC_HOLD",
     CMD_GET_DC_CONFIG: "GET_DC_CONFIG",
     CMD_SET_LED_PATTERN: "SET_LED_PATTERN",
+    CMD_HOST_RX_ACK: "HOST_RX_ACK",
+    CMD_HOST_RX_CLEAR: "HOST_RX_CLEAR",
     CMD_SOFT_RESET: "SOFT_RESET",
     CMD_DEEP_RESET: "DEEP_RESET",
 }
@@ -250,6 +254,7 @@ class USBStream:
         frame_samples: Optional[int] = None,
         fast_mode: bool = True,
         assembler_independent: bool = False,
+        rx_ack_interval: float = 0.0,
     ):
         global running
         running = True
@@ -281,7 +286,17 @@ class USBStream:
 
         self.last_stat: Optional[bytes] = None
         self.last_lcd_status: Optional[bytes] = None
+        self.last_rx_t = time.time()
+        self.bytes = 0
+        self.magic_bad = 0
+        self.crc_bad = 0
+        self.test_seen = 0
+        self.disconnected = False
         self.port_info = self.get_port_path_info() or {}
+        self._host_rx_frames_total = 0
+        self._host_rx_ack_frames = 0
+        self._host_rx_ack_last = 0.0
+        self._host_rx_ack_interval = max(0.0, float(rx_ack_interval))
 
         class _AsmStub:
             def __init__(self, independent: bool):
@@ -305,6 +320,10 @@ class USBStream:
                 self.send_cmd(CMD_SET_FRAME_SAMPLES, int(frame_samples).to_bytes(2, "little", signed=False))
         except Exception:
             pass
+        try:
+            self.send_cmd(CMD_HOST_RX_CLEAR)
+        except Exception:
+            pass
 
     def close(self):
         global running
@@ -318,13 +337,30 @@ class USBStream:
         except Exception:
             pass
 
-    def send_cmd(self, cmd: int, payload: bytes = b""):
+    def send_cmd(self, cmd: int, payload: bytes = b"", timeout_ms: int = 500):
         payload = payload or b""
         _trace_cmd(cmd, payload)
         pkt = bytes([int(cmd) & 0xFF]) + payload
-        self.dev.write(self.ep_out, pkt, timeout=500)  # type: ignore[attr-defined]
+        self.dev.write(self.ep_out, pkt, timeout=int(timeout_ms))  # type: ignore[attr-defined]
+
+    def _note_host_frame_rx(self) -> None:
+        self._host_rx_frames_total = (self._host_rx_frames_total + 1) & 0xFFFFFFFF
+        if self._host_rx_ack_interval <= 0.0:
+            return
+        now = time.time()
+        if (
+            self._host_rx_frames_total != self._host_rx_ack_frames
+            and (now - self._host_rx_ack_last) >= self._host_rx_ack_interval
+        ):
+            try:
+                self.send_cmd(CMD_HOST_RX_ACK, struct.pack("<I", self._host_rx_frames_total), timeout_ms=20)
+                self._host_rx_ack_frames = self._host_rx_frames_total
+                self._host_rx_ack_last = now
+            except Exception:
+                pass
 
     def set_alt(self, alt: int):
+        _trace_cmd(CMD_SET_ALT, bytes([int(alt) & 0xFF]))
         self.dev.set_interface_altsetting(interface=self.interface, alternate_setting=int(alt))  # type: ignore[attr-defined]
 
     def set_block_rate(self, hz: int):
@@ -414,9 +450,11 @@ class USBStream:
 
     def soft_reset(self):
         # vendor control OUT without data
+        _trace_cmd(CMD_SOFT_RESET, b"")
         self.dev.ctrl_transfer(0x40, CMD_SOFT_RESET, 0, 0, None, timeout=400)  # type: ignore[attr-defined]
 
     def deep_reset(self):
+        _trace_cmd(CMD_DEEP_RESET, b"")
         self.dev.ctrl_transfer(0x40, CMD_DEEP_RESET, 0, 0, None, timeout=500)  # type: ignore[attr-defined]
 
     def _get_status_ep0(self, length: int = 136, timeout_ms: int = 500) -> bytes:
@@ -486,7 +524,11 @@ class USBStream:
         to_ms = max(1, int(float(timeout_s) * 1000.0))
         try:
             data = self.dev.read(self.ep_in, self.read_size, timeout=to_ms)  # type: ignore[attr-defined]
-            return bytes(data)
+            raw = bytes(data)
+            if raw:
+                self.last_rx_t = time.time()
+                self.bytes = (int(self.bytes) + len(raw)) & 0xFFFFFFFF
+            return raw
         except Exception:
             return None
 
@@ -517,7 +559,12 @@ class USBStream:
 
             fr = _parse_frame(raw)
             if fr is None:
+                self.magic_bad = (int(self.magic_bad) + 1) & 0xFFFFFFFF
                 continue
+            if fr.flags & 0x80:
+                self.test_seen = (int(self.test_seen) + 1) & 0xFFFFFFFF
+                continue
+            self._note_host_frame_rx()
 
             if fr.adc_id == 0:
                 a = fr

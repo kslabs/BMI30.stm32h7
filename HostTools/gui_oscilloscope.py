@@ -591,13 +591,16 @@ def _reconfigure_and_start(handle: 'DevHandle', args):
 
 
 def status_watchdog_thread(handle: 'DevHandle', stop_ev: threading.Event, idle_sec: float = 2.5, max_consec_timeouts: int = 8, args=None):
-    """Простой вотчдог: если нет пар > idle_sec или подряд таймаутов слишком много —
-    пробуем мягкий рестарт (STOP+START). При повторных срывах эскалируем до мягкого
-    ресета по bulk (DEVICE_RESET 0x22) с последующим START.
+    """Простой вотчдог: по умолчанию только логирует простой потока.
+
+    Рестарт STOP+START отключён, потому что для быстрого UDP-like потока это хуже
+    краткого таймаута чтения: данные устаревают, а интерфейс получает alt=0/alt=1.
+    Старое поведение оставлено только по явному --wdg-restart.
     """
     last_restart = 0.0
     restart_count = 0
     hard_reset_cycles = 0
+    allow_restart = bool(getattr(args, 'wdg_restart', False))
     while not stop_ev.is_set():
         time.sleep(0.5)
         if g_status is None:
@@ -609,6 +612,14 @@ def status_watchdog_thread(handle: 'DevHandle', stop_ev: threading.Event, idle_s
         # Гистерезис: не чаще одного рестарта в 5 секунд
         if (since_pair is not None and since_pair > idle_sec) or (consec is not None and consec >= max_consec_timeouts):
             if (now - last_restart) < 5.0:
+                continue
+            if not allow_restart:
+                msg = f"[WDG] Observe only: idle_pair={since_pair} consec_timeouts={consec}; no STOP/START (--wdg-restart disabled)"
+                if _log:
+                    _log(msg)
+                else:
+                    print(msg)
+                last_restart = now
                 continue
             try:
                 restart_count += 1
@@ -781,7 +792,8 @@ def main():
     ap.add_argument('--pairs', type=int, default=400, help='pairs for rate median window')
     ap.add_argument('--single', action='store_true', help='Single-channel mode (A-only)')
     ap.add_argument('--no-reset-first', action='store_true', help='Skip initial device reset')
-    ap.add_argument('--watchdog', action='store_true', help='Enable simple stream watchdog (STOP+START on idle)')
+    ap.add_argument('--watchdog', action='store_true', help='Enable watchdog logging/probing on idle')
+    ap.add_argument('--wdg-restart', action='store_true', help='Allow old watchdog STOP+START/DEVICE_RESET recovery')
     ap.add_argument('--wdg-idle-sec', type=float, default=2.5, help='Watchdog idle seconds before restart')
     ap.add_argument('--wdg-timeouts', type=int, default=8, help='Consecutive timeouts threshold for restart')
     ap.add_argument('--log', type=str, default=os.path.join(os.path.dirname(__file__), 'gui_oscilloscope.log'), help='Path to log file')

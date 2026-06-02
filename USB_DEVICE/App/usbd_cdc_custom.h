@@ -15,6 +15,18 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len); /* weak */
 uint8_t USBD_VND_TxIsBusy(void);
 uint8_t USBD_VND_LastTxRC(void);
 uint16_t USBD_VND_LastTxLen(void);
+uint32_t USBD_VND_DataInCount(void);
+uint16_t USBD_VND_InTotalLength(void);
+typedef struct {
+  uint32_t diepctl;
+  uint32_t dieptsiz;
+  uint32_t diepint;
+  uint32_t dtxfsts;
+  uint32_t diepempmsk;
+  uint32_t xfer_len;
+  uint32_t xfer_count;
+} USBD_VND_InHwState;
+void USBD_VND_GetInHwState(USBD_VND_InHwState *st);
 /* Экстренный сброс флага занятости (на случай, если DataIn не вызвался на FS) */
 void USBD_VND_ForceTxIdle(void);
 

@@ -59,10 +59,41 @@ void LCD_ShowChar(uint16_t x, uint16_t y, uint8_t num, uint8_t size, uint16_t co
     uint8_t temp;
     uint8_t pos, t;
     uint16_t y0 = y;
-    uint8_t csize = (size / 8 + ((size % 8) ? 1 : 0)) * (size / 2);
+    uint8_t char_width = (size == 12u) ? 6u : 8u;
+    uint8_t bytes_per_col = (uint8_t)(size / 8u + ((size % 8u) ? 1u : 0u));
+    uint8_t csize = (uint8_t)(bytes_per_col * char_width);
 
-    num = num - ' ';
-    if (num < 0 || num >= 159) return; // Проверка диапазона
+    if (num < ' ' || (uint8_t)(num - ' ') >= 159u) return; // Проверка диапазона
+    num = (uint8_t)(num - ' ');
+
+    if (back_color != TRANSPARENT)
+    {
+        ST7735_AddrSet(x, y, (uint16_t)(x + char_width - 1u), (uint16_t)(y + size - 1u));
+        LCD_CS_LOW();
+        LCD_RS_HIGH();
+        for (uint8_t row = 0; row < size; row++)
+        {
+            for (uint8_t col = 0; col < char_width; col++)
+            {
+                uint8_t b;
+                if (size == 12u)
+                    b = asc2_1206[num][(uint8_t)(col * bytes_per_col + (row / 8u))];
+                else if (size == 16u)
+                    b = asc2_1608[num][(uint8_t)(col * bytes_per_col + (row / 8u))];
+                else
+                {
+                    LCD_CS_HIGH();
+                    return;
+                }
+                uint16_t pix = (b & (uint8_t)(0x80u >> (row & 7u))) ? color : back_color;
+                ST7735_SPI_Send((uint8_t)(pix >> 8));
+                ST7735_SPI_Send((uint8_t)(pix & 0xFFu));
+            }
+        }
+        LCD_CS_HIGH();
+        return;
+    }
+
     for (pos = 0; pos < csize; pos++)
     {
         if (size == 12)

@@ -332,6 +332,8 @@ static inline uint32_t adc_addr_to_index(uint32_t addr, uint16_t buf[FIFO_FRAMES
 #define ADC_MARKER_PIN_A  GPIO_PIN_2
 #define ADC_MARKER_PORT_C GPIOC
 #define ADC_MARKER_PIN_C  GPIO_PIN_7
+#define ADC_TX_GATE_PORT  GPIOA
+#define ADC_TX_GATE_PIN   GPIO_PIN_1
 
 static inline void adc_marker_set_level_a(uint8_t level_high)
 {
@@ -343,14 +345,6 @@ static inline void adc_marker_set_level_b(uint8_t level_high)
     ADC_MARKER_PORT_C->BSRR = level_high ? (uint32_t)ADC_MARKER_PIN_C : ((uint32_t)ADC_MARKER_PIN_C << 16);
 }
 
-static inline uint8_t adc_marker_output_allowed(void)
-{
-    /* USB stream может стартовать/останавливаться независимо от sync/маркера.
-       Фазовый маркер PA2/PC7 должен жить всегда, иначе без хоста sync теряется.
-       Реальное разрешение внешнего передатчика по-прежнему контролируется PA1. */
-    return 1u;
-}
-
 static inline uint8_t adc_marker_get_level(void)
 {
     return (uint8_t)(s_pb8_state & 1u);
@@ -358,17 +352,20 @@ static inline uint8_t adc_marker_get_level(void)
 
 static inline void adc_marker_set_level(uint8_t level_high)
 {
-    uint8_t physical_level = (uint8_t)(level_high ? 1u : 0u);
+    extern uint8_t vnd_is_tx_enabled(void);
+    uint8_t marker_level = (uint8_t)(level_high ? 1u : 0u);
+    uint8_t tx_enabled = (uint8_t)(vnd_is_tx_enabled() ? 1u : 0u);
 
     /* Логическая фаза sync должна жить независимо от USB stream/TX gate.
-       Физические PA2/PC7 можем при этом принудительно зажимать в LOW. */
-    s_pb8_state = (uint8_t)(level_high ? 1u : 0u);
-    if (!adc_marker_output_allowed()) {
-        physical_level = 0u;
-    }
+       PA2/PC7 должны всегда показывать реальную фазу; TX_ENABLE гейтит
+       только PA1, не сбивая marker на осциллографе и у второго узла. */
+    s_pb8_state = marker_level;
 
-    adc_marker_set_level_a(physical_level);
-    adc_marker_set_level_b(physical_level);
+    adc_marker_set_level_a(marker_level);
+    adc_marker_set_level_b(marker_level);
+    ADC_TX_GATE_PORT->BSRR = (tx_enabled && marker_level)
+        ? ((uint32_t)ADC_TX_GATE_PIN << 16)
+        : (uint32_t)ADC_TX_GATE_PIN;
 }
 
 static inline void adc_marker_pa3_toggle(void)
@@ -1559,10 +1556,10 @@ void adc_stream_get_debug(adc_stream_debug_t *out) {
 // и должен маппиться на тот же FIFO слот, что и adc_get_frame_ch()/adc_get_frame_pair(): index = seq & (FIFO_FRAMES-1).
 uint8_t adc_get_buffer_parity(uint32_t seq) {
     uint32_t index = seq & (FIFO_FRAMES - 1u);
-    /* s_buffer_parity[] заполняется в момент фиксации готового DMA-буфера.
-       Возвращаем 0..7, где LSB кодирует фазу even/odd.
-       В текущей схеме LSB привязан к уровню PA3 (PA3=1 -> even, PA3=0 -> odd). */
-    return (uint8_t)(s_buffer_parity[index] & 0x07u);
+    /* Возвращаем метку опубликованной пары, сохранённую вместе с frame_wr_seq.
+       Не читаем s_buffer_parity[] напрямую: этот DMA-ring может быть уже перезаписан,
+       если USB/AVG обработчик временно отстал от входного потока. */
+    return (uint8_t)(s_frame_buffer_idx[index] & 0x07u);
 }
 
 // DEBUG: dump trace из non-ISR контекста

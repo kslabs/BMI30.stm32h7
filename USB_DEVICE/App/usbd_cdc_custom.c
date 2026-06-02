@@ -14,6 +14,7 @@
  * Добавлен 3‑й интерфейс (bNumInterfaces=3) и два конечных точки: EP3 OUT (0x03), EP3 IN (0x83) Bulk.
  */
 #include "usbd_cdc.h"      // для типов и макросов CDC
+#include "usbd_cdc_custom.h"
 #include "usbd_ctlreq.h"
 #include <stdio.h>
 #include "usb_vendor_app.h" // ДОБАВЛЕНО: для VND_CMD_* и vnd_build_status
@@ -80,6 +81,7 @@ static volatile uint8_t vnd_last_tx_rc = 0xFF; /* последний rc из USB
 static volatile uint16_t vnd_last_tx_len = 0;
 static volatile uint8_t vnd_tx_active_slot = 0xFFu;
 static volatile uint8_t vnd_tx_next_slot = 0u;
+static volatile uint32_t vnd_dataIn_counter = 0;
 
 static void vnd_clean_dcache_range(const void *buf, uint16_t len)
 {
@@ -262,6 +264,32 @@ uint32_t USBD_VND_Read(uint8_t *dst, uint32_t max_len)
 uint8_t USBD_VND_TxIsBusy(void) { return vnd_tx_busy; }
 uint8_t USBD_VND_LastTxRC(void) { return vnd_last_tx_rc; }
 uint16_t USBD_VND_LastTxLen(void) { return vnd_last_tx_len; }
+uint32_t USBD_VND_DataInCount(void) { return vnd_dataIn_counter; }
+uint16_t USBD_VND_InTotalLength(void) { return hUsbDeviceHS.ep_in[VND_IN_EP & 0x0FU].total_length; }
+
+void USBD_VND_GetInHwState(USBD_VND_InHwState *st)
+{
+  if (st == NULL) {
+    return;
+  }
+
+  memset(st, 0, sizeof(*st));
+  PCD_HandleTypeDef *hpcd = (PCD_HandleTypeDef*)hUsbDeviceHS.pData;
+  if ((hpcd == NULL) || (hpcd->Instance == NULL)) {
+    return;
+  }
+
+  uint32_t epnum = (uint32_t)(VND_IN_EP & 0x0FU);
+  uint32_t USBx_BASE = (uint32_t)hpcd->Instance;
+  USB_OTG_INEndpointTypeDef *in_ep = USBx_INEP(epnum);
+  st->diepctl = in_ep->DIEPCTL;
+  st->dieptsiz = in_ep->DIEPTSIZ;
+  st->diepint = in_ep->DIEPINT;
+  st->dtxfsts = in_ep->DTXFSTS;
+  st->diepempmsk = USBx_DEVICE->DIEPEMPMSK;
+  st->xfer_len = hpcd->IN_ep[epnum].xfer_len;
+  st->xfer_count = hpcd->IN_ep[epnum].xfer_count;
+}
 
 /* Форсируем свободное состояние TX (использовать осторожно: только при подтверждённом клине) */
 void USBD_VND_ForceTxIdle(void)
@@ -270,6 +298,16 @@ void USBD_VND_ForceTxIdle(void)
     VND_LOGF("[VND_FORCE_IDLE] clearing busy (last len=%u rc=%u)\r\n", (unsigned)vnd_last_tx_len, (unsigned)vnd_last_tx_rc);
   }
   vnd_tx_busy = 0U;
+  vnd_tx_active_slot = 0xFFu;
+  vnd_last_tx_len = 0U;
+  if (hUsbDeviceHS.dev_state == USBD_STATE_CONFIGURED) {
+    PCD_HandleTypeDef *hpcd = (PCD_HandleTypeDef*)hUsbDeviceHS.pData;
+    if (hpcd) {
+      (void)HAL_PCD_EP_Abort(hpcd, VND_IN_EP);
+    }
+    (void)USBD_LL_FlushEP(&hUsbDeviceHS, VND_IN_EP);
+    hUsbDeviceHS.ep_in[VND_IN_EP & 0x0FU].total_length = 0U;
+  }
 }
 
 /* Конфигурационные дескрипторы (HS/FS/Other) */
@@ -594,6 +632,7 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
             if (alt == 0) {
               /* Остановить пайплайн приложения и закрыть EP */
               printf("[USB_IF2] SET_INTERFACE alt=0 (CLOSE)\r\n");
+              vnd_log_usb_close_snapshot("set_interface_alt0");
               vnd_pipeline_stop_reset(0);
               (void)USBD_LL_CloseEP(pdev, VND_IN_EP);  pdev->ep_in[VND_IN_EP & 0x0FU].is_used = 0U;
               (void)USBD_LL_CloseEP(pdev, VND_OUT_EP); pdev->ep_out[VND_OUT_EP & 0x0FU].is_used = 0U;
@@ -656,8 +695,22 @@ static uint8_t USBD_CDCVND_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
        получать таймаут. Поведение аналогично CDC. */
     uint16_t tl = pdev->ep_in[epnum].total_length;
     uint16_t mps = hpcd->IN_ep[epnum].maxpacket;
-    static uint32_t vnd_dataIn_counter = 0; vnd_dataIn_counter++;
+    uint8_t was_busy = vnd_tx_busy;
+    uint8_t active_slot = vnd_tx_active_slot;
+    vnd_dataIn_counter++;
     VND_LOGF("[VND_DataIn:ENTER] ep=%u tl=%u mps=%u busy=%u cnt=%lu\r\n", (unsigned)epnum, (unsigned)tl,(unsigned)mps,(unsigned)vnd_tx_busy,(unsigned long)vnd_dataIn_counter);
+    if (!was_busy && active_slot == 0xFFu) {
+      pdev->ep_in[epnum].total_length = 0U;
+      VND_LOGF("[VND_DataIn] stale callback ignored ep=%u cnt=%lu\r\n", (unsigned)epnum, (unsigned long)vnd_dataIn_counter);
+      return (uint8_t)USBD_OK;
+    }
+    if (mps == 0U) {
+      pdev->ep_in[epnum].total_length = 0U;
+      vnd_tx_busy = 0U;
+      vnd_tx_active_slot = 0xFFu;
+      USBD_VND_TxCplt();
+      return (uint8_t)USBD_OK;
+    }
     if ((tl > 0U) && ((tl % mps) == 0U)) {
       /* Нужен ZLP для корректного завершения трансфера */
       VND_LOGF("[VND_DataIn] ep=%u total=%u -> SEND ZLP (phase1) cnt=%lu\r\n", (unsigned)epnum, (unsigned)tl, (unsigned long)vnd_dataIn_counter);

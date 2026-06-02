@@ -238,10 +238,11 @@ def parse_hdr(b: bytes):
 class USBReader:
     """Поток чтения USB с высоким приоритетом."""
     
-    def __init__(self, dev, stop_event, watchdog: bool = False, rx_timeout_ms: int = 100):
+    def __init__(self, dev, stop_event, watchdog: bool = False, wdg_restart: bool = False, rx_timeout_ms: int = 100):
         self.dev = dev
         self.stop_event = stop_event
         self.watchdog = watchdog
+        self.wdg_restart = wdg_restart
         self.rx_timeout_ms = int(rx_timeout_ms)
 
         # Общий lock на операции с PyUSB (read/write), чтобы кнопки режима не ломали чтение
@@ -296,12 +297,22 @@ class USBReader:
         self.timeout_count = 0  # Счётчик таймаутов
         self.last_rx_time = time.time()  # Время последнего успешного приёма
 
-        # Watchdog восстановления (полезно при STOP/START и переключении режимов)
+        # Watchdog по умолчанию только наблюдает. Авто STOP/START/reopen включается
+        # только явным --wdg-restart, иначе host сам создаёт сбросы потока.
         self._wdg_last_action_t = 0.0
         self._wdg_stage = 0  # 0=START, 1=STOP+START
+        self._wdg_last_observe_log_t = 0.0
 
         # Наблюдение за повторяющимися PIPE errors (когда clear_halt+alt не помогает)
         self._pipe_err_streak = 0
+
+    def _log_watchdog_observe(self, reason: str, detail: str = ""):
+        now = time.time()
+        if (now - self._wdg_last_observe_log_t) < 5.0:
+            return
+        self._wdg_last_observe_log_t = now
+        suffix = f" {detail}" if detail else ""
+        print(f"[WDG] Observe only: {reason}{suffix}; no STOP/START/reopen (--wdg-restart disabled)")
         
     def get_latest_buffers(self):
         """Получить копии последних кадров для отображения."""
@@ -512,6 +523,10 @@ class USBReader:
                 if _recover_in_pipe_error(e):
                     self._pipe_err_streak += 1
                     if self.watchdog and self._pipe_err_streak >= 6:
+                        if not self.wdg_restart:
+                            self._log_watchdog_observe("pipe_err_streak", f"streak={self._pipe_err_streak}")
+                            time.sleep(0.15)
+                            continue
                         # Похоже, handle/altsetting залипли — пробуем reopen/reset
                         self._pipe_err_streak = 0
                         _reopen_device("pipe_err_streak")
@@ -522,12 +537,16 @@ class USBReader:
                 if getattr(e, 'errno', None) in (110, 10060) or 'timed out' in str(e).lower():
                     self.timeout_count += 1
 
-                    # Watchdog: если давно нет данных, попробуем «пнуть» устройство командой START.
+                    # Watchdog: по умолчанию только логирует простой. Перезапуск потока
+                    # сохраняем только для явного диагностического режима --wdg-restart.
                     if self.watchdog:
                         now = time.time()
                         silence = now - self.last_rx_time
                         if silence >= 3.0 and (now - self._wdg_last_action_t) >= 3.0:
                             self._wdg_last_action_t = now
+                            if not self.wdg_restart:
+                                self._log_watchdog_observe("no_rx", f"silence={silence:.1f}s timeouts={self.timeout_count}")
+                                continue
                             if self._wdg_stage == 0:
                                 print(f"[WDG] No RX for {silence:.1f}s -> clear_halt + START")
                                 with self.io_lock:
@@ -567,9 +586,14 @@ class USBReader:
                         print(f"[USB] WARNING: {self.timeout_count} timeouts, no data for {elapsed:.1f}s (rx_count={self.rx_count})")
                     continue
                 else:
-                    # Для «жёстких» USB ошибок пробуем reopen (например, broken pipe / no device)
+                    # Для «жёстких» USB ошибок старое поведение делало reopen/reset.
+                    # В UDP-like режиме не перезапускаем поток автоматически.
                     print(f"[USB] Error: {e}")
-                    _reopen_device(f"usb_error_{getattr(e, 'errno', None)}")
+                    if self.wdg_restart:
+                        _reopen_device(f"usb_error_{getattr(e, 'errno', None)}")
+                    else:
+                        self._log_watchdog_observe("usb_error", f"errno={getattr(e, 'errno', None)}")
+                        time.sleep(0.2)
                     continue
             
             # Парсинг кадров из буфера
@@ -965,7 +989,8 @@ def main():
     )
     # Допущенные параметры совместимости (игнорируются, но не ломают запуск)
     parser.add_argument('--ns', type=int, default=0, help='(compat) ignored')
-    parser.add_argument('--watchdog', action='store_true', help='Auto-recover if RX stalls (recommended)')
+    parser.add_argument('--watchdog', action='store_true', help='Log RX stalls; no stream restart unless --wdg-restart is set')
+    parser.add_argument('--wdg-restart', action='store_true', help='Allow watchdog STOP+START/reopen recovery')
     parser.add_argument('--headless-secs', type=float, default=0.0, help='Run without GUI for N seconds, print RX stats and exit')
     args = parser.parse_args()
     
@@ -1036,7 +1061,7 @@ def main():
     # Создание потоков
     stop_event = threading.Event()
     
-    reader = USBReader(dev, stop_event, watchdog=args.watchdog, rx_timeout_ms=args.rx_timeout)
+    reader = USBReader(dev, stop_event, watchdog=args.watchdog, wdg_restart=args.wdg_restart, rx_timeout_ms=args.rx_timeout)
     gui = GUIDisplay(reader, stop_event)
     
     # Запуск USB потока

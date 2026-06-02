@@ -398,11 +398,14 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
      TX3 (VND IN)0x100 (256 words = 1024 bytes)
      ИТОГО: 0x480 words = 4608 bytes (чуть больше 4KB, но STM32H7 USB OTG HS поддерживает)
   */
-  HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_HS, 0x200);
+  /* Keep the OTG_HS FS-PHY FIFO map well below 0x400 32-bit words.
+     EP3 IN carries 432-byte stream frames, so 0xC0 words is enough for a
+     full frame while leaving clear headroom for RX, EP0, CDC bulk and CDC INT. */
+  HAL_PCDEx_SetRxFiFo(&hpcd_USB_OTG_HS, 0x100);
   HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 0, 0x40);
-  HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 1, 0x100);
-  HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 2, 0x40);
-  HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 3, 0x100);
+  HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 1, 0x80);
+  HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 2, 0x20);
+  HAL_PCDEx_SetTxFiFo(&hpcd_USB_OTG_HS, 3, 0xC0);
   /* USER CODE END TxRx_HS_Configuration */
   }
   return USBD_OK;

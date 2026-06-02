@@ -102,6 +102,7 @@ typedef struct {
 void adc_stream_init(void);
 HAL_StatusTypeDef adc_stream_start(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a2);
 HAL_StatusTypeDef adc_stream_restart(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a2);
+void adc_stream_restart_sync(void);
 // НОВОЕ: получить кадр конкретного канала (0=A/ADC1, 1=B/ADC2). Возвращает 1 при успехе.
 // Вернуть кадр конкретного канала и его порядковый номер DMA (seq_out опционален)
 uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples, uint32_t *seq_out);

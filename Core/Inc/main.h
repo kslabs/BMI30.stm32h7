@@ -112,7 +112,7 @@ extern volatile uint32_t systick_heartbeat;
 
 /* USER CODE BEGIN Private defines */
 #ifndef FORCE_BL_GPIO
-#define FORCE_BL_GPIO 1
+#define FORCE_BL_GPIO 0
 #endif
 
 // Совместимость: старые имена DATA_READY_*
@@ -152,9 +152,9 @@ extern volatile uint32_t systick_heartbeat;
 #define MCP4261_SPI_MOSI_Pin GPIO_PIN_5
 #define MCP4261_SPI_MOSI_GPIO_Port GPIOB
 
-/* Базовая AUTO-цель фазы в семплах. В прошивке к ней добавляется длительность
-   RS485 sync-байта, потому что slave измеряет фазу в IRQ уже после приема пакета. */
-#define SYNC_TARGET_PHASE_SAMPLES (10)
+/* AUTO-цель фазы для физических TX-импульсов. Длительность приема RS485
+   sync-байта добавляется отдельно в tim15_get_default_target_phase_ticks(). */
+#define SYNC_TARGET_PHASE_SAMPLES (0)
 
 int32_t tim15_get_default_target_phase_ticks(void);
 void rs485_sync_on_buffer_complete(uint8_t parity);
@@ -173,6 +173,7 @@ uint8_t rs485_status_get_snapshot(uint8_t *local_status,
                                   uint32_t *seen_mask,
                                   uint8_t *status_bytes,
                                   uint8_t max_status_bytes);
+uint8_t rs485_sync_has_active_peer(void);
 
 // --- Профили потоков ADC (буфер/частота) ---
 // Профиль B (default): f_buf=300 Гц, N=912 (Fs=273600 Гц)

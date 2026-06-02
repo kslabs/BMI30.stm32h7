@@ -93,22 +93,38 @@ def save_config(desired_profile):
 		pass
 
 
+AVG_N_MIN = 16
+AVG_N_MAX = 64
+AVG_N_DEFAULT = 24
+AVG_N_ITEMS = [16, 24, 32, 40, 48, 56, 64]
+
+
+def normalize_avg_n(value, default: int = AVG_N_DEFAULT) -> int:
+	try:
+		val = int(value)
+	except Exception:
+		val = int(default)
+	if val < AVG_N_MIN:
+		return AVG_N_MIN
+	if val > AVG_N_MAX:
+		return AVG_N_MAX
+	return val
+
+
 def load_avg_n():
-	"""Load avg_n from config file (fallback 20)."""
+	"""Load avg_n from config file (fallback 24)."""
 	config_file = os.path.join(os.path.dirname(__file__), "bmi30_config.json")
 	try:
 		with open(config_file, "r") as f:
 			data = json.load(f)
-		val = int(data.get("avg_n", 20))
-		if val < 2:
-			return 20
-		return val
+		return normalize_avg_n(data.get("avg_n", AVG_N_DEFAULT))
 	except Exception:
-		return 20
+		return AVG_N_DEFAULT
 
 
 def save_avg_n(avg_n: int):
 	"""Save avg_n to config file alongside other settings (best-effort merge)."""
+	avg_n = normalize_avg_n(avg_n)
 	config_file = os.path.join(os.path.dirname(__file__), "bmi30_config.json")
 	try:
 		data = {}
@@ -151,7 +167,7 @@ class ScopeWindow:
 		self.avg_n = load_avg_n()
 		self.avg_box = QtWidgets.QComboBox()
 		# Шаг 8 для диапазона 8..64 (оптимальный баланс: достаточно вариантов, но не перегружаем UI)
-		avg_items = ["8","16","24","32","40","48","56","64"]
+		avg_items = [str(v) for v in AVG_N_ITEMS]
 		self.avg_box.addItems(avg_items)
 		# Не триггерить обработчик при установке значения по умолчанию
 		try:
@@ -163,9 +179,8 @@ class ScopeWindow:
 			if str(self.avg_n) in avg_items:
 				self.avg_box.setCurrentIndex(avg_items.index(str(self.avg_n)))
 			else:
-				# если значение не в списке, добавим его и выберем
-				self.avg_box.addItem(str(self.avg_n))
-				self.avg_box.setCurrentIndex(self.avg_box.count()-1)
+				self.avg_n = AVG_N_DEFAULT
+				self.avg_box.setCurrentIndex(avg_items.index(str(self.avg_n)))
 		except Exception:
 			pass
 		try:
@@ -332,8 +347,9 @@ class ScopeWindow:
 		self.seq1_even = None
 		self.seq1_odd = None
 		
-		# Отслеживание текущего STREAM_MODE
-		self.stream_mode = 0  # 0 = LATEST (600 семплов, last-buffer-wins), 1 = LOSSLESS_ROI (200 семплов, FIFO)
+		# Отслеживание текущего STREAM_MODE. Начальное значение будет уточнено
+		# после загрузки сохранённой кнопки режима.
+		self.stream_mode = 0  # 0 = LATEST, 1 = LOSSLESS_ROI, 2 = AVG_ROI
 		
 		# DC offset removal: адаптивная коррекция DC по каждому семплу (накопление при STREAM_MODE=1)
 		self.dc_removal_enabled = False  # Флаг: применять ли DC removal (вычитание)
@@ -704,8 +720,10 @@ class ScopeWindow:
 		self.qtimer.setInterval(interval)
 		self.qtimer.timeout.connect(self._tick)
 		self.qtimer.start()
-		# авто-кик при зависании
-		self.auto_soft_kick = str(os.getenv("BMI30_AUTO_SOFT_KICK", "1")).lower() not in ("0","false","no")
+		# Авто-кик при зависании по умолчанию выключен: для UDP-like потока host не должен
+		# сам делать START/reset и создавать повторные/устаревшие данные.
+		self.auto_soft_kick = str(os.getenv("BMI30_AUTO_SOFT_KICK", "0")).lower() not in ("0","false","no")
+		self.soft_kick_may_reset = str(os.getenv("BMI30_SOFT_KICK_RESET", "0")).lower() not in ("0","false","no")
 		self.last_soft_kick_t = 0.0
 		# нижняя панель: слева слайдеры, справа цифровые кнопки
 		bottom = QtWidgets.QHBoxLayout()
@@ -764,6 +782,7 @@ class ScopeWindow:
 			self.num_buttons[self.sel_saved].setChecked(True)
 		else:
 			self.num_buttons[0].setChecked(True)
+		self.stream_mode = self._stream_mode_for_selection(self.num_group.checkedId())
 		self.tx_enabled_desired = (self.num_group.checkedId() != 0)
 		self.num_group.idClicked.connect(self._num_clicked)
 		self.win.closeEvent = self._on_close  # type: ignore
@@ -790,7 +809,7 @@ class ScopeWindow:
 			_autostart = True
 		if _autostart and not _test_mode:
 			# Автозапуск: запускаем тот режим, который выбран/восстановлен из bmi30_sel.json.
-			# Это важно, чтобы (например) sel=5 действительно включал AVG_ROI(20) без ручного клика.
+			# Это важно, чтобы (например) sel=5 действительно включал AVG_ROI с выбранным avg_n без ручного клика.
 			self.view_mode = 0
 			try:
 				idx = int(self.num_group.checkedId())
@@ -872,6 +891,26 @@ class ScopeWindow:
 				print("[RESET] SOFT_RESET sent via CDC")
 		except Exception as e:
 			print(f"[RESET] SOFT_RESET via CDC failed: {e}")
+
+	def _stream_mode_for_selection(self, idx: int | None = None) -> int:
+		try:
+			if idx is None:
+				idx = int(self.num_group.checkedId())
+			else:
+				idx = int(idx)
+		except Exception:
+			idx = 0
+		if idx == 4:
+			return 1
+		if idx == 5:
+			return 2
+		if idx in (1, 2, 3):
+			return 0
+		try:
+			mode = int(getattr(self, 'stream_mode', 0) or 0)
+		except Exception:
+			mode = 0
+		return mode if mode in (0, 1, 2) else 0
 
 	def _reset_phase_splitter(self, reason: str = ""):
 		"""Reset host-side even/odd splitter state.
@@ -1101,13 +1140,9 @@ class ScopeWindow:
 				self._set_status("Ошибка запуска потока", hold_sec=2.0)
 				return
 		try:
-			avg_n = int(avg_n)
-			if avg_n < 2:
-				avg_n = 2
-			if avg_n > 32:
-				avg_n = 32
+			avg_n = normalize_avg_n(avg_n)
 		except Exception:
-			avg_n = 20
+			avg_n = AVG_N_DEFAULT
 
 		try:
 			print(f"[AVG_ROI] Переключение в AVG_ROI (STREAM_MODE=2, avg_n={avg_n})...")
@@ -1130,10 +1165,10 @@ class ScopeWindow:
 			time.sleep(0.02)
 			print("[AVG_ROI] SET_STREAM_MODE=2 (AVG_ROI) отправлен")
 
-			# SET_ASYNC_MODE: 1 (независимые каналы A/B)
-			self.stream.send_cmd(CMD_ASYNC, b"\x01")
+			# SET_ASYNC_MODE: 0 для AVG_ROI; ROI-пайплайн должен идти через парную очередь.
+			self.stream.send_cmd(CMD_ASYNC, b"\x00")
 			time.sleep(0.02)
-			print("[AVG_ROI] SET_ASYNC_MODE=1 отправлен")
+			print("[AVG_ROI] SET_ASYNC_MODE=0 отправлен")
 
 			# Запуск потока
 			self.stream_enabled = True
@@ -1157,7 +1192,7 @@ class ScopeWindow:
 			# stream_mode=2 (AVG_ROI)
 			self.stream_mode = 2
 
-			# Можно снизить FPS GUI: в AVG_ROI кадры редкие (для avg_n=20 ~10Гц на канал)
+			# Частота одной фазы на канал в AVG_ROI: 200/avg_n Гц (avg_n=8 -> 25 Гц).
 			self.qtimer.setInterval(200)  # 5 FPS
 			self._set_status(f"AVG_ROI: усреднение на устройстве avg_n={avg_n}, ROI=200", hold_sec=3.0)
 			print("[AVG_ROI] Режим активирован")
@@ -1441,7 +1476,7 @@ class ScopeWindow:
 			self.tx_enabled_desired = True
 			self.dc_removal_enabled = False
 			self.avg20_enabled = False
-			self._switch_to_avg_roi(avg_n=20)
+			self._switch_to_avg_roi(avg_n=self.avg_n)
 			self._set_status("DC compensation: AVG_ROI(device) + FW DC", hold_sec=3.0)
 		elif idx == 6:
 			# Кнопка 6+: зарезервировано под будущие алгоритмы.
@@ -2599,14 +2634,15 @@ class ScopeWindow:
 			else:
 				self._set_status(f"Нет новых стереопар >{int(self.stop_warn_after)}с (приём идёт). Проверьте A/B и seq. Нажмите ↻ для переподключения.", hold_sec=3.0)
 			self.last_diag_t = now2
-			# Попробуем мягко пнуть поток (без STOP), но не чаще чем раз в diag_interval
+			# Автовосстановление выключено по умолчанию. Если включено через env, оно не
+			# делает reset без отдельного BMI30_SOFT_KICK_RESET=1.
 			if self.stream_enabled and self.auto_soft_kick and (now2 - self.last_soft_kick_t) > max(2.0, self.diag_interval):
 				try:
-					self._set_status("Мягкий рестарт потока…", hold_sec=1.0)
+					self._set_status("Мягкий START потока…", hold_sec=1.0)
 					self._soft_kick_stream()
 					self.last_soft_kick_t = time.time()
 				except Exception as e:
-					print("[kick] soft restart failed:", e)
+					print("[kick] soft START failed:", e)
 
 		# обновить статус: если hold истёк, очистить его, чтобы отобразить дефолтный FPS-статус
 		if self._status_hold_text is not None and time.time() >= self._status_hold_until:
@@ -3040,24 +3076,20 @@ class ScopeWindow:
 			pass
 
 	def _soft_kick_stream(self):
-		"""Мягко переинициализировать параметры и запустить START без STOP, чтобы не ронять интерфейс."""
+		"""Мягко переинициализировать параметры и запустить START без STOP/reset."""
 		if self.stream is None:
 			raise RuntimeError("нет активного потока")
 		if not getattr(self, 'stream_enabled', True):
 			return
 		# Повторим текущий профиль и Ns и отправим START
 		try:
-			# Попробуем новый SOFT_RESET, если прошивка его поддерживает
-			try:
-				if hasattr(self.stream, 'soft_reset'):
-					self.stream.soft_reset()
-					try:
-						import time as _t
-						_t.sleep(0.05)
-					except Exception:
-						pass
-			except Exception:
-				pass
+			if self.soft_kick_may_reset and hasattr(self.stream, 'soft_reset'):
+				self.stream.soft_reset()
+				try:
+					import time as _t
+					_t.sleep(0.05)
+				except Exception:
+					pass
 			# профиль
 			self.stream.send_cmd(CMD_SET_PROFILE, bytes([self.desired_profile]))
 			try:
@@ -3358,7 +3390,7 @@ class ScopeWindow:
 			except Exception:
 				pass
 			print(f"[CONNECT] Creating USBStream, profile={self.desired_profile}, fs={fs}", flush=True)
-			self.stream = USBStream(profile=self.desired_profile, full=True, test_as_data=self.test_as_data, frame_samples=fs, fast_mode=True, assembler_independent=self.independent_channels)
+			self.stream = USBStream(profile=self.desired_profile, full=True, test_as_data=self.test_as_data, frame_samples=fs, fast_mode=True, assembler_independent=self.independent_channels, rx_ack_interval=0.0)
 			# Сохраним порт info для power cycle без stream
 			self.last_port_info = self.stream.port_info
 			# Явная конфигурация устройства по согласованной последовательности
@@ -3495,9 +3527,9 @@ class ScopeWindow:
 		"""Handler for avg_n combo box: send AVG_ROI change to device and save setting."""
 		try:
 			text = self.avg_box.currentText()
-			new_n = int(text)
+			new_n = normalize_avg_n(text)
 		except Exception:
-			new_n = 20
+			new_n = AVG_N_DEFAULT
 		# save selection
 		save_avg_n(new_n)
 		self.avg_n = new_n
