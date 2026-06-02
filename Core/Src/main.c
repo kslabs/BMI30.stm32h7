@@ -90,7 +90,12 @@ volatile uint32_t sync_edge_count = 0;
 /* Измерение периода PD5 через TIM5 (275 MHz) */
 volatile uint32_t sync_tim5_period_ticks = 0;
 #define SYNC_TARGET_PHASE_AUTO 0xFFFFFFFFu
-static volatile uint32_t g_sync_target_phase_ticks = SYNC_TARGET_PHASE_AUTO;
+#define SYNC_TARGET_PHASE_DEFAULT_TICKS 77874u
+#define SYNC_PHASE_PLL_OFF    0u
+#define SYNC_PHASE_PLL_NORMAL 1u
+#define SYNC_PHASE_PLL_QUIET  2u
+static volatile uint32_t g_sync_target_phase_ticks = SYNC_TARGET_PHASE_DEFAULT_TICKS;
+static volatile uint8_t sync_phase_pll_enable = SYNC_PHASE_PLL_QUIET;
 static volatile uint8_t tim15_arr_pulse_stage = 0u;
 static volatile uint32_t tim15_arr_pulse_nominal = 0u;
 static volatile uint32_t tim15_arr_pulse_count = 0u;
@@ -2151,9 +2156,9 @@ static volatile uint8_t g_tune_led_freq_active = 0u;
 #define TIM15_SYNC_PULSE_NEAR_ERROR       400
 #define TIM15_SYNC_PULSE_MID_ERROR        1500
 #define TIM15_SYNC_PULSE_FAR_ERROR        4000
-#define TIM15_SYNC_FILTER_DIVISOR         8
+#define TIM15_SYNC_FILTER_DIVISOR         16
 #define TIM15_SYNC_DEADBAND_NUMERATOR     1u
-#define TIM15_SYNC_DEADBAND_DENOMINATOR   2u
+#define TIM15_SYNC_DEADBAND_DENOMINATOR   1u
 #define TIM15_SYNC_PULSE_MAX_BITS_NUM     1u
 #define TIM15_SYNC_PULSE_MAX_BITS_DEN     4u
 /* Базовая точка ARR для SLAVE берётся из текущего активного профиля TIM15,
@@ -2322,9 +2327,70 @@ static uint32_t tim15_phase_pulse_spacing_buffers(uint32_t abs_phase)
     return 8u;
   }
   if (abs_phase > deadband_ticks) {
+    return 32u;
+  }
+  return 64u;
+}
+
+static int32_t tim15_phase_delta_with_sign(int32_t phase_ticks, int32_t pulse)
+{
+  if (pulse == 0) {
+    return 0;
+  }
+
+#if RS485_SYNC_FULL_PERIOD_ONLY
+  return (phase_ticks > 0) ? pulse : -pulse;
+#else
+  return (phase_ticks > 0) ? -pulse : pulse;
+#endif
+}
+
+static int32_t tim15_compute_quiet_phase_pulse_delta(int32_t phase_ticks)
+{
+  uint32_t abs_phase = (uint32_t)arr_auto_abs_i32(phase_ticks);
+  uint32_t deadband_ticks = tim15_sync_get_deadband_ticks();
+  uint32_t bit_ticks = rs485_sync_get_uart_bit_ticks();
+  int32_t pulse = 0;
+
+  if (bit_ticks == 0u) {
+    bit_ticks = 2387u;
+  }
+  if (abs_phase <= (deadband_ticks + bit_ticks)) {
+    return 0;
+  }
+
+  if (abs_phase < (deadband_ticks + (bit_ticks * 6u))) {
+    pulse = 1;
+  } else if (abs_phase < (deadband_ticks + (bit_ticks * 16u))) {
+    pulse = 2;
+  } else if (abs_phase < (deadband_ticks + (bit_ticks * 48u))) {
+    pulse = 4;
+  } else {
+    pulse = 8;
+  }
+
+  return tim15_phase_delta_with_sign(phase_ticks, pulse);
+}
+
+static uint32_t tim15_quiet_phase_pulse_spacing_buffers(uint32_t abs_phase)
+{
+  uint32_t deadband_ticks = tim15_sync_get_deadband_ticks();
+  uint32_t bit_ticks = rs485_sync_get_uart_bit_ticks();
+
+  if (bit_ticks == 0u) {
+    bit_ticks = 2387u;
+  }
+
+  if (abs_phase >= (deadband_ticks + (bit_ticks * 48u))) {
     return 16u;
   }
-  return 32u;
+  if (abs_phase >= (deadband_ticks + (bit_ticks * 16u))) {
+    return 32u;
+  }
+  if (abs_phase > (deadband_ticks + bit_ticks)) {
+    return 64u;
+  }
+  return 128u;
 }
 
 static void tim15_apply_hold_target_if_possible(void)
@@ -2465,6 +2531,10 @@ static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samp
   control_abs_phase = (uint32_t)arr_auto_abs_i32(control_phase_error);
   pulse_delta = tim15_compute_phase_pulse_delta(control_phase_error);
   pulse_spacing = tim15_phase_pulse_spacing_buffers(control_abs_phase);
+  if (sync_phase_pll_enable == SYNC_PHASE_PLL_QUIET) {
+    pulse_delta = tim15_compute_quiet_phase_pulse_delta(control_phase_error);
+    pulse_spacing = tim15_quiet_phase_pulse_spacing_buffers(control_abs_phase);
+  }
 
   sync_phase_fast_edges++;
   sync_phase_last_error_ticks = phase_error;
@@ -2473,6 +2543,11 @@ static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samp
   sync_phase_fast_last_spacing = pulse_spacing;
   rs485_sync_locked = (uint8_t)(control_abs_phase <= tim15_sync_get_deadband_ticks());
   rs485_sync_led_active = rs485_sync_locked;
+
+  if (sync_phase_pll_enable == SYNC_PHASE_PLL_OFF) {
+    sync_phase_last_pulse_delta = 0;
+    return;
+  }
 
   if (pulse_delta == 0) {
     return;
@@ -3998,6 +4073,7 @@ main_loop_second_half:
           printf("DCSAVE       - save current DC to Flash once\r\n");
           printf("PHASE [AUTO|ticks|+ticks|-ticks] - sync target phase\r\n");
           printf("TARGET [AUTO|ticks|+ticks|-ticks] - alias for PHASE\r\n");
+          printf("PLL [0|1|2]  - phase PLL: 0=off, 1=fast, 2=quiet hold\r\n");
           printf("PERF         - performance stats\r\n");
           printf("FPS          - FPS statistics only\r\n");
           printf("RESET        - software reset\r\n");
@@ -4018,6 +4094,7 @@ main_loop_second_half:
           } else {
             printf("Sync target phase: %ld ticks\r\n", (long)((int32_t)g_sync_target_phase_ticks));
           }
+          printf("Sync PLL: %u\r\n", (unsigned)sync_phase_pll_enable);
           printf("Use 'PERF' or 'FPS' for detailed statistics\r\n");
           printf("==============================\r\n");
         } else if((strncmp(uart1_cmd_buf, "PHASE", 5) == 0) ||
@@ -4063,6 +4140,33 @@ main_loop_second_half:
               rs485_sync_led_active = 0u;
               printf("[UART] PHASE=%ld ticks reset=1\r\n", phase_ticks);
             }
+          }
+        } else if(strncmp(uart1_cmd_buf, "PLL", 3) == 0){
+          char *arg = uart1_cmd_buf + 3;
+          while(*arg == ' ') arg++;
+          if((*arg == 0) || (*arg == '?')){
+            printf("[UART] PLL=%u pulses=%lu\r\n",
+                   (unsigned)sync_phase_pll_enable,
+                   (unsigned long)sync_phase_fast_pulses);
+          } else if((strcmp(arg, "0") == 0) || (strcmp(arg, "OFF") == 0)){
+            sync_phase_pll_enable = SYNC_PHASE_PLL_OFF;
+            tim15_arr_pulse_stage = 0u;
+            arr_auto_apply_tim15(g_tim15_slave_base_arr ? g_tim15_slave_base_arr : htim15.Init.Period);
+            sync_phase_last_pulse_delta = 0;
+            sync_phase_fast_last_buf = 0xFFFFFFFFu;
+            printf("[UART] PLL=0 phase measurement only\r\n");
+          } else if((strcmp(arg, "1") == 0) || (strcmp(arg, "ON") == 0)){
+            sync_phase_pll_enable = SYNC_PHASE_PLL_NORMAL;
+            sync_phase_filter_reset_request = 1u;
+            sync_phase_fast_last_buf = 0xFFFFFFFFu;
+            printf("[UART] PLL=1 phase ARR pulses enabled\r\n");
+          } else if((strcmp(arg, "2") == 0) || (strcmp(arg, "QUIET") == 0)){
+            sync_phase_pll_enable = SYNC_PHASE_PLL_QUIET;
+            sync_phase_filter_reset_request = 1u;
+            sync_phase_fast_last_buf = 0xFFFFFFFFu;
+            printf("[UART] PLL=2 quiet phase hold\r\n");
+          } else {
+            printf("[UART] PLL parse error: '%s'\r\n", arg);
           }
         } else if(strncmp(uart1_cmd_buf, "DCSAVE", 6) == 0){
           vnd_dc_request_save_to_flash();
@@ -4147,6 +4251,7 @@ main_loop_second_half:
             (unsigned)rs485_sync_phase_relation,
             (rs485_sync_phase_relation == RS485_SYNC_RELATION_IN_PHASE) ? "IN_PHASE" :
             (rs485_sync_phase_relation == RS485_SYNC_RELATION_ANTI_PHASE) ? "ANTI_PHASE" : "UNKNOWN");
+          printf("phase_pll   : %u\r\n", (unsigned)sync_phase_pll_enable);
           printf("phase_lock  : %u\r\n", (unsigned)rs485_sync_locked);
           printf("phase_err   : %ld ticks, pulse=%ld\r\n",
             (long)sync_phase_last_error_ticks,
