@@ -90,12 +90,8 @@ volatile uint32_t sync_edge_count = 0;
 /* Измерение периода PD5 через TIM5 (275 MHz) */
 volatile uint32_t sync_tim5_period_ticks = 0;
 #define SYNC_TARGET_PHASE_AUTO 0xFFFFFFFFu
-#define SYNC_TARGET_PHASE_DEFAULT_TICKS 77874u
-#define SYNC_PHASE_PLL_OFF    0u
-#define SYNC_PHASE_PLL_NORMAL 1u
-#define SYNC_PHASE_PLL_QUIET  2u
+#define SYNC_TARGET_PHASE_DEFAULT_TICKS 26500u
 static volatile uint32_t g_sync_target_phase_ticks = SYNC_TARGET_PHASE_DEFAULT_TICKS;
-static volatile uint8_t sync_phase_pll_enable = SYNC_PHASE_PLL_QUIET;
 static volatile uint8_t tim15_arr_pulse_stage = 0u;
 static volatile uint32_t tim15_arr_pulse_nominal = 0u;
 static volatile uint32_t tim15_arr_pulse_count = 0u;
@@ -111,17 +107,15 @@ static volatile uint32_t sync_phase_diag_bufs = 0u;
 static volatile uint32_t sync_phase_diag_edge = 0u;
 static volatile uint8_t sync_phase_diag_kind = 0u;
 static volatile int32_t sync_phase_last_error_ticks = 0;
+static volatile int32_t sync_phase_last_control_error_ticks = 0;
 static volatile int32_t sync_phase_last_pulse_delta = 0;
-static volatile uint8_t sync_phase_last_local_marker = 0u;
-static volatile uint8_t sync_phase_last_local_edge = 0u;
-static volatile uint16_t sync_phase_last_sample_idx = 0u;
+static volatile uint8_t sync_phase_near_raw_mode = 0u;
 static volatile uint32_t sync_phase_fast_edges = 0u;
 static volatile uint32_t sync_phase_fast_pulses = 0u;
 static volatile uint32_t sync_phase_fast_skip_busy = 0u;
 static volatile uint32_t sync_phase_fast_skip_spacing = 0u;
 static volatile uint32_t sync_phase_fast_last_spacing = 0u;
 static volatile uint32_t sync_phase_fast_last_buf = 0xFFFFFFFFu;
-static volatile int32_t sync_phase_last_control_error_ticks = 0;
 static volatile uint8_t optic_sensor_state_public = 0u;
 static volatile uint32_t optic_last_change_ms = 0u;
 static volatile uint16_t optic_active_hold_deciseconds = 30u;
@@ -156,8 +150,6 @@ static volatile uint8_t rs485_sync_restart_request = 0u;
 static volatile uint32_t rs485_sync_restart_count = 0u;
 static volatile uint8_t rs485_phase_guard_recovery_packets = 0u;
 static volatile uint8_t sync_phase_filter_reset_request = 0u;
-static volatile int32_t sync_phase_last_target_ticks = 0;
-static volatile uint32_t sync_phase_last_period_ticks = 0u;
 static volatile uint32_t rs485_sync_buf_div4 = 0;
 static volatile uint8_t rs485_slave_count_estimate = 0;
 static volatile uint32_t rs485_status_window_ticks = 0u;
@@ -173,14 +165,8 @@ static volatile uint8_t rs485_status_slot_local_tx = 0u;
 static volatile uint8_t rs485_status_cycle_count = 0u;
 static volatile uint8_t rs485_status_slot_response_seen = 0u;
 static volatile uint8_t rs485_status_slot_response_byte = 0u;
-static volatile uint8_t rs485_status_slot_response_byte2 = 0u;
-static volatile uint8_t rs485_status_slot_response_len = 0u;
-static volatile uint8_t rs485_status_slot_owner = 0u;       /* 0=master status word, 1..31=slave response slot */
-static volatile uint8_t rs485_status_master_request_id = 1u; /* slave id requested by the next master word */
-static volatile uint8_t rs485_status_last_miss_id = 0u;
 static volatile uint32_t rs485_uart_error_count = 0u;
 static volatile uint8_t rs485_status_peer_bytes[31] = {0u};
-static volatile uint8_t rs485_status_peer_bytes2[31] = {0u};
 static volatile uint32_t rs485_status_peer_last_ms[31] = {0u};
 static volatile uint32_t rs485_status_local_tx_count = 0u;
 static volatile uint32_t rs485_status_local_tx_complete_count = 0u;
@@ -242,47 +228,23 @@ static uint8_t rs485_uid_rx_buf[13] = {0u};
 #define RS485_UID_SLOT_STEP_MS   7u
 #define RS485_UID_SLOT_COUNT     16u
 #define RS485_UID_ARBITRATION_QUIET_MS 220u
-#define RS485_MASTER_FOREIGN_SYNC_DEMOTE_MS 300u
-#define RS485_SLAVE_SYNC_LOST_RECLAIM_MS    1500u
 #define RS485_TX_QUEUE_CAPACITY  32u
 #define RS485_STATUS_ID_MASK          0x1Fu
 #define RS485_STATUS_OPTIC_BIT        0x20u
 #define RS485_STATUS_TX_ENABLE_BIT    0x40u
 #define RS485_STATUS_LABEL_BIT        0x80u
-#define RS485_STATUS_WORD_MARK_BIT    0x40u
-#define RS485_STATUS_WORD_TX_BIT      0x80u
-#define RS485_STATUS2_SYNC_OK_BIT     0x01u
-#define RS485_STATUS2_IN_PHASE_BIT    0x02u
-#define RS485_STATUS2_ROLE_MASTER_BIT 0x04u
-#define RS485_STATUS2_ROLE_SLAVE_BIT  0x08u
-#define RS485_STATUS2_PEER_SEEN_BIT   0x10u
-#define RS485_STATUS2_CYCLE_START_BIT 0x20u
 #define RS485_STATUS_WINDOW_DIV       4u
 #define RS485_STATUS_SLOT_STRIDE      2u
 /* Искусственную паузу убираем: к моменту приёма полного sync-байта линия уже свободна,
    а лишний guard только добавляет джиттер к ответу slave. */
 #define RS485_STATUS_RESPONSE_DELAY_BYTES 0u
-#define RS485_STATUS_PEER_HOLD_MS     250u
+#define RS485_STATUS_PEER_HOLD_MS     30u
 #define RS485_SYNC_RELATION_UNKNOWN   0u
 #define RS485_SYNC_RELATION_IN_PHASE  1u
 #define RS485_SYNC_RELATION_ANTI_PHASE 2u
-#define RS485_SYNC_RELATION_CONFIRM_SCORE 6
-/* 200 Hz sync: один sync-пакет на полный период TX, на выбранной фазе маркера.
-   Это убирает неоднозначность двух полупериодов 400 Hz для физической петли. */
-#define RS485_SYNC_FULL_PERIOD_ONLY   1u
-#define RS485_SYNC_FULL_PERIOD_PARITY 0u
-
-/* Для настройки фазовой петли оставляем только быстрый обработчик sync-пакета.
-   Старые polling-сервисы включаются вручную, если понадобится диагностика. */
-#ifndef RS485_SYNC_LEGACY_SERVICES_ENABLE
-#define RS485_SYNC_LEGACY_SERVICES_ENABLE 0u
-#endif
-#ifndef RS485_SYNC_PHASE_MONITOR_SERVICE_ENABLE
-#define RS485_SYNC_PHASE_MONITOR_SERVICE_ENABLE 0u
-#endif
-#ifndef RS485_SYNC_PD5_ADJUST_SERVICE_ENABLE
-#define RS485_SYNC_PD5_ADJUST_SERVICE_ENABLE 0u
-#endif
+#define RS485_SYNC_RELATION_CONFIRM_SCORE 5
+#define RS485_SYNC_ANTI_PHASE_CONFIRM_PACKETS 32u
+#define RS485_SYNC_RESTART_MIN_MS 250u
 
 static inline uint8_t rs485_sync_read_local_marker_phase(void)
 {
@@ -291,7 +253,7 @@ static inline uint8_t rs485_sync_read_local_marker_phase(void)
 
 static inline uint8_t rs485_sync_edge_kind_from_marker_level(uint8_t marker_level)
 {
-  return (uint8_t)((marker_level ^ 1u) & 1u);
+  return (uint8_t)(marker_level & 1u);
 }
 
 static uint32_t rs485_sync_get_tim5_tick_hz(void)
@@ -348,51 +310,32 @@ static int32_t rs485_sync_wrap_phase_ticks(int32_t phase_ticks, uint32_t period_
   return phase_ticks;
 }
 
-static uint32_t rs485_sync_get_samples_per_period(uint32_t active_samples)
-{
-  if (active_samples == 0u) {
-    return 0u;
-  }
-
-#if RS485_SYNC_FULL_PERIOD_ONLY
-  return active_samples * 2u;
-#else
-  return active_samples;
-#endif
-}
-
-static uint32_t rs485_sync_get_sample_ticks_for_period(uint32_t period_ticks, uint32_t active_samples)
-{
-  uint32_t samples_per_period = rs485_sync_get_samples_per_period(active_samples);
-
-  if ((period_ticks == 0u) || (samples_per_period == 0u)) {
-    return 0u;
-  }
-
-  return period_ticks / samples_per_period;
-}
-
 __attribute__((unused)) static uint32_t rs485_sync_get_auto_target_phase_ticks(uint32_t period_ticks)
 {
   extern uint16_t adc_stream_get_active_samples(void);
   uint32_t uart_packet_ticks = rs485_sync_get_uart_packet_ticks();
   uint32_t active_samples = adc_stream_get_active_samples();
   uint32_t sample_ticks = 0u;
-  int32_t rx_comp_ticks = 0;
+  uint32_t rx_comp_ticks = 0u;
 
   if (period_ticks == 0u) {
     return 0u;
   }
 
-  sample_ticks = rs485_sync_get_sample_ticks_for_period(period_ticks, active_samples);
+  if (active_samples != 0u) {
+    sample_ticks = period_ticks / active_samples;
+  }
 
-  rx_comp_ticks = (int32_t)uart_packet_ticks +
-                  ((int32_t)sample_ticks * (int32_t)SYNC_TARGET_PHASE_SAMPLES);
+  rx_comp_ticks = uart_packet_ticks + (sample_ticks * (uint32_t)SYNC_TARGET_PHASE_SAMPLES);
 
   /* sync-байт приходит после реального фронта master, поэтому целевая фаза
      для slave должна учитывать длительность приёма, а не сворачиваться к
      (period - delay). */
-  return (uint32_t)rs485_sync_wrap_phase_ticks(rx_comp_ticks, period_ticks);
+  if (rx_comp_ticks >= period_ticks) {
+    rx_comp_ticks %= period_ticks;
+  }
+
+  return rx_comp_ticks;
 }
 
 int32_t tim15_get_default_target_phase_ticks(void)
@@ -405,7 +348,7 @@ int32_t tim15_get_default_target_phase_ticks(void)
   int32_t target_ticks = 0;
 
   if ((active_samples != 0u) && (period_ticks != 0u)) {
-    sample_ticks = rs485_sync_get_sample_ticks_for_period(period_ticks, active_samples);
+    sample_ticks = period_ticks / active_samples;
   }
 
   if (sample_ticks == 0u) {
@@ -426,12 +369,11 @@ static void rs485_discovery_on_sync_received(void);
 static void rs485_discovery_on_request(uint8_t value);
 static void rs485_discovery_on_response(uint8_t value);
 static void rs485_discovery_reset_master_scan(void);
+static uint32_t rs485_status_get_effective_period_ticks(void);
+static uint32_t rs485_status_get_window_ticks(uint32_t period_ticks);
+static void rs485_status_wait_byte_times(uint32_t byte_count);
 static uint8_t rs485_status_count_recent_peers(uint32_t now_ms, uint32_t hold_ms);
 static uint8_t rs485_status_build_local_byte(void);
-static void rs485_status_build_wire_word(uint8_t id_or_request, uint8_t cycle_start, uint8_t *byte0, uint8_t *byte1);
-static uint8_t rs485_status_decode_wire_byte0(uint8_t byte0);
-static uint8_t rs485_status_wire_word_valid(uint8_t byte0, uint8_t byte1);
-static void rs485_status_start_wire_word(uint8_t id_or_request, uint8_t cycle_start);
 static void rs485_status_reset_window_state(void);
 static void rs485_status_finalize_window(void);
 static void rs485_status_begin_window(void);
@@ -454,14 +396,14 @@ static uint32_t rs485_compute_uid_mix(void);
 static uint8_t rs485_compute_local_node_id(void);
 static uint32_t rs485_compute_master_claim_delay_ms(void);
 static void rs485_sync_auto_role_service(uint32_t now_ms);
-static void arr_auto_tune_service(void) __attribute__((unused));
+static void arr_auto_tune_service(void);
 static uint32_t tim15_sync_get_deadband_ticks(void);
 static int32_t arr_auto_abs_i32(int32_t value);
 static void tim15_request_hold_offset(int32_t arr_delta);
 static uint8_t tim15_schedule_arr_pulse(int32_t arr_delta);
 static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samples);
-static void phase_micro_adjust_service(void) __attribute__((unused));
-static void sync_phase_monitor_service(void) __attribute__((unused));
+static void phase_micro_adjust_service(void);
+static void sync_phase_monitor_service(void);
 static void tune_led_service(uint32_t now_ms);
 static uint8_t rs485_count_bits_u32(uint32_t value);
 static void rs485_tx_queue_push(uint8_t value);
@@ -1073,22 +1015,31 @@ static void rs485_sync_on_packet_received(uint8_t edge_kind)
       }
     }
 
-    /* Сравниваем именно edge-kind, а не raw-уровень GPIO: совпадение
-       принятого типа фронта с локальным marker соответствует IN_PHASE. */
+    /* Сравниваем именно edge-kind, а не raw-уровень GPIO.
+       Sync-байт принимается после фронта master, поэтому совпадение
+       edge-kind здесь соответствует ПРОТИВОФАЗЕ, а отличие — синфазе. */
     if (rs485_sync_relation_score >= RS485_SYNC_RELATION_CONFIRM_SCORE) {
-      rs485_sync_phase_relation = RS485_SYNC_RELATION_IN_PHASE;
-    } else if (rs485_sync_relation_score <= -RS485_SYNC_RELATION_CONFIRM_SCORE) {
       rs485_sync_phase_relation = RS485_SYNC_RELATION_ANTI_PHASE;
+    } else if (rs485_sync_relation_score <= -RS485_SYNC_RELATION_CONFIRM_SCORE) {
+      rs485_sync_phase_relation = RS485_SYNC_RELATION_IN_PHASE;
     } else {
       rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
     }
 
-    /* Marker/edge relation is protocol diagnostics only. Physical phase is
-       controlled solely by sync arrival time relative to the local buffer. */
-    rs485_anti_phase_recovery_active = 0u;
-    rs485_anti_phase_recovery_packets = 0u;
-    rs485_anti_phase_recovery_request = 0u;
-    rs485_sync_restart_request = 0u;
+    if (rs485_sync_phase_relation == RS485_SYNC_RELATION_ANTI_PHASE) {
+      rs485_anti_phase_recovery_active = 1u;
+      if (rs485_anti_phase_recovery_packets < 255u) {
+        rs485_anti_phase_recovery_packets++;
+      }
+      if (rs485_anti_phase_recovery_packets >= RS485_SYNC_ANTI_PHASE_CONFIRM_PACKETS) {
+        rs485_anti_phase_recovery_request = 1u;
+      }
+    } else {
+      rs485_anti_phase_recovery_active = 0u;
+      rs485_anti_phase_recovery_packets = 0u;
+      rs485_anti_phase_recovery_request = 0u;
+      rs485_sync_restart_request = 0u;
+    }
   } else {
     rs485_sync_relation_score = 0;
     rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
@@ -1187,6 +1138,65 @@ static uint8_t rs485_count_bits_u32(uint32_t value)
   return count;
 }
 
+static uint32_t rs485_status_get_effective_period_ticks(void)
+{
+  uint32_t period_ticks = sync_tim5_period_ticks;
+
+  if (period_ticks < 1000u) {
+    uint16_t buf_rate = adc_stream_get_buf_rate();
+    uint32_t tim_clk = rs485_sync_get_tim5_tick_hz();
+
+    if ((buf_rate != 0u) && (tim_clk != 0u)) {
+      period_ticks = (uint32_t)(((uint64_t)tim_clk + ((uint64_t)buf_rate / 2u)) / (uint64_t)buf_rate);
+    }
+  }
+
+  return period_ticks;
+}
+
+static uint32_t rs485_status_get_window_ticks(uint32_t period_ticks)
+{
+  uint32_t window_ticks = 0u;
+  uint32_t byte_ticks = rs485_sync_get_uart_packet_ticks();
+
+  if (period_ticks == 0u) {
+    return 0u;
+  }
+
+  window_ticks = period_ticks / RS485_STATUS_WINDOW_DIV;
+  if (window_ticks <= byte_ticks) {
+    return 0u;
+  }
+
+  return window_ticks - byte_ticks;
+}
+
+static void rs485_status_wait_byte_times(uint32_t byte_count)
+{
+  uint32_t baud = huart2.Init.BaudRate;
+  uint32_t hclk = HAL_RCC_GetHCLKFreq();
+  uint32_t start_cycles = 0u;
+  uint32_t wait_cycles = 0u;
+
+  if ((byte_count == 0u) || (baud == 0u) || (hclk == 0u)) {
+    return;
+  }
+
+  if ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) == 0u) {
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  }
+  if ((DWT->CTRL & DWT_CTRL_CYCCNTENA_Msk) == 0u) {
+    DWT->LAR = 0xC5ACCE55u;
+    DWT->CYCCNT = 0u;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  }
+
+  wait_cycles = (uint32_t)(((uint64_t)hclk * 10u * (uint64_t)byte_count + (uint64_t)baud - 1u) / (uint64_t)baud);
+  start_cycles = DWT->CYCCNT;
+  while ((uint32_t)(DWT->CYCCNT - start_cycles) < wait_cycles) {
+  }
+}
+
 static uint8_t rs485_status_count_recent_peers(uint32_t now_ms, uint32_t hold_ms)
 {
   uint8_t count = 0u;
@@ -1214,86 +1224,6 @@ static uint8_t rs485_status_build_local_byte(void)
   }
   /* Состояние детектора метки пока временно не приходит от хоста. */
   return status;
-}
-
-static void rs485_status_build_wire_word(uint8_t id_or_request, uint8_t cycle_start, uint8_t *byte0, uint8_t *byte1)
-{
-  extern volatile uint8_t vnd_sync_mode_public;
-  extern volatile uint8_t vnd_sync_ok_public;
-  uint8_t b0 = (uint8_t)(RS485_STATUS_WORD_MARK_BIT | (id_or_request & RS485_STATUS_ID_MASK));
-  uint8_t b1 = RS485_STATUS_WORD_MARK_BIT;
-
-  if (optic_sensor_get_state() != 0u) {
-    b0 |= RS485_STATUS_OPTIC_BIT;
-  }
-  if (vnd_is_tx_enabled() != 0u) {
-    b0 |= RS485_STATUS_WORD_TX_BIT;
-  }
-
-  if (vnd_sync_ok_public != 0u) {
-    b1 |= RS485_STATUS2_SYNC_OK_BIT;
-  }
-  if (rs485_sync_locked != 0u) {
-    b1 |= RS485_STATUS2_IN_PHASE_BIT;
-  }
-  if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
-    b1 |= RS485_STATUS2_ROLE_MASTER_BIT;
-  } else if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
-    b1 |= RS485_STATUS2_ROLE_SLAVE_BIT;
-  }
-  if (rs485_sync_has_active_peer() != 0u) {
-    b1 |= RS485_STATUS2_PEER_SEEN_BIT;
-  }
-  if (cycle_start != 0u) {
-    b1 |= RS485_STATUS2_CYCLE_START_BIT;
-  }
-
-  if (byte0 != NULL) {
-    *byte0 = b0;
-  }
-  if (byte1 != NULL) {
-    *byte1 = b1;
-  }
-}
-
-static uint8_t rs485_status_decode_wire_byte0(uint8_t byte0)
-{
-  uint8_t status = (uint8_t)(byte0 & RS485_STATUS_ID_MASK);
-
-  if ((byte0 & RS485_STATUS_OPTIC_BIT) != 0u) {
-    status |= RS485_STATUS_OPTIC_BIT;
-  }
-  if ((byte0 & RS485_STATUS_WORD_TX_BIT) != 0u) {
-    status |= RS485_STATUS_TX_ENABLE_BIT;
-  }
-
-  return status;
-}
-
-static uint8_t rs485_status_wire_word_valid(uint8_t byte0, uint8_t byte1)
-{
-  if ((byte0 & RS485_STATUS_WORD_MARK_BIT) == 0u) {
-    return 0u;
-  }
-  if ((byte1 & RS485_STATUS_WORD_MARK_BIT) == 0u) {
-    return 0u;
-  }
-  return 1u;
-}
-
-static void rs485_status_start_wire_word(uint8_t id_or_request, uint8_t cycle_start)
-{
-  uint8_t byte0 = 0u;
-  uint8_t byte1 = 0u;
-
-  rs485_status_build_wire_word(id_or_request, cycle_start, &byte0, &byte1);
-  rs485_tx_queue_push_front(byte1);
-  if (rs485_tx_busy == 0u) {
-    rs485_sync_start_tx_byte(byte0);
-  } else {
-    rs485_tx_queue_push_front(byte0);
-    rs485_tx_kick();
-  }
 }
 
 uint8_t rs485_status_get_snapshot(uint8_t *local_status,
@@ -1496,11 +1426,6 @@ static void rs485_status_reset_window_state(void)
   rs485_status_cycle_count = 0u;
   rs485_status_slot_response_seen = 0u;
   rs485_status_slot_response_byte = 0u;
-  rs485_status_slot_response_byte2 = 0u;
-  rs485_status_slot_response_len = 0u;
-  rs485_status_slot_owner = 0u;
-  rs485_status_master_request_id = 1u;
-  rs485_status_last_miss_id = 0u;
   rs485_status_local_slot_expected = 0u;
 }
 
@@ -1515,126 +1440,90 @@ static void rs485_status_reset_slot_state(void)
   rs485_status_slot_local_tx = 0u;
   rs485_status_slot_response_seen = 0u;
   rs485_status_slot_response_byte = 0u;
-  rs485_status_slot_response_byte2 = 0u;
-  rs485_status_slot_response_len = 0u;
   rs485_status_local_slot_expected = 0u;
 }
 
 static void rs485_status_finalize_window(void)
 {
   extern volatile uint8_t vnd_sync_mode_public;
-  uint32_t now_ms = HAL_GetTick();
-  uint8_t owner = rs485_status_slot_owner;
-  uint8_t word_valid = (uint8_t)(((rs485_status_slot_response_seen != 0u) &&
-                                  (rs485_status_slot_response_len >= 2u) &&
-                                  (rs485_status_wire_word_valid(rs485_status_slot_response_byte,
-                                                                rs485_status_slot_response_byte2) != 0u)) ? 1u : 0u);
-  uint8_t word_cycle_start = (uint8_t)(((word_valid != 0u) &&
-                                        ((rs485_status_slot_response_byte2 & RS485_STATUS2_CYCLE_START_BIT) != 0u)) ? 1u : 0u);
-  uint8_t response_id = (uint8_t)(rs485_status_slot_response_byte & RS485_STATUS_ID_MASK);
-  uint8_t legacy_status = rs485_status_decode_wire_byte0(rs485_status_slot_response_byte);
+  uint8_t next_node_id = rs485_local_node_id;
+  uint8_t slot_had_response = (uint8_t)((rs485_status_slot_response_seen != 0u) || (rs485_status_slot_local_tx != 0u));
+  uint8_t response_byte = rs485_status_slot_response_byte;
+  uint8_t recent_count = rs485_status_count_recent_peers(HAL_GetTick(), RS485_STATUS_PEER_HOLD_MS);
+  uint8_t response_id = (uint8_t)(response_byte & RS485_STATUS_ID_MASK);
+  uint8_t active_count = rs485_status_cycle_count;
 
   if ((rs485_status_window_active == 0u) &&
-      (rs485_status_slot_response_seen == 0u) &&
-      (rs485_status_slot_local_tx == 0u)) {
+      (slot_had_response == 0u)) {
     return;
   }
 
   if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
-    if (owner == 0u) {
-      if ((rs485_status_master_request_id == 0u) ||
-          (rs485_status_master_request_id > RS485_DISCOVERY_MAX_ID)) {
-        rs485_status_master_request_id = 1u;
-      }
-      rs485_status_slot_owner = rs485_status_master_request_id;
-    } else {
+    if ((rs485_status_master_expected_phase < RS485_STATUS_SLOT_STRIDE) &&
+        (rs485_status_current_window_phase == rs485_status_master_expected_phase)) {
       rs485_status_window_total_count++;
-
-      if ((word_valid != 0u) && (response_id == owner)) {
+      if (slot_had_response != 0u) {
         rs485_status_window_ok_count++;
-        rs485_status_seen_mask |= (1u << (owner - 1u));
-        rs485_status_peer_bytes[owner - 1u] = legacy_status;
-        rs485_status_peer_bytes2[owner - 1u] = rs485_status_slot_response_byte2;
-        rs485_status_peer_last_ms[owner - 1u] = now_ms;
-        rs485_slave_count_estimate = owner;
-        rs485_discovery_seen_mask = rs485_status_seen_mask;
-        rs485_discovery_scan_mask = rs485_status_seen_mask;
-        rs485_status_cycle_count = owner;
-        rs485_status_last_miss_id = 0u;
-
-        if (owner < RS485_DISCOVERY_MAX_ID) {
-          rs485_status_slot_owner = (uint8_t)(owner + 1u);
-        } else {
-          rs485_status_master_request_id = 1u;
-          rs485_status_slot_owner = 0u;
-        }
-      } else {
+      } else if ((recent_count != 0u) || (rs485_slave_count_estimate != 0u)) {
         rs485_status_window_miss_count++;
-        rs485_status_last_miss_id = owner;
-        rs485_slave_count_estimate = (uint8_t)(owner - 1u);
-        rs485_status_master_request_id = 1u;
-        rs485_status_slot_owner = 0u;
       }
     }
-  } else if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
-    if ((word_valid != 0u) && (word_cycle_start != 0u)) {
-      uint8_t requested_id = response_id;
-      if ((requested_id == 0u) || (requested_id > RS485_DISCOVERY_MAX_ID)) {
-        requested_id = 1u;
+  } else if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
+             (rs485_status_local_slot_expected != 0u) &&
+             (rs485_status_slot_local_tx == 0u)) {
+    rs485_status_local_slot_miss_count++;
+  }
+
+  if (slot_had_response != 0u) {
+    if (rs485_status_cycle_count < RS485_DISCOVERY_MAX_ID) {
+      rs485_status_cycle_count++;
+      active_count = rs485_status_cycle_count;
+    }
+
+    if ((response_id != 0u) &&
+        (response_id <= RS485_DISCOVERY_MAX_ID)) {
+      rs485_status_seen_mask |= (1u << (response_id - 1u));
+      rs485_status_master_expected_phase = (uint8_t)((response_id - 1u) % RS485_STATUS_SLOT_STRIDE);
+      rs485_status_peer_bytes[response_id - 1u] = response_byte;
+      rs485_status_peer_last_ms[response_id - 1u] = HAL_GetTick();
+      if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+        rs485_slave_count_estimate = rs485_status_count_recent_peers(HAL_GetTick(), RS485_STATUS_PEER_HOLD_MS);
       }
-      if ((rs485_local_node_id == 0u) && (requested_id == 1u)) {
-        rs485_local_node_id = 1u;
+    } else if ((rs485_local_node_id != 0u) &&
+               (rs485_local_node_id <= RS485_DISCOVERY_MAX_ID)) {
+      rs485_status_seen_mask |= (1u << (rs485_local_node_id - 1u));
+    }
+
+    rs485_discovery_seen_mask = rs485_status_seen_mask;
+    rs485_discovery_scan_mask = rs485_status_seen_mask;
+  } else {
+    rs485_discovery_seen_mask = rs485_status_seen_mask;
+    rs485_discovery_scan_mask = rs485_status_seen_mask;
+
+    if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+      rs485_slave_count_estimate = recent_count;
+    } else if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+      if (next_node_id == 0u) {
+        if (active_count < RS485_DISCOVERY_MAX_ID) {
+          next_node_id = (uint8_t)(active_count + 1u);
+        }
+      } else if (next_node_id > (uint8_t)(active_count + 1u)) {
+        next_node_id = (uint8_t)(active_count + 1u);
       }
-      rs485_status_master_request_id = requested_id;
-      rs485_status_slot_owner = requested_id;
-      rs485_status_seen_mask = 0u;
-      rs485_status_cycle_count = 0u;
-    } else if (owner == 0u) {
-      if (word_valid != 0u) {
-        uint8_t requested_id = response_id;
-        if ((requested_id == 0u) || (requested_id > RS485_DISCOVERY_MAX_ID)) {
-          requested_id = 1u;
-        }
-        if ((rs485_local_node_id == 0u) && (requested_id == 1u)) {
-          rs485_local_node_id = 1u;
-        }
-        rs485_status_master_request_id = requested_id;
-        rs485_status_slot_owner = requested_id;
-        rs485_status_seen_mask = 0u;
-        rs485_status_cycle_count = 0u;
+
+      rs485_local_node_id = next_node_id;
+      if (next_node_id != 0u) {
+        rs485_slave_count_estimate = active_count;
       } else {
-        rs485_status_slot_owner = 0u;
+        rs485_slave_count_estimate = active_count;
       }
     } else {
-      if ((rs485_status_local_slot_expected != 0u) &&
-          (rs485_status_slot_local_tx == 0u)) {
-        rs485_status_local_slot_miss_count++;
-      }
-
-      if ((word_valid != 0u) || (rs485_status_slot_local_tx != 0u)) {
-        if ((word_valid != 0u) &&
-            (response_id != 0u) &&
-            (response_id <= RS485_DISCOVERY_MAX_ID)) {
-          rs485_status_seen_mask |= (1u << (response_id - 1u));
-          rs485_status_peer_bytes[response_id - 1u] = legacy_status;
-          rs485_status_peer_bytes2[response_id - 1u] = rs485_status_slot_response_byte2;
-          rs485_status_peer_last_ms[response_id - 1u] = now_ms;
-          rs485_discovery_seen_mask = rs485_status_seen_mask;
-          rs485_discovery_scan_mask = rs485_status_seen_mask;
-        }
-        if (owner < RS485_DISCOVERY_MAX_ID) {
-          rs485_status_slot_owner = (uint8_t)(owner + 1u);
-        } else {
-          rs485_status_slot_owner = 0u;
-        }
-      } else {
-        rs485_status_last_miss_id = owner;
-        rs485_status_slot_owner = 0u;
-      }
+      rs485_slave_count_estimate = 0u;
     }
-  } else {
-    rs485_status_slot_owner = 0u;
-    rs485_slave_count_estimate = 0u;
+
+    rs485_status_seen_mask = 0u;
+    rs485_status_tx_sent = 0u;
+    rs485_status_cycle_count = 0u;
   }
 
   rs485_status_reset_slot_state();
@@ -1643,7 +1532,9 @@ static void rs485_status_finalize_window(void)
 static void rs485_status_begin_window(void)
 {
   extern volatile uint8_t vnd_sync_mode_public;
-  uint8_t owner = rs485_status_slot_owner;
+  uint8_t local_slot_phase = 0u;
+  uint8_t current_slot_phase = 0u;
+  uint32_t byte_ticks = 0u;
 
   if (rs485_status_window_active != 0u) {
     rs485_status_finalize_window();
@@ -1655,69 +1546,68 @@ static void rs485_status_begin_window(void)
     rs485_status_current_window_phase = rs485_last_sync_edge_kind;
   }
 
-  if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
-    if (owner == 0u) {
-      uint32_t primask = __get_PRIMASK();
-      __disable_irq();
-      rs485_status_tx_sent = 1u;
-      rs485_status_slot_local_tx = 1u;
-      rs485_status_local_tx_count++;
-      rs485_status_start_wire_word(rs485_status_master_request_id, 1u);
-      if (primask == 0u) {
-        __enable_irq();
-      }
-    }
-    return;
-  }
-
   if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
-      (owner != 0u) &&
-      (rs485_local_node_id != 0u) &&
-      (owner == rs485_local_node_id)) {
-    uint32_t primask = __get_PRIMASK();
-    __disable_irq();
-    if (rs485_tx_busy == 0u) {
+      (rs485_local_node_id != 0u)) {
+    local_slot_phase = (uint8_t)((rs485_local_node_id - 1u) % RS485_STATUS_SLOT_STRIDE);
+    /* Таймслот нужно выбирать по биту текущего sync-пакета,
+       а не по локальному счётчику принятых пакетов: один пропуск RX иначе
+       навсегда сдвигает slave на чужой полупериод. */
+    current_slot_phase = (uint8_t)(rs485_last_sync_edge_kind % RS485_STATUS_SLOT_STRIDE);
+    if (local_slot_phase == current_slot_phase) {
       rs485_status_local_slot_expected = 1u;
       rs485_status_local_slot_expected_count++;
-      rs485_status_tx_sent = 1u;
-      rs485_status_slot_local_tx = 1u;
-      rs485_status_local_tx_count++;
-      rs485_status_start_wire_word(rs485_local_node_id, 0u);
-    } else {
-      rs485_status_tx_pending = 1u;
-      rs485_status_deferred_tx_count++;
-    }
-    if (primask == 0u) {
-      __enable_irq();
+      byte_ticks = rs485_sync_get_uart_packet_ticks();
+      rs485_status_window_ticks = byte_ticks * RS485_STATUS_RESPONSE_DELAY_BYTES;
+
+      if (rs485_tx_busy == 0u) {
+        uint32_t primask = __get_PRIMASK();
+        __disable_irq();
+        if ((rs485_tx_busy == 0u) && (RS485_STATUS_RESPONSE_DELAY_BYTES != 0u)) {
+          rs485_status_wait_byte_times(RS485_STATUS_RESPONSE_DELAY_BYTES);
+        }
+        if (rs485_tx_busy == 0u) {
+          rs485_status_tx_sent = 1u;
+          rs485_status_slot_local_tx = 1u;
+          rs485_status_local_tx_count++;
+          rs485_sync_start_tx_byte(rs485_status_build_local_byte());
+        } else {
+          rs485_status_tx_due_ticks = rs485_status_window_ticks;
+          rs485_status_tx_pending = 1u;
+          rs485_status_deferred_tx_count++;
+        }
+        if (primask == 0u) {
+          __enable_irq();
+        }
+      } else {
+        rs485_status_tx_due_ticks = rs485_status_window_ticks;
+        rs485_status_tx_pending = 1u;
+        rs485_status_deferred_tx_count++;
+      }
     }
   }
 }
 
 static void rs485_status_on_received(uint8_t value)
 {
-  if (rs485_status_window_active == 0u) {
+  uint8_t node_id = (uint8_t)(value & RS485_STATUS_ID_MASK);
+
+  if ((rs485_status_window_active == 0u) ||
+      (node_id == 0u) ||
+      (node_id > RS485_DISCOVERY_MAX_ID)) {
     return;
   }
 
-  if (rs485_status_slot_response_len == 0u) {
+  if (rs485_status_slot_response_seen == 0u) {
+    rs485_status_slot_response_seen = 1u;
     rs485_status_slot_response_byte = value;
-    rs485_status_slot_response_len = 1u;
-    return;
-  }
-
-  if (rs485_status_slot_response_len == 1u) {
-    rs485_status_slot_response_byte2 = value;
-    rs485_status_slot_response_len = 2u;
-    if (rs485_status_wire_word_valid(rs485_status_slot_response_byte,
-                                     rs485_status_slot_response_byte2) != 0u) {
-      rs485_status_slot_response_seen = 1u;
-      rs485_status_peer_rx_count++;
-    }
+    rs485_status_peer_rx_count++;
   }
 }
 
 static void rs485_status_service(void)
 {
+  uint32_t now_ticks = 0u;
+
   if (rs485_status_window_active == 0u) {
     return;
   }
@@ -1731,11 +1621,16 @@ static void rs485_status_service(void)
     return;
   }
 
+  now_ticks = htim5.Instance->CNT;
+  if ((rs485_status_tx_due_ticks != 0u) && (now_ticks < rs485_status_tx_due_ticks)) {
+    return;
+  }
+
   rs485_status_tx_pending = 0u;
   rs485_status_tx_sent = 1u;
   rs485_status_slot_local_tx = 1u;
   rs485_status_local_tx_count++;
-  rs485_status_start_wire_word(rs485_local_node_id, 0u);
+  rs485_sync_start_tx_byte(rs485_status_build_local_byte());
 }
 
 static void rs485_discovery_reset_master_scan(void)
@@ -2012,13 +1907,9 @@ static void rs485_sync_auto_role_service(uint32_t now_ms)
   static uint8_t auto_init_done = 0u;
   static uint32_t auto_start_ms = 0u;
   static uint8_t prev_mode = 0xFFu;
-  static uint32_t master_foreign_sync_first_ms = 0u;
-  uint8_t peer_uid_recent = (uint8_t)((rs485_peer_uid_valid != 0u) &&
-                                      ((now_ms - rs485_peer_uid_last_ms) <= RS485_PEER_UID_STALE_MS));
 
   if (vnd_sync_mode_public != prev_mode) {
     prev_mode = vnd_sync_mode_public;
-    master_foreign_sync_first_ms = 0u;
     rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
     rs485_sync_relation_score = 0;
     rs485_anti_phase_recovery_active = 0u;
@@ -2063,6 +1954,8 @@ static void rs485_sync_auto_role_service(uint32_t now_ms)
   }
 
   if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+    uint8_t peer_uid_recent = (uint8_t)((rs485_peer_uid_valid != 0u) &&
+                                       ((now_ms - rs485_peer_uid_last_ms) <= RS485_PEER_UID_STALE_MS));
     uint8_t foreign_sync_recent = (uint8_t)((sync_last_edge_ms != 0u) &&
                                            ((now_ms - sync_last_edge_ms) <= RS485_SYNC_PRESENT_MS));
 
@@ -2072,20 +1965,6 @@ static void rs485_sync_auto_role_service(uint32_t now_ms)
       return;
     }
 
-    if (foreign_sync_recent != 0u) {
-      if (master_foreign_sync_first_ms == 0u) {
-        master_foreign_sync_first_ms = now_ms;
-      }
-      if ((peer_uid_recent == 0u) &&
-          ((now_ms - master_foreign_sync_first_ms) >= RS485_MASTER_FOREIGN_SYNC_DEMOTE_MS)) {
-        vnd_sync_set_mode_auto(VND_SYNC_MODE_SLAVE);
-        rs485_uid_begin_arbitration_window(now_ms);
-        return;
-      }
-    } else {
-      master_foreign_sync_first_ms = 0u;
-    }
-
     if ((rs485_slave_count_estimate == 0u) &&
         ((foreign_sync_recent != 0u) || (peer_uid_recent != 0u))) {
       static uint32_t last_master_uid_announce_ms = 0u;
@@ -2093,29 +1972,13 @@ static void rs485_sync_auto_role_service(uint32_t now_ms)
           ((now_ms - last_master_uid_announce_ms) >= RS485_UID_MASTER_ANNOUNCE_MS)) {
         last_master_uid_announce_ms = now_ms;
         rs485_uid_schedule_announce(now_ms, 3u, rs485_uid_get_announce_delay_ms());
+        rs485_uid_begin_arbitration_window(now_ms);
       }
     }
     return;
   }
 
-  if ((peer_uid_recent != 0u) && (rs485_peer_uid_cmp > 0)) {
-    auto_start_ms = now_ms;
-    return;
-  }
-
   if (rs485_last_rx_ms != 0u) {
-    if ((now_ms - rs485_last_rx_ms) <= RS485_SLAVE_SYNC_LOST_RECLAIM_MS) {
-      return;
-    }
-    rs485_last_rx_ms = 0u;
-    sync_last_edge_ms = 0u;
-    auto_start_ms = now_ms;
-    rs485_local_node_id = 0u;
-    rs485_reply_pending_id = 0u;
-    rs485_slave_count_estimate = 0u;
-    rs485_discovery_seen_mask = 0u;
-    rs485_discovery_reset_master_scan();
-    rs485_status_reset_window_state();
     return;
   }
 
@@ -2146,27 +2009,38 @@ static volatile uint8_t g_tune_led_freq_active = 0u;
 #define TIM15_SYNC_LOCK_WINDOW_TICKS      40
 #define TIM15_SYNC_PULSE_DEADBAND_TICKS   80
 #define TIM15_SYNC_HOLD_DIVISOR           4096
-#define TIM15_SYNC_PULSE_DIVISOR          1024
-#define TIM15_SYNC_PULSE_BOOST1_DIVISOR   1024
-#define TIM15_SYNC_PULSE_BOOST2_DIVISOR   1024
+#define TIM15_SYNC_PULSE_DIVISOR          96
+#define TIM15_SYNC_PULSE_BOOST1_DIVISOR   96
+#define TIM15_SYNC_PULSE_BOOST2_DIVISOR   48
 #define TIM15_SYNC_PULSE_HOLD_UPDATES     16u
 #define TIM15_SYNC_HOLD_MAX_OFFSET        6
 #define TIM15_SYNC_PULSE_MIN_OFFSET       1
-#define TIM15_SYNC_PULSE_MAX_OFFSET       16
+#define TIM15_SYNC_PULSE_MAX_OFFSET       64
 #define TIM15_SYNC_PULSE_NEAR_ERROR       400
 #define TIM15_SYNC_PULSE_MID_ERROR        1500
 #define TIM15_SYNC_PULSE_FAR_ERROR        4000
-#define TIM15_SYNC_FILTER_DIVISOR         16
-#define TIM15_SYNC_DEADBAND_NUMERATOR     1u
-#define TIM15_SYNC_DEADBAND_DENOMINATOR   1u
+#define TIM15_SYNC_FILTER_DIVISOR         4
+#define TIM15_SYNC_DEADBAND_NUMERATOR     3u
+#define TIM15_SYNC_DEADBAND_DENOMINATOR   4u
 #define TIM15_SYNC_PULSE_MAX_BITS_NUM     1u
-#define TIM15_SYNC_PULSE_MAX_BITS_DEN     4u
+#define TIM15_SYNC_PULSE_MAX_BITS_DEN     1u
+#define TIM15_SYNC_QUIET_ENTER_BITS       2u
+#define TIM15_SYNC_QUIET_EXIT_BITS        32u
+#define TIM15_SYNC_QUIET_ENTER_PACKETS    1u
+#define TIM15_SYNC_QUIET_FILTER_DIVISOR   8u
+#define TIM15_SYNC_QUIET_MAX_OFFSET       4
+#define TIM15_SYNC_QUIET_SPACING_BUFFERS  8u
+#define TIM15_SYNC_NEAR_RAW_BITS          2u
+#define TIM15_SYNC_NEAR_RAW_MAX_OFFSET    1
+#define TIM15_SYNC_NEAR_RAW_SPACING       16u
 /* Базовая точка ARR для SLAVE берётся из текущего активного профиля TIM15,
  * а не из жёстко прошитого значения: профили 300/400 Hz имеют разный номинал.
  * 1 шаг = 1 тик ARR.
  */
 static volatile uint32_t g_tim15_slave_base_arr = 0u;
 static volatile int32_t g_tim15_slave_arr_step_ticks = 1;
+static volatile uint8_t sync_phase_quiet_mode = 0u;
+static volatile uint16_t sync_phase_quiet_enter_count = 0u;
 
 static uint32_t tim15_sync_get_uart_bit_ticks_or_sample(uint32_t sample_ticks)
 {
@@ -2184,21 +2058,21 @@ static uint32_t tim15_sync_get_uart_bit_ticks_or_sample(uint32_t sample_ticks)
 
 static uint32_t tim15_sync_get_deadband_ticks(void)
 {
+  uint32_t period_ticks = sync_tim5_period_ticks;
   uint32_t active_samples = adc_stream_get_active_samples();
   uint32_t sample_ticks = 1144u;
   uint32_t bit_ticks = 0u;
   uint32_t deadband = 0u;
-  uint32_t period_ticks = sync_tim5_period_ticks;
 
   if ((period_ticks != 0u) && (active_samples != 0u)) {
-    sample_ticks = rs485_sync_get_sample_ticks_for_period(period_ticks, active_samples);
+    sample_ticks = period_ticks / active_samples;
     if (sample_ticks == 0u) {
       sample_ticks = 1144u;
     }
   }
 
-  /* Не дергаем TIM15 около lock-зоны: sync должен удерживать фазу, а не
-     создавать видимый джиттер из-за коррекций на каждом полупериоде. */
+  /* Держим фазу внутри одного UART-бита: коррекция стартует уже на ~0.75 bit,
+     чтобы видимый разброс не успевал уходить на 2-3 bit. */
   bit_ticks = tim15_sync_get_uart_bit_ticks_or_sample(sample_ticks);
   deadband = (bit_ticks * TIM15_SYNC_DEADBAND_NUMERATOR) / TIM15_SYNC_DEADBAND_DENOMINATOR;
   if (deadband == 0u) {
@@ -2245,8 +2119,8 @@ static int32_t tim15_compute_phase_pulse_delta(int32_t phase_ticks)
   int32_t boost_far_start = 0;
   uint32_t deadband_ticks = tim15_sync_get_deadband_ticks();
   uint32_t sample_ticks = 1144u;
-  uint32_t active_samples = adc_stream_get_active_samples();
   uint32_t period_ticks = sync_tim5_period_ticks;
+  uint32_t active_samples = adc_stream_get_active_samples();
   uint32_t bit_ticks = 0u;
   uint32_t pulse_cap = TIM15_SYNC_PULSE_MAX_OFFSET;
 
@@ -2255,7 +2129,7 @@ static int32_t tim15_compute_phase_pulse_delta(int32_t phase_ticks)
   }
 
   if ((period_ticks != 0u) && (active_samples != 0u)) {
-    sample_ticks = rs485_sync_get_sample_ticks_for_period(period_ticks, active_samples);
+    sample_ticks = period_ticks / active_samples;
     if (sample_ticks == 0u) {
       sample_ticks = 1144u;
     }
@@ -2269,6 +2143,10 @@ static int32_t tim15_compute_phase_pulse_delta(int32_t phase_ticks)
   }
   if (pulse_cap > TIM15_SYNC_PULSE_MAX_OFFSET) {
     pulse_cap = TIM15_SYNC_PULSE_MAX_OFFSET;
+  }
+  if ((sync_phase_quiet_mode != 0u) &&
+      (pulse_cap > TIM15_SYNC_QUIET_MAX_OFFSET)) {
+    pulse_cap = TIM15_SYNC_QUIET_MAX_OFFSET;
   }
 
   pulse = abs_phase / TIM15_SYNC_PULSE_DIVISOR;
@@ -2292,105 +2170,39 @@ static int32_t tim15_compute_phase_pulse_delta(int32_t phase_ticks)
     pulse = (int32_t)pulse_cap;
   }
 
-  /* Отрицательный delta укорачивает локальный период, положительный удлиняет.
-     В 200 Hz режиме measured_phase считается от начала полного TX-периода:
-     положительная ошибка означает, что sync пришел слишком поздно, значит
-     следующий локальный старт надо задерживать. */
-#if RS485_SYNC_FULL_PERIOD_ONLY
+  /* Отрицательный delta даёт укороченный период (ускорение),
+     положительный — удлинённый (замедление).
+     После исправления знака target phase для устойчивой отрицательной ОС
+     положительная фазовая ошибка должна уменьшаться положительным delta. */
   return (phase_ticks > 0) ? pulse : -pulse;
-#else
-  /* Старое 400 Hz измерение имело противоположный экспериментально проверенный знак. */
-  return (phase_ticks > 0) ? -pulse : pulse;
-#endif
 }
 
 static uint32_t tim15_phase_pulse_spacing_buffers(uint32_t abs_phase)
 {
   uint32_t deadband_ticks = tim15_sync_get_deadband_ticks();
   uint32_t sample_ticks = 1144u;
-  uint32_t active_samples = adc_stream_get_active_samples();
   uint32_t period_ticks = sync_tim5_period_ticks;
+  uint32_t active_samples = adc_stream_get_active_samples();
   uint32_t bit_ticks = 0u;
 
   if ((period_ticks != 0u) && (active_samples != 0u)) {
-    sample_ticks = rs485_sync_get_sample_ticks_for_period(period_ticks, active_samples);
+    sample_ticks = period_ticks / active_samples;
     if (sample_ticks == 0u) {
       sample_ticks = 1144u;
     }
   }
 
   bit_ticks = tim15_sync_get_uart_bit_ticks_or_sample(sample_ticks);
-  if (abs_phase >= (deadband_ticks + (bit_ticks * 8u))) {
-    return 4u;
+  if (sync_phase_quiet_mode != 0u) {
+    return (abs_phase > deadband_ticks) ? TIM15_SYNC_QUIET_SPACING_BUFFERS : 4u;
   }
-  if (abs_phase >= (deadband_ticks + (bit_ticks * 4u))) {
-    return 8u;
+  if (abs_phase >= (deadband_ticks + (bit_ticks * 2u))) {
+    return 1u;
   }
   if (abs_phase > deadband_ticks) {
-    return 32u;
+    return 2u;
   }
-  return 64u;
-}
-
-static int32_t tim15_phase_delta_with_sign(int32_t phase_ticks, int32_t pulse)
-{
-  if (pulse == 0) {
-    return 0;
-  }
-
-#if RS485_SYNC_FULL_PERIOD_ONLY
-  return (phase_ticks > 0) ? pulse : -pulse;
-#else
-  return (phase_ticks > 0) ? -pulse : pulse;
-#endif
-}
-
-static int32_t tim15_compute_quiet_phase_pulse_delta(int32_t phase_ticks)
-{
-  uint32_t abs_phase = (uint32_t)arr_auto_abs_i32(phase_ticks);
-  uint32_t deadband_ticks = tim15_sync_get_deadband_ticks();
-  uint32_t bit_ticks = rs485_sync_get_uart_bit_ticks();
-  int32_t pulse = 0;
-
-  if (bit_ticks == 0u) {
-    bit_ticks = 2387u;
-  }
-  if (abs_phase <= (deadband_ticks + bit_ticks)) {
-    return 0;
-  }
-
-  if (abs_phase < (deadband_ticks + (bit_ticks * 6u))) {
-    pulse = 1;
-  } else if (abs_phase < (deadband_ticks + (bit_ticks * 16u))) {
-    pulse = 2;
-  } else if (abs_phase < (deadband_ticks + (bit_ticks * 48u))) {
-    pulse = 4;
-  } else {
-    pulse = 8;
-  }
-
-  return tim15_phase_delta_with_sign(phase_ticks, pulse);
-}
-
-static uint32_t tim15_quiet_phase_pulse_spacing_buffers(uint32_t abs_phase)
-{
-  uint32_t deadband_ticks = tim15_sync_get_deadband_ticks();
-  uint32_t bit_ticks = rs485_sync_get_uart_bit_ticks();
-
-  if (bit_ticks == 0u) {
-    bit_ticks = 2387u;
-  }
-
-  if (abs_phase >= (deadband_ticks + (bit_ticks * 48u))) {
-    return 16u;
-  }
-  if (abs_phase >= (deadband_ticks + (bit_ticks * 16u))) {
-    return 32u;
-  }
-  if (abs_phase > (deadband_ticks + bit_ticks)) {
-    return 64u;
-  }
-  return 128u;
+  return 4u;
 }
 
 static void tim15_apply_hold_target_if_possible(void)
@@ -2458,17 +2270,19 @@ static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samp
   int32_t target_phase = 0;
   int32_t measured_phase = 0;
   int32_t phase_error = 0;
+  uint32_t raw_abs_phase = 0u;
   uint32_t control_abs_phase = 0u;
   int32_t control_phase_error = 0;
   int32_t pulse_delta = 0;
   uint32_t pulse_spacing = 0u;
   uint32_t current_buf = adc_stream_total_buffer_count;
   uint32_t bit_ticks = 0u;
-  uint8_t local_marker = 0u;
-  uint8_t local_edge = 0u;
+  uint8_t near_raw_mode = 0u;
 
   if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
     filtered_phase_valid = 0u;
+    sync_phase_quiet_mode = 0u;
+    sync_phase_quiet_enter_count = 0u;
     return;
   }
 
@@ -2476,15 +2290,19 @@ static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samp
     filtered_phase_valid = 0u;
     rs485_sync_locked = 0u;
     rs485_sync_led_active = 0u;
+    sync_phase_quiet_mode = 0u;
+    sync_phase_quiet_enter_count = 0u;
     return;
   }
 
   if (sync_phase_filter_reset_request != 0u) {
     sync_phase_filter_reset_request = 0u;
     filtered_phase_valid = 0u;
+    sync_phase_quiet_mode = 0u;
+    sync_phase_quiet_enter_count = 0u;
   }
 
-  sample_ticks = rs485_sync_get_sample_ticks_for_period(period_ticks, active_samples);
+  sample_ticks = period_ticks / active_samples;
   if (sample_ticks == 0u) {
     sample_ticks = 1144u;
   }
@@ -2493,20 +2311,8 @@ static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samp
   target_phase = (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO)
                  ? tim15_get_default_target_phase_ticks()
                  : rs485_sync_wrap_phase_ticks((int32_t)g_sync_target_phase_ticks, period_ticks);
-  local_marker = rs485_sync_read_local_marker_phase();
-  local_edge = rs485_sync_edge_kind_from_marker_level(local_marker);
   measured_phase = (int32_t)((uint32_t)sample_idx * sample_ticks);
-#if RS485_SYNC_FULL_PERIOD_ONLY
-  if ((local_edge & 1u) != (RS485_SYNC_FULL_PERIOD_PARITY & 1u)) {
-    measured_phase += (int32_t)(period_ticks / 2u);
-  }
-#endif
   phase_error = rs485_sync_wrap_phase_ticks(measured_phase - target_phase, period_ticks);
-  sync_phase_last_target_ticks = target_phase;
-  sync_phase_last_period_ticks = period_ticks;
-  sync_phase_last_local_marker = local_marker;
-  sync_phase_last_local_edge = local_edge;
-  sync_phase_last_sample_idx = sample_idx;
   if ((filtered_phase_valid == 0u) || (filtered_period_ticks != period_ticks)) {
     filtered_phase_error = phase_error;
     filtered_phase_valid = 1u;
@@ -2520,34 +2326,71 @@ static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samp
       step_limit = 1;
     }
     innovation = tim15_sync_clamp_i32(innovation, step_limit);
-    filter_step = innovation / TIM15_SYNC_FILTER_DIVISOR;
+    {
+      uint32_t filter_divisor = (sync_phase_quiet_mode != 0u)
+                                ? TIM15_SYNC_QUIET_FILTER_DIVISOR
+                                : TIM15_SYNC_FILTER_DIVISOR;
+      if (filter_divisor == 0u) {
+        filter_divisor = 1u;
+      }
+      filter_step = innovation / (int32_t)filter_divisor;
+    }
     if ((filter_step == 0) && (innovation != 0)) {
       filter_step = (innovation > 0) ? 1 : -1;
     }
     filtered_phase_error = rs485_sync_wrap_phase_ticks(filtered_phase_error + filter_step, period_ticks);
   }
 
-  control_phase_error = filtered_phase_error;
+  raw_abs_phase = (uint32_t)arr_auto_abs_i32(phase_error);
+  {
+    uint32_t deadband_ticks = tim15_sync_get_deadband_ticks();
+    uint32_t quiet_enter_ticks = deadband_ticks + (bit_ticks * TIM15_SYNC_QUIET_ENTER_BITS);
+    uint32_t quiet_exit_ticks = deadband_ticks + (bit_ticks * TIM15_SYNC_QUIET_EXIT_BITS);
+    uint32_t near_raw_ticks = deadband_ticks + (bit_ticks * TIM15_SYNC_NEAR_RAW_BITS);
+
+    near_raw_mode = (uint8_t)(raw_abs_phase <= near_raw_ticks);
+
+    if (sync_phase_quiet_mode != 0u) {
+      if (raw_abs_phase > quiet_exit_ticks) {
+        sync_phase_quiet_mode = 0u;
+        sync_phase_quiet_enter_count = 0u;
+      }
+    } else if (raw_abs_phase <= quiet_enter_ticks) {
+      if (sync_phase_quiet_enter_count < TIM15_SYNC_QUIET_ENTER_PACKETS) {
+        sync_phase_quiet_enter_count++;
+      }
+      if (sync_phase_quiet_enter_count >= TIM15_SYNC_QUIET_ENTER_PACKETS) {
+        sync_phase_quiet_mode = 1u;
+      }
+    } else {
+      sync_phase_quiet_enter_count = 0u;
+    }
+  }
+  control_phase_error = ((sync_phase_quiet_mode != 0u) || (near_raw_mode != 0u))
+                        ? phase_error
+                        : filtered_phase_error;
   control_abs_phase = (uint32_t)arr_auto_abs_i32(control_phase_error);
   pulse_delta = tim15_compute_phase_pulse_delta(control_phase_error);
   pulse_spacing = tim15_phase_pulse_spacing_buffers(control_abs_phase);
-  if (sync_phase_pll_enable == SYNC_PHASE_PLL_QUIET) {
-    pulse_delta = tim15_compute_quiet_phase_pulse_delta(control_phase_error);
-    pulse_spacing = tim15_quiet_phase_pulse_spacing_buffers(control_abs_phase);
+  if (near_raw_mode != 0u) {
+    if (pulse_delta > TIM15_SYNC_NEAR_RAW_MAX_OFFSET) {
+      pulse_delta = TIM15_SYNC_NEAR_RAW_MAX_OFFSET;
+    } else if (pulse_delta < -TIM15_SYNC_NEAR_RAW_MAX_OFFSET) {
+      pulse_delta = -TIM15_SYNC_NEAR_RAW_MAX_OFFSET;
+    }
+    if ((pulse_delta != 0) && (pulse_spacing < TIM15_SYNC_NEAR_RAW_SPACING)) {
+      pulse_spacing = TIM15_SYNC_NEAR_RAW_SPACING;
+    }
   }
 
   sync_phase_fast_edges++;
   sync_phase_last_error_ticks = phase_error;
   sync_phase_last_control_error_ticks = control_phase_error;
   sync_phase_last_pulse_delta = pulse_delta;
+  sync_phase_near_raw_mode = near_raw_mode;
   sync_phase_fast_last_spacing = pulse_spacing;
   rs485_sync_locked = (uint8_t)(control_abs_phase <= tim15_sync_get_deadband_ticks());
   rs485_sync_led_active = rs485_sync_locked;
-
-  if (sync_phase_pll_enable == SYNC_PHASE_PLL_OFF) {
-    sync_phase_last_pulse_delta = 0;
-    return;
-  }
 
   if (pulse_delta == 0) {
     return;
@@ -2633,17 +2476,57 @@ static void phase_micro_adjust_service(void)
 {
   extern volatile uint8_t vnd_sync_mode_public;
   uint32_t now_ms = HAL_GetTick();
+  static uint32_t last_phase_flip_ms = 0u;
+  static uint32_t last_sync_restart_ms = 0u;
 
   tim15_request_hold_offset(0);
 
   if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
       (sync_last_edge_ms != 0u) &&
       ((now_ms - sync_last_edge_ms) <= RS485_SYNC_PRESENT_MS)) {
-    rs485_anti_phase_recovery_active = 0u;
-    rs485_anti_phase_recovery_packets = 0u;
-    rs485_anti_phase_recovery_request = 0u;
-    rs485_sync_restart_request = 0u;
-    rs485_phase_guard_recovery_packets = 0u;
+    if (rs485_anti_phase_recovery_request &&
+        ((now_ms - last_phase_flip_ms) >= 250u)) {
+      adc_stream_invert_phase_polarity();
+      last_phase_flip_ms = now_ms;
+      rs485_sync_relation_score = 0;
+      rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+      rs485_sync_locked = 0u;
+      rs485_sync_led_active = 0u;
+      rs485_anti_phase_recovery_active = 0u;
+      rs485_anti_phase_recovery_packets = 0u;
+      rs485_anti_phase_recovery_request = 0u;
+      rs485_sync_restart_request = 0u;
+      rs485_phase_guard_recovery_packets = 0u;
+      sync_phase_fast_last_buf = 0xFFFFFFFFu;
+      sync_phase_filter_reset_request = 1u;
+      printf("[SYNC] anti-phase detected -> invert local marker polarity, relock IN-PHASE\r\n");
+    }
+
+    extern uint8_t vnd_is_streaming(void);
+    if (rs485_sync_restart_request && vnd_is_streaming()) {
+      rs485_sync_restart_request = 0u;
+      rs485_phase_guard_recovery_packets = 0u;
+      sync_phase_fast_last_buf = 0xFFFFFFFFu;
+      sync_phase_filter_reset_request = 1u;
+    }
+    if (rs485_sync_restart_request &&
+        ((now_ms - last_sync_restart_ms) >= RS485_SYNC_RESTART_MIN_MS)) {
+        adc_stream_restart_sync();
+        last_sync_restart_ms = now_ms;
+        rs485_sync_restart_count++;
+        rs485_sync_relation_score = 0;
+        rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+        rs485_sync_locked = 0u;
+        rs485_sync_led_active = 0u;
+        rs485_anti_phase_recovery_active = 0u;
+        rs485_anti_phase_recovery_packets = 0u;
+        rs485_anti_phase_recovery_request = 0u;
+        rs485_sync_restart_request = 0u;
+        rs485_phase_guard_recovery_packets = 0u;
+        sync_phase_fast_last_buf = 0xFFFFFFFFu;
+        sync_phase_filter_reset_request = 1u;
+        printf("[SYNC] bad phase/relation -> restart ADC sync capture\r\n");
+    }
   } else {
     rs485_sync_locked = 0u;
     rs485_sync_led_active = 0u;
@@ -3021,12 +2904,6 @@ void rs485_sync_on_buffer_complete(uint8_t parity)
     rs485_discovery_reset_master_scan();
     return;
   }
-
-#if RS485_SYNC_FULL_PERIOD_ONLY
-  if ((parity & 1u) != (RS485_SYNC_FULL_PERIOD_PARITY & 1u)) {
-    return;
-  }
-#endif
 
   if ((rs485_sync_tx_suppressed_until_ms != 0u) &&
       ((int32_t)(HAL_GetTick() - rs485_sync_tx_suppressed_until_ms) < 0)) {
@@ -3736,13 +3613,9 @@ int main(void)
   }
 #endif
 
-#if RS485_SYNC_LEGACY_SERVICES_ENABLE
   arr_auto_tune_service();
   phase_micro_adjust_service();
-#endif
-#if RS485_SYNC_PHASE_MONITOR_SERVICE_ENABLE
   sync_phase_monitor_service();
-#endif
 
   /* DEBUG dumps отключены: TIM2 больше не управляет DMA, а вывод s_frame_buffer_idx в COM4 шумит. */
 
@@ -3923,13 +3796,11 @@ main_loop_second_half:
     rs485_phase_guard_recovery_packets = 0u;
     tim15_request_hold_offset(0);
   }
-#if RS485_SYNC_PD5_ADJUST_SERVICE_ENABLE
   /* Подстройка частоты TIM15 по фазе (TIM16 счётчик, PD5 reset) */
   {
     extern void adc_sync_pd5_apply_adjustment(void);
     adc_sync_pd5_apply_adjustment();
   }
-#endif
   rs485_sync_service_tx();
   /* Выравнивание TIM15 по границе буфера — выполняем вне ISR */
   #ifndef SYNC_ACTIONS_ENABLE
@@ -3956,13 +3827,11 @@ main_loop_second_half:
   #endif
 
   #if !MAIN_LOOP_ISOLATION_TEST || (MAIN_LOOP_ISOLATION_STAGE != 3) || (MAIN_LOOP_ISOLATION_STAGE3_PART == 2)
-#if RS485_SYNC_PD5_ADJUST_SERVICE_ENABLE
     /* Применение подстройки частоты TIM15 по PD5 (slave polling) */
     {
       extern void adc_sync_pd5_apply_adjustment(void);
       adc_sync_pd5_apply_adjustment();
     }
-#endif
     // Проверка и выключение LED по таймауту (UART RX индикация)
     extern void CDC_LED_Process(void);
     CDC_LED_Process();
@@ -4071,9 +3940,7 @@ main_loop_second_half:
           printf("ROLE AUTO    - release host-forced, return to auto\r\n");
           printf("DC           - DC load/save diagnostics\r\n");
           printf("DCSAVE       - save current DC to Flash once\r\n");
-          printf("PHASE [AUTO|ticks|+ticks|-ticks] - sync target phase\r\n");
-          printf("TARGET [AUTO|ticks|+ticks|-ticks] - alias for PHASE\r\n");
-          printf("PLL [0|1|2]  - phase PLL: 0=off, 1=fast, 2=quiet hold\r\n");
+          printf("PHASE [AUTO|ticks] - show/set sync target phase\r\n");
           printf("PERF         - performance stats\r\n");
           printf("FPS          - FPS statistics only\r\n");
           printf("RESET        - software reset\r\n");
@@ -4094,32 +3961,20 @@ main_loop_second_half:
           } else {
             printf("Sync target phase: %ld ticks\r\n", (long)((int32_t)g_sync_target_phase_ticks));
           }
-          printf("Sync PLL: %u\r\n", (unsigned)sync_phase_pll_enable);
           printf("Use 'PERF' or 'FPS' for detailed statistics\r\n");
           printf("==============================\r\n");
-        } else if((strncmp(uart1_cmd_buf, "PHASE", 5) == 0) ||
-                  (strncmp(uart1_cmd_buf, "TARGET", 6) == 0)){
-          char *arg = (uart1_cmd_buf[0] == 'T') ? (uart1_cmd_buf + 6) : (uart1_cmd_buf + 5);
+        } else if(strncmp(uart1_cmd_buf, "PHASE", 5) == 0){
+          char *arg = uart1_cmd_buf + 5;
           while(*arg == ' ') arg++;
-          if((*arg == 0) || (*arg == '?')){
+          if(*arg == 0){
             if (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO) {
-              printf("[UART] PHASE=AUTO target=%ld samples effective=%ld period=%lu\r\n",
-                     (long)SYNC_TARGET_PHASE_SAMPLES,
-                     (long)sync_phase_last_target_ticks,
-                     (unsigned long)sync_phase_last_period_ticks);
+              printf("[UART] PHASE=AUTO target=%ld samples\r\n", (long)SYNC_TARGET_PHASE_SAMPLES);
             } else {
-              printf("[UART] PHASE=%ld ticks effective=%ld period=%lu\r\n",
-                     (long)((int32_t)g_sync_target_phase_ticks),
-                     (long)sync_phase_last_target_ticks,
-                     (unsigned long)sync_phase_last_period_ticks);
+              printf("[UART] PHASE=%ld ticks\r\n", (long)((int32_t)g_sync_target_phase_ticks));
             }
           } else if(strcmp(arg, "AUTO") == 0){
             g_sync_target_phase_ticks = SYNC_TARGET_PHASE_AUTO;
-            sync_phase_filter_reset_request = 1u;
-            sync_phase_fast_last_buf = 0xFFFFFFFFu;
-            rs485_sync_locked = 0u;
-            rs485_sync_led_active = 0u;
-            printf("[UART] PHASE=AUTO target=%ld samples reset=1\r\n", (long)SYNC_TARGET_PHASE_SAMPLES);
+            printf("[UART] PHASE=AUTO target=%ld samples\r\n", (long)SYNC_TARGET_PHASE_SAMPLES);
           } else {
             char *end_ptr = NULL;
             long phase_ticks = strtol(arg, &end_ptr, 10);
@@ -4127,46 +3982,9 @@ main_loop_second_half:
             if ((end_ptr == arg) || (end_ptr && *end_ptr != 0)) {
               printf("[UART] PHASE parse error: '%s'\r\n", arg);
             } else {
-              if ((*arg == '+') || (*arg == '-')) {
-                int32_t base_ticks = (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO)
-                                     ? sync_phase_last_target_ticks
-                                     : (int32_t)g_sync_target_phase_ticks;
-                phase_ticks = (long)(base_ticks + (int32_t)phase_ticks);
-              }
               g_sync_target_phase_ticks = (uint32_t)((int32_t)phase_ticks);
-              sync_phase_filter_reset_request = 1u;
-              sync_phase_fast_last_buf = 0xFFFFFFFFu;
-              rs485_sync_locked = 0u;
-              rs485_sync_led_active = 0u;
-              printf("[UART] PHASE=%ld ticks reset=1\r\n", phase_ticks);
+              printf("[UART] PHASE=%ld ticks\r\n", phase_ticks);
             }
-          }
-        } else if(strncmp(uart1_cmd_buf, "PLL", 3) == 0){
-          char *arg = uart1_cmd_buf + 3;
-          while(*arg == ' ') arg++;
-          if((*arg == 0) || (*arg == '?')){
-            printf("[UART] PLL=%u pulses=%lu\r\n",
-                   (unsigned)sync_phase_pll_enable,
-                   (unsigned long)sync_phase_fast_pulses);
-          } else if((strcmp(arg, "0") == 0) || (strcmp(arg, "OFF") == 0)){
-            sync_phase_pll_enable = SYNC_PHASE_PLL_OFF;
-            tim15_arr_pulse_stage = 0u;
-            arr_auto_apply_tim15(g_tim15_slave_base_arr ? g_tim15_slave_base_arr : htim15.Init.Period);
-            sync_phase_last_pulse_delta = 0;
-            sync_phase_fast_last_buf = 0xFFFFFFFFu;
-            printf("[UART] PLL=0 phase measurement only\r\n");
-          } else if((strcmp(arg, "1") == 0) || (strcmp(arg, "ON") == 0)){
-            sync_phase_pll_enable = SYNC_PHASE_PLL_NORMAL;
-            sync_phase_filter_reset_request = 1u;
-            sync_phase_fast_last_buf = 0xFFFFFFFFu;
-            printf("[UART] PLL=1 phase ARR pulses enabled\r\n");
-          } else if((strcmp(arg, "2") == 0) || (strcmp(arg, "QUIET") == 0)){
-            sync_phase_pll_enable = SYNC_PHASE_PLL_QUIET;
-            sync_phase_filter_reset_request = 1u;
-            sync_phase_fast_last_buf = 0xFFFFFFFFu;
-            printf("[UART] PLL=2 quiet phase hold\r\n");
-          } else {
-            printf("[UART] PLL parse error: '%s'\r\n", arg);
           }
         } else if(strncmp(uart1_cmd_buf, "DCSAVE", 6) == 0){
           vnd_dc_request_save_to_flash();
@@ -4207,15 +4025,33 @@ main_loop_second_half:
           uint8_t next_slot = (rs485_slave_count_estimate < RS485_DISCOVERY_MAX_ID) ?
                               (uint8_t)(rs485_slave_count_estimate + 1u) :
                               RS485_DISCOVERY_MAX_ID;
-          uint8_t wire0 = 0u;
-          uint8_t wire1 = 0u;
-          uint8_t slot_owner = rs485_status_slot_owner;
-          uint8_t wire_cycle_start = (uint8_t)(((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
-                                                (slot_owner == 0u)) ? 1u : 0u);
-          rs485_status_build_wire_word((slot_owner == 0u) ? rs485_status_master_request_id : rs485_local_node_id,
-                                       wire_cycle_start,
-                                       &wire0,
-                                       &wire1);
+          uint32_t primask = __get_PRIMASK();
+          int32_t phase_err_snapshot = 0;
+          int32_t phase_ctrl_err_snapshot = 0;
+          int32_t phase_pulse_snapshot = 0;
+          uint8_t phase_quiet_snapshot = 0u;
+          uint8_t phase_near_snapshot = 0u;
+          uint16_t phase_stable_snapshot = 0u;
+          uint32_t phase_pulses_snapshot = 0u;
+          uint32_t phase_busy_snapshot = 0u;
+          uint32_t phase_space_snapshot = 0u;
+          uint32_t phase_spacing_snapshot = 0u;
+
+          __disable_irq();
+          phase_err_snapshot = sync_phase_last_error_ticks;
+          phase_ctrl_err_snapshot = sync_phase_last_control_error_ticks;
+          phase_pulse_snapshot = sync_phase_last_pulse_delta;
+          phase_quiet_snapshot = sync_phase_quiet_mode;
+          phase_near_snapshot = sync_phase_near_raw_mode;
+          phase_stable_snapshot = sync_phase_quiet_enter_count;
+          phase_pulses_snapshot = sync_phase_fast_pulses;
+          phase_busy_snapshot = sync_phase_fast_skip_busy;
+          phase_space_snapshot = sync_phase_fast_skip_spacing;
+          phase_spacing_snapshot = sync_phase_fast_last_spacing;
+          if (primask == 0u) {
+            __enable_irq();
+          }
+
           printf("\r\n=== RS485 STATUS ===\r\n");
           printf("mode        : %u (%s)\r\n",
             (unsigned)vnd_sync_mode_public,
@@ -4226,61 +4062,32 @@ main_loop_second_half:
           printf("slave_count : %u\r\n", (unsigned)rs485_slave_count_estimate);
           printf("next_slot   : %u\r\n", (unsigned)next_slot);
           printf("status_byte : 0x%02X\r\n", (unsigned)rs485_status_build_local_byte());
-          printf("slot_owner  : %u (%s), req=%u miss=%u\r\n",
-            (unsigned)slot_owner,
-            (slot_owner == 0u) ? "MASTER_WORD" : "SLAVE_REPLY",
-            (unsigned)rs485_status_master_request_id,
-            (unsigned)rs485_status_last_miss_id);
-          printf("wire_word   : 0x%02X 0x%02X, rx_len=%u rx=0x%02X 0x%02X\r\n",
-            (unsigned)wire0,
-            (unsigned)wire1,
-            (unsigned)rs485_status_slot_response_len,
-            (unsigned)rs485_status_slot_response_byte,
-            (unsigned)rs485_status_slot_response_byte2);
-          printf("slot_stats  : ok=%lu miss=%lu local=%lu/%lu peer_rx=%lu def=%lu\r\n",
-            (unsigned long)rs485_status_window_ok_count,
-            (unsigned long)rs485_status_window_miss_count,
-            (unsigned long)rs485_status_local_tx_count,
-            (unsigned long)rs485_status_local_slot_expected_count,
-            (unsigned long)rs485_status_peer_rx_count,
-            (unsigned long)rs485_status_deferred_tx_count);
           printf("sync_edges  : %lu\r\n", (unsigned long)sync_edge_count);
           printf("sync_age_ms : %lu\r\n", (unsigned long)edge_age);
           printf("sync_alive  : %u\r\n", (unsigned)(edge_age <= RS485_SYNC_PRESENT_MS && sync_last_edge_ms != 0u));
-          printf("marker_rel  : %u (%s)\r\n",
+          printf("phase_rel   : %u (%s)\r\n",
             (unsigned)rs485_sync_phase_relation,
             (rs485_sync_phase_relation == RS485_SYNC_RELATION_IN_PHASE) ? "IN_PHASE" :
             (rs485_sync_phase_relation == RS485_SYNC_RELATION_ANTI_PHASE) ? "ANTI_PHASE" : "UNKNOWN");
-          printf("phase_pll   : %u\r\n", (unsigned)sync_phase_pll_enable);
-          printf("phase_lock  : %u\r\n", (unsigned)rs485_sync_locked);
+          printf("anti_fix    : %u, packets=%u\r\n",
+            (unsigned)rs485_anti_phase_recovery_active,
+            (unsigned)rs485_anti_phase_recovery_packets);
           printf("phase_err   : %ld ticks, pulse=%ld\r\n",
-            (long)sync_phase_last_error_ticks,
-            (long)sync_phase_last_pulse_delta);
-          printf("phase_ctrl  : err=%ld pulses=%lu busy=%lu space=%lu spacing=%lu stage=%u arr=%lu base=%lu\r\n",
-            (long)sync_phase_last_control_error_ticks,
-            (unsigned long)sync_phase_fast_pulses,
-            (unsigned long)sync_phase_fast_skip_busy,
-            (unsigned long)sync_phase_fast_skip_spacing,
-            (unsigned long)sync_phase_fast_last_spacing,
-            (unsigned)tim15_arr_pulse_stage,
-            (unsigned long)TIM15->ARR,
-            (unsigned long)g_tim15_slave_base_arr);
-          printf("phase_target: %ld ticks, period=%lu, mode=%s samples=%ld\r\n",
-            (long)sync_phase_last_target_ticks,
-            (unsigned long)sync_phase_last_period_ticks,
-            (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO) ? "AUTO" : "MANUAL",
-            (long)SYNC_TARGET_PHASE_SAMPLES);
-          printf("phase_cmd   : %s%ld\r\n",
-            (g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO) ? "AUTO " : "",
-            (long)((g_sync_target_phase_ticks == SYNC_TARGET_PHASE_AUTO)
-                   ? (int32_t)SYNC_TARGET_PHASE_SAMPLES
-                   : (int32_t)g_sync_target_phase_ticks));
-          printf("phase_sample: idx=%u marker=%u edge=%u full200=%u sel=%u\r\n",
-            (unsigned)sync_phase_last_sample_idx,
-            (unsigned)sync_phase_last_local_marker,
-            (unsigned)sync_phase_last_local_edge,
-            (unsigned)RS485_SYNC_FULL_PERIOD_ONLY,
-            (unsigned)RS485_SYNC_FULL_PERIOD_PARITY);
+            (long)phase_err_snapshot,
+            (long)phase_pulse_snapshot);
+          printf("phase_ctrl  : quiet=%u near=%u stable=%u err=%ld pulses=%lu busy=%lu space=%lu spacing=%lu\r\n",
+            (unsigned)phase_quiet_snapshot,
+            (unsigned)phase_near_snapshot,
+            (unsigned)phase_stable_snapshot,
+            (long)phase_ctrl_err_snapshot,
+            (unsigned long)phase_pulses_snapshot,
+            (unsigned long)phase_busy_snapshot,
+            (unsigned long)phase_space_snapshot,
+            (unsigned long)phase_spacing_snapshot);
+          printf("phase_guard : packets=%u, restart=%u/%lu\r\n",
+            (unsigned)rs485_phase_guard_recovery_packets,
+            (unsigned)rs485_sync_restart_request,
+            (unsigned long)rs485_sync_restart_count);
           printf("uart_errs   : %lu\r\n", (unsigned long)rs485_uart_error_count);
           printf("rs485_rx    : %lu\r\n", (unsigned long)rs485_rx_packets);
           printf("rs485_tx    : %lu\r\n", (unsigned long)rs485_tx_packets);
@@ -5816,7 +5623,7 @@ void vnd_get_lcd_sync_snapshot(vnd_lcd_sync_snapshot_t *out)
   if (sync_signal_alive) {
     sync_ok_visual = vnd_sync_ok_public;
     if (display_mode == VND_SYNC_MODE_SLAVE) {
-      sync_ok_visual = 1u;
+      sync_ok_visual = (rs485_sync_phase_relation == RS485_SYNC_RELATION_IN_PHASE) ? 1u : 0u;
     }
     if ((display_mode == VND_SYNC_MODE_MASTER) && (rs485_slave_count_estimate != 0u)) {
       sync_ok_visual = 1u;

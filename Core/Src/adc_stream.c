@@ -345,6 +345,12 @@ static inline void adc_marker_set_level_b(uint8_t level_high)
     ADC_MARKER_PORT_C->BSRR = level_high ? (uint32_t)ADC_MARKER_PIN_C : ((uint32_t)ADC_MARKER_PIN_C << 16);
 }
 
+static inline uint8_t adc_marker_output_allowed(void)
+{
+    extern uint8_t vnd_is_tx_enabled(void);
+    return (uint8_t)(vnd_is_tx_enabled() ? 1u : 0u);
+}
+
 static inline uint8_t adc_marker_get_level(void)
 {
     return (uint8_t)(s_pb8_state & 1u);
@@ -352,18 +358,17 @@ static inline uint8_t adc_marker_get_level(void)
 
 static inline void adc_marker_set_level(uint8_t level_high)
 {
-    extern uint8_t vnd_is_tx_enabled(void);
-    uint8_t marker_level = (uint8_t)(level_high ? 1u : 0u);
-    uint8_t tx_enabled = (uint8_t)(vnd_is_tx_enabled() ? 1u : 0u);
+    uint8_t output_allowed = adc_marker_output_allowed();
+    uint8_t physical_level = (uint8_t)((output_allowed && level_high) ? 1u : 0u);
 
     /* Логическая фаза sync должна жить независимо от USB stream/TX gate.
-       PA2/PC7 должны всегда показывать реальную фазу; TX_ENABLE гейтит
-       только PA1, не сбивая marker на осциллографе и у второго узла. */
-    s_pb8_state = marker_level;
+       Физические PA2/PC7 при выключенном TX зажимаем в LOW, а PA1 держим
+       в неактивном HIGH. При включенном TX PA1 идёт инверсией PA2/PC7. */
+    s_pb8_state = (uint8_t)(level_high ? 1u : 0u);
 
-    adc_marker_set_level_a(marker_level);
-    adc_marker_set_level_b(marker_level);
-    ADC_TX_GATE_PORT->BSRR = (tx_enabled && marker_level)
+    adc_marker_set_level_a(physical_level);
+    adc_marker_set_level_b(physical_level);
+    ADC_TX_GATE_PORT->BSRR = physical_level
         ? ((uint32_t)ADC_TX_GATE_PIN << 16)
         : (uint32_t)ADC_TX_GATE_PIN;
 }

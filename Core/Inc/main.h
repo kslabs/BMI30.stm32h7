@@ -152,9 +152,9 @@ extern volatile uint32_t systick_heartbeat;
 #define MCP4261_SPI_MOSI_Pin GPIO_PIN_5
 #define MCP4261_SPI_MOSI_GPIO_Port GPIOB
 
-/* AUTO-цель фазы для физических TX-импульсов. Длительность приема RS485
-   sync-байта добавляется отдельно в tim15_get_default_target_phase_ticks(). */
-#define SYNC_TARGET_PHASE_SAMPLES (0)
+/* Базовая AUTO-цель фазы в семплах. Компенсация длительности RS485 sync-байта
+  добавляется отдельно, потому что slave измеряет фазу уже после приема пакета. */
+#define SYNC_TARGET_PHASE_SAMPLES (10)
 
 int32_t tim15_get_default_target_phase_ticks(void);
 void rs485_sync_on_buffer_complete(uint8_t parity);
