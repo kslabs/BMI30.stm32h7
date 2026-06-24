@@ -551,7 +551,7 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
                 (req->bRequest == VND_CMD_SET_ASYNC_MODE || req->bRequest == VND_CMD_SET_CHMODE ||
                  req->bRequest == VND_CMD_SET_FULL_MODE  || req->bRequest == VND_CMD_SET_PROFILE ||
                  req->bRequest == VND_CMD_SET_TX_ENABLE || req->bRequest == VND_CMD_SET_OPTIC_POWER ||
-                 req->bRequest == VND_CMD_SET_LED_PATTERN) ) {
+                 req->bRequest == VND_CMD_SET_LED_PATTERN || req->bRequest == VND_CMD_SET_DET_ADC) ) {
       /* Альтернативный путь: принять параметр через wValue (без data stage) */
       uint8_t tmp[2];
       tmp[0] = (uint8_t)req->bRequest;
@@ -584,7 +584,7 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
                  req->bRequest == VND_CMD_SET_FULL_MODE  || req->bRequest == VND_CMD_SET_PROFILE ||
                  req->bRequest == VND_CMD_SET_TX_ENABLE || req->bRequest == VND_CMD_SET_OPTIC_POWER ||
                  req->bRequest == VND_CMD_SET_OPTIC_HOLD || req->bRequest == VND_CMD_SET_LED_PATTERN ||
-                 req->bRequest == VND_CMD_SET_DC_CONFIG) ) {
+                 req->bRequest == VND_CMD_SET_DET_ADC || req->bRequest == VND_CMD_SET_DC_CONFIG) ) {
       /* Принимаем небольшие конфиги по control OUT с телом данных, доставляем в Vendor как будто по Bulk OUT */
       hcdc->CmdOpCode = req->bRequest;
       hcdc->CmdLength = (uint8_t)req->wLength;
@@ -779,6 +779,7 @@ static uint8_t USBD_CDCVND_EP0_RxReady(USBD_HandleTypeDef *pdev)
         op == VND_CMD_SET_OPTIC_POWER ||
         op == VND_CMD_SET_OPTIC_HOLD ||
         op == VND_CMD_SET_LED_PATTERN ||
+        op == VND_CMD_SET_DET_ADC ||
         op == VND_CMD_SET_DC_CONFIG) {
       uint32_t tot = (uint32_t)len + 1U;
       if (tot > sizeof(vnd_rx_buf)) tot = sizeof(vnd_rx_buf); /* страхуемся от выхода за границы */

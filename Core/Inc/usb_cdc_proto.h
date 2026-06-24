@@ -67,6 +67,18 @@ typedef struct {
     uint32_t seq_adc[2];         // отдельные счётчики кадров per ADC
 } usb_stream_cfg_t;
 
+typedef struct {
+    uint8_t  version;       // =1
+    uint8_t  flags;         // bit0=temp, bit1=vdda, bit2=vbat valid
+    int16_t  temp_c;        // die temperature, deg C
+    uint16_t vdda_mv;       // analog supply calculated from VREFINT
+    uint16_t vbat_mv;       // VBAT pin voltage, 0 if not present/valid
+    uint16_t raw_temp;      // raw ADC3 temperature channel
+    uint16_t raw_vrefint;   // raw ADC3 VREFINT channel
+    uint16_t raw_vbat;      // raw ADC3 VBAT/4 channel
+    uint16_t reserved;
+} mcu_internal_adc_v1_t;
+
 // 32-байтный заголовок кадра (per ADC)
 #pragma pack(push,1)
 typedef struct {
@@ -90,6 +102,9 @@ void usb_stream_init(void);
 void usb_stream_poll(void);
 uint8_t usb_stream_try_send_frame(void); // возвращает 1 если кадр отправлен
 usb_stream_cfg_t* usb_stream_cfg(void);
+void temp_sensor_init(void);
+int16_t temp_sensor_read_celsius(void);
+uint8_t mcu_internal_adc_read(mcu_internal_adc_v1_t *out);
 
 // Хук для стека USB: передать принятые из CDC байты в парсер протокола
 void usb_stream_on_rx_bytes(const uint8_t* data, size_t len);

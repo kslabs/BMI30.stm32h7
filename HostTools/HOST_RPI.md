@@ -163,6 +163,7 @@ send_host_rx_clear(dev, 0x03)
 
 - `0x34 = VND_CMD_SET_OPTIC_POWER`
 - `0x39 = VND_CMD_SET_OPTIC_HOLD`
+- `0x3C = VND_CMD_SET_DET_ADC`
 - payload `0x34`: `u8` в диапазоне `0..255`
   - `0` = минимальная мощность/чувствительность
   - `255` = максимальная
@@ -170,19 +171,23 @@ send_host_rx_clear(dev, 0x03)
   - `0` = вернуть значение по умолчанию `30` (`3.0 сек`)
   - `1..600` = удерживать `optic_active=1` ещё `0.1..60.0 сек` после каждого изменения входа фотоприёмника
   - старый формат `u8 seconds` тоже принимается для совместимости
+- payload `0x3C`: `u8`, bit0=`DetADC1`, bit1=`DetADC2`, остальные биты игнорируются; по умолчанию оба бита равны `0`
 
 Пример установки через ваш host-код (bulk OUT `0x03`):
 
 ```python
 VND_CMD_SET_OPTIC_POWER = 0x34
 VND_CMD_SET_OPTIC_HOLD = 0x39
+VND_CMD_SET_DET_ADC = 0x3C
 
 optic_power = 120     # 0..255
 optic_hold_s = 1.5    # 0=default(3.0), step 0.1, max 60.0
 optic_hold_ds = int(round(optic_hold_s * 10.0))
+det_adc = 0x03        # bit0=DetADC1, bit1=DetADC2
 
 dev.write(0x03, bytes([VND_CMD_SET_OPTIC_POWER, optic_power & 0xFF]), timeout=1000)
 dev.write(0x03, bytes([VND_CMD_SET_OPTIC_HOLD]) + optic_hold_ds.to_bytes(2, "little"), timeout=1000)
+dev.write(0x03, bytes([VND_CMD_SET_DET_ADC, det_adc & 0x03]), timeout=1000)
 ```
 
 Логика детекта теперь такая:
@@ -208,7 +213,7 @@ dev.write(0x03, bytes([VND_CMD_SET_OPTIC_HOLD]) + optic_hold_ds.to_bytes(2, "lit
 - offset `100`: `u32 sync_seen_mask`, bit0=node1 ... bit30=node31
 - offset `104`: `u8 sync_node_count`
 - offset `105..135`: `u8 sync_status_bytes[31]`, index0=node1 ... index30=node31
-- формат каждого status byte: bits `0..4=node_id`, bit `5=photoreceiver active`, bit `6=TX enabled`, bit `7=label/reserved`
+- формат status byte: bits `0..4=selector` у local master или `node_id` у slave/remote, bit `5=photoreceiver active`, bit `6=DetADC1`, bit `7=DetADC2`
 
 В проекте это уже декодируют скрипты:
 

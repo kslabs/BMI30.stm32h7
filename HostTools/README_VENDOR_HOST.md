@@ -63,6 +63,8 @@
 - 0x39 SET_OPTIC_HOLD
 - 0x3A GET_DC_CONFIG
 - 0x3B SET_LED_PATTERN
+- 0x3C SET_DET_ADC
+- 0x3D SET_RS485_ID
 
 ### 2.2 EP0 Control (vendor requests)
 
@@ -78,12 +80,12 @@ Vendor OUT без data stage:
 - 0x21 STOP_STREAM
 
 Vendor OUT с параметром в wValue (без data stage):
-- 0x13, 0x14, 0x18, 0x19, 0x33, 0x34, 0x3B (u8 в младшем байте wValue)
+- 0x13, 0x14, 0x18, 0x19, 0x33, 0x34, 0x3B, 0x3C (u8 в младшем байте wValue)
 - 0x17 (u16 в wValue)
 - 0x39 (u16 hold_ds в wValue)
 
 Vendor OUT с data stage:
-- 0x13, 0x14, 0x18, 0x19, 0x33, 0x34, 0x39, 0x3B, 0x1F
+- 0x13, 0x14, 0x18, 0x19, 0x33, 0x34, 0x39, 0x3B, 0x3C, 0x1F
 
 ### 2.3 CDC протокол (отдельный диагностический канал)
 
@@ -122,7 +124,9 @@ Vendor OUT с data stage:
   - `flags_runtime & 0x0020` = локальный оптический датчик активен.
   - `reserved3 bit0` = то же состояние в legacy packed-поле.
   - `sync_local_status bit5` = локальный RS485 status bit оптического датчика.
+  - `sync_local_status bit6` = локальный `DetADC1`, `bit7` = локальный `DetADC2`.
   - `sync_status_bytes[node_id-1] bit5` = состояние оптического датчика удаленной антенны.
+  - `sync_status_bytes[node_id-1] bit6/bit7` = `DetADC1/DetADC2` удаленной антенны.
 - При изменении состояния оптического датчика устройство должно отправить/поставить в очередь `STAT`, чтобы хост мог получать событие без ожидания следующего опроса. Хост также может опрашивать `GET_STATUS` в любой момент.
 
 ### 3.1.1 Диагностика пропажи потока на Raspberry
@@ -315,7 +319,44 @@ Reconnect/init sequence не должен сбрасывать эту конфи
 [recovery] action=<bulk_reader_reopen|restore_config_start|wait_reenum|soft_reset|fallback_600> result=<ok|fail> restore_stream_mode=<n> restore_bytes=<n>
 ```
 
-### 3.2 DCCF (GET_DC_CONFIG, 0x3A)
+### 3.2 ADC frame
+
+ADC-кадр идет по Vendor Bulk IN `0x83`, little-endian. Заголовок всегда 32 байта:
+
+```text
+offset  size  field
+0       2     magic = 0xA55A, wire bytes 5A A5
+2       1     version = 1
+3       1     flags: bit0=ADC0/A, bit1=ADC1/B, bit2=crc16 present, bit7=TEST
+4       4     seq
+8       4     timestamp_ms
+12      2     total_samples
+14      2     zone_count
+16      4     zone1_offset
+20      4     zone1_length
+24      4     reserved: source dma_seq/generation
+28      2     reserved2: buffer_index + source snapshot diagnostics
+30      2     crc16
+32      N     payload: total_samples * uint16_t samples
+```
+
+Если `flags & 0x04 != 0`, `crc16` считается как CRC16-CCITT-FALSE (`poly=0x1021`, `init=0xFFFF`) по байтам `header[0..29]`, затем по payload `total_samples * 2`. Поле `crc16` в расчет не входит. Bit2 в `flags` уже должен быть установлен на момент расчета CRC.
+
+`reserved2` сохраняет совместимость по нижним битам:
+
+```text
+bits 0..2   buffer_index / phase index
+bits 3..7   source_slot = dma_seq % FIFO_FRAMES
+bit  8      snapshot_used
+bit  9      generation_changed_during_snapshot
+bit  10     fifo_guard_near_reuse
+bit  11     source_consumed_after_snapshot
+bits 12..15 TxCplt counter low nibble at frame build
+```
+
+Если host видит физически невозможный in-frame jump, надо логировать вместе `reserved`, `reserved2`, `seq`, `flags`, `total_samples` и CRC status. В нормальном кадре ожидается `snapshot_used=1`; `generation_changed_during_snapshot` и `fifo_guard_near_reuse` должны оставаться 0.
+
+### 3.3 DCCF (GET_DC_CONFIG, 0x3A)
 
 - Сигнатура: DCCF
 - Размер: 40 байт
@@ -332,7 +373,7 @@ Reconnect/init sequence не должен сбрасывать эту конфи
   - fast_until_ms: legacy field, всегда 0 в модели постоянной адаптации
   - adapt_updates
 
-### 3.3 LCDS (GET_LCD_STATUS, 0x38)
+### 3.4 LCDS (GET_LCD_STATUS, 0x38)
 
 - Сигнатура: LCDS
 - Размер: 24 байта
@@ -344,7 +385,155 @@ Reconnect/init sequence не должен сбрасывать эту конфи
   - sync_age_ms
   - text
 
-## 4. Актуальные команды оптики, TX и LED
+### 3.5 EVT1: поток изменений вместо частого опроса
+
+Новый рекомендуемый путь для динамических параметров - service-события по тому же Vendor Bulk IN `0x83`.
+Хост читает обычный поток и, кроме ADC-кадров и `STAT`, распознает маленькие пакеты с сигнатурой `EVT1`.
+
+Назначение:
+- `GET_STATUS` остается snapshot/recovery API: снять полное состояние после reconnect, fault-probe или при старте диагностики.
+- `EVT1` используется для изменений состояния без постоянного request-response polling.
+- Если изменений нет, firmware все равно отправляет редкий heartbeat: `MODE_STATE` примерно раз в 30 секунд, чтобы host видел живой service path.
+- Устройство не копит большой backlog событий. Если host не успевает читать, старые события могут быть заменены более свежими.
+- ADC кадры имеют приоритет. События отправляются только когда Vendor IN свободен и не разрывают A/B пару.
+
+Формат `EVT1`, little-endian:
+
+```text
+offset  size  field
+0       4     sig = "EVT1"
+4       1     version = 1
+5       1     event_type
+6       2     payload_len
+8       4     event_seq
+12      4     device_tick_ms
+16      N     payload
+```
+
+Сейчас firmware отправляет такие `event_type`:
+
+```text
+0x00 FW_INFO      версия прошивки, build time и STM32 UID96
+0x01 TEMP_C       температура, совместимый короткий формат
+0x02 MCU_ADC      внутренние ADC3 каналы: temperature/VREFINT/VBAT
+0x10 OPTIC_STATE  оптический датчик, TX, power/hold
+0x11 SYNC_STATE   роль, наличие sync, active node mask/count
+0x12 MODE_STATE   режимы стрима и host-selected параметры
+0x13 ERROR_STATE  ошибки и USB recovery counters
+```
+
+`0x00 FW_INFO`, payload 47 байт. Firmware отправляет его в baseline после `START_STREAM`.
+
+```text
+offset  size  field
+0       1     payload_version = 1
+1       1     fw_major
+2       1     fw_minor
+3       1     fw_patch
+4       1     fw_build, reserved сейчас 0
+5       4     stm32_uid_w0, little-endian
+9       4     stm32_uid_w1, little-endian
+13      4     stm32_uid_w2, little-endian
+17      10    build_date ASCII, "YYYY-MM-DD", zero-padded if shorter
+27      8     build_time ASCII, "HH:MM:SS", zero-padded if shorter
+35      12    git_hash ASCII prefix, zero-padded if shorter
+```
+
+STM32 UID96 для host key/identity удобно печатать как `uid_w2 uid_w1 uid_w0` в hex или как 12 raw bytes в порядке payload offset 5..16.
+
+`0x01 TEMP_C`, payload 2 байта:
+
+```text
+offset  size  field
+0       2     int16_t temp_c
+```
+
+`0x02 MCU_ADC`, payload 16 байт:
+
+```text
+offset  size  field
+0       1     payload_version = 1
+1       1     flags: bit0=temp valid, bit1=vdda valid, bit2=vbat valid
+2       2     int16_t temp_c
+4       2     uint16_t vdda_mv   ; VDDA по VREFINT calibration
+6       2     uint16_t vbat_mv   ; VBAT pin, 0 если не валидно/не подключено
+8       2     uint16_t raw_temp
+10      2     uint16_t raw_vrefint
+12      2     uint16_t raw_vbat  ; ADC видит VBAT/4
+14      2     reserved
+```
+
+`0x10 OPTIC_STATE`, payload 8 байт:
+
+```text
+0       1     payload_version = 1
+1       1     flags: bit0=optic_active, bit1=tx_enabled
+2       1     optic_power 0..255
+3       1     led_pattern
+4       2     optic_hold_ds, 0.1 s units
+6       2     reserved
+```
+
+`0x11 SYNC_STATE`, payload 16 байт:
+
+```text
+0       1     payload_version = 1
+1       1     raw_mode: 0=master, 1=slave, 2=off
+2       1     display_mode
+3       1     display_char: 'M', 'S', 'O'
+4       1     local node_id, 0 если не назначен
+5       1     active_status_count из RS485 status table
+6       1     total_devices estimate; master = active_status_count + 1
+7       1     flags: bit0=sync_signal_alive, bit1=sync_ok_visual, bit2=color_locked, bit3=host_forced, bit4=sync_ok_public
+8       4     sync_seen_mask, bit0=node1 ... bit30=node31
+12      1     display_value
+13      1     local_status_flags: только bits 5..7 local status byte
+14      2     sync_age_ds, 0.1 s units, 0xFFFF если неизвестно
+```
+
+`0x12 MODE_STATE`, payload 16 байт:
+
+```text
+0       1     payload_version = 1
+1       1     flags: bit0=streaming, bit1=diag, bit2=pending_init, bit3=stream_active, bit4=full_mode, bit5=async_mode, bit6=tx_enabled, bit7=host_rx_alive
+2       1     stream_mode: 0=LATEST, 1=LOSSLESS_ROI, 2=AVG_ROI
+3       1     ch_mode: 0=A-only, 1=B-only, 2=both
+4       1     host_profile
+5       1     avg_n
+6       2     cur_samples_per_frame
+8       2     frame_samples_req
+10      2     trunc_samples
+12      1     sync_mode_public
+13      1     sync_mode_host_forced
+14      2     reserved
+```
+
+`0x13 ERROR_STATE`, payload 16 байт:
+
+```text
+0       1     payload_version = 1
+1       1     flags: bit0=last_error_nonzero, bit1=usb_in_busy_or_inflight
+2       2     last_error, saturated to 0xFFFF
+4       4     error_counter
+8       4     tx_force_idle_count
+12      4     tx_drop_recovery_count
+```
+
+Для `stream_mode=2 AVG_ROI` поле `avg_n` поддерживает рабочие значения `8/16/24/32/40/48/56/64` в диапазоне `8..64`. Ожидаемая частота усредненных ROI-пар примерно `buf_rate / avg_n`: при `buf_rate=400` это около `50 fps` для `avg_n=8`, `25 fps` для `avg_n=16`, `16.6 fps` для `avg_n=24`.
+
+Мониторинг идет низкоприоритетно из main-loop, не из критического ADC/USB пути. Внутренние ADC3 каналы (`TEMP`, `VREFINT`, `VBAT`) читаются примерно раз в 2 секунды. Быстрые state-снапшоты проверяются чаще, но события отправляются только при изменении. Если вообще нет изменений, `MODE_STATE` используется как heartbeat примерно раз в 30 секунд. Если основной поток занят, событие может прийти позже. После `START_STREAM` firmware форсирует baseline по всем типам событий.
+
+Host-side правила:
+- Reader на `0x83` должен различать три типа входящих данных:
+  - ADC frame: `0x5A 0xA5 ...`
+  - `STAT`
+  - `EVT1`
+- `EVT1` не является A/B кадром и не участвует в seq-проверке ADC.
+- По `EVT1` хост обновляет локальный cache состояния и не обязан опрашивать эти поля через request-response.
+- Если host не видит ни одного `EVT1` дольше 2 периодов heartbeat, но ADC кадры продолжают идти, это не повод сбрасывать stream; достаточно отметить service-event lag и ждать следующего безопасного IN-окна.
+- Если после reconnect нужен полный baseline, сначала снять `GET_STATUS`, затем продолжить чтение `EVT1`; после нового `START_STREAM` baseline также придет событиями.
+
+## 4. Актуальные команды оптики, TX, LED и DetADC
 
 - 0x33 SET_TX_ENABLE: 0/1
 - 0x34 SET_OPTIC_POWER: u8 0..255
@@ -353,17 +542,25 @@ Reconnect/init sequence не должен сбрасывать эту конфи
   - совместимость: legacy u8 seconds
 - 0x3B SET_LED_PATTERN: u8 pattern_id
 - 0x35 LED_EVENT: u8 event + u16 duration_ms
+- 0x3C SET_DET_ADC: u8 bits
+  - bit0 = `DetADC1`
+  - bit1 = `DetADC2`
+  - остальные биты игнорируются, значение по умолчанию `0`
+- 0x3D SET_RS485_ID: u8 node_id
+  - `0` = сбросить временный локальный id и ждать auto-нумерацию
+  - `1..31` = принудительно задать временный RS485 slave id
+  - команда предназначена для диагностики/ручного восстановления; штатно master сам назначает компактные id
 
 Проверка через STAT
 - flags_runtime bit 0x0010: TX enabled
 - flags_runtime bit 0x0020: optic active
 - sync_status byte:
-  - bits 0..4 = node_id
+  - bits 0..4 = `selector` для локального master status или `node_id` для slave/remote status
   - bit 5 = optic active
-  - bit 6 = TX enabled
-  - bit 7 = label/reserved
-- Этот же `sync_status` байт передается по RS485 на другую антенну. Для оптического датчика выделен один бит: `0x20`/bit5. Если датчик активен, bit5 должен быть 1; если неактивен, bit5 должен быть 0.
-- Для хоста состояние доступно двумя путями: по запросу `GET_STATUS` (`0x30`, читать 136 байт) и как событие `STAT` при каждом изменении bit5 локального оптического состояния.
+  - bit 6 = `DetADC1`
+  - bit 7 = `DetADC2`
+- RS485 master-цикл передает `sync_byte, master_status0, master_status1`; ответ slave передает `slave_status0, slave_status1`. В `STAT v5` сейчас наружу отдаются первые байты статуса: `sync_local_status` и `sync_status_bytes[31]`.
+- Для хоста состояние доступно двумя путями: по запросу `GET_STATUS` (`0x30`, читать 136 байт) и как событие `STAT` при изменении локального status byte.
 
 ## 5. Актуальные команды DC
 

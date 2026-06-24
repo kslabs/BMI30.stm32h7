@@ -1154,7 +1154,7 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "Flash BOTH ST-LINK (CubeProgrammer)",
+			"label": "Flash ALL ST-LINK (CubeProgrammer)",
 			"type": "shell",
 			"command": "powershell.exe",
 			"args": [
@@ -1169,7 +1169,7 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "Flash BOTH ST-LINK (clean build)",
+			"label": "Flash ALL ST-LINK (clean build)",
 			"type": "shell",
 			"command": "powershell.exe",
 			"args": [

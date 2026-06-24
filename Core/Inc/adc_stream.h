@@ -166,6 +166,8 @@ void adc_stream_sync_edge(void);
 
 // Fine frequency tuning: установка buf_rate в диапазоне 200-210 Hz
 void adc_stream_set_buf_rate_fine(uint16_t buf_rate_hz);
+void adc_stream_set_arr_fine_offset(int32_t offset);
+int32_t adc_stream_get_arr_fine_offset(void);
 
 // Внешняя синхронизация: установка buf_rate по входным импульсам (без ограничения marker_hz)
 void adc_stream_set_buf_rate_external(uint16_t buf_rate_hz);

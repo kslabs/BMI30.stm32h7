@@ -18,12 +18,25 @@ extern "C" {
 #define VND_CMD_SET_DC_CONFIG   0x1Fu /* payload: v1 DC timing config, see vnd_dc_config_v1_t fields */
 #define VND_CMD_GET_DC_CONFIG   0x3Au /* получить текущий DC timing config ('DCCF', 40 байт) */
 #define VND_CMD_SET_LED_PATTERN 0x3Bu /* payload: u8 ws2812_pattern_t for the 20 dynamic LEDs */
+#define VND_CMD_SET_DET_ADC     0x3Cu /* payload: u8 bit0=DetADC1, bit1=DetADC2 */
+
+/* Асинхронные service-события по Vendor IN 0x83: сигнатура 'EVT1'. */
+#define VND_EVT_TYPE_FW_INFO     0x00u /* payload: firmware version/build + STM32 UID96 v1 */
+#define VND_EVT_TYPE_TEMP_C      0x01u /* payload: int16_t temp_c, little-endian, 1 deg C step */
+#define VND_EVT_TYPE_MCU_ADC     0x02u /* payload: mcu adc/supply snapshot v1 */
+#define VND_EVT_TYPE_OPTIC_STATE 0x10u /* payload: optic/tx state v1 */
+#define VND_EVT_TYPE_SYNC_STATE  0x11u /* payload: sync role/topology state v1 */
+#define VND_EVT_TYPE_MODE_STATE  0x12u /* payload: stream/mode state v1 */
+#define VND_EVT_TYPE_ERROR_STATE 0x13u /* payload: error counters v1 */
+
 /* Дополнение из спецификации */
 #define VND_CMD_SET_FULL_MODE   0x13u /* 1 байт: 0=ROI, 1=FULL */
 #define VND_CMD_SET_PROFILE     0x14u /* 1 байт profile */
 #define VND_CMD_SET_ROI_US      0x15u /* 4 байта u32 (микросекунды) */
 /* Новая команда: установить явный размер кадра (samples_per_frame) для ~20 FPS режимов */
 #define VND_CMD_SET_FRAME_SAMPLES 0x17u /* 2 байта u16 */
+#define VND_CMD_SET_SYNC_MODE   0x1Du /* payload: u8 mode (0=master, 1=slave, 2=off), host-forced */
+#define VND_CMD_SET_RS485_ID   0x3Du /* payload: u8 node_id (0=unassigned, 1..31=slave id) */
 /* Режим асинхронной отправки A/B и выбор каналов */
 #ifndef VND_CMD_SET_ASYNC_MODE
 #define VND_CMD_SET_ASYNC_MODE   0x18u /* payload: u8 mode (0=pair/strict A->B, 1=async independent) */
@@ -83,6 +96,9 @@ extern "C" {
 #endif
 #ifndef VND_FLAGS_ADC1
 #define VND_FLAGS_ADC1      0x02u
+#endif
+#ifndef VND_FRAME_FLAG_CRC16
+#define VND_FRAME_FLAG_CRC16 0x04u
 #endif
 #ifndef VND_DMA_TIMEOUT_MS
 #define VND_DMA_TIMEOUT_MS  300u
@@ -218,7 +234,7 @@ typedef struct {
     /* === Расширение v5 (RPI optic/sync/LED control status) === */
     uint16_t optic_hold_ds;    /* hold time in 0.1 s units; default 30 = 3.0 s */
     uint8_t  led_pattern;      /* current host-selectable dynamic LED pattern */
-    uint8_t  sync_local_status;/* local RS485 status byte: id[4:0], optic bit5, tx bit6 */
+    uint8_t  sync_local_status;/* local RS485 status byte: id/selector[4:0], optic bit5, DetADC bits6..7 */
     uint32_t sync_seen_mask;   /* bit0=node1 ... bit30=node31 present in sync_status_bytes */
     uint8_t  sync_node_count;  /* number of active status bytes in sync_seen_mask */
     uint8_t  sync_status_bytes[31]; /* status byte by node id: index 0=node1 ... index30=node31 */
@@ -233,6 +249,7 @@ extern volatile uint8_t vnd_tx_kick; /* Флаг пробуждения таск
 
 /* Публичные функции */
 void Vendor_Stream_Task(void);
+void Vendor_ChangeEvent_Task(void);
 void Vendor_Control_Task(void);
 void Vendor_Status_Task(void);
 void Vendor_Maintenance_Task(void);
@@ -272,6 +289,8 @@ void vnd_generate_test_sawtooth(void);
 /* FPS и статистика производительности */
 void vnd_report_fps_stats(void);
 void vnd_print_perf_stats(void);
+void Vendor_ChangeEvent_DiagPrint(void);
+void Vendor_StreamDiagPrint(void);
 
 /* Сигнал о фронте синхронизации (slave) для индикации S на LCD */
 void vnd_sync_on_edge(void);

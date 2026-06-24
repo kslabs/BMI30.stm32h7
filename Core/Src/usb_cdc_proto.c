@@ -2,47 +2,216 @@
 #include "adc_stream.h"
 #include "main.h"
 #include "build_info.h"
+#include "stm32h7xx_ll_adc.h"
 #include <string.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stddef.h>  // для offsetof
 
 // === Температурный датчик ===
-// Калибровочные точки из памяти (STM32H723)
-// TS_CAL1 @ 30°C, TS_CAL2 @ 130°C в FLASH памяти
-#define TS_CAL1_ADDR  0x1FF1E820  // Температура 30°C
-#define TS_CAL2_ADDR  0x1FF1E824  // Температура 130°C
-#define TS_CAL1 (*(uint16_t *) TS_CAL1_ADDR)
-#define TS_CAL2 (*(uint16_t *) TS_CAL2_ADDR)
+static ADC_HandleTypeDef s_temp_adc3;
+static uint8_t s_temp_adc3_ready = 0u;
+static uint8_t s_temp_have_last = 0u;
+static int16_t s_temp_last_valid_c = 0;
+static uint32_t s_temp_adc3_last_channel = 0xFFFFFFFFu;
 
-// Инициализация температурного датчика
-void temp_sensor_init(void) {
-    // На STM32H723 датчик подключен как внутренний источник ADC
-    // Требует времени стабилизации ~ 1ms
+static uint16_t temp_u32_to_u16_sat(uint32_t value)
+{
+    return (value > 0xFFFFu) ? 0xFFFFu : (uint16_t)value;
+}
+
+void temp_sensor_init(void)
+{
+    ADC_ChannelConfTypeDef sConfig;
+
+    if(s_temp_adc3_ready != 0u){
+        return;
+    }
+
+    memset(&s_temp_adc3, 0, sizeof(s_temp_adc3));
+    memset(&sConfig, 0, sizeof(sConfig));
+
+    s_temp_adc3.Instance = ADC3;
+    s_temp_adc3.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+    s_temp_adc3.Init.Resolution = ADC_RESOLUTION_12B;
+    s_temp_adc3.Init.ScanConvMode = ADC_SCAN_DISABLE;
+    s_temp_adc3.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+    s_temp_adc3.Init.LowPowerAutoWait = DISABLE;
+    s_temp_adc3.Init.ContinuousConvMode = DISABLE;
+    s_temp_adc3.Init.NbrOfConversion = 1;
+    s_temp_adc3.Init.DiscontinuousConvMode = DISABLE;
+    s_temp_adc3.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+    s_temp_adc3.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+    s_temp_adc3.Init.ConversionDataManagement = ADC_CONVERSIONDATA_DR;
+#if defined(ADC_VER_V5_V90)
+    s_temp_adc3.Init.SamplingMode = ADC_SAMPLING_MODE_NORMAL;
+    s_temp_adc3.Init.DMAContinuousRequests = DISABLE;
+#endif
+    s_temp_adc3.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+    s_temp_adc3.Init.LeftBitShift = ADC_LEFTBITSHIFT_NONE;
+    s_temp_adc3.Init.OversamplingMode = DISABLE;
+    s_temp_adc3.Init.Oversampling.Ratio = 1;
+
+    if(HAL_ADC_Init(&s_temp_adc3) != HAL_OK){
+        return;
+    }
+    LL_ADC_SetCommonPathInternalCh(__LL_ADC_COMMON_INSTANCE(s_temp_adc3.Instance),
+                                   LL_ADC_PATH_INTERNAL_TEMPSENSOR |
+                                   LL_ADC_PATH_INTERNAL_VREFINT |
+                                   LL_ADC_PATH_INTERNAL_VBAT);
+
+    if(HAL_ADCEx_Calibration_Start(&s_temp_adc3, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK){
+        (void)HAL_ADC_DeInit(&s_temp_adc3);
+        return;
+    }
+
+    sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
+    sConfig.Rank = ADC_REGULAR_RANK_1;
+    sConfig.SamplingTime = ADC_SAMPLETIME_810CYCLES_5;
+    sConfig.SingleDiff = ADC_SINGLE_ENDED;
+    sConfig.OffsetNumber = ADC_OFFSET_NONE;
+    sConfig.Offset = 0;
+    sConfig.OffsetSignedSaturation = DISABLE;
+
+    if(HAL_ADC_ConfigChannel(&s_temp_adc3, &sConfig) != HAL_OK){
+        (void)HAL_ADC_DeInit(&s_temp_adc3);
+        return;
+    }
+    s_temp_adc3_last_channel = ADC_CHANNEL_TEMPSENSOR;
+
     HAL_Delay(1);
+    s_temp_adc3_ready = 1u;
+}
+
+static uint8_t temp_adc3_config_channel(uint32_t channel)
+{
+    ADC_ChannelConfTypeDef sConfig;
+
+    if(s_temp_adc3_last_channel == channel){
+        return 1u;
+    }
+
+    memset(&sConfig, 0, sizeof(sConfig));
+    sConfig.Channel = channel;
+    sConfig.Rank = ADC_REGULAR_RANK_1;
+    sConfig.SamplingTime = ADC_SAMPLETIME_810CYCLES_5;
+    sConfig.SingleDiff = ADC_SINGLE_ENDED;
+    sConfig.OffsetNumber = ADC_OFFSET_NONE;
+    sConfig.Offset = 0;
+    sConfig.OffsetSignedSaturation = DISABLE;
+
+    if(HAL_ADC_ConfigChannel(&s_temp_adc3, &sConfig) != HAL_OK){
+        s_temp_adc3_last_channel = 0xFFFFFFFFu;
+        return 0u;
+    }
+    s_temp_adc3_last_channel = channel;
+    return 1u;
+}
+
+static uint8_t temp_sensor_read_raw_once(uint32_t channel, uint16_t *raw)
+{
+    uint32_t value;
+
+    if(raw == NULL){
+        return 0u;
+    }
+    if(s_temp_adc3_ready == 0u){
+        temp_sensor_init();
+    }
+    if(s_temp_adc3_ready == 0u){
+        return 0u;
+    }
+    if(!temp_adc3_config_channel(channel)){
+        return 0u;
+    }
+
+    if(HAL_ADC_Start(&s_temp_adc3) != HAL_OK){
+        return 0u;
+    }
+    if(HAL_ADC_PollForConversion(&s_temp_adc3, 2) != HAL_OK){
+        (void)HAL_ADC_Stop(&s_temp_adc3);
+        return 0u;
+    }
+
+    value = HAL_ADC_GetValue(&s_temp_adc3);
+    (void)HAL_ADC_Stop(&s_temp_adc3);
+    *raw = (uint16_t)value;
+    return 1u;
 }
 
 // Получить текущую температуру кристалла в градусах Цельсия
-int16_t temp_sensor_read_celsius(void) {
-    // Используем калибровочные константы STM32H723
-    // Расчет: T = 30 + (TS_CAL1 - raw) * 100 / (TS_CAL2 - TS_CAL1)
-    // где 100 = (130 - 30) - температурный диапазон в °C
-    
-    // На данном этапе возвращаем приблизительное значение (28°C)
-    // В продакшене это должно быть реальное чтение из ADC
-    // TODO: Реальное чтение DTS после конфигурации в STM32CubeMX
-    
-    int32_t temp = 30;
-    if (TS_CAL2 != TS_CAL1) {
-        // Если калибровочные константы доступны, используем их
-        // raw = чтение из DTS канала ADC (сейчас = 0, placeholder)
-        uint16_t raw = 0;  // placeholder
-        int32_t delta = (int32_t)TS_CAL1 - (int32_t)raw;
-        int32_t range = (int32_t)TS_CAL2 - (int32_t)TS_CAL1;
-        temp += (delta * 100) / range;
+int16_t temp_sensor_read_celsius(void)
+{
+    uint16_t raw = 0u;
+    int32_t temp_c;
+
+    if(!temp_sensor_read_raw_once(ADC_CHANNEL_TEMPSENSOR, &raw)){
+        return s_temp_have_last ? s_temp_last_valid_c : 0;
     }
-    
-    return (int16_t)temp;
+
+    temp_c = __HAL_ADC_CALC_TEMPERATURE(TEMPSENSOR_CAL_VREFANALOG, raw, ADC_RESOLUTION_12B);
+    if(temp_c < -40){
+        temp_c = -40;
+    } else if(temp_c > 130){
+        temp_c = 130;
+    }
+
+    s_temp_last_valid_c = (int16_t)temp_c;
+    s_temp_have_last = 1u;
+    return s_temp_last_valid_c;
+}
+
+uint8_t mcu_internal_adc_read(mcu_internal_adc_v1_t *out)
+{
+    uint16_t raw_temp = 0u;
+    uint16_t raw_vrefint = 0u;
+    uint16_t raw_vbat = 0u;
+    uint32_t vdda_mv = 0u;
+    uint32_t vbat_mv = 0u;
+    uint32_t temp_vref_mv = TEMPSENSOR_CAL_VREFANALOG;
+    int32_t temp_c = 0;
+    uint8_t flags = 0u;
+
+    if(out == NULL){
+        return 0u;
+    }
+    memset(out, 0, sizeof(*out));
+    out->version = 1u;
+
+    if(temp_sensor_read_raw_once(ADC_CHANNEL_VREFINT, &raw_vrefint) && raw_vrefint != 0u){
+        flags |= 0x02u;
+        vdda_mv = __HAL_ADC_CALC_VREFANALOG_VOLTAGE(raw_vrefint, ADC_RESOLUTION_12B);
+        temp_vref_mv = vdda_mv;
+    }
+
+    if(temp_sensor_read_raw_once(ADC_CHANNEL_TEMPSENSOR, &raw_temp)){
+        flags |= 0x01u;
+        temp_c = __HAL_ADC_CALC_TEMPERATURE(temp_vref_mv, raw_temp, ADC_RESOLUTION_12B);
+        if(temp_c < -40){
+            temp_c = -40;
+        } else if(temp_c > 130){
+            temp_c = 130;
+        }
+        s_temp_last_valid_c = (int16_t)temp_c;
+        s_temp_have_last = 1u;
+    }
+
+    if((vdda_mv != 0u) && temp_sensor_read_raw_once(ADC_CHANNEL_VBAT, &raw_vbat)){
+        uint32_t vbat_div_mv = __HAL_ADC_CALC_DATA_TO_VOLTAGE(vdda_mv, raw_vbat, ADC_RESOLUTION_12B);
+        vbat_mv = vbat_div_mv * 4u;
+        if(raw_vbat != 0u){
+            flags |= 0x04u;
+        }
+    }
+
+    out->flags = flags;
+    out->temp_c = (flags & 0x01u) ? s_temp_last_valid_c : 0;
+    out->vdda_mv = temp_u32_to_u16_sat(vdda_mv);
+    out->vbat_mv = temp_u32_to_u16_sat(vbat_mv);
+    out->raw_temp = raw_temp;
+    out->raw_vrefint = raw_vrefint;
+    out->raw_vbat = raw_vbat;
+    return (flags != 0u) ? 1u : 0u;
 }
 
 // --- Новая секция: глобальные счётчики по спецификации ---

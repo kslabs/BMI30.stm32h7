@@ -1,7 +1,8 @@
 # Build once, then flash all configured ST-LINK probes sequentially.
 
 param(
-    [switch]$CleanBuild = $false
+    [switch]$CleanBuild = $false,
+    [string[]]$StlinkSn = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,7 +10,8 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $BuildScript = Join-Path $PSScriptRoot "build-and-flash.ps1"
 $FlashScript = Join-Path $PSScriptRoot "flash-cubecli.ps1"
 $ElfFile = Join-Path $ProjectRoot "Debug\BMI30.stm32h7.elf"
-$StlinkTargets = @(
+$CubeProgrammer = "C:\Program Files\STMicroelectronics\STM32Cube\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe"
+$ConfiguredTargets = @(
     @{
         Name = "ST-Link #1"
         Sn = "0667FF514953667287233516"
@@ -21,6 +23,66 @@ $StlinkTargets = @(
         Com = "COM22"
     }
 )
+
+function Get-ConnectedStlinkTargets {
+    if ($StlinkSn.Count -gt 0) {
+        $targets = @()
+        $idx = 1
+        foreach ($sn in $StlinkSn) {
+            $targets += @{
+                Name = "ST-Link #$idx"
+                Sn = $sn
+                Com = ""
+            }
+            $idx++
+        }
+        return $targets
+    }
+
+    $cli = $CubeProgrammer
+    if (!(Test-Path $cli)) {
+        $cmd = Get-Command STM32_Programmer_CLI.exe -ErrorAction SilentlyContinue
+        if ($cmd) {
+            $cli = $cmd.Source
+        }
+    }
+    if (!(Test-Path $cli)) {
+        Write-Host "  [WARN] STM32CubeProgrammer CLI not found, using configured ST-LINK list." -ForegroundColor Yellow
+        return $ConfiguredTargets
+    }
+
+    $listOutput = & $cli -l 2>&1 | Out-String
+    $snList = @()
+    $comBySn = @{}
+    $currentSn = ""
+
+    foreach ($line in ($listOutput -split "`r?`n")) {
+        if ($line -match 'ST-LINK SN\s*:\s*(\S+)') {
+            $currentSn = $matches[1]
+            if ($snList -notcontains $currentSn) {
+                $snList += $currentSn
+            }
+        } elseif (($line -match 'Port:\s*(COM\d+)') -and $currentSn) {
+            $comBySn[$currentSn] = $matches[1]
+        }
+    }
+
+    if ($snList.Count -eq 0) {
+        Write-Host "  [WARN] No connected ST-LINK probes detected, using configured ST-LINK list." -ForegroundColor Yellow
+        return $ConfiguredTargets
+    }
+
+    $targets = @()
+    for ($i = 0; $i -lt $snList.Count; $i++) {
+        $sn = $snList[$i]
+        $targets += @{
+            Name = "ST-Link #$($i + 1)"
+            Sn = $sn
+            Com = $(if ($comBySn.ContainsKey($sn)) { $comBySn[$sn] } else { "" })
+        }
+    }
+    return $targets
+}
 
 if (!(Test-Path $BuildScript)) {
     Write-Error "Build script not found: $BuildScript"
@@ -34,6 +96,13 @@ if (!(Test-Path $FlashScript)) {
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "STM32 BUILD AND FLASH ALL ST-LINK" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
+
+$StlinkTargets = @(Get-ConnectedStlinkTargets)
+Write-Host ("Detected/selected ST-LINK probes: {0}" -f $StlinkTargets.Count) -ForegroundColor Cyan
+foreach ($target in $StlinkTargets) {
+    $comText = if ($target.Com) { $target.Com } else { "COM:n/a" }
+    Write-Host ("  - {0} | SN={1} | {2}" -f $target.Name, $target.Sn, $comText) -ForegroundColor Cyan
+}
 
 $buildArgs = @()
 if ($CleanBuild) {

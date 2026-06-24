@@ -166,14 +166,19 @@ uint16_t optic_sensor_set_hold_deciseconds(uint16_t deciseconds);
 uint16_t optic_sensor_get_hold_deciseconds(void);
 uint8_t optic_tx_set_power(uint8_t power);
 uint8_t optic_tx_get_power(void);
+void optic_tx_refresh_enable(void);
 uint8_t dynamic_led_set_pattern(uint8_t pattern_id);
 uint8_t dynamic_led_get_pattern(void);
+uint8_t rs485_status_set_det_adc_bits(uint8_t bits);
+uint8_t rs485_status_get_det_adc_bits(void);
 uint8_t rs485_status_get_snapshot(uint8_t *local_status,
                                   uint8_t *node_count,
                                   uint32_t *seen_mask,
                                   uint8_t *status_bytes,
                                   uint8_t max_status_bytes);
+void rs485_set_local_node_id_from_host(uint8_t node_id);
 uint8_t rs485_sync_has_active_peer(void);
+uint8_t rs485_sync_phase_locked(void);
 
 // --- Профили потоков ADC (буфер/частота) ---
 // Профиль B (default): f_buf=300 Гц, N=912 (Fs=273600 Гц)
