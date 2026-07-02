@@ -63,10 +63,6 @@ extern TIM_HandleTypeDef htim5;
 #define VND_PROF_LOGF(...) do { } while(0)
 #endif
 
-#ifndef VND_USB_ZERO_DIAG_ENABLE
-#define VND_USB_ZERO_DIAG_ENABLE 0
-#endif
-
 #ifndef VND_SYNC_DIAG_ENABLE
 #define VND_SYNC_DIAG_ENABLE 1
 #endif
@@ -901,14 +897,18 @@ static void vnd_dc_set_mode(uint8_t mode)
 {
     if(mode > VND_DC_MODE_BOOT_FAST) mode = VND_DC_MODE_WORK;
     uint32_t now_ms = HAL_GetTick();
+    uint8_t prev_mode = vnd_dc_mode;
+    uint32_t prev_enter_ms = vnd_dc_mode_enter_ms;
     if(mode != VND_DC_MODE_FREEZE){
         vnd_dc_resume_mode = mode;
     }
     vnd_dc_mode = mode;
-    vnd_dc_mode_enter_ms = now_ms;
-    vnd_dc_fast_until_ms = 0u;
     vnd_dc_adapt_enabled = (mode == VND_DC_MODE_FREEZE) ? 0u : 1u;
-    vnd_dc_reset_adapt_timestamps();
+    if(mode != prev_mode || prev_enter_ms == 0u){
+        vnd_dc_mode_enter_ms = now_ms;
+        vnd_dc_fast_until_ms = 0u;
+        vnd_dc_reset_adapt_timestamps();
+    }
 }
 
 static uint8_t vnd_dc_effective_mode(uint32_t now_ms)
@@ -2249,7 +2249,8 @@ static void vnd_avg_drain_fifo(uint16_t roi_start, uint16_t roi_len)
                 vnd_avg_q_out[q][1][i] = (uint16_t)((vnd_avg_sum[out_parity][1][i] + (uint32_t)(avg_n/2u)) / (uint32_t)avg_n);
             }
 
-            if(vnd_dc_effective_mode(HAL_GetTick()) == VND_DC_MODE_BOOT_FAST){
+            uint8_t dc_mode_now = vnd_dc_effective_mode(HAL_GetTick());
+            if(dc_mode_now != VND_DC_MODE_FREEZE && vnd_dc_adapt_enabled){
                 avg_gate_a = (uint8_t)(vnd_raw_has_full_swing_u16(vnd_avg_q_out[q][0], roi_len, (uint32_t)VND_DC_RANGE_THRESHOLD) ? 0u : 1u);
                 avg_gate_b = (uint8_t)(vnd_raw_has_full_swing_u16(vnd_avg_q_out[q][1], roi_len, (uint32_t)VND_DC_RANGE_THRESHOLD) ? 0u : 1u);
             }
@@ -2740,15 +2741,13 @@ static void vnd_cdc_periodic_stats(uint32_t now_ms)
     uint32_t tx_ok      = dbg_tx_cplt; /* число завершённых передач (может включать STAT/TEST) */
     uint32_t frame_abort = dbg_partial_frame_abort;
     uint32_t size_mism   = dbg_size_mismatch;
-    /* Оценка потока в Мбит/с (грубая: только пользовательские байты за 1с *8/1e6) */
-    float mbps = (float)(bps * 8ULL) / 1000000.0f;
-
-#if VND_SYNC_DIAG_PRINTF
     uint16_t diag_samples_cur = cur_samples_per_frame;
     uint16_t buf_rate = adc_stream_get_buf_rate();
     uint8_t channel_count = (vnd_ch_mode == 2u) ? 2u : 1u;
     uint16_t frame_bytes = 0u;
     uint32_t demand_bps = 0u;
+    /* Оценка потока в Мбит/с (грубая: только пользовательские байты за 1с *8/1e6) */
+    float mbps = (float)(bps * 8ULL) / 1000000.0f;
 
     if (diag_samples_cur == 0u) {
         if ((vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI) || (vnd_stream_mode == VND_STREAM_MODE_AVG_ROI)) {
@@ -2767,7 +2766,6 @@ static void vnd_cdc_periodic_stats(uint32_t now_ms)
     }
     frame_bytes = (uint16_t)(VND_FRAME_HDR_SIZE + ((uint32_t)diag_samples_cur * 2u));
     demand_bps = (uint32_t)channel_count * (uint32_t)frame_bytes * (uint32_t)buf_rate;
-#endif
 
     cdc_logf("STAT bytes_total=%llu bps=%lu (%.2f Mbps) streaming=%u diag=%u sentA=%lu sentB=%lu seq=%lu tx_attempt=%lu tx_reject=%lu tx_cplt=%lu abort=%lu sz_mm=%lu",
              (unsigned long long)cur, (unsigned long)bps, (double)mbps,
@@ -2884,10 +2882,9 @@ static void vnd_frame_finalize_crc(uint8_t *frame)
 
     h->flags |= VND_FRAME_FLAG_CRC16;
     h->crc16 = 0u;
-    uint16_t crc = vnd_frame_crc16(frame, payload_len);
-    h->crc16 = crc;
+    h->crc16 = vnd_frame_crc16(frame, payload_len);
     dbg_frame_crc_finalized++;
-    dbg_frame_crc_last = crc;
+    dbg_frame_crc_last = h->crc16;
 }
 
 /* Состояние кадра */
@@ -3279,11 +3276,9 @@ static __attribute__((unused)) void vnd_meta_neutralize(uint8_t flags_mask, uint
     uint8_t t = vnd_tx_meta_tail;
     while(t != vnd_tx_meta_head){
         vnd_tx_meta_t *m = &vnd_tx_meta_fifo[t];
-        uint8_t m_ch = (uint8_t)(m->flags & 0x03u);
-        uint8_t want_ch = (uint8_t)(flags_mask & 0x03u);
-        uint8_t test_match = ((flags_mask & 0x80u) != 0u) && ((m->flags & 0x80u) != 0u);
-        uint8_t ch_match = (want_ch != 0u) && (m_ch == want_ch);
-        if(m->is_frame && (m->seq_field == seq_field) && (test_match || ch_match)){
+        if(m->is_frame &&
+           (((uint8_t)(m->flags ^ flags_mask) & 0x83u) == 0u) &&
+           (m->seq_field == seq_field)){
             m->is_frame = 0; m->flags = 0; /* превратить в служебный */
             VND_LOG("META_NEUTRALIZE fl=0x%02X seq=%lu", (unsigned)flags_mask, (unsigned long)seq_field);
             break;
@@ -5296,7 +5291,6 @@ static int vnd_async_try_tx(void)
                 src = abuf + roi_start;
             }
             
-#if VND_USB_ZERO_DIAG_ENABLE
             /* ДИАГНОСТИКА: проверяем последние 100 сэмплов DMA буфера на нули (только реальный буфер) */
             static uint32_t zero_check_count = 0; (void)zero_check_count;
             static uint32_t last_zero_check_ms = 0;
@@ -5311,8 +5305,7 @@ static int vnd_async_try_tx(void)
                          abuf[eff-100], abuf[eff-50], abuf[eff-25], abuf[eff-10], abuf[eff-1]);
                 last_zero_check_ms = now_check;
             }
-#endif
-             
+            
             /* Если это staging, скопируем под защитой IRQ в локальный снапшот.
                В ROI режиме копируем только окно, чтобы гарантировать корректный срез. */
             if(!synth && ADC_USB_STAGE_ENABLE){
@@ -6030,24 +6023,24 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
             uint32_t in_now = dbg_avg_in_frames;
             uint32_t out_now = dbg_avg_out_frames;
             uint32_t tx_now = dbg_avg_tx_pairs;
-#if VND_AVG_DIAG_PRINTF
             uint32_t din = in_now - dbg_avg_in_last;
             uint32_t dout = out_now - dbg_avg_out_last;
             uint32_t dtx = tx_now - dbg_avg_tx_last;
-            uint32_t dsp_avg_us = (vnd_dsp.dsp_us_cnt ? (vnd_dsp.dsp_us_total / vnd_dsp.dsp_us_cnt) : 0u);
-            printf("[AVG] n=%u q=%u drop=%lu cnt0=%u cnt1=%u in=%lu(+%lu/s) out=%lu(+%lu/s) tx=%lu(+%lu/s) dsp=%luus(avg) %luus(max) corr_eo=(%.3f,%.3f) corr_ab=(e=%.3f,o=%.3f)\r\n",
-                   (unsigned)vnd_avg_n, (unsigned)vnd_avg_q_count,
-                   (unsigned long)dbg_avg_drop_frames,
-                   (unsigned)vnd_avg_cnt[0], (unsigned)vnd_avg_cnt[1],
-                   (unsigned long)in_now, (unsigned long)din,
-                   (unsigned long)out_now, (unsigned long)dout,
-                   (unsigned long)tx_now, (unsigned long)dtx,
-                   (unsigned long)dsp_avg_us, (unsigned long)vnd_dsp.dsp_us_max,
-                   (double)vnd_dsp.corr_eo[0], (double)vnd_dsp.corr_eo[1],
-                   (double)vnd_dsp.corr_ab[0], (double)vnd_dsp.corr_ab[1]);
-#endif
             dbg_avg_in_last = in_now; dbg_avg_out_last = out_now; dbg_avg_tx_last = tx_now;
             dbg_avg_last_print_ms = now_ms;
+                 uint32_t dsp_avg_us = (vnd_dsp.dsp_us_cnt ? (vnd_dsp.dsp_us_total / vnd_dsp.dsp_us_cnt) : 0u);
+#if VND_AVG_DIAG_PRINTF
+                                 printf("[AVG] n=%u q=%u drop=%lu cnt0=%u cnt1=%u in=%lu(+%lu/s) out=%lu(+%lu/s) tx=%lu(+%lu/s) dsp=%luus(avg) %luus(max) corr_eo=(%.3f,%.3f) corr_ab=(e=%.3f,o=%.3f)\r\n",
+                                     (unsigned)vnd_avg_n, (unsigned)vnd_avg_q_count,
+                                     (unsigned long)dbg_avg_drop_frames,
+                                     (unsigned)vnd_avg_cnt[0], (unsigned)vnd_avg_cnt[1],
+                                     (unsigned long)in_now, (unsigned long)din,
+                                     (unsigned long)out_now, (unsigned long)dout,
+                                         (unsigned long)tx_now, (unsigned long)dtx,
+                                         (unsigned long)dsp_avg_us, (unsigned long)vnd_dsp.dsp_us_max,
+                                         (double)vnd_dsp.corr_eo[0], (double)vnd_dsp.corr_eo[1],
+                                         (double)vnd_dsp.corr_ab[0], (double)vnd_dsp.corr_ab[1]);
+#endif
 
                      /* DC save вызывается выше (вне 1Hz блока), чтобы не зависеть от печати. */
 
@@ -6793,7 +6786,6 @@ void USBD_VND_TxCplt(void)
             int ch = (eff_ch_bits == 0x01) ? 0 : 1;
             if(vnd_pending_init){ vnd_pending_init = 0; }
             vnd_stream_active = 1;
-            if(!first_pair_done){ first_pair_done = 1; }
             /* Учёт статистики по каналам (оценка сэмплов по текущему размеру кадра) */
             /* Статистика: если размер ещё не зафиксирован, используем активный профиль с учётом ограничений */
             uint16_t ns = cur_samples_per_frame;

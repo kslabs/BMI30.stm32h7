@@ -17,16 +17,6 @@
 #define ADC_LOGF(...)    do { } while (0)
 #endif
 
-#ifndef ADC_ZERO_BUFFER_DIAG_ENABLE
-#define ADC_ZERO_BUFFER_DIAG_ENABLE 0
-#endif
-#ifndef ADC_TIM2_SWITCH_DIAG_ENABLE
-#define ADC_TIM2_SWITCH_DIAG_ENABLE 0
-#endif
-#ifndef ADC_PHASE_COMPARE_DIAG_ENABLE
-#define ADC_PHASE_COMPARE_DIAG_ENABLE 0
-#endif
-
 /* ВАЖНО: никакого printf в ISR по умолчанию.
     DMA/ADC callbacks должны быть максимально короткими, иначе растёт джиттер и появляются
     «нулевые»/рваные кадры из-за задержек перезапуска DMA в NORMAL mode. */
@@ -42,7 +32,6 @@ extern volatile uint32_t s_next_ring_index;
 
 // Выводит count семплов из последнего доступного кадра в терминал (ch2 — если true, то второй канал)
 void adc_stream_print_samples(uint32_t count, bool ch2) {
-#if ADC_LOG_ENABLE
     ADC_LOGF("Старт вывода семплов\r\n");
     uint32_t seq = frame_wr_seq ? (frame_wr_seq - 1) : 0;
     uint32_t index = seq & (FIFO_FRAMES - 1u);
@@ -57,10 +46,6 @@ void adc_stream_print_samples(uint32_t count, bool ch2) {
         ADC_LOGF("%u ", buf[i]);
     }
     ADC_LOGF("\r\n");
-#else
-    (void)count;
-    (void)ch2;
-#endif
 }
 // Остановка стрима ADC: корректно останавливает DMA и ADC, сбрасывает буферы
 void adc_stream_stop(void) {
@@ -155,7 +140,6 @@ extern DMA_HandleTypeDef hdma_adc2;
 /* Диагностический дамп регистров B-пути (DMA/ADC/TIM) для расследования застойных ситуаций ADC2 */
 static void dump_b_path_regs(uint32_t ndtrA, uint32_t ndtrB)
 {
-#if ADC_LOG_ENABLE
     DMA_Stream_TypeDef *dma1_stream = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
     DMA_Stream_TypeDef *dma2_stream = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
     /* DMA */
@@ -169,10 +153,6 @@ static void dump_b_path_regs(uint32_t ndtrA, uint32_t ndtrB)
     ADC_LOGF("[ADC][WDDBG] TIM15: CR1=0x%08lX CR2=0x%08lX SMCR=0x%08lX SR=0x%08lX CNT=%lu PSC=%lu ARR=%lu\r\n",
         (unsigned long)TIM15->CR1, (unsigned long)TIM15->CR2, (unsigned long)TIM15->SMCR,
         (unsigned long)TIM15->SR, (unsigned long)TIM15->CNT, (unsigned long)TIM15->PSC, (unsigned long)TIM15->ARR);
-#else
-    (void)ndtrA;
-    (void)ndtrB;
-#endif
 }
 
 // --- Профили ---
@@ -537,7 +517,6 @@ static inline void adc_invalidate_cache_for_buffer(void *buf, uint32_t samples)
 
 void adc_stream_print_sample95_all_buffers(void)
 {
-#if ADC_LOG_ENABLE
     const uint16_t probe_idx = 95u;
     uint16_t ns = adc_stream_get_active_samples();
     if (ns <= probe_idx) {
@@ -560,7 +539,6 @@ void adc_stream_print_sample95_all_buffers(void)
         if (i + 1u < FIFO_FRAMES) ADC_LOGF(" ");
     }
     ADC_LOGF("\r\n");
-#endif
 }
 
 static inline void adc_flush_cache_for_buffer(void *buf, uint32_t samples)
@@ -626,12 +604,18 @@ static uint16_t g_fine_buf_rate_override = 0;
 // Fine ARR offset: ручная подстройка ARR для точной частоты (например -4 для 200→200.35 Гц)
 static int32_t g_arr_fine_offset = 0;  // По умолчанию БЕЗ коррекции
 
+// Периодическое применение offset: применять на 1 буфер каждые N буферов (0 = постоянно)
+static uint32_t g_arr_fine_period = 1000;  // 1 раз на 1000 буферов (~5 сек) → очень медленная коррекция
+
 // Флаг: отключить автоматическое переопределение ARR (для ручного тестирования)
 // По умолчанию ARR задаётся только из профиля в adc_stream_apply_timing().
 volatile uint8_t g_arr_manual_mode = 0;
 
 // Автоматическая подстройка частоты по sync_buffers_between_edges (0=откл, 1=вкл)
 static uint8_t g_auto_freq_sync_enable = 0;  // RS485 sync не меняет частоту/ARR автоматически
+
+static uint32_t g_sync_last_check_buf = 0;  // Номер буфера последней проверки
+static const uint32_t SYNC_CHECK_PERIOD_BUFFERS = 32;    // ~160ms при 200 Hz (быстрая реакция)
 
 // Диагностика
 volatile uint32_t g_auto_freq_regulation_count = 0;
@@ -745,6 +729,9 @@ static inline void adc_sync_phase_on_buffer(void)
     }
     
     extern TIM_HandleTypeDef htim15;
+    extern volatile uint32_t sync_buffers_between_edges;
+    extern volatile uint32_t sync_edge_count;
+    
     /* Читаем TIM15->CNT на момент буфера для фазы */
     uint32_t tim15_cnt_now = htim15.Instance->CNT;
     uint32_t cnt_mod = (tim15_cnt_now % target);
@@ -884,6 +871,7 @@ uint32_t adc_stream_get_fs(void) { return g_profiles[g_active_profile].fs_hz; }
 static void adc_stream_apply_timing(void)
 {
     extern TIM_HandleTypeDef htim15;
+    extern TIM_HandleTypeDef htim16;
     uint16_t samples = adc_stream_get_active_samples();
     uint16_t buf_rate_hz = adc_stream_get_buf_rate();
     if (samples == 0u || buf_rate_hz == 0u) {
@@ -1190,7 +1178,6 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
         /* Half Transfer IRQ не нужен (DMA_NORMAL + ручной перезапуск по TC). */
         
         /* Одноразовый вывод регистров DMA для ADC1 */
-#if ADC_LOG_ENABLE
         {
             DMA_Stream_TypeDef *st = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
             ADC_LOGF("[ADC][DMA1S0] CR=0x%08lX NDTR=%lu PAR=0x%08lX M0AR=0x%08lX FCR=0x%08lX single=%u\r\n",
@@ -1201,9 +1188,8 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
                    (unsigned long)st->FCR,
                    (unsigned)DIAG_SINGLE_ADC1);
         }
-#endif
         /* Одноразовый вывод регистров DMA для ADC2 */
-        #if !DIAG_SINGLE_ADC1 && ADC_LOG_ENABLE
+        #if !DIAG_SINGLE_ADC1
         {
             DMA_Stream_TypeDef *st2 = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
             ADC_LOGF("[ADC][DMA1S1] CR=0x%08lX NDTR=%lu PAR=0x%08lX M0AR=0x%08lX FCR=0x%08lX\r\n",
@@ -1341,7 +1327,6 @@ void adc_stream_restart_sync(void) {
     HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc1_buffers[idx], g_active_samples);
 }
 
-#if ADC_ZERO_BUFFER_DIAG_ENABLE
 // Проверка буфера на нулевое содержимое (для диагностики проблем ADC)
 static inline uint8_t is_buffer_all_zeros(uint16_t *buf, uint16_t samples) {
     for (uint16_t i = 0; i < samples; i++) {
@@ -1349,7 +1334,6 @@ static inline uint8_t is_buffer_all_zeros(uint16_t *buf, uint16_t samples) {
     }
     return 1; // все нули
 }
-#endif
 
 // Получить один кадр конкретного канала (независимая модель). Возвращает 1 если кадр получен.
 uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples, uint32_t *seq_out) {
@@ -1398,7 +1382,6 @@ uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples, uint32_t
     }
     #endif
     
-#if ADC_ZERO_BUFFER_DIAG_ENABLE
     // ДИАГНОСТИКА: проверяем буфер на нулевое содержимое (троттлинг логов)
     if (is_buffer_all_zeros(*buf, *samples)) {
         adc_ch_zero_buffers[ch]++;
@@ -1410,7 +1393,6 @@ uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples, uint32_t
                      ch, (unsigned long)seq, (unsigned long)index, (unsigned long)adc_ch_zero_buffers[ch]);
         }
     }
-#endif
     
     return 1;
 }
@@ -1744,7 +1726,6 @@ void adc_stream_tim2_switch_buffers(void) {
        Это обеспечивает что каждый буфер начинается с одной и той же фазы сигнала,
        устраняя "плывущую" осциллограмму. */
     
-#if ADC_TIM2_SWITCH_DIAG_ENABLE
     /* Счётчики для диагностики */
     static uint32_t tim2_switch_call_count = 0;
     static uint32_t tim2_switch_ok_count = 0;
@@ -1774,7 +1755,6 @@ void adc_stream_tim2_switch_buffers(void) {
         tim2_switch_ok_count = 0;
         tim2_switch_busy_count = 0;
     }
-#endif
     
     /* ЛОГИКА TIM2-DRIVEN (восстановлена для синхронизации осциллограммы) */
     #if 1
@@ -1793,41 +1773,33 @@ void adc_stream_tim2_switch_buffers(void) {
     const uint32_t total_samples = (uint32_t)g_active_samples;
     
     /* Переключаемся только когда оба DMA завершили текущий буфер (NDTR==0).
-    ВАЖНО: не трогаем счётчики фаз/буферов, если DMA ещё занят — иначе получаем «дрожание» фаз. */
+       ВАЖНО: не трогаем счётчики фаз/буферов, если DMA ещё занят — иначе получаем «дрожание» фаз. */
     if (dma1->NDTR != 0) {
-#if ADC_TIM2_SWITCH_DIAG_ENABLE
         tim2_switch_busy_count++;
         last_busy_ndtr_a = dma1->NDTR;
         #if !DIAG_SINGLE_ADC1
         last_busy_ndtr_b = dma2->NDTR;
         #endif
-#endif
         return;
     }
     #if !DIAG_SINGLE_ADC1
     if (dma2->NDTR != 0) {
-#if ADC_TIM2_SWITCH_DIAG_ENABLE
         tim2_switch_busy_count++;
         last_busy_ndtr_a = dma1->NDTR;
         last_busy_ndtr_b = dma2->NDTR;
-#endif
         return;
     }
     #endif
 
     /* УСПЕХ: пара готова → фиксируем событие и только теперь двигаем фазовый счётчик */
-#if ADC_TIM2_SWITCH_DIAG_ENABLE
     tim2_switch_ok_count++;
-#endif
     s_global_buffer_counter++;
-#if ADC_TIM2_SWITCH_DIAG_ENABLE
     // DEBUG: Выводим каждые 200 успешных переключений
     static uint32_t dbg_tim2_ok_counter = 0;
     if (++dbg_tim2_ok_counter % 200 == 0) {
         printf("[TIM2][OK] global_counter=%lu, buf_idx=%u\r\n",
                s_global_buffer_counter, (uint8_t)(s_global_buffer_counter & 0x07));
     }
-#endif
 
     // ВРЕМЕННО ОТКЛЮЧЕНО: guard проверка и заполнение тормозят @ 200Hz
     uint8_t guard_bad_done = 0; // adc_check_guard_idx(done_idx, "tim2-done");
@@ -1915,7 +1887,6 @@ void adc_stream_tim2_switch_buffers(void) {
 
     /* (lossless/backpressure) overflow drops removed */
 
-#if ADC_PHASE_COMPARE_DIAG_ENABLE
     // ========== ДИАГНОСТИКА: Сравнение данных EVEN vs ODD (БЕЗОПАСНО - после DMA check) ==========
     static uint32_t dbg_sample_count = 0;
     static uint32_t even_sum[5] = {0};  // Суммы для EVEN: [0],[1],[2],[100],[299]
@@ -1980,7 +1951,6 @@ void adc_stream_tim2_switch_buffers(void) {
             printf("\r\n");
         }
     }
-#endif
 
     // PERFORMANCE CRITICAL: minmax scan отключён (480k ops/sec @ 200Hz × 1200 samples × 2 channels)
     // Эта проверка тормозила систему, снижая FPS со 160 до 125
@@ -2059,14 +2029,12 @@ void adc_stream_tim2_switch_buffers(void) {
     uint32_t safe_done_idx = done_idx & (FIFO_FRAMES - 1u);
     s_buffer_parity[safe_done_idx] = buffer_index;
     
-#if ADC_TIM2_SWITCH_DIAG_ENABLE
     // DEBUG: Выводим каждые 200 сохранений
     static uint32_t dbg_save_counter = 0;
     if (++dbg_save_counter % 200 == 0) {
          printf("[SAVE] global_counter=%lu, buf_idx=%u, done_idx=%lu\r\n", 
              s_global_buffer_counter, buffer_index, done_idx);
     }
-#endif
     
     s_pair_ready_mask[done_idx] = READY_MASK_FULL;
     adc_mark_ready_and_publish(READY_MASK_FULL);
