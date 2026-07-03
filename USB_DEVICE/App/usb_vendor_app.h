@@ -165,11 +165,11 @@ typedef struct {
     uint8_t  version;           /* 1 */
     uint8_t  mode;              /* VND_DC_MODE_* effective/current mode */
     uint16_t flags;             /* VND_DC_CFG_FLAG_* */
-    uint32_t work_settle_ms;    /* WORK full 16-bit SAR pass time */
-    uint32_t detect_settle_ms;  /* DETECT full 16-bit SAR pass time */
-    uint32_t fast_settle_ms;    /* BOOT_FAST full 16-bit SAR pass time */
+    uint32_t work_settle_ms;    /* WORK max-error-to-midscale smooth DC slew time */
+    uint32_t detect_settle_ms;  /* DETECT max-error-to-midscale smooth DC slew time */
+    uint32_t fast_settle_ms;    /* BOOT_FAST max-error-to-midscale smooth DC slew time */
     uint32_t fast_duration_ms;  /* legacy wire name: last adapt_settle_ms alias, not a timer */
-    uint32_t active_settle_ms;  /* currently used SAR pass time */
+    uint32_t active_settle_ms;  /* currently used smooth DC slew time */
     uint32_t mode_enter_ms;     /* HAL_GetTick() when current mode was entered */
     uint32_t fast_until_ms;     /* legacy field; always 0 in continuous-speed model */
     uint32_t adapt_updates;     /* accepted DC learning updates since boot */

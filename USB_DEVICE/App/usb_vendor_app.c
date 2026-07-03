@@ -700,9 +700,10 @@ static uint32_t dbg_avg_in_last = 0, dbg_avg_out_last = 0, dbg_avg_tx_last = 0;
 #define VND_DC_ADAPT_HOLDOFF_MS (2000u)
 #endif
 
-/* Time-based DC SAR adaptation. Host-visible units are milliseconds; host UI can show seconds.
-    Значения трактуются как время полного прохода 16 SAR-битов к целевому уровню 32767:
-    larger value means slower tracking. */
+/* Time-based DC slew adaptation. Host-visible units are milliseconds; host UI can show seconds.
+    Значения трактуются как время ухода максимальной ошибки 32768 LSB к виртуальному нулю 32768:
+    larger value means slower tracking. Slow modes reduce the LSB step instead of waiting
+    and then applying a large correction jump. */
 #ifndef VND_DC_WORK_SETTLE_MS
 #define VND_DC_WORK_SETTLE_MS   (15u*60u*1000u) /* 900 s */
 #endif
@@ -722,17 +723,21 @@ static uint32_t dbg_avg_in_last = 0, dbg_avg_out_last = 0, dbg_avg_tx_last = 0;
 #define VND_DC_ADAPT_DT_MAX_MS  (1000u)
 #endif
 
-/* За settle_ms выполняется полный 16-битный SAR-проход. При очень малом settle_ms
-    бюджет набирает все биты за один кадр, что даёт максимально быструю адаптацию. */
-#ifndef VND_DC_SAR_BITS
-#define VND_DC_SAR_BITS (16u)
+/* За settle_ms максимальная ошибка 32768 LSB должна дойти до deadband.
+   Все 200 точек ROI обновляются одним общим LSB-шагом; дробная часть
+   накапливается во времени, а не распределяется по отдельным семплам. */
+#ifndef VND_DC_SLEW_MAX_ERROR_LSB
+#define VND_DC_SLEW_MAX_ERROR_LSB (32768u)
 #endif
-#ifndef VND_DC_SAR_MAX_BITS_PER_UPDATE
-#define VND_DC_SAR_MAX_BITS_PER_UPDATE (16u)
+#ifndef VND_DC_SLEW_MAX_LSB_PER_UPDATE
+#define VND_DC_SLEW_MAX_LSB_PER_UPDATE (32768u)
+#endif
+#ifndef VND_DC_TARGET_ZERO
+#define VND_DC_TARGET_ZERO (32768u)
 #endif
 
 /* Deadband для адаптации DC вокруг midscale.
-    Без deadband даже при правильном DC из-за шума знак (v-32767) будет часто меняться,
+    Без deadband даже при правильном DC из-за шума знак (v-32768) будет часто меняться,
     что приводит к "random walk" (постоянно dirty и ощущение, что после reboot всё заново).
     Значение в LSB. */
 #ifndef VND_DC_DEADBAND
@@ -800,7 +805,7 @@ static uint32_t vnd_dc_last_dirty_log_ms = 0;
 static volatile uint8_t vnd_dc_load_request = 0;
 static volatile uint8_t vnd_dc_save_request = 0;
 static uint32_t vnd_dc_last_adapt_ms[2][2];
-static uint32_t vnd_dc_sar_budget_q16[2][2];
+static uint32_t vnd_dc_slew_budget_q16[2][2];
 
 static volatile uint8_t  vnd_dc_mode = VND_DC_MODE_BOOT_FAST;
 /* Режим, в который возвращаемся после FREEZE по команде SET_DC_ADAPT=1. */
@@ -874,18 +879,7 @@ static uint32_t vnd_dc_clamp_settle_ms(uint32_t value_ms)
 static void vnd_dc_reset_adapt_timestamps(void)
 {
     memset(vnd_dc_last_adapt_ms, 0, sizeof(vnd_dc_last_adapt_ms));
-    memset(vnd_dc_sar_budget_q16, 0, sizeof(vnd_dc_sar_budget_q16));
-}
-
-static uint32_t vnd_dc_floor_pow2_u32(uint32_t value)
-{
-    uint32_t p = 1u;
-    while(value >= 2u && p <= (0x80000000u >> 1)){
-        uint32_t next = p << 1;
-        if(next > value) break;
-        p = next;
-    }
-    return p;
+    memset(vnd_dc_slew_budget_q16, 0, sizeof(vnd_dc_slew_budget_q16));
 }
 
 static void vnd_dc_reset_adapt_state(void)
@@ -958,7 +952,7 @@ static void vnd_dc_apply_config_payload(const uint8_t *payload, uint32_t payload
 
         /* Backward-compatible meaning of the last u32: host-side UI may call it
            "adaptation duration". It is not a run timer; it is a settle time for
-           the selected mode, i.e. speed of continuous SAR adaptation. */
+           the selected mode, i.e. speed of continuous smooth-slew adaptation. */
         if(adapt_settle_ms != 0u){
             uint32_t settle_ms = vnd_dc_clamp_settle_ms(adapt_settle_ms);
             if(mode == VND_DC_MODE_DETECT){
@@ -1296,7 +1290,7 @@ static uint32_t vnd_dc_score_bank(const uint16_t *raw, uint16_t raw_ns, uint16_t
         uint16_t v = raw[roi_start + i];
         int16_t dc = vnd_dc_buf[ch][parity][i];
         int32_t y = (int32_t)v + (int32_t)dc;
-        int32_t e = y - 32767;
+        int32_t e = y - (int32_t)VND_DC_TARGET_ZERO;
         if(e < 0) e = -e;
         acc += (uint32_t)e;
     }
@@ -1475,8 +1469,8 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
                 int32_t yb = (int32_t)b_ptr[roi_start + i] + (int32_t)vnd_dc_buf[1][p_use][i];
                 sum_a += ya;
                 sum_b += yb;
-                int32_t ea = ya - 32767; if(ea < 0) ea = -ea;
-                int32_t eb = yb - 32767; if(eb < 0) eb = -eb;
+                int32_t ea = ya - (int32_t)VND_DC_TARGET_ZERO; if(ea < 0) ea = -ea;
+                int32_t eb = yb - (int32_t)VND_DC_TARGET_ZERO; if(eb < 0) eb = -eb;
                 err_a += (uint32_t)ea;
                 err_b += (uint32_t)eb;
             }
@@ -1491,8 +1485,8 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
                 int32_t yb = (int32_t)b_ptr[roi_start + i] + (int32_t)vnd_dc_buf[1][p_alt][i];
                 sum2_a += ya;
                 sum2_b += yb;
-                int32_t ea = ya - 32767; if(ea < 0) ea = -ea;
-                int32_t eb = yb - 32767; if(eb < 0) eb = -eb;
+                int32_t ea = ya - (int32_t)VND_DC_TARGET_ZERO; if(ea < 0) ea = -ea;
+                int32_t eb = yb - (int32_t)VND_DC_TARGET_ZERO; if(eb < 0) eb = -eb;
                 err2_a += (uint32_t)ea;
                 err2_b += (uint32_t)eb;
             }
@@ -1567,6 +1561,8 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
     }
 
     if(!gate_enabled){
+        vnd_dc_last_adapt_ms[ch][p] = HAL_GetTick();
+        vnd_dc_slew_budget_q16[ch][p] = 0u;
         return; /* адаптация выключена */
     }
 
@@ -1576,26 +1572,47 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
     /* Проверяем режим управления адаптацией от хоста.
        FREEZE: только вычитаем DC, но не обучаемся (не меняем vnd_dc_buf). */
     if(mode == VND_DC_MODE_FREEZE || !vnd_dc_adapt_enabled){
+        vnd_dc_last_adapt_ms[ch][p] = now_ms;
+        vnd_dc_slew_budget_q16[ch][p] = 0u;
         return;
     }
 
     /* На старте после reboot/load применяем DC, но не учимся некоторое время,
        чтобы «первый мусорный кадр» не уводил DC в промежуточное состояние. */
     if(vnd_dc_adapt_block_until_ms != 0u && now_ms < vnd_dc_adapt_block_until_ms){
+        vnd_dc_last_adapt_ms[ch][p] = now_ms;
+        vnd_dc_slew_budget_q16[ch][p] = 0u;
         return;
     }
 
-     /* 2) Адаптация DC: строго поиндексная (per-sample), time-based SAR.
-         Host задаёт settle time в миллисекундах: за это время набирается бюджет
-         на полный 16-битный проход последовательного приближения. Модель:
-         out = raw + dc[i]; если out[i] слишком велик -> dc[i] делаем более отрицательным. */
+     /* 2) Адаптация DC: совместный time-based slew по всему 200-sample ROI.
+         Host задаёт settle time в миллисекундах: за это время максимальная
+         ошибка 32768 LSB должна плавно дойти до deadband. Все точки ROI получают
+         один общий маленький модуль шага; направление выбирается для каждого
+         семпла по его стороне от 32768. Мы не распределяем дробь по отдельным индексам
+         и не делаем больших per-sample скачков,
+         чтобы не создавать ломаную форму на осциллограмме.
+         Модель: out = raw + dc[i]; если out[i] выше 32768 -> dc[i] делаем более отрицательным. */
     int64_t sum = 0;
-    for(uint16_t i=0;i<roi_len;i++) sum += (int32_t)out[i];
+    uint32_t max_abs_err = 0u;
+    for(uint16_t i=0;i<roi_len;i++){
+        int32_t e_i = (int32_t)out[i] - (int32_t)VND_DC_TARGET_ZERO;
+        uint32_t abs_i = (e_i < 0) ? (uint32_t)(-e_i) : (uint32_t)e_i;
+        if(abs_i > max_abs_err){
+            max_abs_err = abs_i;
+        }
+        sum += (int32_t)out[i];
+    }
     int32_t mean = (int32_t)(sum / (int32_t)roi_len);
-    __attribute__((unused)) int32_t err = mean - 32767;
+    __attribute__((unused)) int32_t err = mean - (int32_t)VND_DC_TARGET_ZERO;
 
     int32_t dead = (int32_t)VND_DC_DEADBAND;
     if(dead < 0) dead = 0;
+    if(max_abs_err <= (uint32_t)dead){
+        vnd_dc_last_adapt_ms[ch][p] = now_ms;
+        vnd_dc_slew_budget_q16[ch][p] = 0u;
+        return;
+    }
 
     uint8_t changed = 0;
     uint32_t settle_ms = vnd_dc_active_settle_ms(now_ms);
@@ -1616,51 +1633,49 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
         dt_ms = settle_ms;
     }
 
-    uint32_t budget_add_q16 = (uint32_t)(((uint64_t)dt_ms * (uint64_t)VND_DC_SAR_BITS * 65536ULL) / (uint64_t)settle_ms);
-    if(budget_add_q16 == 0u){
-        budget_add_q16 = 1u;
-    }
-    uint32_t budget_q16 = vnd_dc_sar_budget_q16[ch][p] + budget_add_q16;
-    uint32_t max_budget_q16 = (uint32_t)VND_DC_SAR_MAX_BITS_PER_UPDATE * 65536u;
+    uint64_t step_add_q16 =
+        ((uint64_t)dt_ms * (uint64_t)VND_DC_SLEW_MAX_ERROR_LSB * 65536ULL) /
+        (uint64_t)settle_ms;
+    uint64_t budget_q16 = (uint64_t)vnd_dc_slew_budget_q16[ch][p] + step_add_q16;
+    uint64_t max_budget_q16 = (uint64_t)VND_DC_SLEW_MAX_LSB_PER_UPDATE * 65536ULL;
     if(budget_q16 > max_budget_q16){
         budget_q16 = max_budget_q16;
     }
-    uint32_t sar_bits = budget_q16 >> 16;
-    if(sar_bits == 0u){
-        vnd_dc_sar_budget_q16[ch][p] = budget_q16;
+    uint32_t step = (uint32_t)(budget_q16 >> 16);
+    if(step == 0u){
+        vnd_dc_slew_budget_q16[ch][p] = (uint32_t)budget_q16;
         return;
     }
-    if(sar_bits > (uint32_t)VND_DC_SAR_MAX_BITS_PER_UPDATE){
-        sar_bits = (uint32_t)VND_DC_SAR_MAX_BITS_PER_UPDATE;
+    if(step > (uint32_t)VND_DC_SLEW_MAX_LSB_PER_UPDATE){
+        step = (uint32_t)VND_DC_SLEW_MAX_LSB_PER_UPDATE;
     }
-    vnd_dc_sar_budget_q16[ch][p] = budget_q16 - (sar_bits << 16);
+    vnd_dc_slew_budget_q16[ch][p] = (uint32_t)(budget_q16 - ((uint64_t)step << 16));
 
-    /* per-sample SAR correction */
+    /* Все точки ROI обрабатываются за один проход. Модуль шага общий, знак локальный. */
     {
         for(uint16_t i=0;i<roi_len;i++){
-            int32_t e = (int32_t)out[i] - 32767;
-            if(e > -dead && e < dead) continue;
+            int32_t e = (int32_t)out[i] - (int32_t)VND_DC_TARGET_ZERO;
+            uint32_t abs_e = (e < 0) ? (uint32_t)(-e) : (uint32_t)e;
+            if(abs_e <= (uint32_t)dead) continue;
 
             int32_t dc_i32 = (int32_t)vnd_dc_buf[ch][p][i];
-            for(uint32_t bit = 0u; bit < sar_bits; bit++){
-                uint32_t abs_e = (e < 0) ? (uint32_t)(-e) : (uint32_t)e;
-                if(abs_e <= (uint32_t)dead) break;
-                uint32_t step = vnd_dc_floor_pow2_u32(abs_e);
-                if(e > 0){
-                    dc_i32 -= (int32_t)step;
-                    e -= (int32_t)step;
-                } else {
-                    dc_i32 += (int32_t)step;
-                    e += (int32_t)step;
-                }
-                if(dc_i32 < -32768){
-                    dc_i32 = -32768;
-                    break;
-                }
-                if(dc_i32 > 32767){
-                    dc_i32 = 32767;
-                    break;
-                }
+            uint32_t corr = step;
+            uint32_t max_corr = abs_e - (uint32_t)dead;
+            if(corr > max_corr){
+                corr = max_corr;
+            }
+            if(corr == 0u) continue;
+
+            if(e > 0){
+                dc_i32 -= (int32_t)corr;
+            } else {
+                dc_i32 += (int32_t)corr;
+            }
+            if(dc_i32 < -32768){
+                dc_i32 = -32768;
+            }
+            if(dc_i32 > 32767){
+                dc_i32 = 32767;
             }
 
             int16_t nv = (int16_t)dc_i32;
@@ -1681,12 +1696,13 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
             uint32_t now_ms = HAL_GetTick();
             if(vnd_dc_last_dirty_log_ms == 0u || (now_ms - vnd_dc_last_dirty_log_ms) > 1000u){
                 vnd_dc_last_dirty_log_ms = now_ms;
-                   VND_DC_LOGF("[DC] DIRTY: ch=%u p=%u mode=%u settle=%lums dt=%lums sar_bits=%lu mean=%ld err=%ld\r\n",
+                   VND_DC_LOGF("[DC] DIRTY: ch=%u p=%u mode=%u settle=%lums dt=%lums step=%lu maxerr=%lu mean=%ld err=%ld\r\n",
                        (unsigned)ch, (unsigned)p,
                        (unsigned)mode,
                        (unsigned long)settle_ms,
                        (unsigned long)dt_ms,
-                       (unsigned long)sar_bits,
+                       (unsigned long)step,
+                       (unsigned long)max_abs_err,
                        (long)mean, (long)err);
             }
         }
