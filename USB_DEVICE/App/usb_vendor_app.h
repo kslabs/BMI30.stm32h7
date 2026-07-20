@@ -8,17 +8,22 @@ extern "C" {
 #define VND_CMD_START_STREAM    0x20u
 #define VND_CMD_STOP_STREAM     0x21u
 #define VND_CMD_GET_STATUS      0x30u
-#define VND_CMD_SET_TX_ENABLE   0x33u /* 1 байт: 0=выкл, 1=вкл */
+#define VND_CMD_SET_TX_ENABLE   0x33u /* 1 byte: enable complementary TX200 waveform on PA2/PC7 and PA1 */
 #define VND_CMD_SET_OPTIC_POWER 0x34u /* 1 байт: 0..255, мощность оптического TX */
 #define VND_CMD_LED_EVENT       0x35u /* payload: u8 event, u16 duration_ms */
 #define VND_CMD_HOST_RX_ACK     0x36u /* payload: u32 total host-received A/B frames */
 #define VND_CMD_HOST_RX_CLEAR   0x37u /* payload: none, clear host receive heartbeat */
 #define VND_CMD_GET_LCD_STATUS  0x38u /* получить состояние LCD sync-индикатора (M/S/O, число, цвет) */
 #define VND_CMD_SET_OPTIC_HOLD  0x39u /* payload: u16 deciseconds; legacy u8 seconds also accepted */
-#define VND_CMD_SET_DC_CONFIG   0x1Fu /* payload: v1 DC timing config, see vnd_dc_config_v1_t fields */
+#define VND_CMD_SET_DC_CONFIG   0x1Fu /* payload: v1/v2 DC timing config */
 #define VND_CMD_GET_DC_CONFIG   0x3Au /* получить текущий DC timing config ('DCCF', 40 байт) */
 #define VND_CMD_SET_LED_PATTERN 0x3Bu /* payload: u8 ws2812_pattern_t for the 20 dynamic LEDs */
 #define VND_CMD_SET_DET_ADC     0x3Cu /* payload: u8 bit0=DetADC1, bit1=DetADC2 */
+#define VND_CMD_SET_RS485_ID    0x3Du /* payload: u8 node_id (0=unassigned, 1..31=slave id) */
+#define VND_CMD_SET_RS485_IP    0x3Eu /* payload: u8 ip[4] in network order, a.b.c.d */
+#define VND_CMD_REQUEST_RS485_IDENT 0x3Fu /* payload none: master starts one RS485 identity scan */
+#define VND_CMD_GET_RS485_IDENT 0x40u /* EP0 IN wValue=node_id (0=local): returns RID1 */
+#define VND_CMD_SET_LCD_ROLE_OVERLAY 0x41u /* payload: u8 enable, optional u8 period_s, u8 duration_s */
 
 /* Асинхронные service-события по Vendor IN 0x83: сигнатура 'EVT1'. */
 #define VND_EVT_TYPE_FW_INFO     0x00u /* payload: firmware version/build + STM32 UID96 v1 */
@@ -35,8 +40,7 @@ extern "C" {
 #define VND_CMD_SET_ROI_US      0x15u /* 4 байта u32 (микросекунды) */
 /* Новая команда: установить явный размер кадра (samples_per_frame) для ~20 FPS режимов */
 #define VND_CMD_SET_FRAME_SAMPLES 0x17u /* 2 байта u16 */
-#define VND_CMD_SET_SYNC_MODE   0x1Du /* payload: u8 mode (0=master, 1=slave, 2=off), host-forced */
-#define VND_CMD_SET_RS485_ID   0x3Du /* payload: u8 node_id (0=unassigned, 1..31=slave id) */
+#define VND_CMD_SET_SYNC_MODE   0x1Du /* payload: u8 mode (0=master, 1=slave, 2=off, 3/0xFF=auto), optional u8 node_id for slave */
 /* Режим асинхронной отправки A/B и выбор каналов */
 #ifndef VND_CMD_SET_ASYNC_MODE
 #define VND_CMD_SET_ASYNC_MODE   0x18u /* payload: u8 mode (0=pair/strict A->B, 1=async independent) */
@@ -51,6 +55,12 @@ extern "C" {
 #define VND_SYNC_MODE_SLAVE  1u
 #define VND_SYNC_MODE_OFF    2u
 #endif
+#ifndef VND_SYNC_MODE_AUTO
+#define VND_SYNC_MODE_AUTO   0xFFu
+#endif
+#ifndef VND_SYNC_MODE_AUTO_LEGACY
+#define VND_SYNC_MODE_AUTO_LEGACY 3u
+#endif
 
 #define VND_LED_EVENT_NONE       0u
 #define VND_LED_EVENT_CHANNEL_B  1u
@@ -64,9 +74,11 @@ extern "C" {
 #define VND_STFLAG_DIAG_ACTIVE    0x0002u  /* активен диагностический режим */
 #define VND_STFLAG_PENDING_INIT   0x0004u  /* после START ещё нет ни одного кадра A/B (ожидание инициализации) */
 #define VND_STFLAG_STREAM_ACTIVE  0x0008u  /* поток действительно активен (есть переданные A/B) */
-#define VND_STFLAG_TX_ENABLED     0x0010u  /* внешний TX разрешён командой/кнопкой */
+#define VND_STFLAG_TX_ENABLED     0x0010u  /* физический 200 Hz TX после host-request/fail-safe */
 #define VND_STFLAG_OPTIC_ACTIVE   0x0020u  /* оптический датчик на PD0 активен */
 #define VND_STFLAG_HOST_RX_ALIVE  0x0040u  /* хост недавно подтвердил чтение потока */
+#define VND_STFLAG_MASTER_OPTIC_ACTIVE 0x0080u /* master optic активен: локально на master или принят по RS485 на slave */
+#define VND_STFLAG_GROUP_OPTIC_ACTIVE  0x0100u /* активен любой локальный/RS485 optic в группе */
 
 /* Общие константы формата кадров/параметров (централизовано) */
 #ifndef VND_MAX_SAMPLES
@@ -86,6 +98,9 @@ extern "C" {
 #endif
 #ifndef VND_DC_CONFIG_MAX
 #define VND_DC_CONFIG_MAX   40u
+#endif
+#ifndef VND_RS485_IDENT_MAX
+#define VND_RS485_IDENT_MAX 32u
 #endif
 /* Дефолт: 300 семплов на канал в полном режиме */
 #ifndef VND_FULL_DEFAULT_SAMPLES
@@ -117,6 +132,8 @@ extern "C" {
 #define VND_LCD_SYNC_FLAG_COLOR_LOCKED      0x0004u
 #define VND_LCD_SYNC_FLAG_DISPLAY_FALLBACK  0x0008u
 #define VND_LCD_SYNC_FLAG_HOST_FORCED       0x0010u
+#define VND_LCD_SYNC_FLAG_ROLE_OVERLAY_EN   0x0020u
+#define VND_LCD_SYNC_FLAG_ROLE_OVERLAY_ACT  0x0040u
 
 #define VND_DC_MODE_FREEZE     0u /* apply stored DC, do not learn */
 #define VND_DC_MODE_WORK       1u /* normal slow tracking */
@@ -126,6 +143,10 @@ extern "C" {
 #define VND_DC_CFG_FLAG_ADAPT_ENABLED 0x0001u
 #define VND_DC_CFG_FLAG_AUTO_FREEZE   0x0002u
 #define VND_DC_CFG_FLAG_DIRTY         0x0004u
+#define VND_DC_CFG_FLAG_PRE_APPLY     0x0010u /* apply shared table before AVG */
+#define VND_DC_CFG_FLAG_PRE_LEARN     0x0020u /* learn shared table before AVG */
+#define VND_DC_CFG_FLAG_POST_APPLY    0x0040u /* apply shared table after AVG */
+#define VND_DC_CFG_FLAG_POST_LEARN    0x0080u /* learn shared table after AVG */
 
 typedef struct {
     uint8_t  raw_mode;           /* 0=master, 1=slave, 2=off */
@@ -168,12 +189,24 @@ typedef struct {
     uint32_t work_settle_ms;    /* WORK max-error-to-midscale smooth DC slew time */
     uint32_t detect_settle_ms;  /* DETECT max-error-to-midscale smooth DC slew time */
     uint32_t fast_settle_ms;    /* BOOT_FAST max-error-to-midscale smooth DC slew time */
-    uint32_t fast_duration_ms;  /* legacy wire name: last adapt_settle_ms alias, not a timer */
-    uint32_t active_settle_ms;  /* currently used smooth DC slew time */
+    uint32_t fast_duration_ms;  /* legacy wire name; v2 reports pre_settle_ms override */
+    uint32_t active_settle_ms;  /* currently selected pre/post smooth DC slew time */
     uint32_t mode_enter_ms;     /* HAL_GetTick() when current mode was entered */
-    uint32_t fast_until_ms;     /* legacy field; always 0 in continuous-speed model */
+    uint32_t fast_until_ms;     /* legacy wire name; v2 reports post_settle_ms override */
     uint32_t adapt_updates;     /* accepted DC learning updates since boot */
 } vnd_dc_config_v1_t;
+
+typedef struct {
+    char     sig[4];            /* 'RID1' */
+    uint8_t  version;           /* 1 */
+    uint8_t  node_id;           /* 0 if requested row is not available */
+    uint16_t flags;             /* RS485_IDENTITY_FLAG_* */
+    char     short_id[10];      /* 9 uppercase hex digits + NUL; '?' if incomplete */
+    uint8_t  ip4[4];            /* network order: a.b.c.d, zero if not known */
+    uint32_t seen_page_mask;    /* bit0..bit16: identity pages received */
+    uint32_t last_ms;           /* HAL_GetTick() of last page update, 0 if never */
+    uint16_t reserved;
+} vnd_rs485_ident_v1_t;
 
 typedef struct {
     char     sig[4];            /* 'STAT' */
@@ -242,7 +275,8 @@ typedef struct {
 #pragma pack(pop)
 _Static_assert(sizeof(vnd_lcd_status_v1_t) == 24, "vnd_lcd_status_v1_t must be 24 bytes");
 _Static_assert(sizeof(vnd_dc_config_v1_t) == 40, "vnd_dc_config_v1_t must be 40 bytes");
-_Static_assert(sizeof(vnd_status_v1_t) == 136, "vnd_status_v1_t must be 136 bytes (v5 extended)");
+_Static_assert(sizeof(vnd_rs485_ident_v1_t) == 32, "vnd_rs485_ident_v1_t must be 32 bytes");
+_Static_assert(sizeof(vnd_status_v1_t) == 136, "vnd_status_v1_t must be 136 bytes (v5)");
 
 /* Публичные переменные */
 extern volatile uint8_t vnd_tx_kick; /* Флаг пробуждения таска после события */
@@ -256,11 +290,26 @@ void Vendor_Maintenance_Task(void);
 void usb_vendor_periodic_tick(void); /* тик от TIM6 */
 uint8_t vnd_is_streaming(void);
 uint8_t vnd_is_tx_enabled(void);
+uint8_t vnd_is_tx_requested_enabled(void);
+uint32_t vnd_get_tx_host_cmd_count(void);
+uint32_t vnd_get_tx_host_cmd_last_ms(void);
+uint8_t vnd_get_tx_host_cmd_last_value(void);
+uint8_t vnd_set_tx_enabled(uint8_t enable);
 /* Построить статус в буфере (возвращает длину или 0 при ошибке) */
 uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len);
 uint16_t vnd_build_lcd_status(uint8_t *dst, uint16_t max_len);
 uint16_t vnd_build_dc_config(uint8_t *dst, uint16_t max_len);
+uint16_t vnd_build_rs485_ident(uint8_t node_id, uint8_t *dst, uint16_t max_len);
 void vnd_get_lcd_sync_snapshot(vnd_lcd_sync_snapshot_t *out);
+void vnd_lcd_role_overlay_configure(uint8_t enabled, uint8_t period_s, uint8_t duration_s);
+
+extern volatile uint8_t  vnd_lcd_role_overlay_enabled;
+extern volatile uint8_t  vnd_lcd_role_overlay_active;
+extern volatile uint8_t  vnd_lcd_role_overlay_period_s;
+extern volatile uint8_t  vnd_lcd_role_overlay_duration_s;
+extern volatile uint8_t  vnd_lcd_role_overlay_color_id;
+extern volatile uint16_t vnd_lcd_role_overlay_rgb565;
+extern volatile uint32_t vnd_lcd_role_overlay_config_seq;
 /* Диагностическая одноразовая отправка 64B шаблона (оставляем) */
 void vnd_diag_send64_once(void);
 /* ISR уведомление о появлении новых кадров (override слабого hook из adc_stream) */

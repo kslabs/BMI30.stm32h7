@@ -25,14 +25,13 @@ extern TIM_HandleTypeDef htim5;
 #include "usbd_cdc_custom.h" /* для USBD_VND_RequestSoftReset/DeepReset (объявления находятся в .c) */
 #include "vnd_testgen.h"
 
-/* === DC калибровка (только для stream_mode=2 / AVG_ROI) ===
+/* === DC калибровка ROI 200 samples (LOSSLESS_ROI / AVG_ROI) ===
    Требование:
    - DC буферы 200 семплов для каждого (канал A/B) × (even/odd)
-   - Вычитание DC из усреднённых данных
-   - Адаптация DC: за каждый усреднённый пакет обновляем ровно 1 семпл на +/-1
-   - Гейт: если на полном сыром буфере (обычно 600 семплов) нет (max-min)>60000,
-       то DC вычитание и адаптация отключены.
-   - Сохранение в Flash примерно каждые 10–20 минут.
+   - LOSSLESS_ROI: применяем DC к копии ROI перед USB payload
+   - AVG_ROI: host chooses one location for the shared DC table: pre or post
+   - DMA/FIFO raw буферы не изменяем
+   - Сохранение в Flash только по команде хоста, если не включён периодический save.
 */
 #include "stm32h7xx_hal_flash.h"
 #include "stm32h7xx_hal_flash_ex.h"
@@ -63,6 +62,23 @@ extern TIM_HandleTypeDef htim5;
 #define VND_PROF_LOGF(...) do { } while(0)
 #endif
 
+/* Verification build default: keep the COM port quiet except explicit DC speed
+   confirmation in SET_DC_CONFIG. Define VND_UART_LOG_ENABLE=1 to restore logs. */
+#ifndef VND_UART_LOG_ENABLE
+#define VND_UART_LOG_ENABLE 0
+#endif
+#if !VND_UART_LOG_ENABLE
+#define printf(...) ((void)0)
+#endif
+
+#ifndef VND_CDC_LOG_ENABLE
+#define VND_CDC_LOG_ENABLE 0
+#endif
+
+#ifndef VND_LED_EVENTS_ENABLE
+#define VND_LED_EVENTS_ENABLE 0
+#endif
+
 #ifndef VND_SYNC_DIAG_ENABLE
 #define VND_SYNC_DIAG_ENABLE 1
 #endif
@@ -79,6 +95,9 @@ extern TIM_HandleTypeDef htim5;
 void vnd_diag_log_possible_stall(void);
 static void cdc_logf(const char *fmt, ...);
 static void vnd_apply_tx_enable_outputs(void);
+static uint8_t vnd_tx_set_enabled_internal(uint8_t enable, const char *reason);
+static uint8_t vnd_tx_refresh_effective(uint32_t now_ms, const char *reason);
+static void vnd_tx_failsafe_service(uint32_t now_ms);
 static void vnd_log_dc_cmd_rx(const uint8_t *data, uint32_t len);
 
 /* Управление дублированием данных кадров в CDC (COM-порт):
@@ -103,6 +122,7 @@ static void vnd_log_dc_cmd_rx(const uint8_t *data, uint32_t len);
 #endif
 
 extern USBD_HandleTypeDef hUsbDeviceHS;
+extern volatile uint8_t need_usb_status_refresh;
 
 /* В диагностическом режиме упростим логику: отправлять только A-кадр (без обязательного B).
     Это помогает подтвердить транспорт USB IN и исключает потенциальные блокировки на pending_B. */
@@ -127,7 +147,7 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 /* Отладка фаз/буферов: инверсия тестового выхода PA2 (TIM2_CH3) */
 #define VND_CMD_TOGGLE_TIM2CH3_INV 0x32u
 #ifndef VND_CMD_SET_TX_ENABLE
-#define VND_CMD_SET_TX_ENABLE   0x33u /* payload: u8 0/1 (внешний передатчик) */
+#define VND_CMD_SET_TX_ENABLE   0x33u /* payload: u8 0/1; persistent active-low external TX enable on PA1 */
 #endif
 #ifndef VND_CMD_SET_OPTIC_POWER
 #define VND_CMD_SET_OPTIC_POWER 0x34u /* payload: u8 0..255 (мощность оптического TX) */
@@ -154,9 +174,21 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #define VND_CMD_SET_WINDOWS    0x10u /* payload: start0,len0,start1,len1 (LE, u16) */
 #define VND_CMD_SET_BUF_RATE_FINE 0x1Cu /* payload: marker_hz (<=350) или buf_rate_hz (>350), fine 180-250 Hz */
 #ifndef VND_CMD_SET_SYNC_MODE
-#define VND_CMD_SET_SYNC_MODE     0x1Du /* payload: u8 mode (0=master, 1=slave, 2=off) */
+#define VND_CMD_SET_SYNC_MODE     0x1Du /* payload: u8 mode (0=master, 1=slave, 2=off, 3/0xFF=auto), optional u8 slave id */
 #endif
 #define VND_CMD_SET_RS485_ID      0x3Du /* payload: u8 node_id (0=unassigned, 1..31=slave id) */
+#ifndef VND_CMD_SET_RS485_IP
+#define VND_CMD_SET_RS485_IP      0x3Eu /* payload: u8 ip[4] network order */
+#endif
+#ifndef VND_CMD_REQUEST_RS485_IDENT
+#define VND_CMD_REQUEST_RS485_IDENT 0x3Fu /* payload none: start one identity scan */
+#endif
+#ifndef VND_CMD_GET_RS485_IDENT
+#define VND_CMD_GET_RS485_IDENT   0x40u /* payload: optional u8 node_id, returns RID1 */
+#endif
+#ifndef VND_CMD_SET_LCD_ROLE_OVERLAY
+#define VND_CMD_SET_LCD_ROLE_OVERLAY 0x41u /* payload: u8 enable, optional u8 period_s, u8 duration_s */
+#endif
 #define VND_CMD_SET_BLOCK_HZ   0x11u /* payload: u16 hz (20..100) или 0xFFFF=макс (100) */
 /* Новая команда: установка ограничения числа выборок на канал в рабочем кадре */
 #define VND_CMD_SET_TRUNC_SAMPLES 0x16u /* payload: u16 samples (0=отключить усечение) */
@@ -185,6 +217,12 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #define VND_SYNC_MODE_MASTER 0u
 #define VND_SYNC_MODE_SLAVE  1u
 #define VND_SYNC_MODE_OFF    2u
+#ifndef VND_SYNC_MODE_AUTO
+#define VND_SYNC_MODE_AUTO   0xFFu
+#endif
+#ifndef VND_SYNC_MODE_AUTO_LEGACY
+#define VND_SYNC_MODE_AUTO_LEGACY 3u
+#endif
 #define VND_STREAM_MODE_LATEST        0u
 #define VND_STREAM_MODE_LOSSLESS_ROI  1u
 #define VND_STREAM_MODE_AVG_ROI       2u
@@ -204,6 +242,12 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 #endif
 #define VND_AVG_OUT_Q                 4u
 #define VND_HOST_RX_ACK_TIMEOUT_MS    1500u
+#ifndef VND_TX_HOST_START_GRACE_MS
+#define VND_TX_HOST_START_GRACE_MS    3000u
+#endif
+#ifndef VND_TX_USB_HOST_PRESENT_MS
+#define VND_TX_USB_HOST_PRESENT_MS    1500u
+#endif
 #ifndef VND_USB_IN_BUSY_STALL_MS
 #define VND_USB_IN_BUSY_STALL_MS       220u
 #endif
@@ -252,7 +296,11 @@ extern USBD_HandleTypeDef hUsbDeviceHS;
 /* ---------------- Глобальные переменные состояния (централизовано) ---------------- */
 /* Видимая снаружи (CDC) метка стриминга */
 volatile uint8_t streaming = 0;
-static volatile uint8_t vnd_tx_enable = 0; /* 1=разрешить физические TX-маркеры PA2/PC7 и инверсный PA1; 0=зажать PA2/PC7 LOW, PA1 HIGH */
+static volatile uint8_t vnd_tx_requested_enable = 0; /* Persistent host/manual request; changed only by SET_TX_ENABLE/TX200. */
+static volatile uint8_t vnd_tx_enable = 0; /* 1=enable complementary TX200 waveform on PA2/PC7 and PA1; 0=clamp it off. */
+static volatile uint32_t vnd_tx_host_cmd_count = 0;
+static volatile uint32_t vnd_tx_host_cmd_last_ms = 0;
+static volatile uint8_t vnd_tx_host_cmd_last_value = 0;
 /* Последовательность пар (инкремент только после успешного завершения B) */
 volatile uint32_t stream_seq = 0;
 /* Фактически зафиксированный размер кадров и ожидаемый размер байт */
@@ -368,6 +416,34 @@ volatile uint16_t vnd_dc_fast_frames = 0;   /* legacy CALIB_DC_FAST request valu
 volatile uint8_t  vnd_sync_mode_public = VND_SYNC_MODE_SLAVE;
 volatile uint8_t  vnd_sync_ok_public = 1u;
 static volatile uint8_t  vnd_sync_mode_host_forced = 0u;
+volatile uint8_t  vnd_lcd_role_overlay_enabled = 0u;
+volatile uint8_t  vnd_lcd_role_overlay_active = 0u;
+volatile uint8_t  vnd_lcd_role_overlay_period_s = 4u;
+volatile uint8_t  vnd_lcd_role_overlay_duration_s = 4u;
+volatile uint8_t  vnd_lcd_role_overlay_color_id = VND_LCD_SYNC_COLOR_WHITE;
+volatile uint16_t vnd_lcd_role_overlay_rgb565 = 0xFFFFu;
+volatile uint32_t vnd_lcd_role_overlay_config_seq = 0u;
+
+static uint8_t vnd_lcd_role_overlay_clamp_s(uint8_t value_s)
+{
+    if (value_s < 3u) {
+        return 3u;
+    }
+    if (value_s > 5u) {
+        return 5u;
+    }
+    return value_s;
+}
+
+void vnd_lcd_role_overlay_configure(uint8_t enabled, uint8_t period_s, uint8_t duration_s)
+{
+    vnd_lcd_role_overlay_period_s = vnd_lcd_role_overlay_clamp_s(period_s);
+    vnd_lcd_role_overlay_duration_s = vnd_lcd_role_overlay_clamp_s(duration_s);
+    vnd_lcd_role_overlay_enabled = (enabled != 0u) ? 1u : 0u;
+    vnd_lcd_role_overlay_active = 0u;
+    vnd_lcd_role_overlay_config_seq++;
+    need_usb_status_refresh = 1u;
+}
 
 void vnd_sync_on_edge(void)
 {
@@ -705,13 +781,13 @@ static uint32_t dbg_avg_in_last = 0, dbg_avg_out_last = 0, dbg_avg_tx_last = 0;
     larger value means slower tracking. Slow modes reduce the LSB step instead of waiting
     and then applying a large correction jump. */
 #ifndef VND_DC_WORK_SETTLE_MS
-#define VND_DC_WORK_SETTLE_MS   (15u*60u*1000u) /* 900 s */
+#define VND_DC_WORK_SETTLE_MS   (5u*1000u)          /* Work: 5 s */
 #endif
 #ifndef VND_DC_DETECT_SETTLE_MS
-#define VND_DC_DETECT_SETTLE_MS (60u*1000u)     /* 60 s */
+#define VND_DC_DETECT_SETTLE_MS (10000u*1000u)      /* Detection: 10000 s */
 #endif
 #ifndef VND_DC_FAST_SETTLE_MS
-#define VND_DC_FAST_SETTLE_MS   (5u*1000u)      /* 5 s */
+#define VND_DC_FAST_SETTLE_MS   (500u*1000u)        /* Acquisition/BOOT_FAST: 500 s */
 #endif
 #ifndef VND_DC_SETTLE_MIN_MS
 #define VND_DC_SETTLE_MIN_MS    (1u)
@@ -752,8 +828,8 @@ static uint32_t dbg_avg_in_last = 0, dbg_avg_out_last = 0, dbg_avg_tx_last = 0;
 #endif
 
 #define VND_DC_MAGIC 0x31434456u /* 'V''D''C''1' little-endian */
-/* ver=3: commit marker in _pad[] makes partially written slots uncommitted. */
-#define VND_DC_VER   3u
+/* ver=5: one shared DC table; pre/post select only the processing location. */
+#define VND_DC_VER   5u
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -763,8 +839,7 @@ typedef struct __attribute__((packed)) {
     uint16_t crc16; /* CRC16-CCITT по полю data[] */
     uint16_t _rsv0;
 
-    int16_t  dc[2][2][VND_DC_ROI_LEN]; /* [ch][parity][i] signed offset */
-    uint8_t  pos[2][2];
+    int16_t  dc[2][2][VND_DC_ROI_LEN]; /* shared [ch][parity][i] DC correction */
     uint8_t  _pad[32]; /* запас/выравнивание; точный размер не критичен */
 } vnd_dc_blob_t;
 
@@ -777,6 +852,10 @@ typedef struct __attribute__((packed)) {
 #define VND_DC_COMMIT_MAGIC      0x21434456u /* 'VDC!' little-endian */
 #define VND_DC_COMMIT_OFFSET     ((uint32_t)offsetof(vnd_dc_blob_t, _pad) + 28u)
 #define VND_DC_RECOVERY_MAGIC    0x44524356u /* 'VCRD' little-endian */
+
+_Static_assert((VND_DC_SLOT_SIZE % 32u) == 0u, "DC journal slot must be flashword aligned");
+_Static_assert((VND_DC_COMMIT_OFFSET + sizeof(uint32_t)) <= sizeof(vnd_dc_blob_t),
+               "DC commit marker must stay inside the blob");
 
 #ifndef VND_DC_SAVE_DRY_RUN
 #define VND_DC_SAVE_DRY_RUN      0u
@@ -794,8 +873,12 @@ typedef struct __attribute__((packed)) {
 #define VND_DC_SAVE_ERASE_ONLY_TEST 0u
 #endif
 
+enum {
+    VND_DC_STAGE_PRE  = 0u,
+    VND_DC_STAGE_POST = 1u
+};
+
 static int16_t  vnd_dc_buf[2][2][VND_DC_ROI_LEN];
-static uint8_t  vnd_dc_pos[2][2];
 static uint8_t  vnd_dc_loaded = 0;
 static uint8_t  vnd_dc_dirty = 0;
 static uint32_t vnd_dc_write_counter = 0;
@@ -804,6 +887,7 @@ static uint32_t vnd_dc_last_save_ms = 0;
 static uint32_t vnd_dc_last_dirty_log_ms = 0;
 static volatile uint8_t vnd_dc_load_request = 0;
 static volatile uint8_t vnd_dc_save_request = 0;
+/* Adaptation state belongs to the shared coefficient bank, not to pre/post. */
 static uint32_t vnd_dc_last_adapt_ms[2][2];
 static uint32_t vnd_dc_slew_budget_q16[2][2];
 
@@ -814,6 +898,12 @@ static volatile uint32_t vnd_dc_work_settle_ms = (uint32_t)VND_DC_WORK_SETTLE_MS
 static volatile uint32_t vnd_dc_detect_settle_ms = (uint32_t)VND_DC_DETECT_SETTLE_MS;
 static volatile uint32_t vnd_dc_fast_settle_ms = (uint32_t)VND_DC_FAST_SETTLE_MS;
 static volatile uint32_t vnd_dc_adapt_settle_ms = 0u;
+static volatile uint32_t vnd_dc_pre_settle_ms = 0u;  /* 0 = use mode speed */
+static volatile uint32_t vnd_dc_post_settle_ms = 0u; /* 0 = use mode speed */
+static volatile uint8_t  vnd_dc_pre_apply_enabled = 1u;
+static volatile uint8_t  vnd_dc_pre_learn_enabled = 1u;
+static volatile uint8_t  vnd_dc_post_apply_enabled = 0u;
+static volatile uint8_t  vnd_dc_post_learn_enabled = 0u;
 static volatile uint32_t vnd_dc_mode_enter_ms = 0;
 static volatile uint32_t vnd_dc_fast_until_ms = 0u;
 static volatile uint32_t vnd_dc_adapt_updates = 0;
@@ -826,10 +916,12 @@ static uint8_t vnd_dc_parity_swap = 0;
 static uint8_t vnd_dc_parity_swap_valid = 0;
 
 static void vnd_dc_load_once(void);
-static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, uint16_t roi_len, uint8_t gate_enabled);
+static void vnd_dc_apply_only_stage(uint8_t stage, uint8_t ch, uint8_t parity, uint16_t *out, uint16_t roi_len);
+static void vnd_dc_apply_and_adapt_stage(uint8_t stage, uint8_t ch, uint8_t parity, uint16_t *out, uint16_t roi_len, uint8_t gate_enabled);
 static void vnd_dc_set_mode(uint8_t mode);
 static uint8_t vnd_dc_effective_mode(uint32_t now_ms);
 static uint32_t vnd_dc_active_settle_ms(uint32_t now_ms);
+static uint32_t vnd_dc_stage_settle_ms(uint8_t stage, uint32_t now_ms);
 
 /* Exported counters for LCD/diagnostics (see usb_vendor_app.h) */
 volatile uint32_t vnd_dc_save_ok_count = 0;
@@ -923,6 +1015,58 @@ static uint32_t vnd_dc_active_settle_ms(uint32_t now_ms)
     return vnd_dc_work_settle_ms;
 }
 
+static uint32_t vnd_dc_stage_settle_ms(uint8_t stage, uint32_t now_ms)
+{
+    uint32_t base = vnd_dc_active_settle_ms(now_ms);
+    if(stage == VND_DC_STAGE_PRE && vnd_dc_pre_settle_ms != 0u){
+        return vnd_dc_pre_settle_ms;
+    }
+    if(stage == VND_DC_STAGE_POST && vnd_dc_post_settle_ms != 0u){
+        return vnd_dc_post_settle_ms;
+    }
+    return base;
+}
+
+static uint8_t vnd_dc_selected_stage(void)
+{
+    return vnd_dc_post_apply_enabled ? VND_DC_STAGE_POST : VND_DC_STAGE_PRE;
+}
+
+/* There is exactly one DC coefficient table. PRE/POST flags only choose where
+   that table is applied and learned. Applying the same table at both stages
+   would double the correction, so ambiguous combinations are normalized to
+   one effective stage. Learning requests take priority; POST wins if both
+   PRE_LEARN and POST_LEARN are requested. */
+static void vnd_dc_select_single_stage(uint16_t flags)
+{
+    uint8_t pre_apply = (flags & VND_DC_CFG_FLAG_PRE_APPLY) ? 1u : 0u;
+    uint8_t pre_learn = (flags & VND_DC_CFG_FLAG_PRE_LEARN) ? 1u : 0u;
+    uint8_t post_apply = (flags & VND_DC_CFG_FLAG_POST_APPLY) ? 1u : 0u;
+    uint8_t post_learn = (flags & VND_DC_CFG_FLAG_POST_LEARN) ? 1u : 0u;
+
+    if(!(pre_apply || pre_learn || post_apply || post_learn)){
+        pre_apply = 1u;
+        pre_learn = 1u;
+    }
+
+    vnd_dc_pre_apply_enabled = 0u;
+    vnd_dc_pre_learn_enabled = 0u;
+    vnd_dc_post_apply_enabled = 0u;
+    vnd_dc_post_learn_enabled = 0u;
+
+    if(post_learn){
+        vnd_dc_post_apply_enabled = 1u;
+        vnd_dc_post_learn_enabled = 1u;
+    } else if(pre_learn){
+        vnd_dc_pre_apply_enabled = 1u;
+        vnd_dc_pre_learn_enabled = 1u;
+    } else if(post_apply){
+        vnd_dc_post_apply_enabled = 1u;
+    } else {
+        vnd_dc_pre_apply_enabled = 1u;
+    }
+}
+
 static uint32_t vnd_dc_rd_le32(const uint8_t *p)
 {
     return (uint32_t)p[0] |
@@ -934,37 +1078,66 @@ static uint32_t vnd_dc_rd_le32(const uint8_t *p)
 static void vnd_dc_apply_config_payload(const uint8_t *payload, uint32_t payload_len)
 {
     if(payload == NULL || payload_len < 2u) return;
-    if(payload[0] != 1u) return; /* version */
+    if(payload[0] != 1u && payload[0] != 2u) return; /* version */
 
+    uint8_t version = payload[0];
     uint8_t mode = payload[1];
     if(payload_len >= 20u){
         uint16_t flags = (uint16_t)(payload[2] | ((uint16_t)payload[3] << 8));
-        (void)flags; /* reserved for future host-side policy */
 
         uint32_t work_ms = vnd_dc_rd_le32(payload + 4);
         uint32_t detect_ms = vnd_dc_rd_le32(payload + 8);
         uint32_t fast_ms = vnd_dc_rd_le32(payload + 12);
-        uint32_t adapt_settle_ms = vnd_dc_rd_le32(payload + 16);
+        uint32_t pre_or_adapt_ms = vnd_dc_rd_le32(payload + 16);
 
         vnd_dc_work_settle_ms = vnd_dc_clamp_settle_ms(work_ms);
         vnd_dc_detect_settle_ms = vnd_dc_clamp_settle_ms(detect_ms);
         vnd_dc_fast_settle_ms = vnd_dc_clamp_settle_ms(fast_ms);
 
-        /* Backward-compatible meaning of the last u32: host-side UI may call it
-           "adaptation duration". It is not a run timer; it is a settle time for
-           the selected mode, i.e. speed of continuous smooth-slew adaptation. */
-        if(adapt_settle_ms != 0u){
-            uint32_t settle_ms = vnd_dc_clamp_settle_ms(adapt_settle_ms);
-            if(mode == VND_DC_MODE_DETECT){
-                vnd_dc_detect_settle_ms = settle_ms;
-            } else if(mode == VND_DC_MODE_BOOT_FAST){
-                vnd_dc_fast_settle_ms = settle_ms;
-            } else if(mode == VND_DC_MODE_WORK){
-                vnd_dc_work_settle_ms = settle_ms;
+        if(version == 2u && payload_len >= 24u){
+            uint32_t post_ms = vnd_dc_rd_le32(payload + 20);
+
+            uint8_t old_pre_apply = vnd_dc_pre_apply_enabled;
+            uint8_t old_pre_learn = vnd_dc_pre_learn_enabled;
+            uint8_t old_post_apply = vnd_dc_post_apply_enabled;
+            uint8_t old_post_learn = vnd_dc_post_learn_enabled;
+
+            vnd_dc_select_single_stage(flags);
+
+            vnd_dc_pre_settle_ms = (pre_or_adapt_ms != 0u) ? vnd_dc_clamp_settle_ms(pre_or_adapt_ms) : 0u;
+            vnd_dc_post_settle_ms = (post_ms != 0u) ? vnd_dc_clamp_settle_ms(post_ms) : 0u;
+            vnd_dc_adapt_settle_ms = vnd_dc_pre_settle_ms;
+
+            if(old_pre_apply != vnd_dc_pre_apply_enabled ||
+               old_pre_learn != vnd_dc_pre_learn_enabled ||
+               old_post_apply != vnd_dc_post_apply_enabled ||
+               old_post_learn != vnd_dc_post_learn_enabled){
+                /* Keep the shared coefficients, reset only time/slew bookkeeping. */
+                vnd_dc_reset_adapt_timestamps();
             }
-            vnd_dc_adapt_settle_ms = settle_ms;
         } else {
-            vnd_dc_adapt_settle_ms = 0u;
+            /* v1-compatible meaning of the last u32: selected-mode settle time,
+               not a run timer. v1 always means pre-average apply+learn only. */
+            vnd_dc_pre_apply_enabled = 1u;
+            vnd_dc_pre_learn_enabled = 1u;
+            vnd_dc_post_apply_enabled = 0u;
+            vnd_dc_post_learn_enabled = 0u;
+            vnd_dc_pre_settle_ms = 0u;
+            vnd_dc_post_settle_ms = 0u;
+
+            if(pre_or_adapt_ms != 0u){
+                uint32_t settle_ms = vnd_dc_clamp_settle_ms(pre_or_adapt_ms);
+                if(mode == VND_DC_MODE_DETECT){
+                    vnd_dc_detect_settle_ms = settle_ms;
+                } else if(mode == VND_DC_MODE_BOOT_FAST){
+                    vnd_dc_fast_settle_ms = settle_ms;
+                } else if(mode == VND_DC_MODE_WORK){
+                    vnd_dc_work_settle_ms = settle_ms;
+                }
+                vnd_dc_adapt_settle_ms = settle_ms;
+            } else {
+                vnd_dc_adapt_settle_ms = 0u;
+            }
         }
     }
 
@@ -1116,7 +1289,6 @@ static void vnd_dc_boot_recovery_erase_if_requested(void)
         vnd_dc_save_last_result = 2;
         vnd_dc_loaded = 1;
         memset(vnd_dc_buf, 0, sizeof(vnd_dc_buf));
-        memset(vnd_dc_pos, 0, sizeof(vnd_dc_pos));
         vnd_dc_dirty = 0;
         vnd_dc_dirty_public = 0;
         vnd_dc_dirty_since_ms = 0;
@@ -1173,7 +1345,7 @@ static void vnd_sync_apply_mode(uint8_t mode)
 {
     extern volatile uint8_t g_arr_manual_mode;
 
-    if(mode > VND_SYNC_MODE_OFF) mode = VND_SYNC_MODE_MASTER;
+    if(mode > VND_SYNC_MODE_OFF) mode = VND_SYNC_MODE_OFF;
 
     if (mode == VND_SYNC_MODE_MASTER || mode == VND_SYNC_MODE_SLAVE) {
         adc_stream_clear_buf_rate_override();
@@ -1239,14 +1411,13 @@ void vnd_sync_set_mode_auto(uint8_t mode)
 
 static void vnd_sync_apply_host_forced_mode(uint8_t mode)
 {
-    if(mode > VND_SYNC_MODE_OFF) mode = VND_SYNC_MODE_MASTER;
+    if(mode > VND_SYNC_MODE_OFF) mode = VND_SYNC_MODE_OFF;
 
     vnd_sync_mode_host_forced = 1u;
     if (mode == VND_SYNC_MODE_MASTER || mode == VND_SYNC_MODE_SLAVE) {
-        /* A host-selected topology must be renumbered by the selected master.
-           Clear any previous compact slave id on every forced MASTER/SLAVE
-           command; slaves will fall back to UID-hint and then accept fresh
-           compact assignment from the new master. */
+        /* Clear any previous compact id on forced MASTER/SLAVE. The host may
+           provide a fresh slave id in the same SET_SYNC_MODE command, or later
+           through SET_RS485_ID. */
         rs485_set_local_node_id_from_host(0u);
     }
     vnd_sync_apply_mode(mode);
@@ -1262,11 +1433,18 @@ void vnd_sync_apply_mode_forced(uint8_t mode)
 void vnd_sync_release_host_forced(void)
 {
     vnd_sync_mode_host_forced = 0u;
+    vnd_sync_apply_mode(VND_SYNC_MODE_SLAVE);
 }
 
 uint8_t vnd_sync_is_mode_host_forced(void)
 {
     return vnd_sync_mode_host_forced;
+}
+
+static int16_t *vnd_dc_bank(uint8_t ch, uint8_t parity)
+{
+    if(ch > 1u || parity > 1u) return NULL;
+    return vnd_dc_buf[ch][parity];
 }
 
 __attribute__((unused))
@@ -1282,13 +1460,15 @@ static uint32_t vnd_dc_score_bank(const uint16_t *raw, uint16_t raw_ns, uint16_t
     if(ch > 1u || parity > 1u) return 0xFFFFFFFFu;
     if(roi_len != (uint16_t)VND_DC_ROI_LEN) return 0xFFFFFFFFu;
     if(raw_ns < (uint16_t)(roi_start + roi_len)) return 0xFFFFFFFFu;
+    int16_t *bank = vnd_dc_bank(ch, parity);
+    if(bank == NULL) return 0xFFFFFFFFu;
 
     /* Скоринг: весь ROI (200 точек). Это выполняется редко (один раз после reboot),
        поэтому лучше быть надёжным, чем быстрым. */
     uint32_t acc = 0;
     for(uint16_t i = 0; i < roi_len; i++){
         uint16_t v = raw[roi_start + i];
-        int16_t dc = vnd_dc_buf[ch][parity][i];
+        int16_t dc = bank[i];
         int32_t y = (int32_t)v + (int32_t)dc;
         int32_t e = y - (int32_t)VND_DC_TARGET_ZERO;
         if(e < 0) e = -e;
@@ -1452,6 +1632,10 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
         {
             uint8_t p_use = (uint8_t)(parity ^ vnd_dc_parity_swap);
             uint8_t p_alt = (uint8_t)(p_use ^ 1u);
+            int16_t *bank_a = vnd_dc_bank(0u, p_use);
+            int16_t *bank_b = vnd_dc_bank(1u, p_use);
+            int16_t *bank2_a = vnd_dc_bank(0u, p_alt);
+            int16_t *bank2_b = vnd_dc_bank(1u, p_alt);
 
             int64_t raw_sum_a = 0, raw_sum_b = 0;
             for(uint16_t i = 0; i < roi_len; i++){
@@ -1465,8 +1649,8 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
             int64_t sum_a = 0, sum_b = 0;
             uint32_t err_a = 0, err_b = 0;
             for(uint16_t i = 0; i < roi_len; i++){
-                int32_t ya = (int32_t)a_ptr[roi_start + i] + (int32_t)vnd_dc_buf[0][p_use][i];
-                int32_t yb = (int32_t)b_ptr[roi_start + i] + (int32_t)vnd_dc_buf[1][p_use][i];
+                int32_t ya = (int32_t)a_ptr[roi_start + i] + (int32_t)(bank_a ? bank_a[i] : 0);
+                int32_t yb = (int32_t)b_ptr[roi_start + i] + (int32_t)(bank_b ? bank_b[i] : 0);
                 sum_a += ya;
                 sum_b += yb;
                 int32_t ea = ya - (int32_t)VND_DC_TARGET_ZERO; if(ea < 0) ea = -ea;
@@ -1481,8 +1665,8 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
             int64_t sum2_a = 0, sum2_b = 0;
             uint32_t err2_a = 0, err2_b = 0;
             for(uint16_t i = 0; i < roi_len; i++){
-                int32_t ya = (int32_t)a_ptr[roi_start + i] + (int32_t)vnd_dc_buf[0][p_alt][i];
-                int32_t yb = (int32_t)b_ptr[roi_start + i] + (int32_t)vnd_dc_buf[1][p_alt][i];
+                int32_t ya = (int32_t)a_ptr[roi_start + i] + (int32_t)(bank2_a ? bank2_a[i] : 0);
+                int32_t yb = (int32_t)b_ptr[roi_start + i] + (int32_t)(bank2_b ? bank2_b[i] : 0);
                 sum2_a += ya;
                 sum2_b += yb;
                 int32_t ea = ya - (int32_t)VND_DC_TARGET_ZERO; if(ea < 0) ea = -ea;
@@ -1505,8 +1689,13 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
         }
     }
 
-    vnd_dc_apply_and_adapt(0, parity, tmp_a, roi_len, gate_a);
-    vnd_dc_apply_and_adapt(1, parity, tmp_b, roi_len, gate_b);
+    if(vnd_dc_pre_learn_enabled){
+        vnd_dc_apply_and_adapt_stage(VND_DC_STAGE_PRE, 0, parity, tmp_a, roi_len, gate_a);
+        vnd_dc_apply_and_adapt_stage(VND_DC_STAGE_PRE, 1, parity, tmp_b, roi_len, gate_b);
+    } else if(vnd_dc_pre_apply_enabled){
+        vnd_dc_apply_only_stage(VND_DC_STAGE_PRE, 0, parity, tmp_a, roi_len);
+        vnd_dc_apply_only_stage(VND_DC_STAGE_PRE, 1, parity, tmp_b, roi_len);
+    }
 
     if(do_stats && vnd_dc_parity_swap_valid){
         __attribute__((unused)) uint8_t p_use = (uint8_t)(parity ^ vnd_dc_parity_swap);
@@ -1541,18 +1730,42 @@ static void vnd_dc_background_step(uint16_t roi_start, uint16_t roi_len)
     }
 }
 
-static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, uint16_t roi_len, uint8_t gate_enabled)
+static void vnd_dc_apply_only_stage(uint8_t stage, uint8_t ch, uint8_t parity, uint16_t *out, uint16_t roi_len)
+{
+    (void)stage; /* PRE/POST share the same coefficient bank. */
+    if(!out) return;
+    if(roi_len != (uint16_t)VND_DC_ROI_LEN) return;
+    if(ch > 1u || parity > 1u) return;
+
+    uint8_t p = (uint8_t)(parity ^ (vnd_dc_parity_swap_valid ? vnd_dc_parity_swap : 0u));
+    int16_t *bank = vnd_dc_bank(ch, p);
+    if(bank == NULL) return;
+    for(uint16_t i=0;i<roi_len;i++){
+        int16_t dc = bank[i];
+        int32_t y = (int32_t)out[i] + (int32_t)dc;
+        if(y < 0){
+            y = 0;
+        } else if(y > 65535){
+            y = 65535;
+        }
+        out[i] = (uint16_t)y;
+    }
+}
+
+static void vnd_dc_apply_and_adapt_stage(uint8_t stage, uint8_t ch, uint8_t parity, uint16_t *out, uint16_t roi_len, uint8_t gate_enabled)
 {
     if(!out) return;
     if(roi_len != (uint16_t)VND_DC_ROI_LEN) return;
     if(ch > 1u || parity > 1u) return;
 
      uint8_t p = (uint8_t)(parity ^ (vnd_dc_parity_swap_valid ? vnd_dc_parity_swap : 0u));
+    int16_t *bank = vnd_dc_bank(ch, p);
+    if(bank == NULL) return;
 
     /* 1) Применяем DC по всему окну ВСЕГДА (если есть сохранённые значения — они должны работать сразу после reboot).
           Гейт используется только для адаптации (learning), чтобы не "разъезжаться" на сигналах без полного размаха. */
     for(uint16_t i=0;i<roi_len;i++){
-        int16_t dc = vnd_dc_buf[ch][p][i];
+        int16_t dc = bank[i];
         uint16_t v = out[i];
         int32_t y = (int32_t)v + (int32_t)dc;
         if(y < 0) y = 0;
@@ -1570,7 +1783,7 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
     uint8_t mode = vnd_dc_effective_mode(now_ms);
 
     /* Проверяем режим управления адаптацией от хоста.
-       FREEZE: только вычитаем DC, но не обучаемся (не меняем vnd_dc_buf). */
+       FREEZE: только вычитаем DC, но не обучаемся (не меняем DC-таблицу). */
     if(mode == VND_DC_MODE_FREEZE || !vnd_dc_adapt_enabled){
         vnd_dc_last_adapt_ms[ch][p] = now_ms;
         vnd_dc_slew_budget_q16[ch][p] = 0u;
@@ -1615,7 +1828,7 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
     }
 
     uint8_t changed = 0;
-    uint32_t settle_ms = vnd_dc_active_settle_ms(now_ms);
+    uint32_t settle_ms = vnd_dc_stage_settle_ms(stage, now_ms);
     if(settle_ms == 0u){
         return;
     }
@@ -1658,7 +1871,7 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
             uint32_t abs_e = (e < 0) ? (uint32_t)(-e) : (uint32_t)e;
             if(abs_e <= (uint32_t)dead) continue;
 
-            int32_t dc_i32 = (int32_t)vnd_dc_buf[ch][p][i];
+            int32_t dc_i32 = (int32_t)bank[i];
             uint32_t corr = step;
             uint32_t max_corr = abs_e - (uint32_t)dead;
             if(corr > max_corr){
@@ -1679,8 +1892,8 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
             }
 
             int16_t nv = (int16_t)dc_i32;
-            if(nv != vnd_dc_buf[ch][p][i]){
-                vnd_dc_buf[ch][p][i] = nv;
+            if(nv != bank[i]){
+                bank[i] = nv;
                 changed = 1;
             }
         }
@@ -1696,8 +1909,8 @@ static void vnd_dc_apply_and_adapt(uint8_t ch, uint8_t parity, uint16_t *out, ui
             uint32_t now_ms = HAL_GetTick();
             if(vnd_dc_last_dirty_log_ms == 0u || (now_ms - vnd_dc_last_dirty_log_ms) > 1000u){
                 vnd_dc_last_dirty_log_ms = now_ms;
-                   VND_DC_LOGF("[DC] DIRTY: ch=%u p=%u mode=%u settle=%lums dt=%lums step=%lu maxerr=%lu mean=%ld err=%ld\r\n",
-                       (unsigned)ch, (unsigned)p,
+                   VND_DC_LOGF("[DC] DIRTY: stage=%u ch=%u p=%u mode=%u settle=%lums dt=%lums step=%lu maxerr=%lu mean=%ld err=%ld\r\n",
+                       (unsigned)stage, (unsigned)ch, (unsigned)p,
                        (unsigned)mode,
                        (unsigned long)settle_ms,
                        (unsigned long)dt_ms,
@@ -1743,7 +1956,7 @@ static void vnd_dc_load_once(void)
             break;
         }
         uint32_t data_off = (uint32_t)offsetof(vnd_dc_blob_t, dc);
-        uint32_t data_len = (uint32_t)sizeof(b->dc) + (uint32_t)sizeof(b->pos);
+        uint32_t data_len = (uint32_t)offsetof(vnd_dc_blob_t, _pad) - data_off;
         uint16_t crc = vnd_crc16_ccitt(((const uint8_t*)b) + data_off, data_len);
         if(crc != b->crc16){
             next_off = off;
@@ -1767,7 +1980,6 @@ static void vnd_dc_load_once(void)
     if(best == NULL){
         VND_DC_LOGF("[DC] LOAD EMPTY (journal)\r\n");
         memset(vnd_dc_buf, 0, sizeof(vnd_dc_buf));
-        memset(vnd_dc_pos, 0, sizeof(vnd_dc_pos));
         vnd_dc_adapt_block_until_ms = HAL_GetTick() + (uint32_t)VND_DC_ADAPT_HOLDOFF_MS;
         vnd_dc_dirty = 0;
         vnd_dc_dirty_public = 0;
@@ -1782,7 +1994,6 @@ static void vnd_dc_load_once(void)
     }
 
     memcpy(vnd_dc_buf, best->dc, sizeof(vnd_dc_buf));
-    memcpy(vnd_dc_pos, best->pos, sizeof(vnd_dc_pos));
     vnd_dc_reset_adapt_state();
     vnd_dc_parity_swap_valid = 0u; /* пересчитаем после загрузки на первом кадре */
     vnd_dc_write_counter = best->write_counter;
@@ -1843,10 +2054,9 @@ static void vnd_dc_try_save_periodic(void)
     blob.write_counter = ++vnd_dc_write_counter;
     vnd_dc_write_counter_public = vnd_dc_write_counter;
     memcpy(blob.dc, vnd_dc_buf, sizeof(vnd_dc_buf));
-    memcpy(blob.pos, vnd_dc_pos, sizeof(vnd_dc_pos));
     vnd_dc_blob_set_commit(&blob);
     uint32_t data_off = (uint32_t)offsetof(vnd_dc_blob_t, dc);
-    uint32_t data_len = (uint32_t)sizeof(blob.dc) + (uint32_t)sizeof(blob.pos);
+    uint32_t data_len = (uint32_t)offsetof(vnd_dc_blob_t, _pad) - data_off;
     blob.crc16 = vnd_crc16_ccitt(((const uint8_t*)&blob) + data_off, data_len);
 
      /* Диагностика: контрольные суммы 4 DC массивов в RAM на момент сохранения.
@@ -2227,9 +2437,35 @@ static void vnd_avg_drain_fifo(uint16_t roi_start, uint16_t roi_len)
         }
         uint16_t *a_roi = a_ptr + roi_start;
         uint16_t *b_roi = b_ptr + roi_start;
+        const uint16_t *a_sum_src = a_roi;
+        const uint16_t *b_sum_src = b_roi;
+
+        /* В AVG_ROI pre-DC применяется до усреднения: берём raw ROI в локальную копию,
+           применяем DC/адаптацию и уже скорректированные точки добавляем в сумму.
+           Raw DMA/FIFO буферы остаются неизменными. */
+        if(roi_len == (uint16_t)VND_DC_ROI_LEN && vnd_dc_pre_apply_enabled){
+            static uint16_t avg_dc_tmp_a[VND_DC_ROI_LEN];
+            static uint16_t avg_dc_tmp_b[VND_DC_ROI_LEN];
+            uint8_t avg_gate_a = (uint8_t)(vnd_raw_has_full_swing_u16(a_roi, roi_len, (uint32_t)VND_DC_RANGE_THRESHOLD) ? 0u : 1u);
+            uint8_t avg_gate_b = (uint8_t)(vnd_raw_has_full_swing_u16(b_roi, roi_len, (uint32_t)VND_DC_RANGE_THRESHOLD) ? 0u : 1u);
+
+            vnd_dc_load_once();
+            memcpy(avg_dc_tmp_a, a_roi, (size_t)roi_len * sizeof(uint16_t));
+            memcpy(avg_dc_tmp_b, b_roi, (size_t)roi_len * sizeof(uint16_t));
+            if(vnd_dc_pre_learn_enabled){
+                vnd_dc_apply_and_adapt_stage(VND_DC_STAGE_PRE, 0, parity, avg_dc_tmp_a, roi_len, avg_gate_a);
+                vnd_dc_apply_and_adapt_stage(VND_DC_STAGE_PRE, 1, parity, avg_dc_tmp_b, roi_len, avg_gate_b);
+            } else {
+                vnd_dc_apply_only_stage(VND_DC_STAGE_PRE, 0, parity, avg_dc_tmp_a, roi_len);
+                vnd_dc_apply_only_stage(VND_DC_STAGE_PRE, 1, parity, avg_dc_tmp_b, roi_len);
+            }
+            a_sum_src = avg_dc_tmp_a;
+            b_sum_src = avg_dc_tmp_b;
+        }
+
         for(uint16_t i=0;i<roi_len;i++){
-            vnd_avg_sum[parity][0][i] += (uint32_t)a_roi[i];
-            vnd_avg_sum[parity][1][i] += (uint32_t)b_roi[i];
+            vnd_avg_sum[parity][0][i] += (uint32_t)a_sum_src[i];
+            vnd_avg_sum[parity][1][i] += (uint32_t)b_sum_src[i];
         }
         vnd_avg_cnt[parity]++;
         vnd_avg_last_dma_seq[parity] = dma_seq;
@@ -2258,27 +2494,25 @@ static void vnd_avg_drain_fifo(uint16_t roi_start, uint16_t roi_len)
 
             uint8_t out_parity = parity;
             uint8_t q = vnd_avg_q_tail;
-            uint8_t avg_gate_a = 0u;
-            uint8_t avg_gate_b = 0u;
             for(uint16_t i=0;i<roi_len;i++){
                 vnd_avg_q_out[q][0][i] = (uint16_t)((vnd_avg_sum[out_parity][0][i] + (uint32_t)(avg_n/2u)) / (uint32_t)avg_n);
                 vnd_avg_q_out[q][1][i] = (uint16_t)((vnd_avg_sum[out_parity][1][i] + (uint32_t)(avg_n/2u)) / (uint32_t)avg_n);
             }
 
-            uint8_t dc_mode_now = vnd_dc_effective_mode(HAL_GetTick());
-            if(dc_mode_now != VND_DC_MODE_FREEZE && vnd_dc_adapt_enabled){
-                avg_gate_a = (uint8_t)(vnd_raw_has_full_swing_u16(vnd_avg_q_out[q][0], roi_len, (uint32_t)VND_DC_RANGE_THRESHOLD) ? 0u : 1u);
-                avg_gate_b = (uint8_t)(vnd_raw_has_full_swing_u16(vnd_avg_q_out[q][1], roi_len, (uint32_t)VND_DC_RANGE_THRESHOLD) ? 0u : 1u);
+            if(roi_len == (uint16_t)VND_DC_ROI_LEN && vnd_dc_post_apply_enabled){
+                uint8_t post_gate_a = (uint8_t)(vnd_raw_has_full_swing_u16(vnd_avg_q_out[q][0], roi_len, (uint32_t)VND_DC_RANGE_THRESHOLD) ? 0u : 1u);
+                uint8_t post_gate_b = (uint8_t)(vnd_raw_has_full_swing_u16(vnd_avg_q_out[q][1], roi_len, (uint32_t)VND_DC_RANGE_THRESHOLD) ? 0u : 1u);
+                vnd_dc_load_once();
+                if(vnd_dc_post_learn_enabled){
+                    vnd_dc_apply_and_adapt_stage(VND_DC_STAGE_POST, 0, out_parity, vnd_avg_q_out[q][0], roi_len, post_gate_a);
+                    vnd_dc_apply_and_adapt_stage(VND_DC_STAGE_POST, 1, out_parity, vnd_avg_q_out[q][1], roi_len, post_gate_b);
+                } else {
+                    vnd_dc_apply_only_stage(VND_DC_STAGE_POST, 0, out_parity, vnd_avg_q_out[q][0], roi_len);
+                    vnd_dc_apply_only_stage(VND_DC_STAGE_POST, 1, out_parity, vnd_avg_q_out[q][1], roi_len);
+                }
             }
 
-                /* DC (только для roi_len=200): применяем вычитание всегда.
-                    В BOOT_FAST дополнительно разрешаем обучение по усреднённым кадрам,
-                    чтобы быстрая адаптация mode 5 работала по реальному GUI-потоку. */
-            vnd_dc_load_once();
-                vnd_dc_apply_and_adapt(0, out_parity, vnd_avg_q_out[q][0], roi_len, avg_gate_a);
-                vnd_dc_apply_and_adapt(1, out_parity, vnd_avg_q_out[q][1], roi_len, avg_gate_b);
-
-            /* DSP (корреляции/профилирование) — на готовом усреднённом ROI */
+            /* DSP (корреляции/профилирование) — на готовом усреднённом DC-corrected ROI */
             vnd_dwt_init_once();
             uint32_t c0 = vnd_dwt_cycles();
             vnd_dsp_update(out_parity, vnd_avg_q_out[q][0], vnd_avg_q_out[q][1], roi_len);
@@ -2498,6 +2732,10 @@ static __attribute__((unused)) uint8_t vnd_detect_spike_info(uint16_t *buf, uint
 /* ДИАГНОСТИКА: обновление индикации последней принятой команды на LCD и UART */
 static void vnd_update_cmd_indicator(void)
 {
+    if (vnd_lcd_role_overlay_active != 0u) {
+        return;
+    }
+
     char cmd_str[16];
     uint32_t now = HAL_GetTick();
     uint32_t elapsed_sec = (now >= last_cmd_timestamp_ms) ? ((now - last_cmd_timestamp_ms) / 1000) : 0;
@@ -2560,49 +2798,8 @@ static void vnd_update_lcd_params(void)
 
 static void vnd_log_dc_cmd_rx(const uint8_t *data, uint32_t len)
 {
-    if(data == NULL || len == 0u) return;
-
-    uint8_t cmd = data[0];
-    if(cmd != VND_CMD_SET_DC_ADAPT &&
-       cmd != VND_CMD_SET_DC_CONFIG &&
-       cmd != VND_CMD_GET_DC_CONFIG &&
-         cmd != VND_CMD_SAVE_DC_TO_FLASH &&
-       cmd != VND_CMD_CALIB_DC_FAST &&
-       cmd != VND_CMD_SET_STREAM_MODE){
-        return;
-    }
-
-    char payload_hex[80];
-    uint32_t max_dump = len > 1u ? (len - 1u) : 0u;
-    if(max_dump > 12u) max_dump = 12u;
-
-    size_t pos = 0u;
-    payload_hex[0] = '\0';
-    for(uint32_t i = 0u; i < max_dump; i++){
-        int n = snprintf(&payload_hex[pos], sizeof(payload_hex) - pos,
-                         "%02X%s",
-                         (unsigned)data[1u + i],
-                         (i + 1u < max_dump) ? " " : "");
-        if(n <= 0) break;
-        pos += (size_t)n;
-        if(pos >= sizeof(payload_hex)) break;
-    }
-
-    if(max_dump == 0u){
-        snprintf(payload_hex, sizeof(payload_hex), "-");
-    }
-
-    printf("[DC_CMD_RX] cmd=0x%02X len=%lu payload=%s%s\r\n",
-           (unsigned)cmd,
-           (unsigned long)len,
-           payload_hex,
-           (len > (1u + max_dump)) ? " ..." : "");
-
-    cdc_logf("DC_CMD_RX cmd=0x%02X len=%lu payload=%s%s",
-             (unsigned)cmd,
-             (unsigned long)len,
-             payload_hex,
-             (len > (1u + max_dump)) ? " ..." : "");
+    (void)data;
+    (void)len;
 }
 
 /* --- CDC дублирование: отправляем компактную ASCII строку с первыми 64 сэмплами --- */
@@ -2672,6 +2869,11 @@ static char     cdc_evt_buf[160];              /* буфер форматиро�
 
 static void cdc_logf(const char *fmt, ...)
 {
+    if((uint32_t)VND_CDC_LOG_ENABLE == 0u){
+        (void)fmt;
+        return;
+    }
+
     va_list ap;
     va_start(ap, fmt);
     int n = vsnprintf(cdc_evt_buf, sizeof(cdc_evt_buf) - 2, fmt, ap);
@@ -3699,6 +3901,8 @@ void vnd_pipeline_stop_reset(int deep)
     if(deep){ extern void adc_stream_stop(void); adc_stream_stop(); }
     /* Индикация */
     HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_RESET);
+    /* Pipeline stop must not alter the persistent TX request or PA1 output. */
+    (void)vnd_tx_refresh_effective(HAL_GetTick(), "pipeline_stop");
 }
 
 /* Реализация ранее отсутствовавшей функции */
@@ -4065,10 +4269,9 @@ static void vnd_emit_sync_state_event(uint8_t force)
     vnd_get_lcd_sync_snapshot(&lcd);
     (void)rs485_status_get_snapshot(&local_status, &active_status_count, &seen_mask, NULL, 31u);
 
-    if(lcd.raw_mode == VND_SYNC_MODE_MASTER){
+    if((lcd.raw_mode == VND_SYNC_MODE_MASTER) ||
+       (lcd.raw_mode == VND_SYNC_MODE_SLAVE)){
         total_devices = (uint8_t)(active_status_count + 1u);
-    } else if(lcd.raw_mode == VND_SYNC_MODE_SLAVE){
-        total_devices = (active_status_count != 0u) ? active_status_count : 1u;
     }
     if(total_devices == 0u){
         total_devices = 1u;
@@ -4113,6 +4316,45 @@ static uint8_t vnd_host_rx_alive_now(uint32_t now_ms)
     return (uint8_t)(streaming &&
                      vnd_tick_age_ms(now_ms, vnd_last_host_rx_ack_ms, &age_ms) &&
                      age_ms <= VND_HOST_RX_ACK_TIMEOUT_MS);
+}
+
+static uint8_t vnd_tx_start_grace_now(uint32_t now_ms)
+{
+    uint32_t age_ms = 0u;
+    return (uint8_t)(streaming &&
+                     vnd_tick_age_ms(now_ms, start_cmd_ms, &age_ms) &&
+                     age_ms <= VND_TX_HOST_START_GRACE_MS);
+}
+
+static uint8_t vnd_usb_host_present_now(uint32_t now_ms)
+{
+    extern volatile uint32_t g_usb_last_sof_ms;
+    uint32_t sof_age_ms = 0u;
+
+    if(hUsbDeviceHS.dev_state == USBD_STATE_SUSPENDED){
+        return 1u;
+    }
+    if(hUsbDeviceHS.dev_state != USBD_STATE_CONFIGURED){
+        return 0u;
+    }
+    return (uint8_t)(vnd_tick_age_ms(now_ms, g_usb_last_sof_ms, &sof_age_ms) &&
+                     sof_age_ms <= VND_TX_USB_HOST_PRESENT_MS);
+}
+
+static uint8_t vnd_tx_host_allowed_now(uint32_t now_ms)
+{
+    if(streaming){
+        return 1u;
+    }
+    if(vnd_usb_host_present_now(now_ms)){
+        return 1u;
+    }
+    return vnd_tx_start_grace_now(now_ms);
+}
+
+static void vnd_tx_failsafe_service(uint32_t now_ms)
+{
+    (void)vnd_tx_refresh_effective(now_ms, "failsafe");
 }
 
 static void vnd_emit_mode_state_event(uint32_t now_ms, uint8_t force)
@@ -4214,6 +4456,12 @@ void Vendor_ChangeEvent_Task(void)
     uint8_t force;
 
     force = vnd_change_force_event;
+    if(need_usb_status_refresh != 0u){
+        need_usb_status_refresh = 0u;
+        pending_status = 1u;
+        force = 1u;
+        vnd_tx_kick = 1u;
+    }
     vnd_state_event_poll(now_ms, force);
     vnd_sensor_event_poll(now_ms, force);
     if(force != 0u){
@@ -4350,7 +4598,9 @@ void Vendor_Maintenance_Task(void)
                 roi_len = (uint16_t)VND_ROI_LEN_DEFAULT;
             }
         }
-        vnd_dc_background_step(roi_start, roi_len);
+        if(!(streaming && full_mode && !diag_mode_active && vnd_stream_mode == VND_STREAM_MODE_AVG_ROI)){
+            vnd_dc_background_step(roi_start, roi_len);
+        }
 #if VND_MAINT_ENABLE_DC_SAVE
         vnd_dc_try_save_periodic();
 #endif
@@ -4359,6 +4609,8 @@ void Vendor_Maintenance_Task(void)
 
     {
         uint32_t now_ms = HAL_GetTick();
+        vnd_tx_failsafe_service(now_ms);
+
         if(vnd_sync_mode == VND_SYNC_MODE_MASTER){
             uint16_t hz = adc_stream_get_buf_rate();
             if(hz != 0u && hz != vnd_sync_last_hz){
@@ -4427,6 +4679,8 @@ static void vnd_reset_buffers(void){
 }
 
 uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
+    uint8_t sync_master_flags = 0u;
+
     if(max_len < 64) return 0; /* требуется минимум v1 */
     memset(&g_status,0,sizeof(g_status));
     /* Сигнатура 'STAT' в первых 4 байтах */
@@ -4434,7 +4688,7 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
     g_status.sig[1] = 'T';
     g_status.sig[2] = 'A';
     g_status.sig[3] = 'T';
-    g_status.version = 5; /* v5: adds RPI optic hold, sync status bytes, LED pattern */
+    g_status.version = 5; /* v5: full 136-byte status */
     g_status.cur_samples = cur_samples_per_frame;
     g_status.frame_bytes = (uint16_t)(VND_FRAME_HDR_SIZE + cur_samples_per_frame*2u);
     g_status.test_frames = test_sent ? 1u : 0u;
@@ -4453,13 +4707,21 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
     /* Используем zone_count/zone1_offset временно, НЕ нарушая сигнатуру first 4 bytes (для старого парсера останутся нулями, если не читает эти поля) */
     /* Предполагается, что хост обновит парсер позже; сейчас это поле диагностическое. */
     /* ВНИМАНИЕ: если host строго ожидает zone_count==0, можно отключить. */
-    /* Здесь пока не трогаем формат кадра; STAT расширяем безопасно. */
+    /* Формат STAT не расширяем: master optic отдаем битом flags_runtime. */
+    (void)rs485_status_get_master_snapshot(NULL, NULL, &sync_master_flags);
+
     if(streaming) g_status.flags_runtime |= VND_STFLAG_STREAMING;
     if(diag_mode_active) g_status.flags_runtime |= VND_STFLAG_DIAG_ACTIVE;
     if(vnd_pending_init) g_status.flags_runtime |= VND_STFLAG_PENDING_INIT;
     if(vnd_stream_active) g_status.flags_runtime |= VND_STFLAG_STREAM_ACTIVE;
     if(vnd_tx_enable) g_status.flags_runtime |= VND_STFLAG_TX_ENABLED;
     if(optic_sensor_get_state()) g_status.flags_runtime |= VND_STFLAG_OPTIC_ACTIVE;
+    if((sync_master_flags & 0x04u) != 0u) { /* rs485 master snapshot flag: optic active */
+        g_status.flags_runtime |= VND_STFLAG_MASTER_OPTIC_ACTIVE;
+    }
+    if(optic_any_sensor_active()) {
+        g_status.flags_runtime |= VND_STFLAG_GROUP_OPTIC_ACTIVE;
+    }
     /* Новые поля диагностики */
     uint16_t f2 = 0;
     /* Бит0 = занятость IN EP: локальная (vnd_ep_busy) ИЛИ низкоуровневая (LL vnd_tx_busy) */
@@ -4573,7 +4835,7 @@ uint16_t vnd_build_status(uint8_t *dst, uint16_t max_len){
         memcpy(dst, &g_status, 64);
         return 64;
     }
-    if(max_len < sizeof(vnd_status_v1_t)){
+    if(max_len < 136u){
         g_status.version = 4;
         memcpy(dst, &g_status, 96);
         return 96;
@@ -4610,6 +4872,20 @@ uint16_t vnd_build_lcd_status(uint8_t *dst, uint16_t max_len)
     st.display_rgb565 = snap.display_rgb565;
     st.sync_age_ms = snap.sync_age_ms;
 
+    if (vnd_lcd_role_overlay_active != 0u) {
+        st.display_mode = snap.raw_mode;
+        if (snap.raw_mode == VND_SYNC_MODE_SLAVE) {
+            st.display_char = (uint8_t)'S';
+            st.display_value = (uint8_t)(snap.node_id & 0x1Fu);
+        } else if (snap.raw_mode == VND_SYNC_MODE_MASTER) {
+            st.display_char = (uint8_t)'M';
+            st.display_value = (uint8_t)(snap.slave_count & 0x1Fu);
+        } else {
+            st.display_char = (uint8_t)'O';
+            st.display_value = 0u;
+        }
+    }
+
     if (snap.sync_signal_alive != 0u) {
         st.flags |= VND_LCD_SYNC_FLAG_SIGNAL_ALIVE;
     }
@@ -4624,6 +4900,14 @@ uint16_t vnd_build_lcd_status(uint8_t *dst, uint16_t max_len)
     }
     if (vnd_sync_is_mode_host_forced() != 0u) {
         st.flags |= VND_LCD_SYNC_FLAG_HOST_FORCED;
+    }
+    if (vnd_lcd_role_overlay_enabled != 0u) {
+        st.flags |= VND_LCD_SYNC_FLAG_ROLE_OVERLAY_EN;
+    }
+    if (vnd_lcd_role_overlay_active != 0u) {
+        st.flags |= VND_LCD_SYNC_FLAG_ROLE_OVERLAY_ACT;
+        st.display_rgb565 = vnd_lcd_role_overlay_rgb565;
+        st.display_color_id = vnd_lcd_role_overlay_color_id;
     }
 
     st.text[0] = (char)st.display_char;
@@ -4649,7 +4933,7 @@ uint16_t vnd_build_dc_config(uint8_t *dst, uint16_t max_len)
 
     uint32_t now_ms = HAL_GetTick();
     uint8_t mode = vnd_dc_effective_mode(now_ms);
-    uint32_t active_settle_ms = vnd_dc_active_settle_ms(now_ms);
+    uint32_t active_settle_ms = vnd_dc_stage_settle_ms(vnd_dc_selected_stage(), now_ms);
 
     memset(&st, 0, sizeof(st));
     st.sig[0] = 'D';
@@ -4661,14 +4945,51 @@ uint16_t vnd_build_dc_config(uint8_t *dst, uint16_t max_len)
     if(vnd_dc_adapt_enabled) st.flags |= VND_DC_CFG_FLAG_ADAPT_ENABLED;
     if(vnd_dc_auto_freeze) st.flags |= VND_DC_CFG_FLAG_AUTO_FREEZE;
     if(vnd_dc_dirty_public) st.flags |= VND_DC_CFG_FLAG_DIRTY;
+    if(vnd_dc_pre_apply_enabled) st.flags |= VND_DC_CFG_FLAG_PRE_APPLY;
+    if(vnd_dc_pre_learn_enabled) st.flags |= VND_DC_CFG_FLAG_PRE_LEARN;
+    if(vnd_dc_post_apply_enabled) st.flags |= VND_DC_CFG_FLAG_POST_APPLY;
+    if(vnd_dc_post_learn_enabled) st.flags |= VND_DC_CFG_FLAG_POST_LEARN;
     st.work_settle_ms = vnd_dc_work_settle_ms;
     st.detect_settle_ms = vnd_dc_detect_settle_ms;
     st.fast_settle_ms = vnd_dc_fast_settle_ms;
-    st.fast_duration_ms = vnd_dc_adapt_settle_ms;
+    st.fast_duration_ms = vnd_dc_pre_settle_ms;
     st.active_settle_ms = active_settle_ms;
     st.mode_enter_ms = vnd_dc_mode_enter_ms;
-    st.fast_until_ms = vnd_dc_fast_until_ms;
+    st.fast_until_ms = vnd_dc_post_settle_ms;
     st.adapt_updates = vnd_dc_adapt_updates;
+
+    memcpy(dst, &st, sizeof(st));
+    return (uint16_t)sizeof(st);
+}
+
+uint16_t vnd_build_rs485_ident(uint8_t node_id, uint8_t *dst, uint16_t max_len)
+{
+    vnd_rs485_ident_v1_t st;
+    rs485_identity_snapshot_t snap;
+
+    if ((dst == NULL) || (max_len < (uint16_t)sizeof(st))) {
+        return 0u;
+    }
+
+    memset(&st, 0, sizeof(st));
+    memset(&snap, 0, sizeof(snap));
+    st.sig[0] = 'R';
+    st.sig[1] = 'I';
+    st.sig[2] = 'D';
+    st.sig[3] = '1';
+    st.version = 1u;
+
+    if (rs485_identity_get_snapshot(node_id, &snap) != 0u) {
+        st.node_id = snap.node_id;
+        st.flags = snap.flags;
+        memcpy(st.short_id, snap.short_id, sizeof(st.short_id));
+        memcpy(st.ip4, snap.ip4, sizeof(st.ip4));
+        st.seen_page_mask = snap.seen_page_mask;
+        st.last_ms = snap.last_ms;
+    } else {
+        memset(st.short_id, '?', 9u);
+        st.short_id[9] = '\0';
+    }
 
     memcpy(dst, &st, sizeof(st));
     return (uint16_t)sizeof(st);
@@ -4676,14 +4997,44 @@ uint16_t vnd_build_dc_config(uint8_t *dst, uint16_t max_len)
 
 uint8_t vnd_is_streaming(void){ return streaming; }
 uint8_t vnd_is_tx_enabled(void){ return vnd_tx_enable; }
+uint8_t vnd_is_tx_requested_enabled(void){ return vnd_tx_requested_enable; }
+uint32_t vnd_get_tx_host_cmd_count(void){ return vnd_tx_host_cmd_count; }
+uint32_t vnd_get_tx_host_cmd_last_ms(void){ return vnd_tx_host_cmd_last_ms; }
+uint8_t vnd_get_tx_host_cmd_last_value(void){ return vnd_tx_host_cmd_last_value; }
+uint8_t vnd_set_tx_enabled(uint8_t enable)
+{
+    return vnd_tx_set_enabled_internal(enable, "manual");
+}
 
 static void vnd_apply_tx_enable_outputs(void)
 {
-    /* USB START/STOP не управляет физическими TX-выводами.
-       Все уровни PA2/PC7/PA1 выставляет adc_stream_refresh_marker_output(),
-       чтобы PA1 не давал ложный короткий импульс при смене enable. */
+    /* Apply all TX200 pins from one phase source. Do not drive PA1 separately:
+       it is the complement of PA2/PC7 and a separate write creates a false edge. */
     adc_stream_refresh_marker_output();
-    optic_tx_refresh_enable();
+}
+
+static uint8_t vnd_tx_set_enabled_internal(uint8_t enable, const char *reason)
+{
+    vnd_tx_requested_enable = (enable != 0u) ? 1u : 0u;
+    return vnd_tx_refresh_effective(HAL_GetTick(), reason);
+}
+
+static uint8_t vnd_tx_refresh_effective(uint32_t now_ms, const char *reason)
+{
+    /* TX200 follows only the last explicit SET_TX_ENABLE/TX200 request.
+       USB streaming, SOF/heartbeat and STOP_STREAM do not gate the physical
+       output. Explicit 0 (or MCU reset) is required to turn it off. */
+    (void)now_ms;
+    uint8_t next = (uint8_t)(vnd_tx_requested_enable != 0u ? 1u : 0u);
+    if(vnd_tx_enable != next){
+        vnd_tx_enable = next;
+        vnd_apply_tx_enable_outputs();
+        cdc_logf("EVT TX_ENABLE=%u req=%u reason=%s",
+                 (unsigned)next,
+                 (unsigned)vnd_tx_requested_enable,
+                 reason ? reason : "?");
+    }
+    return vnd_tx_enable;
 }
 
 /* функция vnd_generate_test_sawtooth() реализована в vnd_testgen.c */
@@ -4721,6 +5072,8 @@ static void vnd_prepare_pair(void)
     uint32_t used_avg_ts_ms = 0;
     /* Локальный снапшот staging-буфера, чтобы TC не перезаписал usb_stage_bufA во время копирования */
     static __attribute__((unused)) uint16_t stage_copy[MAX_FRAME_SAMPLES];
+    static uint16_t lossless_dc_copy_a[VND_DC_ROI_LEN];
+    static uint16_t lossless_dc_copy_b[VND_DC_ROI_LEN];
     uint16_t stage_samples = 0;
     (void)stage_samples; /* может быть неиспользован при ADC_USB_STAGE_ENABLE=0 */
     
@@ -4784,9 +5137,21 @@ static void vnd_prepare_pair(void)
                 cur_samples_per_frame = roi_len;
                 cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)cur_samples_per_frame * 2u);
             }
-            /* Смещаем указатели на начало ROI (FIFO-блоки стабильно хранят данные по seq). */
-            ch1 = ch1 + roi_start;
-            ch2 = ch2 + roi_start;
+            /* Смещаем указатели на начало ROI. Для 200-sample ROI применяем DC к локальной
+               копии, чтобы USB payload был скорректирован, но FIFO/DMA raw буферы не менялись. */
+            if(roi_len == (uint16_t)VND_DC_ROI_LEN && vnd_dc_pre_apply_enabled){
+                uint8_t parity = (uint8_t)(adc_get_buffer_parity(pair_seq) & 1u);
+                vnd_dc_load_once();
+                memcpy(lossless_dc_copy_a, ch1 + roi_start, (size_t)roi_len * sizeof(uint16_t));
+                memcpy(lossless_dc_copy_b, ch2 + roi_start, (size_t)roi_len * sizeof(uint16_t));
+                vnd_dc_apply_only_stage(VND_DC_STAGE_PRE, 0, parity, lossless_dc_copy_a, roi_len);
+                vnd_dc_apply_only_stage(VND_DC_STAGE_PRE, 1, parity, lossless_dc_copy_b, roi_len);
+                ch1 = lossless_dc_copy_a;
+                ch2 = lossless_dc_copy_b;
+            } else {
+                ch1 = ch1 + roi_start;
+                ch2 = ch2 + roi_start;
+            }
             /* В ROI режиме не используем precomputed CRC из staging (оно было для полного кадра). */
             crc_a = 0; crc_seq = 0;
             samples = cur_samples_per_frame;
@@ -5907,6 +6272,8 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
        на профильной базе и не подстраивается автоматически у SLAVE. */
     {
         uint32_t now_ms = HAL_GetTick();
+        vnd_tx_failsafe_service(now_ms);
+
         if(vnd_sync_mode == VND_SYNC_MODE_MASTER){
             uint16_t hz = adc_stream_get_buf_rate();
             if(hz != 0u && hz != vnd_sync_last_hz){
@@ -6743,6 +7110,7 @@ void USBD_VND_TxCplt(void)
         adc_stream_stop();
         /* Индикация STOP: погасить пин Data_ready и вывести CDC-событие */
         HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_RESET);
+        (void)vnd_tx_refresh_effective(HAL_GetTick(), "stop_ack");
         {
             uint64_t cur = vnd_total_tx_bytes;
             uint64_t delta = (cur >= vnd_tx_bytes_at_start) ? (cur - vnd_tx_bytes_at_start) : 0ULL;
@@ -7064,8 +7432,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     cur_samples_per_frame = 0; /* снять lock, чтобы применилось немедленно */
                     cur_expected_frame_size = 0;
                 }
-                /* USB START не должен ломать текущую фазу маркера/состояние передатчика. */
-                vnd_apply_tx_enable_outputs();
+                /* START применяет сохранённый host-request TX, не меняя его. */
                 /* Синхронизация всегда активна и не должна сбрасываться при START */
                 if(vnd_sync_mode_public == VND_SYNC_MODE_SLAVE){
                     extern volatile uint8_t sync_restart_on_edge;
@@ -7086,6 +7453,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     meta_push_total = meta_pop_total = meta_empty_events = meta_overflow_events = 0;
                 } while(0);
                 streaming = 1;
+                (void)vnd_tx_refresh_effective(start_cmd_ms, "start_stream");
                      /* ГАРАНТИЯ повторного старта:
                          после STOP/alt-reset хост ожидает «чистый» старт. Перезапускаем ADC/DMA и сбрасываем
                          внутренние rd/wr seq в adc_stream (иначе возможна деградация FPS на последующих запусках).
@@ -7219,7 +7587,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 vnd_tx_ready = 1;
                 /* ADC/DMA продолжают работать в фоне, STOP только выключает передачу по USB */
                 HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_RESET);
-                vnd_apply_tx_enable_outputs();
+                (void)vnd_tx_refresh_effective(HAL_GetTick(), "stop_stream");
                 {
                     uint64_t cur = vnd_total_tx_bytes;
                     uint64_t delta = (cur >= vnd_tx_bytes_at_start) ? (cur - vnd_tx_bytes_at_start) : 0ULL;
@@ -7282,7 +7650,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 /* async_mode должен остаться 1 после первого START */
                 
                 HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_RESET);
-                vnd_apply_tx_enable_outputs();
+                (void)vnd_tx_refresh_effective(HAL_GetTick(), "stop_stream");
                 cdc_logf("EVT STOP t=%lu async=%d full=%d ep_busy=%d", 
                          (unsigned long)HAL_GetTick(), async_mode, full_mode, vnd_ep_busy);
             }
@@ -7363,6 +7731,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                                        ((uint32_t)data[4] << 24);
                 if ((!vnd_host_rx_counter_valid) || (host_frames != vnd_host_rx_last_counter)) {
                     vnd_last_host_rx_ack_ms = HAL_GetTick();
+                    (void)vnd_tx_refresh_effective(vnd_last_host_rx_ack_ms, "host_ack");
                 }
                 vnd_host_rx_last_counter = host_frames;
                 vnd_host_rx_counter_valid = 1u;
@@ -7375,6 +7744,8 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             vnd_last_host_rx_ack_ms = 0;
             vnd_host_rx_last_counter = 0;
             vnd_host_rx_counter_valid = 0;
+            /* Heartbeat reset must not alter TX; reapply the unchanged host request. */
+            (void)vnd_tx_refresh_effective(HAL_GetTick(), "host_clear");
         }
         break;
 
@@ -7391,9 +7762,12 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
         {
             if(len >= 2){
                 uint8_t en = (data[1] != 0u) ? 1u : 0u;
-                vnd_tx_enable = en;
-                vnd_apply_tx_enable_outputs();
-                cdc_logf("EVT TX_ENABLE=%u", (unsigned)en);
+                last_cmd_received = VND_CMD_SET_TX_ENABLE;
+                last_cmd_timestamp_ms = HAL_GetTick();
+                vnd_tx_host_cmd_count++;
+                vnd_tx_host_cmd_last_ms = last_cmd_timestamp_ms;
+                vnd_tx_host_cmd_last_value = en;
+                (void)vnd_tx_set_enabled_internal(en, "host_cmd");
             }
         }
         break;
@@ -7440,7 +7814,55 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
         }
         break;
 
+        case VND_CMD_SET_RS485_IP:
+        {
+            if (len >= 5u) {
+                rs485_identity_set_local_ip4(&data[1]);
+                cdc_logf("EVT RS485_IP=%u.%u.%u.%u",
+                         (unsigned)data[1],
+                         (unsigned)data[2],
+                         (unsigned)data[3],
+                         (unsigned)data[4]);
+            }
+        }
+        break;
+
+        case VND_CMD_REQUEST_RS485_IDENT:
+        {
+            rs485_identity_request_scan();
+            cdc_logf("EVT RS485_IDENT_SCAN_REQUEST");
+        }
+        break;
+
+        case VND_CMD_GET_RS485_IDENT:
+        {
+            uint8_t node_id = (len >= 2u) ? data[1] : 0u;
+            if (streaming) {
+                VND_LOG("GET_RS485_IDENT bulk ignored while streaming (use EP0)");
+                break;
+            }
+            if (!vnd_ep_busy) {
+                uint16_t l = vnd_build_rs485_ident(node_id, (uint8_t*)status_buf, sizeof(status_buf));
+                if (l != 0u) {
+                    vnd_tx_ready = 0;
+                    vnd_ep_busy = 1;
+                    vnd_last_tx_len = l;
+                    vnd_last_tx_start_ms = HAL_GetTick();
+                    vnd_mark_service_inflight();
+                    if (USBD_VND_Transmit(&hUsbDeviceHS, (uint8_t*)status_buf, l) == USBD_OK) {
+                        vnd_tx_meta_after((uint8_t*)status_buf, l);
+                        VND_LOG("RID1_TX req len=%u", l);
+                    } else {
+                        VND_LOG("RID1_BUSY_FAIL");
+                        vnd_rollback_tx_start();
+                    }
+                }
+            }
+        }
+        break;
+
         case VND_CMD_LED_EVENT:
+#if VND_LED_EVENTS_ENABLE
         {
             if (len >= 4) {
                 uint8_t event = data[1];
@@ -7467,6 +7889,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 cdc_logf("EVT LED_EVENT event=%u dur=%u", (unsigned)event, (unsigned)duration_ms);
             }
         }
+#endif
         break;
 
         case VND_CMD_SET_WINDOWS:
@@ -7576,26 +7999,38 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             break;
 
         case VND_CMD_SET_DC_CONFIG:
-                        /* Time-based DC config:
+            /* Time-based DC config:
                payload after opcode:
-                 u8 version=1, u8 mode, u16 flags,
-                                 u32 work_settle_ms, detect_settle_ms, fast_settle_ms, adapt_settle_ms.
-                             adapt_settle_ms is a selected-mode settle time, not a run timer. */
+                 v1: u8 version=1, u8 mode, u16 flags,
+                     u32 work_settle_ms, detect_settle_ms, fast_settle_ms, adapt_settle_ms.
+                 v2: u8 version=2, u8 mode, u16 flags,
+                     u32 work_settle_ms, detect_settle_ms, fast_settle_ms,
+                     u32 pre_settle_ms, post_settle_ms. */
             if(len >= 3)
             {
                 vnd_dc_apply_config_payload(&data[1], (uint32_t)(len - 1u));
-                                printf("[CMD_IND] SET_DC_CONFIG mode=%u work=%lums detect=%lums fast=%lums adapt=%lums\r\n",
+                (printf)("[DC_SPEED] mode=%u work=%lums acquisition=%lums detection=%lums pre=%lums post=%lums flags=P%cL%c/p%cL%c\r\n",
                        (unsigned)vnd_dc_mode,
                        (unsigned long)vnd_dc_work_settle_ms,
-                       (unsigned long)vnd_dc_detect_settle_ms,
                        (unsigned long)vnd_dc_fast_settle_ms,
-                                             (unsigned long)vnd_dc_adapt_settle_ms);
-                                cdc_logf("EVT SET_DC_CONFIG mode=%u work=%lu detect=%lu fast=%lu adapt=%lu",
+                       (unsigned long)vnd_dc_detect_settle_ms,
+                       (unsigned long)vnd_dc_pre_settle_ms,
+                       (unsigned long)vnd_dc_post_settle_ms,
+                       vnd_dc_pre_apply_enabled ? 'A' : '-',
+                       vnd_dc_pre_learn_enabled ? 'L' : '-',
+                       vnd_dc_post_apply_enabled ? 'A' : '-',
+                       vnd_dc_post_learn_enabled ? 'L' : '-');
+                cdc_logf("EVT SET_DC_CONFIG mode=%u work=%lu detect=%lu fast=%lu pre=%lu post=%lu flags=0x%02X",
                          (unsigned)vnd_dc_mode,
                          (unsigned long)vnd_dc_work_settle_ms,
                          (unsigned long)vnd_dc_detect_settle_ms,
                          (unsigned long)vnd_dc_fast_settle_ms,
-                                                 (unsigned long)vnd_dc_adapt_settle_ms);
+                         (unsigned long)vnd_dc_pre_settle_ms,
+                         (unsigned long)vnd_dc_post_settle_ms,
+                         (unsigned)((vnd_dc_pre_apply_enabled ? 0x01u : 0u) |
+                                    (vnd_dc_pre_learn_enabled ? 0x02u : 0u) |
+                                    (vnd_dc_post_apply_enabled ? 0x04u : 0u) |
+                                    (vnd_dc_post_learn_enabled ? 0x08u : 0u)));
             }
             break;
 
@@ -7647,13 +8082,54 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             }
             break;
 
+        case VND_CMD_SET_LCD_ROLE_OVERLAY:
+            if(len >= 2)
+            {
+                uint8_t enable = (data[1] != 0u) ? 1u : 0u;
+                uint8_t period_s = vnd_lcd_role_overlay_period_s;
+                uint8_t duration_s = vnd_lcd_role_overlay_duration_s;
+                if(len >= 3u) {
+                    period_s = data[2];
+                }
+                if(len >= 4u) {
+                    duration_s = data[3];
+                }
+                vnd_lcd_role_overlay_configure(enable, period_s, duration_s);
+                printf("[CMD_IND] SET_LCD_ROLE_OVERLAY en=%u period=%u duration=%u\r\n",
+                       (unsigned)enable,
+                       (unsigned)vnd_lcd_role_overlay_period_s,
+                       (unsigned)vnd_lcd_role_overlay_duration_s);
+                cdc_logf("EVT LCD_ROLE_OVERLAY en=%u period=%u duration=%u",
+                         (unsigned)enable,
+                         (unsigned)vnd_lcd_role_overlay_period_s,
+                         (unsigned)vnd_lcd_role_overlay_duration_s);
+            }
+            break;
+
         case VND_CMD_SET_SYNC_MODE:
             if(len >= 2)
             {
                 uint8_t mode = data[1];
-                if(mode > VND_SYNC_MODE_OFF) mode = VND_SYNC_MODE_MASTER;
-                vnd_sync_apply_host_forced_mode(mode);
-                printf("[CMD_IND] SET_SYNC_MODE %u\r\n", (unsigned)mode);
+                if ((mode == VND_SYNC_MODE_AUTO) || (mode == VND_SYNC_MODE_AUTO_LEGACY)) {
+                    vnd_sync_release_host_forced();
+                    printf("[CMD_IND] SET_SYNC_MODE AUTO\r\n");
+                    cdc_logf("EVT SET_SYNC_MODE AUTO");
+                } else {
+                    uint8_t node_id = 0u;
+                    if(mode > VND_SYNC_MODE_OFF) {
+                        mode = VND_SYNC_MODE_OFF;
+                    }
+                    vnd_sync_apply_host_forced_mode(mode);
+                    if ((mode == VND_SYNC_MODE_SLAVE) && (len >= 3u)) {
+                        node_id = data[2];
+                        if (node_id > 31u) {
+                            node_id = 0u;
+                        }
+                        rs485_set_local_node_id_from_host(node_id);
+                    }
+                    printf("[CMD_IND] SET_SYNC_MODE %u node=%u\r\n", (unsigned)mode, (unsigned)node_id);
+                    cdc_logf("EVT SET_SYNC_MODE mode=%u node=%u", (unsigned)mode, (unsigned)node_id);
+                }
             }
             break;
 

@@ -8,6 +8,8 @@
   - 0x31 зарезервирована в Vendor модуле как GET_STATUS_IMM (служебно).
   - 0x32 в Vendor модуле используется как TOGGLE_TIM2CH3_INV.
   - GET_TEMP и GET_VERSION сейчас реализованы в CDC протоколе.
+- Правило отчетов по прошивке: всегда указывать связку `ST-LINK SN -> COM -> роль/узел` для каждого устройства. Если прошивка не удалась, в ошибке обязательно писать роль/узел устройства за этим программатором; если COM не отвечает и роль определить нельзя, явно писать `роль неизвестна, COM не отвечает`.
+- Правило контроля на этой установке: у Codex нет доступа к USB Vendor/PyUSB. Проверку реакции прошивки, статуса оптики и post-flash диагностику выполнять только через COM-порты диагностического UART/CDC.
 
 ## 1. Базовая конфигурация устройства
 
@@ -65,6 +67,10 @@
 - 0x3B SET_LED_PATTERN
 - 0x3C SET_DET_ADC
 - 0x3D SET_RS485_ID
+- 0x3E SET_RS485_IP
+- 0x3F REQUEST_RS485_IDENT
+- 0x40 GET_RS485_IDENT
+- 0x41 SET_LCD_ROLE_OVERLAY
 
 ### 2.2 EP0 Control (vendor requests)
 
@@ -72,20 +78,22 @@ Vendor IN (чтение):
 - 0x30 GET_STATUS
 - 0x38 GET_LCD_STATUS
 - 0x3A GET_DC_CONFIG
+- 0x40 GET_RS485_IDENT
 
 Vendor OUT без data stage:
 - 0x7E SOFT_RESET
 - 0x7F DEEP_RESET
 - 0x20 START_STREAM
 - 0x21 STOP_STREAM
+- 0x3F REQUEST_RS485_IDENT
 
 Vendor OUT с параметром в wValue (без data stage):
-- 0x13, 0x14, 0x18, 0x19, 0x33, 0x34, 0x3B, 0x3C (u8 в младшем байте wValue)
+- 0x13, 0x14, 0x18, 0x19, 0x1D, 0x33, 0x34, 0x3B, 0x3C, 0x41 (u8 в младшем байте wValue)
 - 0x17 (u16 в wValue)
 - 0x39 (u16 hold_ds в wValue)
 
 Vendor OUT с data stage:
-- 0x13, 0x14, 0x18, 0x19, 0x33, 0x34, 0x39, 0x3B, 0x3C, 0x1F
+- 0x13, 0x14, 0x18, 0x19, 0x1D, 0x33, 0x34, 0x39, 0x3B, 0x3C, 0x1F, 0x3E, 0x41
 
 ### 2.3 CDC протокол (отдельный диагностический канал)
 
@@ -122,6 +130,8 @@ Vendor OUT с data stage:
 - `GET_STATUS` через Bulk OUT/IN использует тот же Bulk IN путь, что и поток. Для диагностики зависания потока используйте EP0 control, а Bulk-статус считайте только вспомогательным.
 - Состояние оптического датчика хост читает через `GET_STATUS` (`0x30`):
   - `flags_runtime & 0x0020` = локальный оптический датчик активен.
+  - `flags_runtime & 0x0080` = master optic активен: локально на master или принят по RS485 на slave.
+  - `flags_runtime & 0x0100` = активен любой локальный/RS485 optic в группе.
   - `reserved3 bit0` = то же состояние в legacy packed-поле.
   - `sync_local_status bit5` = локальный RS485 status bit оптического датчика.
   - `sync_local_status bit6` = локальный `DetADC1`, `bit7` = локальный `DetADC2`.
@@ -129,7 +139,55 @@ Vendor OUT с data stage:
   - `sync_status_bytes[node_id-1] bit6/bit7` = `DetADC1/DetADC2` удаленной антенны.
 - При изменении состояния оптического датчика устройство должно отправить/поставить в очередь `STAT`, чтобы хост мог получать событие без ожидания следующего опроса. Хост также может опрашивать `GET_STATUS` в любой момент.
 
-### 3.1.1 Диагностика пропажи потока на Raspberry
+Индикация master optic на slave:
+- Запросить `GET_STATUS` длиной 136 байт, лучше через EP0 control: `ctrl_transfer(0xC0, 0x30, 0, 0, 136)`.
+- `sync_local_status` находится на offset `99`: это только локальный статус той платы, к которой подключен USB.
+- `sync_seen_mask` находится на offset `100..103`, `sync_status_bytes[31]` на offset `105..135`.
+- Для каждого slave `node_id` 1..31 сначала проверить `sync_seen_mask & (1 << (node_id - 1))`.
+- `sync_seen_mask` и `sync_status_bytes` описывают только slave nodes `1..N`; master не занимает бит в этой маске.
+- Master optic уже передается по RS485 в `master_status0 bit5`; firmware на slave использует этот свежий бит и выставляет для хоста `flags_runtime & 0x0080`.
+- Onboard/system address WS2812 сохраняет цветовую роль: `MASTER` меняет базовый синий на зеленый при своем `optic_active=1`; `SLAVE` меняет базовый белый на желтый при своем локальном `optic_active=1`, а при свежем `master_status0 bit5=1` без локального срабатывания меняет белый на магента/фиолетовый.
+- Host на slave должен численно читать master optic из `flags_runtime & 0x0080`.
+
+### 3.2 RS485 identity/IP (GET_RS485_IDENT, 0x40)
+
+Назначение: по запросу master все узлы RS485 медленно передают короткий номер устройства и IPv4, а каждый узел запоминает строки, которые слышит на шине.
+
+Команды хоста:
+- `0x3E SET_RS485_IP`: payload `u8 ip[4]` в обычном порядке `a.b.c.d`. Firmware не знает IP роутера/хоста сама; если роутера нет, Raspberry/host должен записать fallback IP хоста.
+- `0x3F REQUEST_RS485_IDENT`: без payload. Отправлять текущему master; master запускает один полный проход страниц identity.
+- `0x40 GET_RS485_IDENT`: чтение результата. EP0 IN: `ctrl_transfer(0xC0, 0x40, node_id, 0, 32)`, где `node_id=0` означает локальную строку устройства, к которому подключен USB. Bulk-вариант `[0x40, node_id]` допустим только вне stream; во время stream используйте EP0.
+
+Ответ `RID1`, 32 байта:
+- offset `0..3`: ASCII `RID1`
+- `4`: version = `1`
+- `5`: `node_id` строки, `0` если строки нет
+- `6..7`: flags LE
+- `8..17`: `short_id[10]`, 9 hex-символов и `NUL`; если неполно, заполнено `?`
+- `18..21`: `ip4[4]` в порядке `a.b.c.d`
+- `22..25`: `seen_page_mask` LE, bit0..bit16
+- `26..29`: `last_ms` LE, `HAL_GetTick()` последнего обновления строки
+- `30..31`: reserved
+
+Флаги `RID1.flags`:
+- `0x0001 SHORT_VALID`
+- `0x0002 IP_VALID`
+- `0x0004 COMPLETE`
+- `0x0008 LOCAL`
+- `0x0010 RECENT` (обновление за последние 30 секунд)
+- `0x0020 SCAN_ACTIVE`
+
+RS485 wire-format внутри существующего sync+2 байта:
+- Sync-пакет остается всегда прежним.
+- `master_status0 bits0..4` = адрес/selector запроса: `1..31` slave id, `0` = служебный слот самого master без ответа slave. `bits5..7` остаются статусными флагами master.
+- `master_status1 = 0xC0 | master_id` в штатном режиме, чтобы slave знали публичный id master.
+- `master_status1 = 0xA0 | new_id` при compact-assignment; адрес в `master_status0 bits0..4` указывает старый id slave.
+- `master_status1 = 0x80 | page` при identity-запросе; адрес в `master_status0 bits0..4` указывает, какой slave должен ответить.
+- Ответ выбранного slave: первый байт = обычный RS485 status byte slave, второй байт = `0x40 | nibble`.
+- Страницы `page 0..8` = 9 hex-nibble `short_id` от старшей к младшей. Страницы `page 9..16` = IPv4 nibble в порядке `a.b.c.d`, старшая половина байта затем младшая.
+- Во время identity-запросов невыбранные slave не отвечают, но слушают ответ выбранного slave и также обновляют свою таблицу.
+
+### 3.3 Диагностика пропажи потока на Raspberry
 
 Важное различие:
 - EP0 `GET_STATUS` отвечает: Raspberry видит USB device/control path.
@@ -186,7 +244,7 @@ STAT1 = GET_STATUS через EP0, 136 байт
 - Если verdict=`host_bulk_lost`, Raspberry не должен считать STM32 виновным: STM32 продолжал увеличивать счетчики отправки.
 - Если verdict=`stm32_tx_stalled` или `stm32_adc_stalled`, Raspberry должен сохранить полный порядок команд перед fault и два `STAT`, чтобы это можно было чинить в прошивке.
 
-### 3.1.2 Что делать при `USB error 5` и переходе на 600 samples
+### 3.4 Что делать при `USB error 5` и переходе на 600 samples
 
 Типичный проблемный лог Raspberry:
 
@@ -262,7 +320,7 @@ if len(data) < 64 or data[:4] != b"STAT":
     raise RuntimeError(f"bad STAT len={len(data)}")
 ```
 
-### 3.1.3 Host-side устойчивость потока без повторов
+### 3.5 Host-side устойчивость потока без повторов
 
 Цель хоста: вести поток как live/UDP-like stream. Хост не просит повторить старые кадры, не догоняет backlog и не подменяет текущие данные устаревшими. В штатном режиме gaps быть не должно; если сбой уже произошел, потерянные кадры только считаются и логируются, но не восстанавливаются повторной передачей.
 
@@ -319,7 +377,7 @@ Reconnect/init sequence не должен сбрасывать эту конфи
 [recovery] action=<bulk_reader_reopen|restore_config_start|wait_reenum|soft_reset|fallback_600> result=<ok|fail> restore_stream_mode=<n> restore_bytes=<n>
 ```
 
-### 3.2 ADC frame
+### 3.6 ADC frame
 
 ADC-кадр идет по Vendor Bulk IN `0x83`, little-endian. Заголовок всегда 32 байта:
 
@@ -356,7 +414,7 @@ bits 12..15 TxCplt counter low nibble at frame build
 
 Если host видит физически невозможный in-frame jump, надо логировать вместе `reserved`, `reserved2`, `seq`, `flags`, `total_samples` и CRC status. В нормальном кадре ожидается `snapshot_used=1`; `generation_changed_during_snapshot` и `fifo_guard_near_reuse` должны оставаться 0.
 
-### 3.3 DCCF (GET_DC_CONFIG, 0x3A)
+### 3.7 DCCF (GET_DC_CONFIG, 0x3A)
 
 - Сигнатура: DCCF
 - Размер: 40 байт
@@ -367,13 +425,13 @@ bits 12..15 TxCplt counter low nibble at frame build
   - work_settle_ms
   - detect_settle_ms
   - fast_settle_ms
-  - fast_duration_ms: legacy wire-name; сейчас это последний `adapt_settle_ms`, не таймер
-  - active_settle_ms
+  - fast_duration_ms: legacy wire-name; для v2 показывает `pre_settle_ms`
+  - active_settle_ms: settle выбранной эффективной стадии pre/post
   - mode_enter_ms
-  - fast_until_ms: legacy field, всегда 0 в модели постоянной адаптации
+  - fast_until_ms: legacy wire-name; для v2 показывает `post_settle_ms`
   - adapt_updates
 
-### 3.4 LCDS (GET_LCD_STATUS, 0x38)
+### 3.8 LCDS (GET_LCD_STATUS, 0x38)
 
 - Сигнатура: LCDS
 - Размер: 24 байта
@@ -384,8 +442,12 @@ bits 12..15 TxCplt counter low nibble at frame build
   - flags
   - sync_age_ms
   - text
+- `flags bit5` (`0x0020`) = большой role overlay разрешен host-командой.
+- `flags bit6` (`0x0040`) = большой role overlay сейчас активен на LCD.
+- Если overlay активен, `display_rgb565`/`display_color_id` показывают текущий цвет большого текста.
+- Когда overlay активен, `display_char`/`display_value`/`text` описывают большой `Mxx`/`Sxx` по raw-роли, без fallback маленького индикатора `M00` при потере sync.
 
-### 3.5 EVT1: поток изменений вместо частого опроса
+### 3.9 EVT1: поток изменений вместо частого опроса
 
 Новый рекомендуемый путь для динамических параметров - service-события по тому же Vendor Bulk IN `0x83`.
 Хост читает обычный поток и, кроме ADC-кадров и `STAT`, распознает маленькие пакеты с сигнатурой `EVT1`.
@@ -482,10 +544,10 @@ offset  size  field
 2       1     display_mode
 3       1     display_char: 'M', 'S', 'O'
 4       1     local node_id, 0 если не назначен
-5       1     active_status_count из RS485 status table
-6       1     total_devices estimate; master = active_status_count + 1
+5       1     active_status_count = N, нормализованное число slave-узлов
+6       1     total_devices estimate = N + 1, master + slaves
 7       1     flags: bit0=sync_signal_alive, bit1=sync_ok_visual, bit2=color_locked, bit3=host_forced, bit4=sync_ok_public
-8       4     sync_seen_mask, bit0=node1 ... bit30=node31
+8       4     sync_seen_mask, bits 0..N-1 для slave nodes 1..N
 12      1     display_value
 13      1     local_status_flags: только bits 5..7 local status byte
 14      2     sync_age_ds, 0.1 s units, 0xFFFF если неизвестно
@@ -533,15 +595,217 @@ Host-side правила:
 - Если host не видит ни одного `EVT1` дольше 2 периодов heartbeat, но ADC кадры продолжают идти, это не повод сбрасывать stream; достаточно отметить service-event lag и ждать следующего безопасного IN-окна.
 - Если после reconnect нужен полный baseline, сначала снять `GET_STATUS`, затем продолжить чтение `EVT1`; после нового `START_STREAM` baseline также придет событиями.
 
-## 4. Актуальные команды оптики, TX, LED и DetADC
+## 4. Актуальные команды sync, LCD, оптики, TX, LED и DetADC
 
-- 0x33 SET_TX_ENABLE: 0/1
+### 4.1 Управление ролью sync по USB
+
+По умолчанию firmware работает в auto-role: устройства сами выбирают master/slave по RS485 sync/UID arbitration.
+
+`0x1D SET_SYNC_MODE` управляет разрешением auto или принудительной ролью:
+- payload `[0x00]` = принудительно `MASTER`
+- payload `[0x01]` = принудительно `SLAVE`
+- payload `[0x02]` = принудительно `OFF`
+- payload `[0x03]` или `[0xFF]` = снять host-forced и вернуть самостоятельный auto-role выбор
+
+Для slave номер нужно задавать явно:
+- атомарно с ролью: `SET_SYNC_MODE` payload `[0x01, node_id]`, где `node_id=1..31`
+- отдельно: `0x3D SET_RS485_ID` payload `[node_id]`
+
+Рекомендуемый порядок для фиксированной топологии:
+- На выбранном master: `SET_SYNC_MODE [0x00]`.
+- На каждом slave: `SET_SYNC_MODE [0x01, node_id]`, где `node_id` уникален в пределах `1..31`.
+- Если slave уже принудительно в роли slave, номер можно поменять отдельно командой `SET_RS485_ID [node_id]`.
+- Для возврата всей группы в самостоятельный выбор: на каждом устройстве отправить `SET_SYNC_MODE [0xFF]` или `[0x03]`.
+
+Контроль состояния:
+- `GET_LCD_STATUS` (`LCDS`) возвращает `flags bit4 host_forced`.
+- `EVT1 SYNC_STATE` содержит `sync_mode_public` и `sync_mode_host_forced`.
+- `GET_STATUS` показывает текущие `sync_local_status`/`sync_status_bytes`, но флаг forced удобнее читать через `LCDS` или `EVT1`.
+
+### 4.2 Большая индикация роли на LCD
+
+`0x41 SET_LCD_ROLE_OVERLAY` управляет крупной периодической индикацией роли.
+
+Payload:
+- `[0x00]` = запретить overlay и вернуть обычный LCD status screen
+- `[0x01]` = разрешить overlay с текущими/дефолтными временами
+- `[enable, period_s, duration_s]` = задать интервал между показами и длительность показа; `period_s` и `duration_s` ограничиваются диапазоном `3..5`, дефолт `4/4`
+
+EP0 варианты:
+- OUT без data stage: `bRequest=0x41`, младший байт `wValue` = `enable`
+- OUT с data stage: payload `[enable]` или `[enable, period_s, duration_s]`
+
+Поведение на LCD:
+- Рисуется full-screen текст самым крупным доступным размером: `Mxx`, `Sxx` или `O  `.
+- Для `MASTER` `xx` = число активных slave из RS485 status table.
+- Для `SLAVE` `xx` = локальный `node_id`.
+- Цвет текста выбирается случайно из ярких цветов `RED/GREEN/YELLOW/BLUE/CYAN/WHITE`.
+- Отрисовка выполняется только из основного цикла в низкоприоритетном LCD-обновлении; USB callback только меняет флаги.
+- При выходе из overlay обычный экран очищается и перерисовывается заново.
+
+### 4.3 Обязательная проверка host-кода для 200 Hz TX
+
+`TX200` — логическое разрешение передачи 200 Hz. Для host-кода важны только команда,
+сохранённый request и подтверждённое состояние передачи:
+
+```text
+SET_TX_ENABLE=1 -> tx_req=1, tx200=1 (передача включена)
+SET_TX_ENABLE=0 -> tx_req=0, tx200=0 (передача выключена)
+```
+
+В текущей firmware TX не зависит от состояния USB-потока:
+`physical_tx = tx_request`. Последняя явная команда `0x33 01/00` действует до противоположной
+команды или reset устройства, даже при `STREAMING=0`, `STOP_STREAM`, отсутствии SOF/heartbeat
+и `HOST_RX_CLEAR`. Оптический датчик также не переключает это состояние.
+
+Наблюдаемая комбинация `streaming=1, tx_req=0, tx200=0` означает, что устройство не
+получило `SET_TX_ENABLE=1` либо какой-то путь host-кода позднее отправил
+`SET_TX_ENABLE=0`/reset. Это не случайное выключение по датчику или heartbeat.
+
+#### Точный формат команды
+
+Для Vendor bulk OUT endpoint `0x03` raw-пакет должен иметь ровно два байта:
+
+```text
+33 01    # включить 200 Hz TX
+33 00    # выключить 200 Hz TX
+```
+
+Если helper `send_cmd(cmd, payload)` сам добавляет opcode, вызывать его так:
+
+```python
+CMD_SET_TX_ENABLE = 0x33
+stream.send_cmd(CMD_SET_TX_ENABLE, b"\x01")  # enable
+stream.send_cmd(CMD_SET_TX_ENABLE, b"\x00")  # disable
+```
+
+Нельзя передавать helper-у payload `b"\x33\x01"`, если он уже добавляет opcode: на wire
+получится ошибочный пакет `33 33 01`. При прямой записи в endpoint, наоборот, opcode обязателен:
+
+```python
+dev.write(0x03, b"\x33\x01", timeout=1000)
+```
+
+Альтернативный EP0-вариант без data stage: vendor OUT `bRequest=0x33`, младший байт
+`wValue=0/1`, `wLength=0`. Не смешивать bulk framing и EP0 framing в одной функции.
+
+#### Обязательный порядок startup/reconnect
+
+`SET_TX_ENABLE` является persistent host-request. В текущей firmware `STOP_STREAM`
+не выключает синхронные выходы и не стирает request. Рекомендуемый порядок оставляет TX-команду в конце,
+чтобы сразу сделать однозначный readback:
+
+```text
+HOST_RX_CLEAR
+STOP_STREAM
+SET_* configuration
+START_STREAM
+SET_TX_ENABLE desired_tx_enabled    # всегда последняя команда управления TX
+GET_STATUS                          # обязательный readback
+```
+
+Проверить и исправить все ветки host-кода:
+
+- initial connect;
+- reconnect после USB exception;
+- watchdog/soft-kick;
+- смена profile, stream mode, frequency и channel mode;
+- повторная инициализация после timeout;
+- смена MASTER/SLAVE;
+- shutdown старого reader и запуск нового reader.
+
+После `STOP_STREAM` физический TX обязан сохранить последнее явно заданное состояние.
+Host может идемпотентно повторить желаемое значение, но команда `SET_TX_ENABLE=1`,
+отправленная до STOP, не теряется. Нельзя использовать локальный default `False` во время
+reconnect, если пользователь оставил TX включенным.
+`stream_enabled` и `desired_tx_enabled` — разные состояния и не должны перезаписывать друг друга.
+
+#### Проверка скрытой команды выключения
+
+Найти по всему host-проекту все места, где встречаются `0x33`, `SET_TX_ENABLE`, `TX200`,
+`STOP_STREAM`, `START_STREAM`, `HOST_RX_CLEAR`. `SET_TX_ENABLE=0` разрешено отправлять
+только по явному действию пользователя. Cleanup, timeout, heartbeat, reconnect и создание
+нового USB object не должны молча отправлять `0x33 00`.
+
+Production host не должен скрывать ошибку записи конструкцией `except Exception: pass`.
+Каждая команда должна логироваться как минимум с полями:
+
+```text
+monotonic_time, device_identity, command, payload, reason, result
+```
+
+Особенно важны причины `connect`, `reconnect`, `watchdog`, `mode_switch`, `user_enable`,
+`user_disable`, `shutdown`. По логу должно быть видно, кто последним записал `0x33 00`.
+
+#### Четыре одинаковых USB-устройства
+
+Нельзя для каждой команды заново делать только `find(VID=0xCAFE, PID=0x4001)` и брать
+первое найденное устройство. При четырех одинаковых VID/PID команда может попасть не в тот
+прибор. Host обязан:
+
+- однозначно привязать каждый прибор по USB serial number либо стабильным bus/address/port path;
+- отправлять `SET_TX_ENABLE` через тот же открытый `device handle` и interface, с которого
+  читается поток данного прибора;
+- хранить отдельный `desired_tx_enabled` для каждого прибора;
+- сериализовать записи в bulk OUT per-device lock;
+- исключить второй GUI/service/reader, который одновременно управляет тем же прибором.
+
+Нельзя хранить один глобальный `dev`, endpoint или TX state для всех четырех устройств.
+При reconnect новый handle должен получить identity прежнего прибора до отправки команд.
+
+#### Обязательный readback
+
+После `SET_TX_ENABLE` host должен прочитать полный `GET_STATUS` (`0x30`) именно с того же
+устройства и проверить:
+
+```text
+flags_runtime & 0x0001 != 0    # STREAMING
+flags_runtime & 0x0010 != 0    # физический 200 Hz TX enabled
+reserved3 & 0x0002 != 0        # legacy duplicate TX enabled
+```
+
+Для `desired_tx_enabled=True` оба TX-бита обязаны быть `1` независимо от `STREAMING`.
+Проверку делать сразу после команды, затем через `1 s`, `5 s` и после reconnect. Если бит не установился,
+host должен записать в лог ошибку с identity прибора и последними командами; допустим один
+явный повтор `SET_TX_ENABLE=1`, но нельзя запускать бесконечный toggle-таймер.
+
+Через диагностический COM команда `OPTIC` должна показывать:
+
+```text
+stream=1 tx_req=1 tx200=1    # host включил TX, состояние исправно
+stream=1 tx_req=0 tx200=0    # host оставил/повторно записал disable
+```
+
+Для точной проверки UART-строка также содержит `tx_cmd_count`, `tx_cmd_val` и
+`tx_cmd_age_ms`. При каждом принятом `0x33` должен увеличиваться `tx_cmd_count`, а
+`tx_cmd_val` должен совпасть с payload. Host не должен делать выводы о внутренней
+реализации STM32: подтверждением являются `tx_req`, `tx200` и TX-биты `GET_STATUS`.
+
+Минимальный acceptance test для каждого из четырех приборов:
+
+1. Выполнить полный startup-порядок и отправить `SET_TX_ENABLE=1`.
+2. Проверить TX readback сразу, через 5 секунд и после серии `HOST_RX_ACK`.
+3. Отправить `HOST_RX_CLEAR`: TX должен остаться включенным.
+4. Выполнить `STOP_STREAM`: состояние TX не должно измениться.
+5. Выполнить `START_STREAM`: состояние TX также не должно измениться.
+6. Отправить `SET_TX_ENABLE=0`: TX-бит должен стать `0`, а STREAMING остаться `1`.
+7. Снова отправить `SET_TX_ENABLE=1`: TX-бит должен стать `1` и оставаться таким.
+8. Выполнить reconnect и повторить проверку identity, порядка команд и readback.
+
+Host-код считается исправленным только после прохождения этого теста на всех четырех
+устройствах одновременно.
+
 - 0x34 SET_OPTIC_POWER: u8 0..255
 - 0x39 SET_OPTIC_HOLD:
   - новый формат: u16 deciseconds
   - совместимость: legacy u8 seconds
 - 0x3B SET_LED_PATTERN: u8 pattern_id
 - 0x35 LED_EVENT: u8 event + u16 duration_ms
+- 200 Hz marker/TX не gated по оптическим датчикам. Полный обязательный host-контракт приведен в разделе 4.3.
+- Оптический 38 kHz carrier не gated по приемнику: `SET_OPTIC_POWER=255` задает максимум, чтобы фотоприемник мог сработать.
+- Для bench-контроля без USB Vendor доступны COM-команды UART: `TX200 1`, `TX200 0`, `OPTP 255`, `OPTH 0..600`, `OPTIC`. `TX200 1/0` эквивалентны host-request `SET_TX_ENABLE` и не зависят от stream. `OPTIC` печатает `tx200` (подтверждённое состояние), `tx_req` (запрос host/manual), `power/hold_ds/rx/pd0/any/master_rx/local_status`. В `local_status` bit5 (`0x20`) означает локальное срабатывание оптического приемника.
+- Внешняя WS2812-лента имеет optic-gate: `SET_LED_PATTERN` и `LED_EVENT` сохраняют желаемое состояние, но реально светиться она может только пока активен хотя бы один оптический датчик в группе.
+- В gate входят локальный `optic_active`, свежий master `master_status0 bit5` на slave и свежие `sync_status_bytes[*] bit5` от slave-узлов на master/узлах, которые их слышат. Если все эти признаки равны 0 или устарели, внешняя лента рендерится как `OFF`; onboard/system address WS2812 продолжает показывать роль.
 - 0x3C SET_DET_ADC: u8 bits
   - bit0 = `DetADC1`
   - bit1 = `DetADC2`
@@ -550,17 +814,26 @@ Host-side правила:
   - `0` = сбросить временный локальный id и ждать auto-нумерацию
   - `1..31` = принудительно задать временный RS485 slave id
   - команда предназначена для диагностики/ручного восстановления; штатно master сам назначает компактные id
+- 0x3E SET_RS485_IP: `u8 ip[4]`, network order `a.b.c.d`
+  - IP задает host. Если устройство подключено к роутеру, host пишет IP на этом роутере; если роутера нет и остался только host, host пишет свой fallback IP.
+- 0x3F REQUEST_RS485_IDENT: без payload
+  - Отправлять текущему master. Master делает один проход RS485 identity-страниц и все узлы запоминают услышанные строки.
+- 0x40 GET_RS485_IDENT: чтение `RID1`
+  - EP0 IN: `ctrl_transfer(0xC0, 0x40, node_id, 0, 32)`, `node_id=0` = локальная строка.
 
 Проверка через STAT
 - flags_runtime bit 0x0010: TX enabled
 - flags_runtime bit 0x0020: optic active
 - sync_status byte:
-  - bits 0..4 = `selector` для локального master status или `node_id` для slave/remote status
+  - bits 0..4 = `node_id` в публичных полях `sync_local_status`/`sync_status_bytes`
   - bit 5 = optic active
   - bit 6 = `DetADC1`
   - bit 7 = `DetADC2`
-- RS485 master-цикл передает `sync_byte, master_status0, master_status1`; ответ slave передает `slave_status0, slave_status1`. В `STAT v5` сейчас наружу отдаются первые байты статуса: `sync_local_status` и `sync_status_bytes[31]`.
-- Для хоста состояние доступно двумя путями: по запросу `GET_STATUS` (`0x30`, читать 136 байт) и как событие `STAT` при изменении локального status byte.
+- На сырой RS485-шине `master_status0 bits0..4` остаются адресом/`selector` запроса к slave, чтобы не ломать опрос. `master_status1` в штатном случае несет `0xC0 | master_id`; при переназначении ID вместо этого может идти команда `0xA0 | new_id`, а при identity-опросе `0x80 | page`.
+- Firmware на slave использует принятый master status для синхронизации/служебного master id, но не добавляет master в `sync_seen_mask`/`sync_status_bytes`.
+- Для хоста состояние локального узла, master optic flag и slave-таблицы доступно двумя путями: по запросу `GET_STATUS` (`0x30`, читать 136 байт) и как событие `STAT` при изменении локального или принятого по RS485 status byte.
+- Для firmware-индикации slave отдельно использует свежий `master_status0 bit5`: если master сообщил `optic_active=1`, onboard/system address WS2812 slave меняется с белого на магента/фиолетовый только при отсутствии локального срабатывания; локальный `optic_active=1` на самом slave имеет приоритет и показывает желтый. Master в этой ситуации меняется с синего на зеленый.
+- Для внешних световых эффектов действует общий optic-gate: если нет локального/принятого по RS485 `optic_active`, внешняя WS2812-лента остается выключенной даже при включенных host-командах. 200 Hz marker/TX в этот gate не входит и при активном stream следует только `SET_TX_ENABLE`.
 
 ## 5. Актуальные команды DC
 
@@ -579,23 +852,34 @@ Host-side правила:
 Актуальный алгоритм адаптации
 - DC обучается плавным slew-rate алгоритмом, отдельно для каждого канала и parity-bank, но с общим шагом для всех 200 семплов ROI.
 - Прошивка применяет DC к USB payload для 200-семплового ROI в режимах `LOSSLESS_ROI` и `AVG_ROI`. Исходные DMA/FIFO буферы не изменяются.
+- В `LOSSLESS_ROI` прошивка копирует raw ROI, применяет текущую DC и отправляет скорректированный ROI по USB.
+- Для всех режимов существует одна DC-таблица `[channel][parity][sample]`. Переключение `pre`/`post` меняет только место её применения и не меняет/не очищает коэффициенты.
+- В `AVG_ROI` доступны два взаимоисключающих места обработки:
+  - `pre` - DC применяется к каждому raw ROI до накопления суммы.
+  - `post` - DC применяется к готовому усредненному ROI перед постановкой в USB-очередь.
+- По умолчанию и для старого payload `version=1` активен прежний режим `pre apply+learn`, `post` выключен.
+- Одновременно применять одну таблицу в `pre` и `post` запрещено: это удвоило бы компенсацию. Если host всё же прислал обе группы флагов, firmware нормализует их к одной стадии: `POST_LEARN` имеет приоритет, затем `PRE_LEARN`, затем `POST_APPLY`, затем `PRE_APPLY`.
+- Для сильного остаточного смещения после усреднения нужно выбрать `POST_APPLY|POST_LEARN`.
 - Прошивка меняет DC только когда адаптация разрешена, окно ROI равно 200 семплам и amplitude-gate разрешает обучение.
-- Скорость обучения задаёт Raspberry через `*_settle_ms` в `SET_DC_CONFIG`: это время, за которое максимальная ошибка 32768 LSB должна дойти до виртуального нуля 32768/deadband.
+- Скорость обучения задаёт Raspberry через `*_settle_ms` в `SET_DC_CONFIG`: это время, за которое максимальная ошибка 32768 LSB должна дойти до виртуального нуля 32768/deadband. В payload `version=2` скорости `pre_settle_ms` и `post_settle_ms` задаются отдельно; `0` означает использовать скорость текущего режима `WORK/DETECT/BOOT_FAST`.
+- Дефолты прошивки/хоста для проверки: `WORK=5 s`, `BOOT_FAST/Acquisition=500 s`, `DETECT=10000 s`, `FREEZE/Stop=0 s` (обучение остановлено).
 - Минимальное значение `*_settle_ms` — 1 мс. При таком значении прошивка может сделать максимально быстрый LSB-slew на ближайшем новом кадре.
 - На каждом кадре все семплы ROI обрабатываются за один проход: модуль шага общий и небольшой, а знак выбирается для каждого семпла по его стороне относительно 32768. Дробная часть шага копится во времени, а не распределяется по отдельным индексам ROI.
 - Пример: `settle_ms=100000` при 200 Гц даёт 20000 итераций; максимальная ошибка 32768 LSB уходит примерно по 1-2 LSB на кадр, без ломаной по соседним семплам.
 - Режим адаптации не имеет таймера остановки: `WORK`, `DETECT` и `BOOT_FAST` работают постоянно до следующей команды Raspberry. Меняется только скорость адаптации.
-- Повторная команда `SET_DC_CONFIG` с той же или новой скоростью не сбрасывает DC-таблицу; она только меняет текущий режим/settle time. Для полной остановки обучения используйте `FREEZE` или `SET_DC_ADAPT 0`.
-- `CALIB_DC_FAST` (`0x1E`) оставлен только для совместимости: payload `frames` включает временное окно `BOOT_FAST` примерно на указанное число ADC-буферов и не перезаписывает базовый режим, выбранный `SET_DC_CONFIG`.
-- Начиная с DC blob version 4 прошивка игнорирует старые сохранённые DC-коэффициенты предыдущих экспериментальных версий; после обновления компенсация стартует с нулевых коэффициентов и обучается заново.
-- В GUI BMI30 принята базовая быстрая адаптация 1 сек (`fast_settle_ms=1000`). Верхние параметры `W` и `D` задают множители 1..999 для рабочей адаптации и адаптации в режиме детекции: `work_settle_ms = 1000 * W`, `detect_settle_ms = 1000 * D`.
+- Повторная команда `SET_DC_CONFIG` с той же или новой скоростью/стадией не сбрасывает общую DC-таблицу; она меняет только место обработки, режим и settle time. Для полной остановки обучения используйте `FREEZE` или `SET_DC_ADAPT 0`.
+- `CALIB_DC_FAST` (`0x1E`) оставлен только для совместимости. Ненулевой `frames` выбирает режим `BOOT_FAST`, а `frames=0` выбирает `WORK`; в текущей continuous-speed модели режим не завершается по таймеру и действует до следующего `SET_DC_CONFIG`, `SET_DC_ADAPT` или `CALIB_DC_FAST`.
+- DC blob version 5 хранит одну общую таблицу. Старый экспериментальный blob version 4 с раздельными pre/post таблицами игнорируется; после первого обновления компенсация обучается заново и последующие переключения pre/post используют те же коэффициенты.
+- Режим `Acquisition` в хостовых инструментах является алиасом `BOOT_FAST`; режим `Stop` является алиасом `FREEZE`.
 
-Формат `SET_DC_CONFIG` (`0x1F`) после opcode, little-endian, 20 байт:
+Формат `SET_DC_CONFIG` (`0x1F`) после opcode, little-endian.
+
+Legacy `version=1`, 20 байт:
 
 ```text
 offset  size  field
 0       1     version = 1
-1       1     mode: 0=FREEZE, 1=WORK, 2=DETECT, 3=BOOT_FAST
+1       1     mode: 0=FREEZE/Stop, 1=WORK, 2=DETECT, 3=BOOT_FAST/Acquisition
 2       2     flags, сейчас 0
 4       4     work_settle_ms
 8       4     detect_settle_ms
@@ -603,11 +887,119 @@ offset  size  field
 16      4     adapt_settle_ms, legacy wire-name fast_duration_ms; скорость выбранного режима, не таймер
 ```
 
+Новый `version=2`, 24 байта:
+
+```text
+offset  size  field
+0       1     version = 2
+1       1     mode: 0=FREEZE/Stop, 1=WORK, 2=DETECT, 3=BOOT_FAST/Acquisition
+2       2     flags
+4       4     work_settle_ms
+8       4     detect_settle_ms
+12      4     fast_settle_ms
+16      4     pre_settle_ms; 0 = use mode speed
+20      4     post_settle_ms; 0 = use mode speed
+```
+
+Флаги `version=2`:
+- `0x0010 PRE_APPLY`
+- `0x0020 PRE_LEARN` (также включает apply)
+- `0x0040 POST_APPLY`
+- `0x0080 POST_LEARN` (также включает apply)
+- Если все stage-флаги равны 0, firmware использует совместимый default `PRE_APPLY|PRE_LEARN`.
+- Эффективной может быть только одна стадия. Комбинации pre+post нормализуются по приоритету `POST_LEARN > PRE_LEARN > POST_APPLY > PRE_APPLY`; в `GET_DC_CONFIG` возвращаются уже нормализованные флаги.
+
+### 5.1 Обязательный контракт для host-кода
+
+Host должен использовать `SET_DC_CONFIG version=2`. Канонические значения по умолчанию:
+
+- UI `Work, sec.` = `5` -> wire `work_settle_ms = 5000`.
+- UI `Acquisition, sec.` = `500` -> wire `fast_settle_ms = 500000`, режим `BOOT_FAST=3`.
+- UI `Detection, sec.` = `10000` -> wire `detect_settle_ms = 10000000`, режим `DETECT=2`.
+- UI `Start, sec.` = `0` не является полем `SET_DC_CONFIG version=2` и не должно добавляться в пакет. У текущей continuous-speed модели нет таймера старта или автоматического завершения режима.
+
+Порядок полей на экране и порядок полей в USB-пакете различаются. Wire-порядок после `mode, flags` строго такой:
+
+```text
+work_settle_ms, detect_settle_ms, fast_settle_ms, pre_settle_ms, post_settle_ms
+```
+
+То есть host обязан явно выполнить следующее отображение, а не упаковывать UI-поля подряд:
+
+```text
+wire.work_settle_ms   = round(UI.Work_sec       * 1000)
+wire.detect_settle_ms = round(UI.Detection_sec  * 1000)
+wire.fast_settle_ms   = round(UI.Acquisition_sec * 1000)
+```
+
+Канонический Python-код для режима `WORK`, pre-DC apply+learn:
+
+```python
+import struct
+
+CMD_SET_DC_CONFIG = 0x1F
+DC_MODE_WORK = 1
+DC_FLAG_PRE_APPLY = 0x0010
+DC_FLAG_PRE_LEARN = 0x0020
+
+payload = struct.pack(
+    "<BBHIIIII",
+    2,                                      # version
+    DC_MODE_WORK,
+    DC_FLAG_PRE_APPLY | DC_FLAG_PRE_LEARN,
+    5_000,                                  # Work
+    10_000_000,                             # Detection
+    500_000,                                # Acquisition/BOOT_FAST
+    0,                                      # pre: use selected mode speed
+    0,                                      # post: use selected mode speed
+)
+stream.send_cmd(CMD_SET_DC_CONFIG, payload) # send_cmd добавляет opcode сам
+```
+
+Полный пакет на USB wire, включая opcode, должен быть ровно 25 байт:
+
+```text
+1F 02 01 30 00 88 13 00 00 80 96 98 00 20 A1 07 00 00 00 00 00 00 00 00 00
+```
+
+Нельзя одновременно включать второй конфигуратор DC. Любой последующий `SET_DC_CONFIG` немедленно перезаписывает активные значения. Поэтому startup-код, reconnect-код и периодический service loop должны использовать один и тот же источник настроек; они не должны повторно отправлять библиотечные defaults.
+
+Известная устаревшая конфигурация, которую запрещено отправлять:
+
+```text
+WORK=900000 ms, ACQUISITION=5000 ms, DETECTION=60000 ms
+```
+
+Эти значения соответствуют старым defaults `900/5/60 sec`. Если STM32 сообщает такую строку, UI-настройки `5/500/10000` до устройства не дошли либо были перезаписаны старым клиентом:
+
+```text
+[DC_SPEED] mode=1 work=900000ms acquisition=5000ms detection=60000ms ...
+```
+
+После каждой отправки host обязан прочитать `GET_DC_CONFIG` (`DCCF`) и проверить применённые значения. Для приведённого выше пакета ожидается:
+
+```text
+mode=1
+work_settle_ms=5000
+detect_settle_ms=10000000
+fast_settle_ms=500000
+active_settle_ms=5000
+fast_duration_ms=0    # legacy wire-name, для v2 это pre_settle_ms
+fast_until_ms=0       # legacy wire-name, для v2 это post_settle_ms
+flags & 0x0030 == 0x0030
+```
+
+При несовпадении host не должен молча продолжать запуск потока. Он должен записать в лог путь загруженного host-модуля, значения UI, полный hex отправленного пакета и весь ответ `DCCF`. Проверять только отображаемые значения UI недостаточно.
+
+Legacy `version=1` допустим только для старых клиентов. Его последнее поле `adapt_settle_ms`/`fast_duration_ms` не является `Start`: ненулевое значение переопределяет скорость выбранного режима. Для нового host-кода `version=1` использовать нельзя.
+
+`GET_DC_CONFIG` (`DCCF`, 40 байт) сохраняет старую длину ответа. В `flags` дополнительно отражаются stage-флаги выше. Поле `fast_duration_ms` теперь показывает `pre_settle_ms`, поле `fast_until_ms` показывает `post_settle_ms`; старые имена полей оставлены только для wire-совместимости.
+
 Рекомендуемый быстрый старт от Raspberry:
-1. Отправить `SET_DC_CONFIG` с `fast_settle_ms=1000` и рабочими значениями `work_settle_ms`/`detect_settle_ms`; режим выбрать как `BOOT_FAST`, `WORK` или `DETECT` по текущему сценарию.
+1. Отправить `SET_DC_CONFIG version=2`. Для прежней pre-AVG обработки использовать `flags=PRE_APPLY|PRE_LEARN`. Для проверки остаточного смещения после AVG включить `POST_APPLY|POST_LEARN` и задать отдельный `post_settle_ms`.
 2. Запустить поток/измерение в нужном режиме.
-3. Читать `GET_DC_CONFIG` (`DCCF`) и смотреть `mode`, `active_settle_ms`, `adapt_updates`, `flags`.
-4. Когда нужна другая скорость, отправить новый `SET_DC_CONFIG` с `mode=WORK`, `DETECT` или `BOOT_FAST`; когда нужно остановить обучение, отправить `FREEZE` или legacy `SET_DC_ADAPT 0`.
+3. Сразу после записи прочитать `GET_DC_CONFIG` (`DCCF`) и проверить все переданные времена, `mode`, `active_settle_ms` и stage-флаги; во время работы смотреть также `adapt_updates`.
+4. Когда нужна другая скорость, отправить новый `SET_DC_CONFIG` с `mode=WORK`, `DETECT` или `BOOT_FAST/Acquisition`; когда нужно остановить обучение, отправить `FREEZE/Stop` или legacy `SET_DC_ADAPT 0`.
 
 Legacy `SET_DC_ADAPT` не задаёт скорость. `SET_DC_ADAPT 0` только замораживает обучение, `SET_DC_ADAPT 1` возвращает последний не-FREEZE режим. Для управления скоростью Raspberry должен использовать `SET_DC_CONFIG`.
 

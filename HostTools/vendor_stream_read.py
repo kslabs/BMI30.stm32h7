@@ -21,6 +21,7 @@ VND_CMD_SET_PROFILE       = 0x14
 VND_CMD_SET_ASYNC         = 0x18
 VND_CMD_SET_CHMODE        = 0x19
 VND_CMD_SET_STREAM_MODE   = 0x1A
+VND_CMD_SET_DC_CONFIG     = 0x1F
 VND_CMD_SET_TX_ENABLE     = 0x33
 VND_CMD_SET_OPTIC_POWER   = 0x34
 VND_CMD_SET_OPTIC_HOLD    = 0x39
@@ -28,6 +29,17 @@ VND_CMD_HOST_RX_ACK       = 0x36
 VND_CMD_HOST_RX_CLEAR     = 0x37
 
 VND_STFLAG_OPTIC_ACTIVE   = 0x0020
+VND_STFLAG_MASTER_OPTIC_ACTIVE = 0x0080
+VND_STFLAG_GROUP_OPTIC_ACTIVE  = 0x0100
+
+VND_DC_MODE_FREEZE        = 0
+VND_DC_MODE_WORK          = 1
+VND_DC_MODE_DETECT        = 2
+VND_DC_MODE_BOOT_FAST     = 3
+VND_DC_FLAG_PRE_APPLY     = 0x0010
+VND_DC_FLAG_PRE_LEARN     = 0x0020
+VND_DC_FLAG_POST_APPLY    = 0x0040
+VND_DC_FLAG_POST_LEARN    = 0x0080
 
 MAGIC = 0xA55A
 
@@ -139,6 +151,8 @@ def parse_stat(buf: bytes):
     st['optic_active_packed'] = 1 if (st['reserved3'] & 0x01) else 0
     st['tx_enable_packed'] = 1 if (st['reserved3'] & 0x02) else 0
     st['optic_active_flag'] = 1 if (st['flags_rt'] & VND_STFLAG_OPTIC_ACTIVE) else 0
+    st['master_optic_flag'] = 1 if (st['flags_rt'] & VND_STFLAG_MASTER_OPTIC_ACTIVE) else 0
+    st['group_optic_flag'] = 1 if (st['flags_rt'] & VND_STFLAG_GROUP_OPTIC_ACTIVE) else 0
 
     # v2/v3/v4 extensions (total 96 bytes)
     if len(buf) >= STAT_LEN_V4:
@@ -150,7 +164,7 @@ def parse_stat(buf: bytes):
         st['now_ms'] = int.from_bytes(buf[84:88], 'little')
         st['last_full0_ms'] = int.from_bytes(buf[88:92], 'little')
         st['last_full1_ms'] = int.from_bytes(buf[92:96], 'little')
-    if len(buf) >= STAT_LEN_V5 and st.get('ver', 0) >= 5:
+    if len(buf) >= STAT_LEN_V5:
         st['optic_hold_ds'] = int.from_bytes(buf[96:98], 'little')
         st['led_pattern'] = buf[98]
         st['sync_local_status'] = buf[99]
@@ -158,6 +172,32 @@ def parse_stat(buf: bytes):
         st['sync_node_count'] = buf[104]
         st['sync_status_bytes'] = list(buf[105:136])
     return st
+
+
+def sync_remote_summary(st: dict) -> str:
+    if 'sync_local_status' not in st:
+        return ''
+    local_status = st.get('sync_local_status', 0)
+    local_id = local_status & 0x1F
+    seen_mask = st.get('sync_seen_mask', 0)
+    remote = []
+    for idx, status in enumerate(st.get('sync_status_bytes', [])):
+        node_id = idx + 1
+        if not (seen_mask & (1 << idx)):
+            continue
+        if node_id == local_id:
+            continue
+        remote.append((node_id, status, 1 if (status & 0x20) else 0))
+    remote_txt = ','.join(f'{node}:0x{status:02X}/optic={optic}' for node, status, optic in remote) or '-'
+    remote_optic_any = 1 if any(optic for _, _, optic in remote) else 0
+    local_optic = 1 if (local_status & 0x20) else 0
+    master_optic = 1 if st.get('master_optic_flag', 0) else 0
+    return (
+        f' sync_local_id={local_id} sync_local_optic={local_optic}'
+        f' master_optic={master_optic}'
+        f' remote_status={remote_txt} remote_optic_any={remote_optic_any}'
+        f' group_optic={st.get("group_optic_flag", 0)}'
+    )
 
 
 def stat_expected_len(acc: bytes) -> int:
@@ -168,6 +208,49 @@ def stat_expected_len(acc: bytes) -> int:
     if ver >= 5:
         return STAT_LEN_V5
     return STAT_LEN_V4 if ver >= 2 else STAT_LEN_V1
+
+
+def parse_dc_mode(value) -> int:
+    if value is None:
+        return VND_DC_MODE_WORK
+    text = str(value).strip().lower()
+    names = {
+        'freeze': VND_DC_MODE_FREEZE,
+        'work': VND_DC_MODE_WORK,
+        'detect': VND_DC_MODE_DETECT,
+        'fast': VND_DC_MODE_BOOT_FAST,
+        'boot_fast': VND_DC_MODE_BOOT_FAST,
+        'boot-fast': VND_DC_MODE_BOOT_FAST,
+        'acquisition': VND_DC_MODE_BOOT_FAST,
+        'acq': VND_DC_MODE_BOOT_FAST,
+        'stop': VND_DC_MODE_FREEZE,
+    }
+    if text in names:
+        return names[text]
+    mode = int(text, 0)
+    if mode < VND_DC_MODE_FREEZE:
+        mode = VND_DC_MODE_FREEZE
+    if mode > VND_DC_MODE_BOOT_FAST:
+        mode = VND_DC_MODE_WORK
+    return mode
+
+
+def dc_stage_flags(stage: str) -> int:
+    stage = (stage or 'pre').strip().lower()
+    mapping = {
+        'off': 0,
+        'pre': VND_DC_FLAG_PRE_APPLY | VND_DC_FLAG_PRE_LEARN,
+        'post': VND_DC_FLAG_POST_APPLY | VND_DC_FLAG_POST_LEARN,
+        # A single coefficient table must be applied exactly once. Keep legacy
+        # CLI aliases, but normalize "both" to the post-AVG location.
+        'both': VND_DC_FLAG_POST_APPLY | VND_DC_FLAG_POST_LEARN,
+        'pre-apply': VND_DC_FLAG_PRE_APPLY,
+        'post-apply': VND_DC_FLAG_POST_APPLY,
+        'both-apply': VND_DC_FLAG_POST_APPLY,
+    }
+    if stage not in mapping:
+        raise SystemExit(f"Unknown --dc-stage {stage!r}")
+    return mapping[stage]
 
 
 def main():
@@ -201,7 +284,15 @@ def main():
     ap.add_argument('--fail-fast', action='store_true', help='Exit immediately on first violation (default: count and continue)')
     ap.add_argument('--verify', choices=['pair', 'mono'], default=None, help='Verification mode: pair=A->B strict pairs, mono=single stream seq continuity')
     ap.add_argument('--stream-mode', type=int, default=0, help='0=latest (lossy), 1=LOSSLESS_ROI, 2=AVG_ROI')
-    ap.add_argument('--avg-n', type=int, default=24, help='AVG_ROI parameter (16..64), used when --stream-mode=2')
+    ap.add_argument('--avg-n', type=int, default=24, help='AVG_ROI parameter (8..64), used when --stream-mode=2')
+    ap.add_argument('--dc-stage', choices=['off', 'pre', 'post', 'both', 'pre-apply', 'post-apply', 'both-apply'], default=None,
+                    help='Send SET_DC_CONFIG v2: choose one DC location for AVG_ROI; legacy both aliases normalize to post (default: pre).')
+    ap.add_argument('--dc-mode', default='work', help='DC mode for SET_DC_CONFIG v2: freeze/stop/work/detect/fast/acquisition or 0..3')
+    ap.add_argument('--dc-work-ms', type=int, default=None, help='WORK settle time for DC config (default 5000)')
+    ap.add_argument('--dc-detect-ms', type=int, default=None, help='DETECT settle time for DC config (default 10000000)')
+    ap.add_argument('--dc-fast-ms', type=int, default=None, help='ACQUISITION/BOOT_FAST settle time for DC config (default 500000)')
+    ap.add_argument('--dc-pre-ms', type=int, default=None, help='Pre-average DC settle override, 0=use mode speed')
+    ap.add_argument('--dc-post-ms', type=int, default=None, help='Post-average DC settle override, 0=use mode speed')
     ap.add_argument('--async-mode', dest='async_mode', type=int, choices=[0, 1], default=None, help='Set ASYNC mode (0/1). In LOSSLESS_ROI firmware may force 0.')
     ap.add_argument('--chmode', type=int, choices=[0, 1, 2, 3], default=None, help='Set channel mode (firmware-defined).')
     ap.add_argument('--tx-enable', type=int, choices=[0, 1], default=None, help='Set external TX gate (0=disable, 1=enable) via CMD 0x33.')
@@ -230,8 +321,8 @@ def main():
         sm = int(args.stream_mode) & 0xFF
         if sm == 2:
             n = int(args.avg_n)
-            if n < 16:
-                n = 16
+            if n < 8:
+                n = 8
             if n > 64:
                 n = 64
             send_cmd(dev, ep_out, bytes([VND_CMD_SET_STREAM_MODE, sm, n & 0xFF]))
@@ -252,6 +343,36 @@ def main():
         send_cmd(dev, ep_out, bytes([VND_CMD_SET_FRAME_SAMPLES]) + le16(int(args.frame_samples)))
     send_cmd(dev, ep_out, bytes([VND_CMD_SET_FULL_MODE, 1 if args.full_mode else 0]))
 
+    send_dc_config = (
+        args.dc_stage is not None or
+        args.dc_work_ms is not None or
+        args.dc_detect_ms is not None or
+        args.dc_fast_ms is not None or
+        args.dc_pre_ms is not None or
+        args.dc_post_ms is not None
+    )
+    if send_dc_config:
+        inferred_stage = args.dc_stage
+        if inferred_stage is None:
+            if args.dc_pre_ms is not None and args.dc_post_ms is not None:
+                inferred_stage = 'post'
+            elif args.dc_post_ms is not None:
+                inferred_stage = 'post'
+            else:
+                inferred_stage = 'pre'
+        flags = dc_stage_flags(inferred_stage)
+        mode = parse_dc_mode(args.dc_mode)
+        work_ms = int(args.dc_work_ms if args.dc_work_ms is not None else 5 * 1000)
+        detect_ms = int(args.dc_detect_ms if args.dc_detect_ms is not None else 10000 * 1000)
+        fast_ms = int(args.dc_fast_ms if args.dc_fast_ms is not None else 500 * 1000)
+        pre_ms = int(args.dc_pre_ms if args.dc_pre_ms is not None else 0)
+        post_ms = int(args.dc_post_ms if args.dc_post_ms is not None else 0)
+        dc_payload = struct.pack('<BBBHIIIII', VND_CMD_SET_DC_CONFIG, 2, mode & 0xFF, flags & 0xFFFF,
+                                 work_ms, detect_ms, fast_ms, pre_ms, post_ms)
+        send_cmd(dev, ep_out, dc_payload)
+        if not args.quiet:
+            print(f"SET_DC_CONFIG v2 stage={inferred_stage} mode={mode} work={work_ms} detect={detect_ms} fast={fast_ms} pre={pre_ms} post={post_ms}")
+
     # Optional extra mode knobs
     try:
         if args.async_mode is not None:
@@ -263,11 +384,6 @@ def main():
     try:
         if args.chmode is not None:
             send_cmd(dev, ep_out, bytes([VND_CMD_SET_CHMODE, int(args.chmode) & 0xFF]))
-    except Exception:
-        pass
-    try:
-        if args.tx_enable is not None:
-            send_cmd(dev, ep_out, bytes([VND_CMD_SET_TX_ENABLE, int(args.tx_enable) & 0xFF]))
     except Exception:
         pass
     try:
@@ -314,6 +430,14 @@ def main():
 
     # Start
     send_cmd(dev, ep_out, bytes([VND_CMD_START_STREAM]))
+
+    # Apply the requested persistent TX state after START and verify it via status.
+    # Firmware also preserves the request across later STOP/START cycles.
+    try:
+        if args.tx_enable is not None:
+            send_cmd(dev, ep_out, bytes([VND_CMD_SET_TX_ENABLE, int(args.tx_enable) & 0xFF]))
+    except Exception:
+        pass
 
     want_frames = int(args.frames)
     use_time_limit = (want_frames <= 0)
@@ -373,7 +497,7 @@ def main():
                         buf = bytes(raw)
                         st = parse_stat(buf)
                         if st and status_verbose:
-                            print(f"STAT[vnd-ctl] v{st['ver']} f2=0x{st['flags2']:04X} cur={st['cur_samples']} seq={st['cur_stream_seq']} sentA/B={st['sent0']}/{st['sent1']} wr={st['wr']} dma0/1={st['dma0']}/{st['dma1']} lastTX={st['last_tx_len']} send={st['sending_ch']} pair fs={st['pair_idx']>>8}/{st['pair_idx']&0xFF} optic_power={st['optic_power']} optic_hold_ds={st.get('optic_hold_ds', st['optic_hold_seconds']*10)} optic_active={1 if (st['optic_active_packed'] or st['optic_active_flag']) else 0} tx_enable={st['tx_enable_packed']} led_pattern={st.get('led_pattern', '-')} sync_count={st.get('sync_node_count', '-')}")
+                            print(f"STAT[vnd-ctl] v{st['ver']} f2=0x{st['flags2']:04X} cur={st['cur_samples']} seq={st['cur_stream_seq']} sentA/B={st['sent0']}/{st['sent1']} wr={st['wr']} dma0/1={st['dma0']}/{st['dma1']} lastTX={st['last_tx_len']} send={st['sending_ch']} pair fs={st['pair_idx']>>8}/{st['pair_idx']&0xFF} optic_power={st['optic_power']} optic_hold_ds={st.get('optic_hold_ds', st['optic_hold_seconds']*10)} optic_active={1 if (st['optic_active_packed'] or st['optic_active_flag']) else 0} tx_enable={st['tx_enable_packed']} led_pattern={st.get('led_pattern', '-')} sync_count={st.get('sync_node_count', '-')}{sync_remote_summary(st)}")
                         elif status_verbose:
                             print("STAT[vnd-ctl]", buf[:16].hex(), "len=", len(buf))
                     else:
@@ -428,7 +552,7 @@ def main():
                             extra = ""
                             if 'now_ms' in stp:
                                 extra = f" now={stp['now_ms']} last_full0/1={stp['last_full0_ms']}/{stp['last_full1_ms']}"
-                            print(f"STAT v{stp['ver']} f2=0x{stp['flags2']:04X} cur={stp['cur_samples']} seq={stp['cur_stream_seq']} sentA/B={stp['sent0']}/{stp['sent1']} wr={stp['wr']} dma0/1={stp['dma0']}/{stp['dma1']} lastTX={stp['last_tx_len']} send={stp['sending_ch']} pair fs={stp['pair_idx']>>8}/{stp['pair_idx']&0xFF} optic_power={stp['optic_power']} optic_hold_ds={stp.get('optic_hold_ds', stp['optic_hold_seconds']*10)} optic_active={1 if (stp['optic_active_packed'] or stp['optic_active_flag']) else 0} tx_enable={stp['tx_enable_packed']} led_pattern={stp.get('led_pattern', '-')} sync_count={stp.get('sync_node_count', '-')}{extra}")
+                            print(f"STAT v{stp['ver']} f2=0x{stp['flags2']:04X} cur={stp['cur_samples']} seq={stp['cur_stream_seq']} sentA/B={stp['sent0']}/{stp['sent1']} wr={stp['wr']} dma0/1={stp['dma0']}/{stp['dma1']} lastTX={stp['last_tx_len']} send={stp['sending_ch']} pair fs={stp['pair_idx']>>8}/{stp['pair_idx']&0xFF} optic_power={stp['optic_power']} optic_hold_ds={stp.get('optic_hold_ds', stp['optic_hold_seconds']*10)} optic_active={1 if (stp['optic_active_packed'] or stp['optic_active_flag']) else 0} tx_enable={stp['tx_enable_packed']} led_pattern={stp.get('led_pattern', '-')} sync_count={stp.get('sync_node_count', '-')}{sync_remote_summary(stp)}{extra}")
                         else:
                             print("STAT", st[:16].hex(), "len=", len(st))
                     progressed = True
