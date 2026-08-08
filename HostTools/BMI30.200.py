@@ -706,6 +706,8 @@ class ScopeWindow:
 		# Флаг намерения пользователя: передача включена/выключена
 		self.stream_enabled = False
 		self.tx_enabled_desired = False
+		self.tx_user_enabled_latched = False
+		self._tx_cmd_lock = threading.Lock()
 		# Сохраним порт info для power cycle без stream
 		self.last_port_info = None
 		# timer
@@ -784,6 +786,7 @@ class ScopeWindow:
 			self.num_buttons[0].setChecked(True)
 		self.stream_mode = self._stream_mode_for_selection(self.num_group.checkedId())
 		self.tx_enabled_desired = (self.num_group.checkedId() != 0)
+		self.tx_user_enabled_latched = self.tx_enabled_desired
 		self.num_group.idClicked.connect(self._num_clicked)
 		self.win.closeEvent = self._on_close  # type: ignore
 		# slider signals
@@ -1393,14 +1396,24 @@ class ScopeWindow:
 	def _apply_tx_enable(self, reason: str = "") -> bool:
 		if self.stream is None:
 			return False
-		en = 1 if bool(getattr(self, 'tx_enabled_desired', False)) else 0
-		try:
-			self.stream.send_cmd(CMD_SET_TX_ENABLE, bytes([en]))
-			print(f"[TX] {'ENABLE' if en else 'DISABLE'} ({reason or 'apply'})", flush=True)
-			return True
-		except Exception as e:
-			print(f"[TX] apply failed ({reason or 'apply'}): {e}", flush=True)
-			return False
+		lock = getattr(self, '_tx_cmd_lock', None)
+		if lock is None:
+			lock = threading.Lock()
+			self._tx_cmd_lock = lock
+		with lock:
+			en = 1 if bool(getattr(self, 'tx_enabled_desired', False)) else 0
+			# Once the user selected an enabled mode, a stale connect/retry path must
+			# not send an implicit DISABLE. Only button 0 clears the user latch.
+			if en == 0 and bool(getattr(self, 'tx_user_enabled_latched', False)):
+				print(f"[TX] SKIP stale DISABLE ({reason or 'apply'})", flush=True)
+				return False
+			try:
+				self.stream.send_cmd(CMD_SET_TX_ENABLE, bytes([en]))
+				print(f"[TX] {'ENABLE' if en else 'DISABLE'} ({reason or 'apply'})", flush=True)
+				return True
+			except Exception as e:
+				print(f"[TX] apply failed ({reason or 'apply'}): {e}", flush=True)
+				return False
 
 	def _set_dc_adapt_cmd(self, enable: bool, reason: str = ""):
 		"""Отправить CMD_SET_DC_ADAPT (FREEZE/ACTIVE) при смене состояния."""
@@ -1423,7 +1436,7 @@ class ScopeWindow:
 			print(f"[DC_ADAPT_CMD] send failed: {e}", flush=True)
 
 	def _set_sync_mode_cmd(self, mode: int):
-		"""Отправить CMD_SET_SYNC_MODE (0=master, 1=slave)."""
+		"""Назначить network master/selected slave с Unix time в миллисекундах."""
 		try:
 			if self.stream is None:
 				return
@@ -1434,10 +1447,14 @@ class ScopeWindow:
 			last = float(getattr(self, '_sync_cmd_last', 0.0) or 0.0)
 			if (now - last) < 0.2:
 				return
-			self.stream.send_cmd(CMD_SET_SYNC_MODE, bytes([mode]))
+			payload = bytes([mode])
+			assigned_unix_ms = time.time_ns() // 1_000_000
+			payload += struct.pack('<Q', assigned_unix_ms)
+			self.stream.send_cmd(CMD_SET_SYNC_MODE, payload)
 			self._sync_cmd_state = mode
 			self._sync_cmd_last = now
-			print(f"[SYNC_CMD] {'MASTER' if mode == 0 else 'SLAVE'}", flush=True)
+			stamp_text = f" unix_ms={assigned_unix_ms}" if assigned_unix_ms is not None else ""
+			print(f"[SYNC_CMD] {'MASTER' if mode == 0 else 'SLAVE'}{stamp_text}", flush=True)
 		except Exception as e:
 			print(f"[SYNC_CMD] send failed: {e}", flush=True)
 
@@ -1445,6 +1462,7 @@ class ScopeWindow:
 	def _num_clicked(self, idx: int):
 		if idx in (1, 2, 3):
 			self.tx_enabled_desired = True
+			self.tx_user_enabled_latched = True
 			mode_map = {1: 1, 2: 2, 3: 0}  # 1: канал 1, 2: канал 2, 3: оба
 			# Если поток не запущен - запустить его
 			if self.stream is None and not self._connecting:
@@ -1465,6 +1483,7 @@ class ScopeWindow:
 		elif idx == 4:
 			# Кнопка 4: переключение в LOSSLESS_ROI режим (STREAM_MODE=1), показ 2 каналов × 2 осциллограммы × 200 семплов
 			self.tx_enabled_desired = True
+			self.tx_user_enabled_latched = True
 			self.dc_removal_enabled = False  # Выключить DC removal
 			self.avg20_enabled = False
 			self._switch_to_lossless_roi()
@@ -1474,6 +1493,7 @@ class ScopeWindow:
 			# Поэтому на "5" переключаемся в AVG_ROI и выключаем host-side DC removal,
 			# чтобы не было двойной коррекции и путаницы "показывает/сохраняет не то".
 			self.tx_enabled_desired = True
+			self.tx_user_enabled_latched = True
 			self.dc_removal_enabled = False
 			self.avg20_enabled = False
 			self._switch_to_avg_roi(avg_n=self.avg_n)
@@ -1484,6 +1504,7 @@ class ScopeWindow:
 			self._set_status("Режим 6 зарезервирован под будущие алгоритмы", hold_sec=2.0)
 		elif idx == 0:
 			self.tx_enabled_desired = False
+			self.tx_user_enabled_latched = False
 			self.stream_enabled = False
 			self.usb_retry_timer.stop()
 			self._apply_tx_enable("button_0")

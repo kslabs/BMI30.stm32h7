@@ -14,6 +14,8 @@ CMD_GET_STATUS = 0x30
 CMD_GET_STATUS_IMM = 0x31
 
 VND_STFLAG_OPTIC_ACTIVE = 0x0020
+VND_STFLAG_MASTER_OPTIC_ACTIVE = 0x0080
+VND_STFLAG_GROUP_OPTIC_ACTIVE = 0x0100
 
 def _configure_unbuffered_io():
     try:
@@ -165,6 +167,8 @@ def parse_stat(buf: bytes):
     optic_active_packed = 1 if (reserved3 & 0x01) else 0
     tx_enable_packed = 1 if (reserved3 & 0x02) else 0
     optic_active_flag = 1 if (flags_runtime & VND_STFLAG_OPTIC_ACTIVE) else 0
+    master_optic_flag = 1 if (flags_runtime & VND_STFLAG_MASTER_OPTIC_ACTIVE) else 0
+    group_optic_flag = 1 if (flags_runtime & VND_STFLAG_GROUP_OPTIC_ACTIVE) else 0
     st = {
         'ver': ver,
         'cur_samples': cur_samples,
@@ -184,20 +188,49 @@ def parse_stat(buf: bytes):
         'optic_hold_seconds': optic_hold_seconds,
         'optic_active_packed': optic_active_packed,
         'optic_active_flag': optic_active_flag,
+        'master_optic_flag': master_optic_flag,
+        'group_optic_flag': group_optic_flag,
         'tx_enable_packed': tx_enable_packed,
     }
     if ver >= 2 and len(buf) >= 76:
         st['stage_alt1_ms'] = int.from_bytes(buf[64:68], 'little')
         st['stage_start_ms'] = int.from_bytes(buf[68:72], 'little')
         st['stage_first_frame_ms'] = int.from_bytes(buf[72:76], 'little')
-    if ver >= 5 and len(buf) >= 136:
+    if len(buf) >= 136:
         st['optic_hold_ds'] = int.from_bytes(buf[96:98], 'little')
         st['led_pattern'] = buf[98]
         st['sync_local_status'] = buf[99]
         st['sync_seen_mask'] = int.from_bytes(buf[100:104], 'little')
         st['sync_node_count'] = buf[104]
-        st['sync_status_bytes'] = list(buf[105:136])
+        st['sync_status_bytes'] = list(buf[105:137])
     return st
+
+
+def sync_remote_summary(st):
+    if 'sync_local_status' not in st:
+        return ''
+    local_status = st.get('sync_local_status', 0)
+    local_id = local_status & 0x1F
+    seen_mask = st.get('sync_seen_mask', 0)
+    direct_ids = st.get('ver', 0) >= 6
+    remote = []
+    for idx, status in enumerate(st.get('sync_status_bytes', [])):
+        node_id = idx if direct_ids else idx + 1
+        if not (seen_mask & (1 << idx)):
+            continue
+        if node_id == local_id:
+            continue
+        remote.append((node_id, status, 1 if (status & 0x20) else 0))
+    remote_txt = ','.join(f'{node}:0x{status:02X}/optic={optic}' for node, status, optic in remote) or '-'
+    remote_optic_any = 1 if any(optic for _, _, optic in remote) else 0
+    local_optic = 1 if (local_status & 0x20) else 0
+    master_optic = 1 if st.get('master_optic_flag', 0) else 0
+    return (
+        f' sync_local_id={local_id} sync_local_optic={local_optic}'
+        f' master_optic={master_optic}'
+        f' remote_status={remote_txt} remote_optic_any={remote_optic_any}'
+        f' group_optic={st.get("group_optic_flag", 0)}'
+    )
 
 
 def main(duration_secs: float = 5.0):
@@ -279,7 +312,7 @@ def main(duration_secs: float = 5.0):
             if head == b'STAT':
                 st = parse_stat(bytes(data))
                 if st:
-                    line = f"STAT v{st['ver']} flags2=0x{st['flags2']:04X} cur_samples={st['cur_samples']} wr={st['wr']} seq={st['cur_stream_seq']} sentA/B={st['sent0']}/{st['sent1']} dma0/1={st['dma0']}/{st['dma1']} sending={st['sending_ch']} pair fs={st['pair_fill']}/{st['pair_send']} lastTX={st['last_tx_len']} optic_power={st['optic_power']} optic_hold_ds={st.get('optic_hold_ds', st['optic_hold_seconds']*10)} optic_active={1 if (st['optic_active_packed'] or st['optic_active_flag']) else 0} tx_enable={st['tx_enable_packed']} led_pattern={st.get('led_pattern', '-')} sync_count={st.get('sync_node_count', '-')}"
+                    line = f"STAT v{st['ver']} flags2=0x{st['flags2']:04X} cur_samples={st['cur_samples']} wr={st['wr']} seq={st['cur_stream_seq']} sentA/B={st['sent0']}/{st['sent1']} dma0/1={st['dma0']}/{st['dma1']} sending={st['sending_ch']} pair fs={st['pair_fill']}/{st['pair_send']} lastTX={st['last_tx_len']} optic_power={st['optic_power']} optic_hold_ds={st.get('optic_hold_ds', st['optic_hold_seconds']*10)} optic_active={1 if (st['optic_active_packed'] or st['optic_active_flag']) else 0} tx_enable={st['tx_enable_packed']} led_pattern={st.get('led_pattern', '-')} sync_count={st.get('sync_node_count', '-')}{sync_remote_summary(st)}"
                     if st.get('stage_start_ms') and st.get('stage_first_frame_ms'):
                         dt = st['stage_first_frame_ms'] - st['stage_start_ms']
                         line += f" stages: alt1={st.get('stage_alt1_ms', 0)} start={st['stage_start_ms']} first={st['stage_first_frame_ms']} Δ={dt}ms"

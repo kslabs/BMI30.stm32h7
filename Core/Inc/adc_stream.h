@@ -54,7 +54,8 @@ extern volatile uint32_t adc_ch_wr_seq[2];     // записано по кана
 extern volatile uint32_t adc_ch_rd_seq[2];     // выдано по каналам (main)
 extern volatile uint32_t adc_ch_overflow_drops[2]; // переполнения по каналам
 
-// LOSSLESS/BACKPRESSURE: при заполнении FIFO поток может быть поставлен на паузу (без потери кадров)
+// Legacy diagnostics. ADC is never paused by USB backpressure; oldest unread
+// frames are overwritten and counted in the overflow counters.
 extern volatile uint8_t  adc_stream_paused;
 extern volatile uint32_t adc_stream_pause_events;
 
@@ -95,6 +96,14 @@ typedef struct {
     uint32_t last_publish_ms;    // время последней публикации (frame_wr_seq инкремент)
     uint32_t restart_attempts;   // попыток перезапуска ADC/DMA вотчдогом
     uint32_t restart_success;    // успешных перезапусков
+    uint32_t restart_suppressed_live; // отменено повторной проверкой: ADC уже жив
+    uint32_t restart_reason;     // 0=none, 1=arm, 2=pair, 3=B DMA, 4=A DMA
+    uint32_t restart_ndtr_a;     // NDTR A в момент последнего watchdog recovery
+    uint32_t restart_ndtr_b;     // NDTR B в момент последнего watchdog recovery
+    uint32_t restart_publish_age_ms;
+    uint32_t tc_rearm_failures;  // обе немедленные попытки rearm на границе пары не удались
+    uint32_t publish_gap_max_ms; // максимальный интервал между публикациями
+    uint32_t publish_gap_over_10ms; // число интервалов публикации больше 10 ms
     uint16_t active_samples; // current profile samples per buffer
     uint16_t reserved;
 } adc_stream_debug_t;
@@ -118,7 +127,8 @@ uint8_t adc_get_frame_pair(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, ui
 // игнорирует ADC_USB_STAGE_ENABLE (usb_stage_bufA). Нужен для lossless ROI/AVG.
 uint8_t adc_get_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, uint32_t *seq_out);
 
-// LOSSLESS: peek текущей пары FIFO без продвижения frame_rd_seq.
+// Peek текущей пары без продвижения frame_rd_seq. Возвращаемые указатели ведут
+// на стабильный CPU snapshot, поэтому rolling DMA может продолжать перезапись FIFO.
 // Используйте вместе с adc_consume_frame_pair_fifo() после успешной обработки кадра.
 uint8_t adc_peek_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, uint32_t *seq_out);
 
@@ -134,7 +144,7 @@ void adc_stream_get_debug(adc_stream_debug_t *out);
 // Получить parity (чётность) буфера по seq (0=even, 1=odd) для 400Hz режима
 uint8_t adc_get_buffer_parity(uint32_t seq);
 
-// Логическое состояние маркера фазы (0/1), не зависящее от принудительного зажима PA2/PC7.
+// Логическая фаза TX200: PA2/PC7 повторяют её, PA1 выводит инверсию при разрешённом TX.
 uint8_t adc_stream_get_marker_level(void);
 void adc_stream_refresh_marker_output(void);
 

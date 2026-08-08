@@ -47,22 +47,20 @@ void adc_stream_print_samples(uint32_t count, bool ch2) {
     }
     ADC_LOGF("\r\n");
 }
-// Остановка стрима ADC: корректно останавливает DMA и ADC, сбрасывает буферы
+/* Public legacy hook. Runtime consumers are not allowed to stop acquisition:
+   USB STOP/reset only discards pending consumer data. Hardware rearm is owned
+   by the normal DMA frame-boundary path, watchdog/profile change or MCU reset. */
 void adc_stream_stop(void) {
-    if (s_adc1) {
-        HAL_ADC_Stop_DMA(s_adc1);
-        HAL_ADC_Stop(s_adc1);
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    frame_rd_seq = frame_wr_seq;
+    adc_ch_rd_seq[0] = adc_ch_wr_seq[0];
+    adc_ch_rd_seq[1] = adc_ch_wr_seq[1];
+    adc_stream_paused = 0u;
+    if (primask == 0u) {
+        __enable_irq();
     }
-    if (s_adc2) {
-        HAL_ADC_Stop_DMA(s_adc2);
-        HAL_ADC_Stop(s_adc2);
-    }
-    frame_wr_seq = frame_rd_seq = 0;
-    frame_overflow_drops = 0;
-    frame_backlog_max = 0;
-    s_next_ring_index = 0;
-    adc_stream_paused = 0;
-    ADC_LOGF("[ADC][STOP] DMA и ADC остановлены, буферы сброшены\r\n");
+    ADC_LOGF("[ADC][STOP] ignored: continuous acquisition remains active\r\n");
 }
 
 // Debug: DMA event counters
@@ -239,15 +237,33 @@ volatile uint32_t adc_last_full1_ms = 0; // время последнего по
 // Новые метрики публикации и перезапусков (v4 debug)
 volatile uint32_t adc_publish_count = 0;      // число инкрементов frame_wr_seq (парных публикаций)
 volatile uint32_t adc_last_publish_ms = 0;     // метка времени последней публикации пары
+volatile uint32_t adc_publish_gap_max_ms = 0;  // максимальная пауза между публикациями
+volatile uint32_t adc_publish_gap_over_10ms = 0; // паузы публикации больше 10 ms
 volatile uint32_t adc_restart_attempts = 0;    // суммарные попытки перезапуска через внешний вотчдог
-volatile uint32_t adc_restart_success = 0;     // успешные перезапуски (apply_profile OK)
+volatile uint32_t adc_restart_success = 0;     // перезапуски, после которых реально опубликован новый кадр
+static volatile uint32_t s_adc_restart_suppressed_live = 0;
+static volatile uint32_t s_adc_restart_reason = 0;
+static volatile uint32_t s_adc_restart_ndtr_a = 0;
+static volatile uint32_t s_adc_restart_ndtr_b = 0;
+static volatile uint32_t s_adc_restart_publish_age_ms = 0;
+static volatile uint32_t s_adc_tc_rearm_failures = 0;
+/* HAL_OK от HAL_ADC_Start_DMA означает только, что DMA был вооружён. Это ещё не
+   доказывает наличие триггеров/TC и публикацию пары. Храним отдельную точку
+   старта, чтобы watchdog подтверждал восстановление только по новому кадру. */
+static volatile uint32_t s_dma_arm_ms = 0;
+static volatile uint32_t s_dma_arm_publish_snapshot = 0;
+static volatile uint8_t  s_watchdog_recovery_pending = 0;
+static volatile uint32_t s_watchdog_recovery_publish_snapshot = 0;
+static volatile uint32_t s_watchdog_recovery_started_ms = 0;
 
 // Новые независимые счётчики по каналам (A=0, B=1)
 volatile uint32_t adc_ch_wr_seq[2] = {0,0};     // записано буферов (ISR) по каждому каналу
 volatile uint32_t adc_ch_rd_seq[2] = {0,0};     // выдано потребителю по каналу
 volatile uint32_t adc_ch_overflow_drops[2] = {0,0}; // переполнения по каналу
 
-/* LOSSLESS/BACKPRESSURE: при заполнении FIFO поток ставится на паузу вместо дропа/перезаписи */
+/* ADC acquisition is continuous. A slow/disconnected USB consumer may lose the
+   oldest pending frame, but it must never stop ADC/DMA, the phase marker or
+   master SYNC. Kept for ABI/diagnostics; paused is always zero in production. */
 volatile uint8_t  adc_stream_paused = 0;
 volatile uint32_t adc_stream_pause_events = 0;
 
@@ -299,6 +315,14 @@ static volatile uint8_t s_pair_ready_mask[FIFO_FRAMES];
 static volatile uint32_t s_pair_ready_idx = 0; /* следующий индекс, который ждём к публикации */
 static const uint8_t READY_MASK_FULL = DIAG_SINGLE_ADC1 ? 0x01u : 0x03u;
 // static const uint8_t TC_REQUIRED_MASK = DIAG_SINGLE_ADC1 ? 0x01u : 0x03u;  // UNUSED
+
+/* Stable CPU snapshots decouple readers from the rolling DMA ring. When RPI
+   stops consuming, DMA is allowed to overwrite the oldest ring slot; pointers
+   returned to the USB task must therefore never refer to that live slot. */
+/* CPU-only snapshots: USB packet builders copy from here into their own DMA
+   buffers.  Keep these 5.4 KiB in DTCM to leave a real stack reserve in D1. */
+__attribute__((section(".ram_dtcm"), aligned(32)))
+static uint16_t s_consumer_snapshot[2][MAX_FRAME_SAMPLES];
 
 #if ADC_USB_STAGE_ENABLE
 __attribute__((aligned(32))) uint16_t usb_stage_bufA[MAX_FRAME_SAMPLES];
@@ -361,9 +385,9 @@ static inline void adc_marker_set_level(uint8_t level_high)
     uint8_t output_allowed = adc_marker_output_allowed();
     uint8_t physical_level = (uint8_t)((output_allowed && level_high) ? 1u : 0u);
 
-    /* Логическая фаза sync должна жить независимо от USB stream/TX gate.
-       Физические PA2/PC7 при выключенном TX зажимаем в LOW, а PA1 держим
-       в неактивном HIGH. При включенном TX PA1 идёт инверсией PA2/PC7. */
+    /* Keep the logical sync phase alive independently of the host TX command.
+       The enabled physical outputs are complementary: PA2/PC7=phase,
+       PA1=!phase. Disable clamps PA2/PC7 LOW and PA1 HIGH. */
     s_pb8_state = (uint8_t)(level_high ? 1u : 0u);
 
     adc_marker_set_level_a(physical_level);
@@ -436,6 +460,20 @@ void adc_stream_invert_phase_polarity(void)
 extern volatile uint32_t sync_tim5_cnt_at_buffer;
 extern volatile uint32_t sync_tim5_buffer_phase_seq;
 
+static inline void adc_trim_reader_backlog(volatile uint32_t *rd_seq,
+                                           uint32_t wr_seq,
+                                           volatile uint32_t *drop_counter)
+{
+    const uint32_t max_pending = (FIFO_FRAMES > 1u) ? (FIFO_FRAMES - 1u) : 0u;
+    uint32_t pending = wr_seq - *rd_seq;
+
+    if (pending > max_pending) {
+        uint32_t drop = pending - max_pending;
+        *rd_seq += drop;
+        *drop_counter += drop;
+    }
+}
+
 /* Отметить готовность канала и, если пара на очередном индексе готова, опубликовать её */
 static inline void adc_mark_ready_and_publish(uint8_t ch_bit)
 {
@@ -453,27 +491,44 @@ static inline void adc_mark_ready_and_publish(uint8_t ch_bit)
         
         s_pair_ready_idx = (s_pair_ready_idx + 1u) & (FIFO_FRAMES - 1u);
         /* публикуем + уведомляем верхний уровень */
+        uint32_t publish_now_ms = HAL_GetTick();
+        uint32_t previous_publish_ms = adc_last_publish_ms;
+        if(previous_publish_ms != 0u){
+            uint32_t publish_gap_ms = publish_now_ms - previous_publish_ms;
+            if(publish_gap_ms > adc_publish_gap_max_ms){
+                adc_publish_gap_max_ms = publish_gap_ms;
+            }
+            if(publish_gap_ms > 10u){
+                adc_publish_gap_over_10ms++;
+            }
+        }
         frame_wr_seq += 1u;
         adc_publish_count++;
-        adc_last_publish_ms = HAL_GetTick();
+        adc_last_publish_ms = publish_now_ms;
         sync_tim5_cnt_at_buffer = htim5.Instance->CNT;
         sync_tim5_buffer_phase_seq++;
+        uint32_t phase_start_cycles = DWT->CYCCNT;
         adc_marker_pa3_toggle();
         /* Жёсткая привязка sync к моменту смены маркера: запускаем сразу после toggle,
            а не позже из общего DMA callback, где набегает программный джиттер. */
         adc_stream_total_buffer_count++;
         rs485_sync_on_buffer_complete(adc_parity_from_pa3());
+        /* LED DMA is phase-locked to the same edge as TX/sync. Its driver
+           rejects a late start, so SPI activity cannot enter the final two
+           thirds of the half-period. */
+        ws2812_spi_on_phase_start(phase_start_cycles);
         uint32_t backlog = frame_wr_seq - frame_rd_seq;
         if (backlog > frame_backlog_max) frame_backlog_max = backlog;
-        if (backlog > FIFO_FRAMES) {
-            /* LOSSLESS/BACKPRESSURE: не сдвигаем frame_rd_seq и не выбрасываем пары.
-               Когда очередь близка к переполнению, переводим захват в паузу; watchdog
-               позже возобновит его после разгрузки FIFO. */
-            if (!adc_stream_paused) {
-                adc_stream_paused = 1;
-                adc_stream_pause_events++;
-            }
-        }
+        /* Continuous acquisition: reserve one DMA slot by discarding only the
+           oldest unread USB frame. Never pause ADC because the host is slow. */
+        adc_trim_reader_backlog(&frame_rd_seq, frame_wr_seq, &frame_overflow_drops);
+        adc_trim_reader_backlog(&adc_ch_rd_seq[0], adc_ch_wr_seq[0],
+                                &adc_ch_overflow_drops[0]);
+#if !DIAG_SINGLE_ADC1
+        adc_trim_reader_backlog(&adc_ch_rd_seq[1], adc_ch_wr_seq[1],
+                                &adc_ch_overflow_drops[1]);
+#endif
+        adc_stream_paused = 0u;
         adc_stream_on_new_frames(1u);
     }
     (void)ch_bit; /* параметр оставлен на будущее для расширенной диагностики */
@@ -913,8 +968,11 @@ static void adc_stream_apply_timing(void)
         tim15_arr = (uint32_t)tuned_arr;
     }
 
-    __HAL_TIM_SET_AUTORELOAD(&htim15, tim15_arr);
-    __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, (tim15_arr + 1u) / 2u); /* 50% */
+    /* Commit the profile value as the real nominal ARR and cancel any
+       transient phase pulse based on the previous rate. Otherwise a pulse
+       started before the RPI rate command can later restore the boot ARR and
+       leave ADC sampling at the wrong frequency. */
+    tim15_sync_apply_nominal_arr(tim15_arr);
 
     /* TIM5: 32-битный счётчик фазы без предделителя для максимальной точности
      * PSC = 0 → без предделителя → частота счёта 275 МГц
@@ -933,14 +991,20 @@ static void adc_stream_apply_timing(void)
         uint32_t actual_tick_rate = tim_clk;  /* Полная частота без предделителя */
         uint32_t ticks_per_sample = actual_tick_rate / sample_rate;
         uint32_t ticks_per_buf = (actual_tick_rate / buf_rate_hz);  /* Тиков за буфер */
-        
-        printf("[SYNC_TIMING] TIM5 (32-bit): PSC=%u ARR=0xFFFFFFFF → tick_rate=%lu Hz\r\n",
-               (unsigned)tim5_psc, (unsigned long)actual_tick_rate);
-        printf("[SYNC_TIMING] TIM5: per_ADC_sample=%lu ticks | per_buffer=%lu ticks (%.1f ms)\r\n",
-               (unsigned long)ticks_per_sample, (unsigned long)ticks_per_buf,
-               (float)(1000.0f / buf_rate_hz));
-        printf("[SYNC_TIMING] TIM15: ARR=%lu sample_rate=%lu Hz | APB2=%lu MHz\r\n",
-               (unsigned long)tim15_arr, (unsigned long)sample_rate, (unsigned long)(tim_clk / 1000000u));
+        (void)actual_tick_rate;
+        (void)ticks_per_sample;
+        (void)ticks_per_buf;
+
+        /* Never print timing unconditionally from a host-command path. A reconnect
+           loop can repeat the same rate command and starve Vendor USB with blocking
+           UART output. Detailed timing remains available with ADC_LOG_ENABLE=1. */
+        ADC_LOGF("[SYNC_TIMING] TIM5 (32-bit): PSC=%u ARR=0xFFFFFFFF tick_rate=%lu Hz\r\n",
+                 (unsigned)tim5_psc, (unsigned long)actual_tick_rate);
+        ADC_LOGF("[SYNC_TIMING] TIM5: per_ADC_sample=%lu ticks | per_buffer=%lu ticks (%.1f ms)\r\n",
+                 (unsigned long)ticks_per_sample, (unsigned long)ticks_per_buf,
+                 (float)(1000.0f / buf_rate_hz));
+        ADC_LOGF("[SYNC_TIMING] TIM15: ARR=%lu sample_rate=%lu Hz | APB2=%lu MHz\r\n",
+                 (unsigned long)tim15_arr, (unsigned long)sample_rate, (unsigned long)(tim_clk / 1000000u));
     }
 
     /* Обновляем TIM2 (маркеры/окно) */
@@ -952,12 +1016,55 @@ static void adc_stream_apply_timing(void)
              (unsigned long)sample_rate, (unsigned long)tick_hz, (unsigned long)tim15_arr);
 }
 
+/* TIM15 is the common external trigger for both ADCs. During a DMA rearm its
+   TRGO output is gated until both channels are ready. The counter itself must
+   keep running: stopping and resetting it at every frame made the frame period
+   depend on HAL rearm execution time and defeated the RS-485 phase PLL. */
+static uint8_t adc_stream_pause_common_trigger(void)
+{
+    extern TIM_HandleTypeDef htim15;
+    if (htim15.Instance == NULL) return 0u;
+
+    uint8_t was_running = ((htim15.Instance->CR1 & TIM_CR1_CEN) != 0u) ? 1u : 0u;
+    if (was_running) {
+        MODIFY_REG(htim15.Instance->CR2, TIM_CR2_MMS, TIM_TRGO_RESET);
+    }
+    return was_running;
+}
+
+static void adc_stream_restore_common_trigger(uint8_t was_running)
+{
+    extern TIM_HandleTypeDef htim15;
+    if (!was_running || htim15.Instance == NULL) return;
+
+    MODIFY_REG(htim15.Instance->CR2, TIM_CR2_MMS, TIM_TRGO_UPDATE);
+}
+
+static void adc_stream_clear_dma_irq_state(void)
+{
+    __HAL_DMA_CLEAR_FLAG(&hdma_adc1, __HAL_DMA_GET_TC_FLAG_INDEX(&hdma_adc1));
+    __HAL_DMA_CLEAR_FLAG(&hdma_adc1, __HAL_DMA_GET_HT_FLAG_INDEX(&hdma_adc1));
+    __HAL_DMA_CLEAR_FLAG(&hdma_adc1, __HAL_DMA_GET_TE_FLAG_INDEX(&hdma_adc1));
+    __HAL_DMA_CLEAR_FLAG(&hdma_adc1, __HAL_DMA_GET_DME_FLAG_INDEX(&hdma_adc1));
+    __HAL_DMA_CLEAR_FLAG(&hdma_adc1, __HAL_DMA_GET_FE_FLAG_INDEX(&hdma_adc1));
+    HAL_NVIC_ClearPendingIRQ(DMA1_Stream0_IRQn);
+#if !DIAG_SINGLE_ADC1
+    __HAL_DMA_CLEAR_FLAG(&hdma_adc2, __HAL_DMA_GET_TC_FLAG_INDEX(&hdma_adc2));
+    __HAL_DMA_CLEAR_FLAG(&hdma_adc2, __HAL_DMA_GET_HT_FLAG_INDEX(&hdma_adc2));
+    __HAL_DMA_CLEAR_FLAG(&hdma_adc2, __HAL_DMA_GET_TE_FLAG_INDEX(&hdma_adc2));
+    __HAL_DMA_CLEAR_FLAG(&hdma_adc2, __HAL_DMA_GET_DME_FLAG_INDEX(&hdma_adc2));
+    __HAL_DMA_CLEAR_FLAG(&hdma_adc2, __HAL_DMA_GET_FE_FLAG_INDEX(&hdma_adc2));
+    HAL_NVIC_ClearPendingIRQ(DMA1_Stream1_IRQn);
+#endif
+}
+
 static HAL_StatusTypeDef adc_stream_apply_profile(void) {
     if (!s_adc1 || (!DIAG_SINGLE_ADC1 && !s_adc2)) {
         ADC_LOGF("[ADC][APPLY_PROFILE] ERROR: s_adc1/s_adc2 не инициализированы!\r\n");
         return HAL_ERROR;
     }
     uint32_t total_samples = (uint32_t)g_active_samples;
+    uint8_t tim15_was_running = adc_stream_pause_common_trigger();
     ADC_LOGF("[ADC][APPLY_PROFILE] profile=%u samples=%u\r\n", (unsigned)g_active_profile, (unsigned)g_active_samples);
     // Остановить DMA перед запуском с новым размером
         HAL_ADC_Stop_DMA(s_adc1);
@@ -965,6 +1072,7 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
         ((DMA_Stream_TypeDef*)s_adc1->DMA_Handle->Instance)->NDTR = total_samples;
         HAL_ADC_Stop_DMA(s_adc2);
         ((DMA_Stream_TypeDef*)s_adc2->DMA_Handle->Instance)->NDTR = total_samples;
+    adc_stream_clear_dma_irq_state();
     ADC_LOGF("[ADC][APPLY_PROFILE] DMA остановлен, подготовка к запуску\r\n");
     frame_wr_seq = frame_rd_seq = 0;
     frame_overflow_drops = 0;
@@ -996,6 +1104,7 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
         #endif
         if(!DIAG_SINGLE_ADC1){ memset(adc2_buffers[0], 0, stage_ns * sizeof(uint16_t)); adc_flush_cache_for_buffer(adc2_buffers[0], (uint32_t)stage_ns); }
         ADC_LOGF("[ADC][STATIC] mode: DMA disabled, staged markers cleared (samples=%lu)\r\n", (unsigned long)stage_ns);
+        adc_stream_restore_common_trigger(tim15_was_running);
         return HAL_OK;
     }
 
@@ -1004,6 +1113,7 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
     
     #if DIAG_DISABLE_ADC_DMA
         ADC_LOGF("[ADC][DIAG] DMA start suppressed (DIAG_DISABLE_ADC_DMA=1) total_samples=%lu\r\n", (unsigned long)total_samples);
+        adc_stream_restore_common_trigger(tim15_was_running);
         return HAL_OK;
         s_last_started_idx = 0;
         s_last_started_idx = 0;
@@ -1158,7 +1268,10 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
             DMA1_Stream0_IRQn, (unsigned long)((nvic_iser & nvic_bit) ? 1 : 0));
     #endif
     
-    if (rc1 != HAL_OK) return HAL_ERROR;
+    if (rc1 != HAL_OK) {
+        adc_stream_restore_common_trigger(tim15_was_running);
+        return HAL_ERROR;
+    }
         #if !DIAG_SINGLE_ADC1
     HAL_StatusTypeDef rc2 = HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[0], total_samples);
     ADC_LOGF("[ADC][APPLY_PROFILE] HAL_ADC_Start_DMA ADC2 rc=%d\r\n", (int)rc2);
@@ -1167,7 +1280,12 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
     __HAL_DMA_ENABLE_IT(&hdma_adc2, DMA_IT_TE);
     __HAL_DMA_DISABLE_IT(&hdma_adc2, DMA_IT_HT);
     
-    if (rc2 != HAL_OK) return HAL_ERROR;
+    if (rc2 != HAL_OK) {
+        (void)HAL_ADC_Stop_DMA(s_adc1);
+        adc_stream_clear_dma_irq_state();
+        adc_stream_restore_common_trigger(tim15_was_running);
+        return HAL_ERROR;
+    }
         #if ADC2_DISABLE_DMA_IRQS
             /* (не используется) */
         #else
@@ -1201,18 +1319,45 @@ static HAL_StatusTypeDef adc_stream_apply_profile(void) {
         }
         #endif
     #endif
+    s_dma_arm_ms = HAL_GetTick();
+    s_dma_arm_publish_snapshot = adc_publish_count;
+    adc_stream_restore_common_trigger(tim15_was_running);
     return HAL_OK;
 }
 
 int adc_stream_set_profile(uint8_t prof_id) {
+    uint16_t previous_samples;
+    uint16_t previous_buf_rate;
+    uint16_t next_buf_rate;
+
     if (prof_id >= ADC_PROFILE_COUNT) return -1;
     if (prof_id == g_active_profile) {
         ADC_LOGF("[ADC][PROF] prof=%u ALREADY active, g_active_samples=%u\r\n", prof_id, g_active_samples);
         return 0; // уже
     }
+
+    previous_samples = g_active_samples;
+    previous_buf_rate = adc_stream_get_buf_rate();
     g_active_profile = prof_id;
     g_active_samples = g_profiles[prof_id].samples_per_buf;
+    next_buf_rate = adc_stream_get_buf_rate();
     ADC_LOGF("[ADC][PROF] SET prof=%u -> g_active_samples=%u, adc_ready=%d\r\n", prof_id, g_active_samples, (s_adc1 && s_adc2)?1:0);
+
+    /* Different host profile IDs can describe the same active acquisition.
+       This is especially common after SET_BUF_RATE_FINE: the override owns the
+       effective buffer rate and all current profiles use the same 600-sample
+       DMA geometry. Restarting both ADC DMAs in that case resets the local
+       marker parity on only one board and makes an otherwise locked slave run
+       a needless full anti-phase slew. Treat an unchanged effective geometry
+       as a metadata-only profile update. */
+    if ((previous_samples == g_active_samples) &&
+        (previous_buf_rate == next_buf_rate)) {
+        ADC_LOGF("[ADC][PROF] effective geometry unchanged (%u @ %u Hz), no DMA restart\r\n",
+                 (unsigned)g_active_samples,
+                 (unsigned)next_buf_rate);
+        return 0;
+    }
+
     if (s_adc1 && s_adc2) {
         if (adc_stream_apply_profile() != HAL_OK) {
             ADC_LOGF("[ADC][PROF] apply_profile FAILED!\r\n");
@@ -1287,44 +1432,88 @@ HAL_StatusTypeDef adc_stream_restart(ADC_HandleTypeDef* a1, ADC_HandleTypeDef* a
     return adc_stream_apply_profile();
 }
 
-/* Legacy helper: перезапуск ADC/DMA для старой схемы синхронизации. В новой RS-485 схеме не используется. */
-void adc_stream_restart_sync(void) {
-    extern TIM_HandleTypeDef htim15;
-    extern ADC_HandleTypeDef hadc1;
-    #if !DIAG_SINGLE_ADC1
-    extern ADC_HandleTypeDef hadc2;
-    #endif
-    
-    /* Останавливаем ADC/DMA (автоматически завершает текущую передачу) */
-    HAL_ADC_Stop_DMA(&hadc1);
-    #if !DIAG_SINGLE_ADC1
-    HAL_ADC_Stop_DMA(&hadc2);
-    #endif
-    
-    /* Сбрасываем TIM15 для начала нового цикла */
-    htim15.Instance->CNT = 0;
-    htim15.Instance->EGR = TIM_EGR_UG;
-    
-    /* Сбрасываем только внутренние маркеры четности/буфера */
-    adc_stream_reset_capture_phase_state();
-    
-    /* Сбрасываем маски готовности для синхронного старта обоих ADC */
-    extern volatile uint8_t s_pair_ready_mask[FIFO_FRAMES];
-    for (uint8_t i = 0; i < FIFO_FRAMES; i++) {
-        s_pair_ready_mask[i] = 0;
+/* Watchdog recovery differs from a host START/profile change: already published
+   FIFO frames and their sequence numbers must survive. Only the incomplete DMA
+   pair is discarded and both channels are armed atomically from the next
+   unpublished ring slot. */
+static HAL_StatusTypeDef adc_stream_recover_dma_pair(void)
+{
+    if (s_adc1 == NULL || (!DIAG_SINGLE_ADC1 && s_adc2 == NULL)) return HAL_ERROR;
+
+    uint32_t total_samples = (uint32_t)g_active_samples;
+    if (total_samples == 0u) return HAL_ERROR;
+
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    uint8_t tim15_was_running = adc_stream_pause_common_trigger();
+
+    (void)HAL_ADC_Stop_DMA(s_adc1);
+#if !DIAG_SINGLE_ADC1
+    (void)HAL_ADC_Stop_DMA(s_adc2);
+#endif
+    adc_stream_clear_dma_irq_state();
+
+    uint32_t start_idx = frame_wr_seq & (FIFO_FRAMES - 1u);
+    memset((void*)s_pair_ready_mask, 0, sizeof(s_pair_ready_mask));
+    s_pair_ready_idx = start_idx;
+    s_next_ring_index = start_idx;
+    s_last_started_idx = start_idx;
+    s_tc_mask = 0u;
+    adc_stream_paused = 0u;
+
+    /* Drop only incomplete per-channel completions. Keep the public pair FIFO
+       sequence continuous so USB and DC consumers do not see a role-like reset. */
+    adc_ch_wr_seq[0] = frame_wr_seq;
+    adc_ch_rd_seq[0] = frame_rd_seq;
+#if !DIAG_SINGLE_ADC1
+    adc_ch_wr_seq[1] = frame_wr_seq;
+    adc_ch_rd_seq[1] = frame_rd_seq;
+#endif
+
+    HAL_StatusTypeDef rc2 = HAL_OK;
+#if !DIAG_SINGLE_ADC1
+    /* Arm B first and A last. TIM15 remains stopped, therefore neither channel
+       can consume a trigger before both DMA streams are configured. */
+    rc2 = HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[start_idx], total_samples);
+    if (rc2 == HAL_OK) {
+        __HAL_DMA_ENABLE_IT(&hdma_adc2, DMA_IT_TC);
+        __HAL_DMA_ENABLE_IT(&hdma_adc2, DMA_IT_TE);
+        __HAL_DMA_DISABLE_IT(&hdma_adc2, DMA_IT_HT);
     }
-    
-    /* ВАЖНО: НЕ инкрементируем s_next_ring_index - callback сам управляет кольцевым буфером */
-    /* Просто перезапускаем DMA на текущий буфер с начала */
-    uint32_t idx = s_next_ring_index & (FIFO_FRAMES - 1u);
-    
-    /* Запускаем оба ADC максимально синхронно - подготавливаем оба, потом стартуем */
-    #if !DIAG_SINGLE_ADC1
-    /* Подготовка ADC2 */
-    HAL_ADC_Start_DMA(&hadc2, (uint32_t*)adc2_buffers[idx], g_active_samples);
-    #endif
-    /* Подготовка ADC1 (небольшая задержка минимальна) */
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc1_buffers[idx], g_active_samples);
+#endif
+
+    HAL_StatusTypeDef rc1 = HAL_ERROR;
+    if (rc2 == HAL_OK) {
+        rc1 = HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[start_idx], total_samples);
+        if (rc1 == HAL_OK) {
+            __HAL_DMA_ENABLE_IT(&hdma_adc1, DMA_IT_TC);
+            __HAL_DMA_ENABLE_IT(&hdma_adc1, DMA_IT_TE);
+            __HAL_DMA_DISABLE_IT(&hdma_adc1, DMA_IT_HT);
+        }
+    }
+
+    HAL_StatusTypeDef result = (rc1 == HAL_OK && rc2 == HAL_OK) ? HAL_OK : HAL_ERROR;
+    if (result != HAL_OK) {
+        (void)HAL_ADC_Stop_DMA(s_adc1);
+#if !DIAG_SINGLE_ADC1
+        (void)HAL_ADC_Stop_DMA(s_adc2);
+#endif
+        adc_stream_clear_dma_irq_state();
+    } else {
+        s_dma_arm_ms = HAL_GetTick();
+        s_dma_arm_publish_snapshot = adc_publish_count;
+    }
+
+    adc_stream_restore_common_trigger(tim15_was_running);
+    __set_PRIMASK(primask);
+    return result;
+}
+
+/* Legacy helper retained for source compatibility. RS-485 phase/role handling
+   must never interrupt the continuous ADC/DMA acquisition. */
+void adc_stream_restart_sync(void) {
+    adc_stream_paused = 0u;
+    ADC_LOGF("[ADC][SYNC] restart request ignored: continuous acquisition\r\n");
 }
 
 // Проверка буфера на нулевое содержимое (для диагностики проблем ADC)
@@ -1338,30 +1527,40 @@ static inline uint8_t is_buffer_all_zeros(uint16_t *buf, uint16_t samples) {
 // Получить один кадр конкретного канала (независимая модель). Возвращает 1 если кадр получен.
 uint8_t adc_get_frame_ch(uint8_t ch, uint16_t **buf, uint16_t *samples, uint32_t *seq_out) {
     if (ch > 1 || !buf || !samples) return 0;
-    
+    uint32_t primask = __get_PRIMASK();
+    uint32_t seq = 0u;
+    uint32_t index = 0u;
+    uint16_t snapshot_samples = 0u;
+
     __disable_irq();
     if (adc_ch_rd_seq[ch] == adc_ch_wr_seq[ch]) {
-        __enable_irq();
+        if (primask == 0u) {
+            __enable_irq();
+        }
         return 0; // нет новых
     }
-    uint32_t seq = adc_ch_rd_seq[ch];
-    __enable_irq();
+    seq = adc_ch_rd_seq[ch];
+    index = seq & (FIFO_FRAMES - 1u);
+    snapshot_samples = g_active_samples;
+    if (snapshot_samples > MAX_FRAME_SAMPLES) {
+        snapshot_samples = MAX_FRAME_SAMPLES;
+    }
+
+    /* The DMA ring is rolling: copy while IRQs are masked so the completion
+       ISR cannot reassign/overwrite this slot in the middle of the snapshot. */
+    {
+        uint16_t *src = (ch == 0u) ? adc1_buffers[index] : adc2_buffers[index];
+        adc_invalidate_cache_for_buffer(src, snapshot_samples);
+        memcpy(s_consumer_snapshot[ch], src,
+               (size_t)snapshot_samples * sizeof(uint16_t));
+    }
+    if (primask == 0u) {
+        __enable_irq();
+    }
     if (seq_out) { *seq_out = seq; }
 
-    /* НОВАЯ СХЕМА: TIM2 callback пишет маркеры в prev_idx,
-       который соответствует seq (без сдвига). USB читает тот же буфер. */
-    uint32_t index = seq & (FIFO_FRAMES - 1u);
-    #if ADC_USB_STAGE_ENABLE
-    *buf = (ch==0) ? usb_stage_bufA : usb_stage_bufB;
-    #else
-    *buf = (ch==0) ? adc1_buffers[index] : adc2_buffers[index];
-    #endif
-    *samples = g_active_samples;
-
-     /* STM32H7: DMA пишет в RAM, CPU читает через D-cache.
-         Без invalidate можно получить «залипшие» нули/старые данные.
-         Делаем invalidate здесь (в контексте main), а не в ISR. */
-     adc_invalidate_cache_for_buffer(*buf, *samples);
+    *buf = s_consumer_snapshot[ch];
+    *samples = snapshot_samples;
     
     // DEBUG: Проверка лестницы отключена
     #if 0  // ОТКЛЮЧЕНО: маркеры убраны
@@ -1495,19 +1694,39 @@ uint8_t adc_peek_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *sampl
         ADC_LOGF("[ADC][PEEK_FRAME_PAIR_FIFO] ERROR: ch1/ch2/samples NULL\r\n");
         return 0;
     }
+    uint32_t primask = __get_PRIMASK();
+    uint32_t seq = 0u;
+    uint32_t index = 0u;
+    uint16_t snapshot_samples = 0u;
+
     __disable_irq();
     if (frame_rd_seq == frame_wr_seq) {
-        __enable_irq();
+        if (primask == 0u) {
+            __enable_irq();
+        }
         return 0;
     }
-    uint32_t seq = frame_rd_seq;
-    __enable_irq();
+    seq = frame_rd_seq;
+    index = seq & (FIFO_FRAMES - 1u);
+    snapshot_samples = g_active_samples;
+    if (snapshot_samples > MAX_FRAME_SAMPLES) {
+        snapshot_samples = MAX_FRAME_SAMPLES;
+    }
+
+    adc_invalidate_cache_for_buffer(adc1_buffers[index], snapshot_samples);
+    adc_invalidate_cache_for_buffer(adc2_buffers[index], snapshot_samples);
+    memcpy(s_consumer_snapshot[0], adc1_buffers[index],
+           (size_t)snapshot_samples * sizeof(uint16_t));
+    memcpy(s_consumer_snapshot[1], adc2_buffers[index],
+           (size_t)snapshot_samples * sizeof(uint16_t));
+    if (primask == 0u) {
+        __enable_irq();
+    }
     if (seq_out) { *seq_out = seq; }
 
-    uint32_t index = seq & (FIFO_FRAMES - 1u);
-    *ch1 = adc1_buffers[index];
-    *ch2 = adc2_buffers[index];
-    *samples = g_active_samples;
+    *ch1 = s_consumer_snapshot[0];
+    *ch2 = s_consumer_snapshot[1];
+    *samples = snapshot_samples;
     return 1;
 }
 
@@ -1569,6 +1788,14 @@ void adc_stream_get_debug(adc_stream_debug_t *out) {
     out->last_publish_ms = adc_last_publish_ms;
     out->restart_attempts = adc_restart_attempts;
     out->restart_success = adc_restart_success;
+    out->restart_suppressed_live = s_adc_restart_suppressed_live;
+    out->restart_reason = s_adc_restart_reason;
+    out->restart_ndtr_a = s_adc_restart_ndtr_a;
+    out->restart_ndtr_b = s_adc_restart_ndtr_b;
+    out->restart_publish_age_ms = s_adc_restart_publish_age_ms;
+    out->tc_rearm_failures = s_adc_tc_rearm_failures;
+    out->publish_gap_max_ms = adc_publish_gap_max_ms;
+    out->publish_gap_over_10ms = adc_publish_gap_over_10ms;
     out->active_samples = g_active_samples;
     out->reserved = 0;
 }
@@ -1759,10 +1986,6 @@ void adc_stream_tim2_switch_buffers(void) {
     /* ЛОГИКА TIM2-DRIVEN (восстановлена для синхронизации осциллограммы) */
     #if 1
 
-    if (adc_stream_paused) {
-        return;
-    }
-
     DMA_Stream_TypeDef *dma1 = (DMA_Stream_TypeDef*)s_adc1->DMA_Handle->Instance;
     #if !DIAG_SINGLE_ADC1
     DMA_Stream_TypeDef *dma2 = (DMA_Stream_TypeDef*)s_adc2->DMA_Handle->Instance;
@@ -1840,20 +2063,17 @@ void adc_stream_tim2_switch_buffers(void) {
     backlogB = adc_ch_wr_seq[1] - adc_ch_rd_seq[1];
     #endif
 
-    /* LOSSLESS/backpressure: не дропаем и не переписываем непрочитанные кадры */
-    if (backlogA >= FIFO_FRAMES || backlogB >= FIFO_FRAMES) {
-        adc_stream_paused = 1;
-        adc_stream_pause_events++;
-        /* Счётчик оставляем для диагностики (историческое имя) */
-        adc_ch_overflow_drops[0]++;
-        #if !DIAG_SINGLE_ADC1
-        adc_ch_overflow_drops[1]++;
-        #endif
-        s_next_ring_index = next_idx;
-        adc_last_full0_ms = HAL_GetTick();
-        adc_last_full1_ms = adc_last_full0_ms;
-        return;
-    }
+    /* USB/backpressure never gates acquisition. Keep only the newest pending
+       frames and immediately reuse the freed DMA ring slot. */
+    (void)backlogA;
+    (void)backlogB;
+    adc_trim_reader_backlog(&adc_ch_rd_seq[0], adc_ch_wr_seq[0],
+                            &adc_ch_overflow_drops[0]);
+    #if !DIAG_SINGLE_ADC1
+    adc_trim_reader_backlog(&adc_ch_rd_seq[1], adc_ch_wr_seq[1],
+                            &adc_ch_overflow_drops[1]);
+    #endif
+    adc_stream_paused = 0u;
 
     /* Есть место — запускаем DMA на следующий буфер */
     /* NDTR страховка: программируем фактическое N только перед новым стартом */
@@ -2080,8 +2300,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     if (bit & 0x01u) {
         adc_ch_wr_seq[0]++;
         uint32_t backlogA = adc_ch_wr_seq[0] - adc_ch_rd_seq[0];
-        if (backlogA > FIFO_FRAMES) {
-            uint32_t excess = backlogA - FIFO_FRAMES;
+        if (backlogA >= FIFO_FRAMES) {
+            uint32_t excess = backlogA - (FIFO_FRAMES - 1u);
             adc_ch_overflow_drops[0] += excess;
             adc_ch_rd_seq[0] += excess;
         }
@@ -2090,8 +2310,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
     if (bit & 0x02u) {
         adc_ch_wr_seq[1]++;
         uint32_t backlogB = adc_ch_wr_seq[1] - adc_ch_rd_seq[1];
-        if (backlogB > FIFO_FRAMES) {
-            uint32_t excess = backlogB - FIFO_FRAMES;
+        if (backlogB >= FIFO_FRAMES) {
+            uint32_t excess = backlogB - (FIFO_FRAMES - 1u);
             adc_ch_overflow_drops[1] += excess;
             adc_ch_rd_seq[1] += excess;
         }
@@ -2323,24 +2543,41 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
         uint32_t next_idx = (done_idx + 1u) & (FIFO_FRAMES - 1u);
         uint32_t total_samples = (uint32_t)g_active_samples;
 
-        /* Перезапуск DMA на следующий буфер (TIM2 НЕ участвует) */
+        /* Stable v99 frame-boundary sequence.  Rearm each completed ADC
+           immediately while the common TIM15 trigger keeps running.  Stopping
+           both ADCs first lengthened the blind interval enough to lose several
+           sample triggers per frame; that made the nominal 400-frame/s clock
+           software-latency dependent and neutralised the phase pulses. */
         (void)HAL_ADC_Stop_DMA(s_adc1);
-        (void)HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[next_idx], total_samples);
+        HAL_StatusTypeDef rearm_a =
+            HAL_ADC_Start_DMA(s_adc1,
+                              (uint32_t*)adc1_buffers[next_idx],
+                              total_samples);
         __HAL_DMA_ENABLE_IT(&hdma_adc1, DMA_IT_TC);
         __HAL_DMA_ENABLE_IT(&hdma_adc1, DMA_IT_TE);
         __HAL_DMA_DISABLE_IT(&hdma_adc1, DMA_IT_HT);
 
+        HAL_StatusTypeDef rearm_b = HAL_OK;
         #if !DIAG_SINGLE_ADC1
         (void)HAL_ADC_Stop_DMA(s_adc2);
-        (void)HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[next_idx], total_samples);
+        rearm_b = HAL_ADC_Start_DMA(s_adc2,
+                                    (uint32_t*)adc2_buffers[next_idx],
+                                    total_samples);
         __HAL_DMA_ENABLE_IT(&hdma_adc2, DMA_IT_TC);
         __HAL_DMA_ENABLE_IT(&hdma_adc2, DMA_IT_TE);
         __HAL_DMA_DISABLE_IT(&hdma_adc2, DMA_IT_HT);
         #endif
 
-        s_next_ring_index = next_idx;
-
-        ws2812_spi_on_adc_buffer_complete();
+        if ((rearm_a == HAL_OK) && (rearm_b == HAL_OK)) {
+            s_next_ring_index = next_idx;
+        } else {
+            s_adc_tc_rearm_failures++;
+            ADC_LOGF("[ADC][TC] v99 frame rearm failed A=%d B=%d\r\n",
+                     (int)rearm_a, (int)rearm_b);
+        }
+        /* Prepare the status pixel before publishing the new phase. This keeps
+           encoding/cache work out of the protected phase-edge start path. */
+        ws2812_spi_prepare_phase_frame();
 
         /* Попробуем опубликовать готовые подряд пары */
         adc_mark_ready_and_publish(READY_MASK_FULL);
@@ -2502,64 +2739,26 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 #endif  /* ОСНОВНОЙ DMA CALLBACK - ВКЛЮЧЁН */
 }
 
-// Внешняя синхронизация (slave): по фронту перезапускаем DMA буфер
+// Legacy external-sync hook. A sync edge is not allowed to stop/rearm DMA or
+// reset the ADC sampling cycle.
 void adc_stream_sync_edge(void)
 {
-    if (adc_stream_paused) return;
-    if (s_adc1 == NULL) return;
-    #if !DIAG_SINGLE_ADC1
-    if (s_adc2 == NULL) return;
-    #endif
-
-    uint32_t total_samples = (uint32_t)g_active_samples;
-    if (total_samples == 0u) return;
-
-    uint32_t remaining = __HAL_DMA_GET_COUNTER(&hdma_adc1);
-    uint32_t half = total_samples / 2u;
-
-    uint32_t cur_idx = s_next_ring_index & (FIFO_FRAMES - 1u);
-    uint32_t target_idx = cur_idx;
-    if (remaining <= half) {
-        target_idx = (cur_idx + 1u) & (FIFO_FRAMES - 1u);
-    }
-
-    // Сбрасываем промежуточные метки готовности текущего буфера
-    s_pair_ready_mask[cur_idx] = 0;
-    if (target_idx != cur_idx) {
-        s_pair_ready_mask[target_idx] = 0;
-    }
-    s_tc_mask = 0;
-
-    // Перезапуск DMA на выбранный буфер
-    (void)HAL_ADC_Stop_DMA(s_adc1);
-    (void)HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[target_idx], total_samples);
-    __HAL_DMA_ENABLE_IT(&hdma_adc1, DMA_IT_TC);
-    __HAL_DMA_ENABLE_IT(&hdma_adc1, DMA_IT_TE);
-    __HAL_DMA_DISABLE_IT(&hdma_adc1, DMA_IT_HT);
-
-    #if !DIAG_SINGLE_ADC1
-    (void)HAL_ADC_Stop_DMA(s_adc2);
-    (void)HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[target_idx], total_samples);
-    __HAL_DMA_ENABLE_IT(&hdma_adc2, DMA_IT_TC);
-    __HAL_DMA_ENABLE_IT(&hdma_adc2, DMA_IT_TE);
-    __HAL_DMA_DISABLE_IT(&hdma_adc2, DMA_IT_HT);
-    #endif
-
-    s_next_ring_index = target_idx;
-
-    /* Привязать фазу АЦП к фронту PD5: сбросить TIM15 и сгенерировать UPDATE */
-    {
-        extern TIM_HandleTypeDef htim15;
-        __HAL_TIM_SET_COUNTER(&htim15, 0u);
-        /* Генерируем UPDATE событие напрямую, чтобы гарантировать доступность без макроса */
-        htim15.Instance->EGR = TIM_EGR_UG;
-    }
+    adc_stream_paused = 0u;
 }
 
 /* Периодический вотчдог: если давно не было DMA Full от ADC1, считаем поток зависшим и мягко перезапускаем.
    Это устраняет зависания, когда цепочка ADC/DMA перестаёт генерировать события (см. STALL_WARN: ADC_IDLE). */
-/* Беззнаковая разность тиков (учёт переполнения 32-битного HAL_GetTick()) */
-static inline uint32_t tick_diff32(uint32_t now, uint32_t before){ return (now >= before) ? (now - before) : (0xFFFFFFFFu - before + 1u + now); }
+/* Age for intervals shorter than 2^31 ms, including HAL_GetTick wrap.
+   An ISR can update `before` one tick after main captured `now`; that is a
+   small future timestamp, not an age of 0xFFFFFFFF ms. Treat it as age zero.
+   The old unsigned helper caused periodic false ADC restarts on this race. */
+static inline uint32_t tick_diff32(uint32_t now, uint32_t before)
+{
+    uint32_t delta = now - before;
+    return (delta <= 0x7FFFFFFFu) ? delta : 0u;
+}
+
+#define ADC_WD_TIMEOUT_MS 500u
 
 /* Селективный перезапуск канала B полностью отключён в рабочей конфигурации.
    Исторически пытались мягко перезапускать только B, но это давало нестабильность
@@ -2576,6 +2775,63 @@ static int adc_restart_channel_b(void){
 }
 #endif
 
+static HAL_StatusTypeDef adc_stream_watchdog_recover(uint32_t now_ms,
+                                                     uint32_t reason_code,
+                                                     const char *reason)
+{
+    uint32_t primask = __get_PRIMASK();
+    uint8_t source_is_live = 0u;
+
+    /* Revalidate under one IRQ lock immediately before the destructive HAL
+       stop/start. A DMA callback may have published a healthy pair after the
+       watchdog made its first decision. Runtime recovery must never cut that
+       live acquisition (and therefore TX200) in half. */
+    __disable_irq();
+    now_ms = HAL_GetTick();
+    if (reason_code == 1u) {
+        source_is_live =
+            (uint8_t)((adc_publish_count != s_dma_arm_publish_snapshot) ? 1u : 0u);
+    } else if (reason_code == 2u) {
+        source_is_live =
+            (uint8_t)(((adc_last_publish_ms != 0u) &&
+                       (tick_diff32(now_ms, adc_last_publish_ms) <=
+                        ADC_WD_TIMEOUT_MS)) ? 1u : 0u);
+    } else if (reason_code == 3u) {
+        source_is_live =
+            (uint8_t)((__HAL_DMA_GET_COUNTER(&hdma_adc2) !=
+                       (uint32_t)g_active_samples) ? 1u : 0u);
+    } else if (reason_code == 4u) {
+        source_is_live =
+            (uint8_t)(((adc_last_full0_ms != 0u) &&
+                       (tick_diff32(now_ms, adc_last_full0_ms) <=
+                        ADC_WD_TIMEOUT_MS)) ? 1u : 0u);
+    }
+
+    if (source_is_live != 0u) {
+        s_adc_restart_suppressed_live++;
+        __set_PRIMASK(primask);
+        return HAL_BUSY;
+    }
+
+    adc_restart_attempts++;
+    s_adc_restart_reason = reason_code;
+    s_adc_restart_ndtr_a = __HAL_DMA_GET_COUNTER(&hdma_adc1);
+    s_adc_restart_ndtr_b = __HAL_DMA_GET_COUNTER(&hdma_adc2);
+    s_adc_restart_publish_age_ms = (adc_last_publish_ms == 0u)
+        ? 0xFFFFFFFFu
+        : tick_diff32(now_ms, adc_last_publish_ms);
+    ADC_LOGF("[ADC][WD] %s -> atomic pair rearm\r\n", reason ? reason : "stall");
+
+    HAL_StatusTypeDef rc = adc_stream_recover_dma_pair();
+    if (rc == HAL_OK) {
+        s_watchdog_recovery_pending = 1u;
+        s_watchdog_recovery_publish_snapshot = adc_publish_count;
+        s_watchdog_recovery_started_ms = now_ms;
+    }
+    __set_PRIMASK(primask);
+    return rc;
+}
+
 void adc_stream_watchdog(void)
 {
     /* Локальный захват текущего тика (исключаем рассинхронизацию перед вызовом) */
@@ -2588,43 +2844,51 @@ void adc_stream_watchdog(void)
         arr_manual_mode = g_arr_manual_mode;
     }
 
-    /* LOSSLESS/backpressure: при паузе из-за заполненного FIFO не делаем рестарт,
-       а возобновляем захват, когда хост «разгрузит» очередь. */
-    if (adc_stream_paused) {
-        uint32_t backlogA = adc_ch_wr_seq[0] - adc_ch_rd_seq[0];
-        uint32_t backlogB = 0;
-        #if !DIAG_SINGLE_ADC1
-        backlogB = adc_ch_wr_seq[1] - adc_ch_rd_seq[1];
-        #endif
-        if (backlogA <= (FIFO_FRAMES / 2u) && backlogB <= (FIFO_FRAMES / 2u)) {
-            uint32_t idx = s_next_ring_index & (FIFO_FRAMES - 1u);
-            uint32_t total_samples = (uint32_t)g_active_samples;
-            DMA_Stream_TypeDef *dma1_stream = (DMA_Stream_TypeDef*)hdma_adc1.Instance;
-            dma1_stream->NDTR = total_samples;
-            (void)HAL_ADC_Start_DMA(s_adc1, (uint32_t*)adc1_buffers[idx], total_samples);
-            #if !DIAG_SINGLE_ADC1
-            DMA_Stream_TypeDef *dma2_stream = (DMA_Stream_TypeDef*)hdma_adc2.Instance;
-            dma2_stream->NDTR = total_samples;
-            (void)HAL_ADC_Start_DMA(s_adc2, (uint32_t*)adc2_buffers[idx], total_samples);
-            #endif
-            adc_stream_paused = 0;
-            adc_last_full0_ms = adc_last_full1_ms = HAL_GetTick();
-            ADC_LOGF("[ADC][BP] resume idx=%lu backlogA=%lu backlogB=%lu\r\n",
-                     (unsigned long)idx, (unsigned long)backlogA, (unsigned long)backlogB);
+    /* A recovery is successful only after the ISR publishes a new A+B pair.
+       Give the freshly armed DMA enough time before allowing another attempt. */
+    if (s_watchdog_recovery_pending) {
+        if (adc_publish_count != s_watchdog_recovery_publish_snapshot) {
+            adc_restart_success++;
+            s_watchdog_recovery_pending = 0u;
+        } else if (tick_diff32(now_ms, s_watchdog_recovery_started_ms) < 500u) {
+            return;
+        } else {
+            s_watchdog_recovery_pending = 0u;
         }
+    }
+
+    /* A full USB FIFO is not an ADC state. Old firmware could leave this
+       legacy flag set and permanently disable watchdog recovery. */
+    adc_stream_paused = 0u;
+    if (arr_manual_mode) return; /* В ручном ARR-режиме запрещаем только watchdog-рестарты */
+
+    /* The first arm (including START) can fail before either DMA callback is
+       seen. Do not wait for last_full0_ms in that case. */
+    if (s_dma_arm_ms != 0u &&
+        adc_publish_count == s_dma_arm_publish_snapshot &&
+        tick_diff32(now_ms, s_dma_arm_ms) > 500u) {
+        (void)adc_stream_watchdog_recover(now_ms, 1u, "no pair after arm");
         return;
     }
-    if (arr_manual_mode) return; /* В ручном ARR-режиме запрещаем только watchdog-рестарты */
+
     uint32_t lastA = adc_last_full0_ms;
     uint32_t lastB = adc_last_full1_ms;
     if(lastA == 0) return; /* поток ещё не стартовал (нет ни одного полного завершения) */
+
+    /* A and B callbacks may still change while their pairing state is broken.
+       Publication age is therefore the authoritative liveness condition. */
+    uint32_t publish_ref_ms = adc_last_publish_ms;
+    if (publish_ref_ms < s_dma_arm_ms) publish_ref_ms = s_dma_arm_ms;
+    if (publish_ref_ms != 0u && tick_diff32(now_ms, publish_ref_ms) > 500u) {
+        (void)adc_stream_watchdog_recover(now_ms, 2u, "pair publication stalled");
+        return;
+    }
 
     /* Защита от ложных "будущих" меток lastA/lastB (гонка или порча памяти):
        если метка немного впереди now ( <100000 мс ), считаем dt=0, игнорируем. */
     if(lastA > now_ms){ uint32_t ahead = lastA - now_ms; if(ahead < 100000u){ lastA = now_ms; } }
     if(lastB > now_ms){ uint32_t ahead = lastB - now_ms; if(ahead < 100000u){ lastB = now_ms; } }
 
-    const uint32_t ADC_WD_TIMEOUT_MS = 500u; /* общий таймаут полного простоя */
     uint32_t dtA = tick_diff32(now_ms, lastA);
     // uint32_t dtB_now = (lastB==0) ? 0 : tick_diff32(now_ms, lastB);  // Неиспользуется
 
@@ -2682,10 +2946,7 @@ void adc_stream_watchdog(void)
                 ADC_LOGF("[ADC][WD] CH_B DMA not advancing: ndtrB=%u unchanged %lums (strike=%u). dtA=%lu dtB=%lu -> restart BOTH\r\n",
                          (unsigned)ndtrB, (unsigned long)stuck_ms, (unsigned)b_stuck_strikes, (unsigned long)dtA, (unsigned long)dtB_now);
                 dump_b_path_regs(ndtrA, ndtrB);
-                adc_restart_attempts++;
-                if(adc_stream_restart(NULL, NULL) == HAL_OK){
-                    adc_restart_success++;
-                    adc_last_full0_ms = adc_last_full1_ms = HAL_GetTick();
+                if(adc_stream_watchdog_recover(now_ms, 3u, "channel B DMA stalled") == HAL_OK){
                     b_stuck_strikes = 0;
                 } else {
                     ADC_LOGF("[ADC][WD] full restart after B-DMA-stuck FAILED\r\n");
@@ -2696,11 +2957,8 @@ void adc_stream_watchdog(void)
     }
 
     if(dtA > ADC_WD_TIMEOUT_MS){
-        adc_restart_attempts++;
         ADC_LOGF("[ADC][WD] No DMA Full A for %lu ms -> restart BOTH\r\n", (unsigned long)dtA);
-        if(adc_stream_restart(NULL, NULL) == HAL_OK){
-            adc_restart_success++; adc_last_full0_ms = HAL_GetTick(); adc_last_full1_ms = adc_last_full0_ms; /* синхронизация */
-        } else {
+        if(adc_stream_watchdog_recover(now_ms, 4u, "no DMA Full A") != HAL_OK){
             ADC_LOGF("[ADC][WD] full restart FAILED\r\n");
         }
         return; /* после общего рестарта не выполняем частный контроль B */
@@ -2711,9 +2969,9 @@ void adc_stream_watchdog(void)
 }
 
 /* === Fine Frequency Tuning === */
-/* Установка частоты маркера (PA1/PA2) в диапазоне 180-250 Hz
+/* Установка частоты TX200/фазового маркера PA1/PA2/PC7 в диапазоне 180-250 Hz
  * Допускаем два формата payload:
- *  - marker_hz (<=350): желаемая частота меандра на PA1/PA2
+ *  - marker_hz (<=350): желаемая частота комплементарного меандра
  *  - buf_rate_hz (>350): частота DMA буферов (маркер = buf_rate/2)
  */
 void adc_stream_set_buf_rate_fine(uint16_t raw_hz) {
@@ -2734,6 +2992,12 @@ void adc_stream_set_buf_rate_fine(uint16_t raw_hz) {
         ADC_LOGF("[ADC][RATE] Fine-tune marker=%u Hz out of range (180-250), ignoring\r\n", (unsigned)marker_hz);
         return;
     }
+
+    /* Repeating the current RPI setting must be a no-op. Reapplying TIM15/TIM5
+       resets phase timing and, during a reconnect loop, can prevent USB progress. */
+    if (g_fine_buf_rate_override == buf_rate_hz) {
+        return;
+    }
     
     /* Устанавливаем override для buf_rate */
     g_fine_buf_rate_override = buf_rate_hz;
@@ -2752,6 +3016,9 @@ void adc_stream_set_arr_fine_offset(int32_t offset) {
         offset = 128;
     }
 
+    if (g_arr_fine_offset == offset) {
+        return;
+    }
     g_arr_fine_offset = offset;
     adc_stream_apply_timing();
 }
@@ -2764,6 +3031,9 @@ int32_t adc_stream_get_arr_fine_offset(void) {
 void adc_stream_set_buf_rate_external(uint16_t buf_rate_hz) {
     if(buf_rate_hz < 20u || buf_rate_hz > 1000u) {
         ADC_LOGF("[ADC][RATE] External sync out of range: %u Hz\r\n", (unsigned)buf_rate_hz);
+        return;
+    }
+    if (g_fine_buf_rate_override == buf_rate_hz) {
         return;
     }
     g_fine_buf_rate_override = buf_rate_hz;

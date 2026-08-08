@@ -23,10 +23,28 @@ extern SPI_HandleTypeDef hspi3;
 
 enum {
   WS2812_PREFIX_BYTES = 3u,
-  WS2812_RESET_BYTES = 64u,
+  /* The output is forced to GPIO-low after DMA completion and remains low for
+     the rest of the 2.5-ms half-period. 16 zero bytes therefore provide the
+     beginning of the reset interval; the following GPIO-low time completes it.
+     Keeping 64 bytes here made the SPI clock run almost to the one-third
+     boundary and left no usable start-time margin. */
+  WS2812_RESET_BYTES = 16u,
   WS2812_BYTES_PER_COLOR = 4u,
   WS2812_BYTES_PER_LED = 12u,
   WS2812_TX_BUF_SIZE = WS2812_PREFIX_BYTES + (WS2812_LED_COUNT * WS2812_BYTES_PER_LED) + WS2812_RESET_BYTES,
+  /* SPI123 = PLL3P = 100 MHz, SPI3 prescaler = 32. A complete LED DMA frame
+     takes 694 us. The 800-us limit is deliberately inside one third of the
+     nominal 2.5-ms TX half-period (833 us). */
+  WS2812_SPI_WIRE_HZ = 3125000u,
+  WS2812_HALF_PERIOD_US = 2500u,
+  WS2812_FIRST_THIRD_US = WS2812_HALF_PERIOD_US / 3u,
+  WS2812_SAFE_WINDOW_US = 800u,
+  WS2812_START_GUARD_US = 20u,
+  WS2812_TX_WIRE_US =
+      (((WS2812_TX_BUF_SIZE * 8000000u) + WS2812_SPI_WIRE_HZ - 1u) /
+       WS2812_SPI_WIRE_HZ),
+  WS2812_START_DEADLINE_US =
+      WS2812_SAFE_WINDOW_US - WS2812_TX_WIRE_US - WS2812_START_GUARD_US,
   WS2812_FRAME_RATE_HZ = 400u,
   WS2812_IDLE_STEP_FRAMES = 20u,
   WS2812_STREAM_STEP_FRAMES = 10u,
@@ -37,9 +55,14 @@ enum {
   WS2812_DRIP_STEP_FRAMES = 20u,
   WS2812_TEST_STEP_FRAMES = 200u,
   WS2812_STATUS_BLINK_HALF_FRAMES = (WS2812_FRAME_RATE_HZ * 3u) / 4u,
+  WS2812_DMA_TIMEOUT_MS = 100u,
   WS2812_SPI_CODE_0 = 0x8u, /* 1000 */
   WS2812_SPI_CODE_1 = 0xEu  /* 1110 */
 };
+
+typedef char ws2812_frame_must_fit_first_third[
+    (WS2812_TX_WIRE_US + WS2812_START_GUARD_US <
+     WS2812_FIRST_THIRD_US) ? 1 : -1];
 
 typedef struct {
   uint8_t onboard_r;
@@ -67,6 +90,11 @@ static volatile ws2812_pattern_t s_requested_pattern = WS2812_PATTERN_OFF;
 static volatile uint8_t s_pattern_force_send = 1u;
 static volatile uint32_t s_frame_period_cycles = 1u;
 static volatile uint32_t s_last_frame_cycles = 0u;
+static volatile uint32_t s_busy_since_ms = 0u;
+static volatile uint32_t s_recovery_count = 0u;
+static volatile uint32_t s_phase_late_skip_count = 0u;
+static volatile uint32_t s_phase_start_delay_cycles_max = 0u;
+static volatile uint32_t s_phase_start_deadline_cycles = 1u;
 static volatile uint16_t s_pattern_anim_step = 0u;
 static volatile uint16_t s_pattern_frame_repeat = 0u;
 static volatile uint32_t s_pattern_frame_counter = 0u;
@@ -75,6 +103,11 @@ static volatile uint32_t s_override_until_ms = 0u;
 static ws2812_pattern_t s_rendered_pattern = WS2812_PATTERN_COUNT;
 static uint16_t s_rendered_anim_step = 0xFFFFu;
 static uint32_t s_rendered_status_key = 0xFFFFFFFFu;
+/* Updated in main-loop service and read by the ADC-completion LED preparation
+   path. Do not scan the 32-node RS485 table from the phase-critical ISR. */
+static volatile uint8_t s_group_optic_active_cached = 0u;
+
+static void ws2812_pin_gpio_low_mode(void);
 
 static const ws2812_frame_def_t s_pattern_off[] = {
   { 0u, 0u, 0u, 0u, 0u, 0u, 200u }
@@ -212,6 +245,7 @@ static uint8_t ws2812_try_mark_busy(void)
   }
 
   s_busy = 1u;
+  s_busy_since_ms = HAL_GetTick();
   ws2812_irq_restore(primask);
   return 1u;
 }
@@ -220,6 +254,62 @@ static void ws2812_clear_busy(void)
 {
   uint32_t primask = ws2812_irq_save();
   s_busy = 0u;
+  s_busy_since_ms = 0u;
+  ws2812_irq_restore(primask);
+}
+
+static void ws2812_recover_stalled_transfer(uint32_t now_ms)
+{
+  uint32_t primask;
+
+  /* Any value other than 0/1 is memory corruption, not a valid busy state.
+     Recover immediately instead of applying a timeout to a corrupted
+     s_busy_since_ms value. */
+  if (s_busy > 1u) {
+    primask = ws2812_irq_save();
+    s_busy = 0u;
+    s_busy_since_ms = 0u;
+    s_tx_buffer_building = 0u;
+    s_tx_frame_ready = 1u;
+    s_pattern_force_send = 1u;
+    s_rendered_pattern = WS2812_PATTERN_COUNT;
+    s_recovery_count++;
+    ws2812_irq_restore(primask);
+    (void)HAL_SPI_Abort(&hspi3);
+    ws2812_pin_gpio_low_mode();
+    return;
+  }
+
+  if ((s_busy == 0u) ||
+      ((int32_t)(now_ms - s_busy_since_ms) <
+       (int32_t)WS2812_DMA_TIMEOUT_MS)) {
+    return;
+  }
+
+  /* Lock both normal update paths before aborting the stalled DMA/SPI
+     transaction. A missed DMA/EOT callback must never freeze the system LED
+     permanently. */
+  primask = ws2812_irq_save();
+  if ((s_busy == 0u) ||
+      ((int32_t)(now_ms - s_busy_since_ms) <
+       (int32_t)WS2812_DMA_TIMEOUT_MS)) {
+    ws2812_irq_restore(primask);
+    return;
+  }
+  s_busy = 0u;
+  s_busy_since_ms = 0u;
+  s_tx_buffer_building = 1u;
+  ws2812_irq_restore(primask);
+
+  (void)HAL_SPI_Abort(&hspi3);
+  ws2812_pin_gpio_low_mode();
+
+  primask = ws2812_irq_save();
+  s_tx_buffer_building = 0u;
+  s_tx_frame_ready = 1u;
+  s_pattern_force_send = 1u;
+  s_rendered_pattern = WS2812_PATTERN_COUNT;
+  s_recovery_count++;
   ws2812_irq_restore(primask);
 }
 
@@ -603,9 +693,12 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
     WS2812_STATUS_LIGHT_BLUE_R = 0u,
     WS2812_STATUS_LIGHT_BLUE_G = 36u,
     WS2812_STATUS_LIGHT_BLUE_B = 96u,
-    WS2812_STATUS_AMBER_R = 96u,
-    WS2812_STATUS_AMBER_G = 36u,
-    WS2812_STATUS_AMBER_B = 0u,
+    WS2812_STATUS_YELLOW_R = 160u,
+    WS2812_STATUS_YELLOW_G = 80u,
+    WS2812_STATUS_YELLOW_B = 0u,
+    WS2812_STATUS_MAGENTA_R = 128u,
+    WS2812_STATUS_MAGENTA_G = 0u,
+    WS2812_STATUS_MAGENTA_B = 80u,
     WS2812_STATUS_WHITE_R = 72u,
     WS2812_STATUS_WHITE_G = 72u,
     WS2812_STATUS_WHITE_B = 72u,
@@ -623,7 +716,12 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
                                     (last_error != 0u)) ? 1u : 0u);
   uint8_t display_slave_mode;
   uint8_t master_sync_active;
-  uint8_t optic_active = (uint8_t)((optic_sensor_get_state() != 0u) ? 1u : 0u);
+  uint8_t local_optic_active =
+      (uint8_t)((optic_sensor_get_state() != 0u) ? 1u : 0u);
+  uint8_t group_optic_active =
+      s_group_optic_active_cached;
+  uint8_t optic_active;
+  uint8_t master_optic_active = rs485_status_master_optic_active();
   uint8_t tx_enabled = (uint8_t)((vnd_is_tx_enabled() != 0u) ? 1u : 0u);
   uint8_t alarm_gate_on = 1u;
   uint8_t smooth_level = 255u;
@@ -632,16 +730,23 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
   uint8_t blue = 0u;
 
   vnd_get_lcd_sync_snapshot(&sync_snapshot);
-  display_slave_mode = (uint8_t)((sync_snapshot.display_mode == VND_SYNC_MODE_SLAVE) ? 1u : 0u);
-  master_sync_active = (uint8_t)(((sync_snapshot.display_mode == VND_SYNC_MODE_MASTER) &&
+  display_slave_mode = (uint8_t)((sync_snapshot.raw_mode == VND_SYNC_MODE_SLAVE) ? 1u : 0u);
+  master_sync_active = (uint8_t)(((sync_snapshot.raw_mode == VND_SYNC_MODE_MASTER) &&
                                   (sync_snapshot.sync_signal_alive != 0u)) ? 1u : 0u);
+  /* A MASTER drives host-selected effects from any fresh group sensor, so its
+     system LED must show the same green hit for local and remote sources. Keep
+     the SLAVE color scheme unchanged: local yellow, remote MASTER magenta. */
+  optic_active = (display_slave_mode != 0u)
+      ? local_optic_active
+      : group_optic_active;
 
   if ((alarm_active != 0u) &&
       (((s_pattern_frame_counter / blink_half_frames) & 1u) != 0u)) {
     alarm_gate_on = 0u;
   }
 
-  if ((alarm_active == 0u) && (tx_enabled != 0u)) {
+  if ((tx_enabled != 0u) &&
+      ((alarm_active == 0u) || (optic_active != 0u))) {
     uint32_t period_frames = blink_half_frames * 2u;
     uint32_t phase = (period_frames != 0u) ? (s_pattern_frame_counter % period_frames) : 0u;
     uint32_t ramp = 0u;
@@ -656,29 +761,44 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
     smooth_level = (uint8_t)(((ramp * ramp * (765u - (2u * ramp))) + 32512u) / 65025u);
   }
 
-  if (alarm_active != 0u) {
+  /* The selected optical hit is time-critical and must change the status color
+     immediately. It has priority over the persistent error indication, while
+     the independent TX breathing animation remains active. */
+  if (optic_active != 0u) {
+    if (display_slave_mode != 0u) {
+      red = WS2812_STATUS_YELLOW_R;
+      green = WS2812_STATUS_YELLOW_G;
+      blue = WS2812_STATUS_YELLOW_B;
+    } else {
+      red = WS2812_STATUS_GREEN_R;
+      green = WS2812_STATUS_GREEN_G;
+      blue = WS2812_STATUS_GREEN_B;
+    }
+  } else if (alarm_active != 0u) {
     if (alarm_gate_on != 0u) {
       red = WS2812_STATUS_ALARM_R;
       green = WS2812_STATUS_ALARM_G;
       blue = WS2812_STATUS_ALARM_B;
     }
   } else {
-    if (display_slave_mode != 0u) {
-      if (optic_active != 0u) {
-        red = WS2812_STATUS_AMBER_R;
-        green = WS2812_STATUS_AMBER_G;
-        blue = WS2812_STATUS_AMBER_B;
+    /* Assigned role is configuration, not proof of a live RS-485 link.
+       Show the same unambiguous light-blue offline color on every role. */
+    if (sync_snapshot.sync_signal_alive == 0u) {
+      red = WS2812_STATUS_LIGHT_BLUE_R;
+      green = WS2812_STATUS_LIGHT_BLUE_G;
+      blue = WS2812_STATUS_LIGHT_BLUE_B;
+    } else if (display_slave_mode != 0u) {
+      if (master_optic_active != 0u) {
+        red = WS2812_STATUS_MAGENTA_R;
+        green = WS2812_STATUS_MAGENTA_G;
+        blue = WS2812_STATUS_MAGENTA_B;
       } else {
         red = WS2812_STATUS_WHITE_R;
         green = WS2812_STATUS_WHITE_G;
         blue = WS2812_STATUS_WHITE_B;
       }
     } else {
-      if (optic_active != 0u) {
-        red = WS2812_STATUS_GREEN_R;
-        green = WS2812_STATUS_GREEN_G;
-        blue = WS2812_STATUS_GREEN_B;
-      } else if (master_sync_active != 0u) {
+      if (master_sync_active != 0u) {
         red = WS2812_STATUS_BLUE_R;
         green = WS2812_STATUS_BLUE_G;
         blue = WS2812_STATUS_BLUE_B;
@@ -689,11 +809,16 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
       }
     }
 
-    if (tx_enabled != 0u) {
-      red = (uint8_t)(((uint32_t)red * smooth_level) / 255u);
-      green = (uint8_t)(((uint32_t)green * smooth_level) / 255u);
-      blue = (uint8_t)(((uint32_t)blue * smooth_level) / 255u);
-    }
+  }
+
+  /* Optic changes only RGB. TX remains an independent brightness/breathing
+     layer for local and remote optical states alike. Keep the dedicated alarm
+     blink unchanged unless a higher-priority local optic state is displayed. */
+  if ((tx_enabled != 0u) &&
+      ((alarm_active == 0u) || (optic_active != 0u))) {
+    red = (uint8_t)(((uint32_t)red * smooth_level) / 255u);
+    green = (uint8_t)(((uint32_t)green * smooth_level) / 255u);
+    blue = (uint8_t)(((uint32_t)blue * smooth_level) / 255u);
   }
 
   if (red_out != NULL) {
@@ -712,6 +837,7 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
          ((uint32_t)tx_enabled << 3) |
          ((uint32_t)alarm_gate_on << 4) |
          ((uint32_t)master_sync_active << 5) |
+         ((uint32_t)master_optic_active << 6) |
          ((uint32_t)red << 8) |
          ((uint32_t)green << 16) |
          ((uint32_t)blue << 24);
@@ -919,6 +1045,14 @@ static uint8_t ws2812_start_transfer(uint8_t *tx_buf, uint16_t tx_len)
 
 void ws2812_spi_init(void)
 {
+  /* ADC can begin producing frame interrupts before main() reaches its
+     diagnostic DWT setup. Enable CYCCNT here because phase-window validation
+     depends on it from the first LED frame. */
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  DWT->LAR = 0xC5ACCE55u;
+  DWT->CYCCNT = 0u;
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
   ws2812_scope_pin_init();
   ws2812_pin_gpio_low_mode();
   ws2812_build_pattern_buffers();
@@ -933,13 +1067,25 @@ void ws2812_spi_init(void)
   s_pattern_anim_step = 0u;
   s_pattern_frame_repeat = 0u;
   s_pattern_frame_counter = 0u;
+  s_busy_since_ms = 0u;
+  s_recovery_count = 0u;
+  s_phase_late_skip_count = 0u;
+  s_phase_start_delay_cycles_max = 0u;
+  s_phase_start_deadline_cycles =
+      (uint32_t)(((uint64_t)SystemCoreClock *
+                  (uint64_t)WS2812_START_DEADLINE_US) / 1000000ULL);
+  if (s_phase_start_deadline_cycles == 0u) {
+    s_phase_start_deadline_cycles = 1u;
+  }
   s_override_pattern = WS2812_PATTERN_OFF;
   s_override_until_ms = 0u;
+  s_busy = 0u;
   s_tx_frame_ready = 0u;
   s_tx_buffer_building = 0u;
   s_rendered_pattern = WS2812_PATTERN_COUNT;
   s_rendered_anim_step = 0xFFFFu;
   s_rendered_status_key = 0xFFFFFFFFu;
+  s_group_optic_active_cached = 0u;
 }
 
 void ws2812_spi_clear(void)
@@ -979,12 +1125,44 @@ uint8_t ws2812_spi_show(void)
   ws2812_clean_dcache_region(s_tx_buf, (uint32_t)sizeof(s_tx_buf));
   s_tx_frame_ready = 1u;
   ws2812_end_tx_buffer_update();
-  return ws2812_start_transfer(s_tx_buf, (uint16_t)sizeof(s_tx_buf));
+  /* Never start SPI from an arbitrary caller time. The prepared frame will be
+     transmitted at the next ADC/TX phase edge. */
+  return 1u;
 }
 
 uint8_t ws2812_spi_is_busy(void)
 {
   return s_busy;
+}
+
+uint32_t ws2812_spi_get_frame_count(void)
+{
+  return s_pattern_frame_counter;
+}
+
+uint32_t ws2812_spi_get_recovery_count(void)
+{
+  return s_recovery_count;
+}
+
+uint32_t ws2812_spi_get_phase_late_skip_count(void)
+{
+  return s_phase_late_skip_count;
+}
+
+uint32_t ws2812_spi_get_phase_start_delay_max_us(void)
+{
+  if (SystemCoreClock == 0u) {
+    return 0u;
+  }
+  return (uint32_t)((((uint64_t)s_phase_start_delay_cycles_max * 1000000ULL) +
+                     (uint64_t)SystemCoreClock - 1ULL) /
+                    (uint64_t)SystemCoreClock);
+}
+
+uint32_t ws2812_spi_get_wire_time_us(void)
+{
+  return WS2812_TX_WIRE_US;
 }
 
 void ws2812_spi_set_pattern(ws2812_pattern_t pattern)
@@ -1051,7 +1229,12 @@ void ws2812_spi_trigger_event(ws2812_event_t event, uint16_t duration_ms)
 void ws2812_spi_service(uint32_t now_ms)
 {
   ws2812_pattern_t effective_pattern = s_requested_pattern;
+  uint8_t group_optic_active =
+      (uint8_t)((optic_any_sensor_active() != 0u) ? 1u : 0u);
   uint32_t status_key = 0u;
+
+  ws2812_recover_stalled_transfer(now_ms);
+  s_group_optic_active_cached = group_optic_active;
 
   if ((s_override_pattern != WS2812_PATTERN_OFF) &&
       ((int32_t)(s_override_until_ms - now_ms) > 0)) {
@@ -1060,6 +1243,10 @@ void ws2812_spi_service(uint32_t now_ms)
     s_override_pattern = WS2812_PATTERN_OFF;
     s_override_until_ms = 0u;
     s_pattern_force_send = 1u;
+  }
+
+  if (group_optic_active == 0u) {
+    effective_pattern = WS2812_PATTERN_OFF;
   }
 
   if (effective_pattern != s_active_pattern) {
@@ -1117,15 +1304,39 @@ static void ws2812_note_transfer_started(void)
   }
 }
 
-void ws2812_spi_on_adc_buffer_complete(void)
+void ws2812_spi_prepare_phase_frame(void)
 {
   if ((s_busy != 0u) || (s_tx_buffer_building != 0u) || (s_tx_frame_ready == 0u)) {
     return;
   }
 
+  /* Do status sampling, encoding and D-cache maintenance before the marker
+     changes. The phase-edge path then contains only the bounded DMA start. */
   ws2812_update_onboard_status_in_tx_buffer();
+}
+
+void ws2812_spi_on_phase_start(uint32_t phase_start_cycles)
+{
+  uint32_t delay_cycles;
+
+  if ((s_busy != 0u) || (s_tx_buffer_building != 0u) || (s_tx_frame_ready == 0u)) {
+    return;
+  }
+
+  delay_cycles = (uint32_t)(DWT->CYCCNT - phase_start_cycles);
+  if (delay_cycles > s_phase_start_deadline_cycles) {
+    /* A late LED frame is less important than clean ADC reception. Leave PB2
+       low and retry on the next half-period instead of entering the protected
+       final two thirds of this one. */
+    s_phase_late_skip_count++;
+    return;
+  }
 
   if (ws2812_start_transfer(s_tx_buf, (uint16_t)WS2812_TX_BUF_SIZE) != 0u) {
+    delay_cycles = (uint32_t)(DWT->CYCCNT - phase_start_cycles);
+    if (delay_cycles > s_phase_start_delay_cycles_max) {
+      s_phase_start_delay_cycles_max = delay_cycles;
+    }
     ws2812_note_transfer_started();
   }
 }

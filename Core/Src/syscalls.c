@@ -29,6 +29,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/times.h>
+#include <stdint.h>
 /* Redirect printf to UART */
 #include "stm32h7xx_hal.h"
 #include "main.h"
@@ -40,6 +41,60 @@ extern int __io_getchar(void) __attribute__((weak));
 
 /* UART handle from main.c */
 extern UART_HandleTypeDef huart1;
+
+#ifndef COM_PRINT_DC_SPEED_ONLY
+#define COM_PRINT_DC_SPEED_ONLY 0
+#endif
+
+#if COM_PRINT_DC_SPEED_ONLY
+static uint8_t com_filter_allow_line = 0u;
+static uint8_t com_filter_reject_line = 0u;
+static uint8_t com_filter_prefix_pos = 0u;
+static const char com_filter_prefix[] = "[DC_SPEED]";
+
+static void com_filter_reset_line(void)
+{
+  com_filter_allow_line = 0u;
+  com_filter_reject_line = 0u;
+  com_filter_prefix_pos = 0u;
+}
+
+static void com_filter_write_char(char c)
+{
+  if (com_filter_allow_line != 0u) {
+    __io_putchar((int)c);
+    if (c == '\n') {
+      com_filter_reset_line();
+    }
+    return;
+  }
+
+  if (com_filter_reject_line != 0u) {
+    if (c == '\n') {
+      com_filter_reset_line();
+    }
+    return;
+  }
+
+  if (c == com_filter_prefix[com_filter_prefix_pos]) {
+    com_filter_prefix_pos++;
+    if (com_filter_prefix[com_filter_prefix_pos] == '\0') {
+      const char *p = com_filter_prefix;
+      while (*p != '\0') {
+        __io_putchar((int)*p++);
+      }
+      com_filter_allow_line = 1u;
+    }
+    return;
+  }
+
+  com_filter_reject_line = 1u;
+  com_filter_prefix_pos = 0u;
+  if (c == '\n') {
+    com_filter_reset_line();
+  }
+}
+#endif
 
 
 char *__env[1] = { 0 };
@@ -90,7 +145,11 @@ __attribute__((weak)) int _write(int file, char *ptr, int len)
 
   for (DataIdx = 0; DataIdx < len; DataIdx++)
   {
+#if COM_PRINT_DC_SPEED_ONLY
+    com_filter_write_char(*ptr++);
+#else
     __io_putchar(*ptr++);
+#endif
   }
   return len;
 }

@@ -28,6 +28,17 @@
 #include "build_info.h"          /* fw_git_hash, fw_build_date, fw_build_time */
 #include "usb_vendor_app.h"      /* vnd_report_fps_stats, vnd_print_perf_stats */
 
+#ifndef CDC_COM_LOG_ENABLE
+#define CDC_COM_LOG_ENABLE 0
+#endif
+#if !CDC_COM_LOG_ENABLE
+#define printf(...) ((void)0)
+#endif
+
+#ifndef CDC_RX_LED_ENABLE
+#define CDC_RX_LED_ENABLE 0
+#endif
+
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -305,9 +316,11 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
            (*Len > dump_len) ? " ..." : "");
   }
   
+#if CDC_RX_LED_ENABLE
   // Индикация приёма UART данных через LED - мигать при любом событии RX
   HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_SET); // Включить LED
   led_off_tick = HAL_GetTick() + 100; // Выключить через 100ms
+#endif
   
   // Проверка текстовых команд для отладки через UART (COM4)
   
@@ -373,9 +386,7 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
       case 0x14u: // VND_CMD_SET_PROFILE
       case 0x18u: // VND_CMD_SET_ASYNC_MODE
       case 0x19u: // VND_CMD_SET_CHMODE
-      case 0x1Bu: // VND_CMD_SET_DC_ADAPT
-      case 0x1Eu: // VND_CMD_CALIB_DC_FAST
-      case 0x1Fu: // VND_CMD_SET_DC_CONFIG
+      case 0x1Fu: // VND_CMD_SET_DC_SPEED
       case 0x15u: // VND_CMD_SET_ROI_US
       case 0x20u: // VND_CMD_START_STREAM
       case 0x21u: // VND_CMD_STOP_STREAM
@@ -383,6 +394,11 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
       case 0x30u: // VND_CMD_GET_STATUS
       case 0x33u: // VND_CMD_SET_TX_ENABLE
       case 0x34u: // VND_CMD_SET_OPTIC_POWER
+      case 0x3Du: // VND_CMD_SET_RS485_ID
+      case 0x3Eu: // VND_CMD_SET_RS485_IP
+      case 0x3Fu: // VND_CMD_REQUEST_RS485_IDENT
+      case 0x40u: // VND_CMD_GET_RS485_IDENT
+      case 0x41u: // VND_CMD_SET_LCD_ROLE_OVERLAY
         USBD_VND_DataReceived(Buf, *Len);
         vendor_forwarded = 1;
         break;
@@ -449,10 +465,14 @@ static int8_t CDC_TransmitCplt_HS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
 // Проверка и выключение LED по таймауту (вызывается из main loop)
 void CDC_LED_Process(void)
 {
+#if CDC_RX_LED_ENABLE
   if(led_off_tick != 0 && HAL_GetTick() >= led_off_tick) {
     HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_RESET); // Выключить LED
     led_off_tick = 0;
   }
+#else
+  led_off_tick = 0;
+#endif
 }
 
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */

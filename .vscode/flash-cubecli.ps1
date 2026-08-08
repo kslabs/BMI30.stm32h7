@@ -16,12 +16,15 @@ if (!(Test-Path $cli)) {
 }
 
 $profiles = @(
-    @{ Name = "SWD-4000"; Args = @("port=SWD", "freq=4000") },
-    @{ Name = "SWD-1000"; Args = @("port=SWD", "freq=1000") },
-    @{ Name = "UR-HWrst-1000"; Args = @("port=SWD", "freq=1000", "mode=UR", "reset=HWrst") },
-    @{ Name = "UR-HWrst-100"; Args = @("port=SWD", "freq=100", "mode=UR", "reset=HWrst") },
-    @{ Name = "HotPlug-1000"; Args = @("port=SWD", "freq=1000", "mode=HotPlug") },
-    @{ Name = "HotPlug-100"; Args = @("port=SWD", "freq=100", "mode=HotPlug") }
+    # Force the Cortex-M7 access port. CubeProgrammer can otherwise reuse AP3
+    # from an earlier session and report "Unable to get core ID" on a healthy
+    # STM32H723 target.
+    @{ Name = "SWD-4000"; Args = @("port=SWD", "freq=4000", "ap=0") },
+    @{ Name = "SWD-1000"; Args = @("port=SWD", "freq=1000", "ap=0") },
+    @{ Name = "UR-HWrst-1000"; Args = @("port=SWD", "freq=1000", "ap=0", "mode=UR", "reset=HWrst") },
+    @{ Name = "UR-HWrst-100"; Args = @("port=SWD", "freq=100", "ap=0", "mode=UR", "reset=HWrst") },
+    @{ Name = "HotPlug-1000"; Args = @("port=SWD", "freq=1000", "ap=0", "mode=HotPlug") },
+    @{ Name = "HotPlug-100"; Args = @("port=SWD", "freq=100", "ap=0", "mode=HotPlug") }
 )
 
 $attempts = @()

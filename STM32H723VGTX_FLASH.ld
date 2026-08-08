@@ -38,7 +38,10 @@ ENTRY(Reset_Handler)
 _estack = ORIGIN(RAM_D1) + LENGTH(RAM_D1);    /* end of RAM */
 /* Generate a link error if heap and stack don't fit into RAM */
 _Min_Heap_Size = 0x200;      /* required amount of heap  */
-_Min_Stack_Size = 0x400; /* required amount of stack */
+/* The ADC, USB and RS485 IRQs can nest.  1 KiB only checked that the image
+   linked; it did not leave enough runtime stack and the descending MSP could
+   overwrite the last D1 .bss objects (the WS2812 state was the first victim). */
+_Min_Stack_Size = 0x2000; /* require at least 8 KiB for the runtime stack */
 
 /* Specify the memory areas */
 MEMORY
@@ -164,6 +167,16 @@ SECTIONS
     *(.ram_d2*)
     . = ALIGN(32);
   } >RAM_D2
+
+  /* CPU-only scratch/snapshots.  DTCM is not used by DMA, therefore only
+     objects which are copied by the CPU may be placed here. */
+  .ram_dtcm (NOLOAD) :
+  {
+    . = ALIGN(32);
+    *(.ram_dtcm)
+    *(.ram_dtcm*)
+    . = ALIGN(32);
+  } >DTCMRAM
 
   /* User_heap_stack section, used to check that there is enough RAM left */
   ._user_heap_stack :

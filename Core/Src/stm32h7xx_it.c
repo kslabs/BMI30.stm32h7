@@ -532,7 +532,14 @@ void HardFault_Capture(uint32_t *stack_addr)
   hardfault_hfsr = SCB->HFSR;
   hardfault_bfar = SCB->BFAR;
   hardfault_mmfar= SCB->MMFAR;
-  vnd_dc_note_flash_fault(hardfault_bfar, hardfault_cfsr);
+  /* An ECC-corrupted word in the append-only DC/role journal raises a precise
+     BusFault on the first read. Record it in .noinit and reboot immediately;
+     the next boot erases only the reserved journal sector. Previously the MCU
+     blinked forever here and required a manual second reset. */
+  if(vnd_dc_note_flash_fault(hardfault_bfar, hardfault_cfsr) != 0u){
+    __DSB();
+    NVIC_SystemReset();
+  }
   hardfault_active = 1;
 
   hf_raw_puts("\r\nHARDFAULT\r\n");

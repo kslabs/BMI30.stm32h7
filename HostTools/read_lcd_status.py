@@ -18,6 +18,13 @@ FLAG_SYNC_OK_VISUAL = 0x0002
 FLAG_COLOR_LOCKED = 0x0004
 FLAG_DISPLAY_FALLBACK = 0x0008
 FLAG_HOST_FORCED = 0x0010
+FLAG_ROLE_OVERLAY_ENABLED = 0x0020
+FLAG_ROLE_OVERLAY_ACTIVE = 0x0040
+FLAG_ROLE_PERSISTED = 0x0080
+FLAG_NODE_ID_CONFLICT = 0x0100
+FLAG_MULTIPLE_MASTER = 0x0200
+FLAG_PERSISTED_MASTER = 0x0400
+FLAG_DEVICE_ID_ASSIGNED = 0x0800
 
 MODE_NAMES = {
     0: "MASTER",
@@ -124,6 +131,17 @@ def main() -> int:
     print(f"color_locked: {'yes' if (flags & FLAG_COLOR_LOCKED) else 'no'}")
     print(f"display_fallback: {'yes' if (flags & FLAG_DISPLAY_FALLBACK) else 'no'}")
     print(f"host_forced: {'yes' if (flags & FLAG_HOST_FORCED) else 'no'}")
+    print(f"role_overlay_enabled: {'yes' if (flags & FLAG_ROLE_OVERLAY_ENABLED) else 'no'}")
+    print(f"role_overlay_active: {'yes' if (flags & FLAG_ROLE_OVERLAY_ACTIVE) else 'no'}")
+    print(f"role_persisted: {'yes' if (flags & FLAG_ROLE_PERSISTED) else 'no'}")
+    print(f"device_id_assigned: {'yes' if (flags & FLAG_DEVICE_ID_ASSIGNED) else 'no'}")
+    persisted_role = (
+        "MASTER" if (flags & FLAG_PERSISTED_MASTER)
+        else ("SLAVE" if (flags & FLAG_ROLE_PERSISTED) else "none")
+    )
+    print(f"persisted_role: {persisted_role}")
+    print(f"node_id_conflict: {'yes' if (flags & FLAG_NODE_ID_CONFLICT) else 'no'}")
+    print(f"multiple_master: {'yes' if (flags & FLAG_MULTIPLE_MASTER) else 'no'}")
     if sync_age_ms == 0xFFFFFFFF:
         print("sync_age_ms: n/a")
     else:

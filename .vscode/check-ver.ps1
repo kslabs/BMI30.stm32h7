@@ -60,14 +60,16 @@ try {
       if ($sp.BytesToRead -le 0) { Start-Sleep -Milliseconds 50; continue }
       $line = $sp.ReadLine()
       if ($line -match '^===\s*FIRMWARE VERSION') { $inBlock = $true }
+      if ($line -match '^VERSION\s+fw=') { $inBlock = $true }
       if ($inBlock) { $lines += $line }
+      if ($line -match '^VERSION\s+fw=') { break }
       if ($inBlock -and $line -match '^=+') { break }
     } catch {
       # Ignore timeouts during window
     }
   }
 
-    if (-not $lines -or $lines.Count -lt 2) {
+    if (-not $lines -or $lines.Count -lt 1) {
       Write-Warning "[VER] No version block captured on CDC."
       $needFallback = $FallbackUart.IsPresent
     } else {
@@ -79,6 +81,14 @@ try {
     $ver = ($lines | Where-Object { $_ -match '^Version:\s*(.+)$' } | ForEach-Object { ($Matches[1]).Trim() } | Select-Object -First 1)
     $git = ($lines | Where-Object { $_ -match '^Git:\s*(.+)$' } | ForEach-Object { ($Matches[1]).Trim() } | Select-Object -First 1)
     $built = ($lines | Where-Object { $_ -match '^Built:\s*(.+)$' } | ForEach-Object { ($Matches[1]).Trim() } | Select-Object -First 1)
+    $raw = ($lines | Where-Object { $_ -match '^VERSION\s+fw=' } | Select-Object -First 1)
+    if ($raw) {
+      if ($raw -match '\bfw=([^\s]+)') { $ver = $Matches[1] }
+      if ($raw -match '\bgit=([^\s]+)') { $git = $Matches[1] }
+      if ($raw -match '\bbuild_date=([^\s]+)\s+build_time=([^\s]+)') {
+        $built = $Matches[1] + ' ' + $Matches[2]
+      }
+    }
 
     # Save to file
     try {

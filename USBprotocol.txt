@@ -71,9 +71,8 @@ Payload: массив `total_samples` значений по 2 байта (LE). (
 |0x14  | CMD_SET_PROFILE | Выбор профиля обработки/фильтра | 1 байт profile | (опц.) статус*
 |0x13  | CMD_SET_FULL_MODE| 0=ROI, 1=FULL режим захвата    | 1 байт flag    | (опц.) статус*
 |0x15  | CMD_SET_ROI_US  | Задание ROI по номеру семпла   | 4 байта (u32)  | (опц.) статус*
-|0x1D  | CMD_SET_SYNC_MODE | Управление auto/forced ролью sync | 1 байт mode, опц. `node_id` для slave | нет
-|0x1B  | CMD_SET_DC_ADAPT | Legacy управление DC-обучением | 1 байт: 0=FREEZE, 1=WORK | нет
-|0x1F  | CMD_SET_DC_CONFIG | Настройка режимов скорости DC-компенсации | `DcConfigSetV1`, 20 байт | нет
+|0x1D  | CMD_SET_SYNC_MODE | Сохраняемая локальная роль master/slave / временный OFF/AUTO | MASTER/SLAVE: `mode + u64 unix_ms LE`; OFF/AUTO: 1 байт mode | нет
+|0x1F  | CMD_SET_DC_SPEED | Единственная скорость DC-компенсации | `uint32_t settle_ms` LE; 0=off, 1=fastest, 1000=1s | нет
 |0x20  | CMD_START_STREAM| Запуск потока: отправить тестовый кадр + начать фиксацию размера | none | поток
 |0x21  | CMD_STOP_STREAM | Остановка: прекращение потока, сброс внутренних флагов | none | статусная структура
 |0x30  | CMD_GET_STATUS  | (Расширенный) запрос статуса     | none | статусная структура
@@ -82,11 +81,13 @@ Payload: массив `total_samples` значений по 2 байта (LE). (
 |0x33  | CMD_SET_TX_ENABLE | Persistent host-request TX200: 1 включает передачу, 0 выключает | 1 байт: 0/1 | (опц.) статус*
 |0x38  | CMD_GET_LCD_STATUS | Снимок sync-индикатора LCD (`M/S/O`, число, цвет) | none | структура `LCDS` (24 байта)
 |0x3A  | CMD_GET_DC_CONFIG | Снимок текущих настроек DC-компенсации | none | структура `DCCF` (40 байт)
-|0x3D  | CMD_SET_RS485_ID | Временный локальный RS485 id | 1 байт: 0 или 1..31 | нет
+|0x3D  | CMD_SET_RS485_ID | Постоянный локальный device_id, независимый от роли | 1 байт: 0..31 | нет
 |0x3E  | CMD_SET_RS485_IP | Локальный IPv4 для RS485 identity | 4 байта: `a,b,c,d` | нет
 |0x3F  | CMD_REQUEST_RS485_IDENT | Запустить один master-scan ID/IP по RS485 | none | нет
-|0x40  | CMD_GET_RS485_IDENT | Получить строку таблицы RS485 identity | EP0 IN: `wValue=node_id`, 0=local | структура `RID1` (32 байта)
+|0x40  | CMD_GET_RS485_IDENT | Получить строку таблицы RS485 identity | EP0 IN: `wValue=0..31` device, `0xFF` local | структура `RID1` (32 байта)
 |0x41  | CMD_SET_LCD_ROLE_OVERLAY | Разрешить/запретить крупную LCD-индикацию роли | `enable`, опц. `period_s,duration_s` | нет
+|0x42  | CMD_SET_RPI_INFO | Сообщить локальные номер RPI и IPv4 | `u16 rpi_number LE + ip[4]` | нет
+|0x43  | CMD_GET_RS485_SENSOR | Получить 16 срочных sensor bits узла | EP0 IN: `wValue=0..31`, `0xFF` local | `SNS1` (16 байт)
 
 `*` Статус после SET_* может быть отложен или не возвращаться — зависит от реализации.
 Гарантированно возвращается после STOP и GET_STATUS.
@@ -121,7 +122,8 @@ Payload: массив `total_samples` значений по 2 байта (LE). (
 Подробнее: HostTools/TEMP_SENSOR_GUIDE.md
 
 ## 4. Статусная структура (предложенный/текущий вид)
-Передаётся в виде отдельного короткого bulk IN пакета (<=64 байт). 
+Передаётся отдельным bulk IN пакетом: 64/96/136 байт для совместимых версий
+или 137 байт для прямой карты ID 0..31.
 Предлагаемое поле `magic='STAT'` (4 ASCII) для идентификации.
 
 ```
@@ -150,68 +152,101 @@ struct __attribute__((packed)) VendorStatus {
 
 ### 4.0.0. Управление ролью RS485 sync (`CMD_SET_SYNC_MODE`, 0x1D)
 
-По умолчанию firmware работает в auto-role: устройства сами выбирают `MASTER`/`SLAVE` по RS485
-sync/UID arbitration. Хост может либо разрешить этот самостоятельный выбор, либо принудительно
-назначить конкретную роль.
+Автоматического голосования за `MASTER` нет. Если сохранённого назначения ещё нет, все устройства
+остаются пассивными `SLAVE`, пока RPI не назначит master.
+
+Роль — локальная настройка конкретной платы. `MASTER` или `SLAVE`, выбранные её RPI, немедленно
+сохраняются во Flash и восстанавливаются после reset/power-cycle. Назначение не распространяется
+на соседние платы и чужие UID/role/enum кадры не могут его изменить. Поэтому несколько ошибочно
+назначенных master остаются видимыми, пока пользователь/RPI явно не переведёт лишние платы в
+`SLAVE`.
+
+Смена или повторное подтверждение роли не очищает установленную RPI частоту буферов, не
+перезапускает ADC/DMA, не сбрасывает ADC frame/parity sequence и не меняет состояние `TX200`,
+заданное последней командой `SET_TX_ENABLE`.
 
 Payload `CMD_SET_SYNC_MODE`:
 
-- `[0x00]` — forced `MASTER`
-- `[0x01]` — forced `SLAVE`
+- `[0x00, unix_ms_u64_le]` — сохранить локальную роль `MASTER`; всего 9 байт payload
+- `[0x01, unix_ms_u64_le]` — сохранить локальную роль `SLAVE`; всего 9 байт payload
 - `[0x02]` — forced `OFF`
-- `[0x03]` или `[0xFF]` — `AUTO`, снять host-forced и вернуть самостоятельный выбор
-- `[0x01, node_id]` — forced `SLAVE` и одновременно задать локальный slave номер, `node_id=1..31`
+- `[0x03]` или `[0xFF]` — снять временный `host_forced` и вернуться к сохранённой роли
 
-Номер slave можно менять отдельно командой `CMD_SET_RS485_ID` (`0x3D`), но для фиксированной
-топологии рекомендуется атомарный вариант `[0x01, node_id]`, чтобы роль и номер пришли одной
-командой. `node_id=0` сбрасывает временный локальный id.
+`unix_ms` — UTC Unix time в миллисекундах, little-endian; поле сохранено для совместимости.
+Команда RPI является авторитетной и принимается с первого раза.
+
+`CMD_SET_RS485_ID (0x3D)` отдельно задаёт постоянный `device_id` в диапазоне `0..31`.
+Команда разрешена в обеих ролях. ID сохраняется во Flash, не меняется вместе с ролью и не
+перенумеровывается при изменении состава группы. Неназначенность хранится отдельным флагом:
+назначенный ID 0 отображается как M00/S00. Назначение идёт только по локальному USB своего RPI;
+неназначенная плата молчит в RS485, но ADC и USB продолжают работать.
+
+Специального selected sensor-slave больше нет. Состояния `optic/DetADC1/DetADC2` каждого
+устройства адресуются как `sync_status_bytes[device_id]`, включая master.
+Изменения sensor bits передаются приоритетно в ближайшем цикле 200 Hz и повторяются трижды;
+фоновая identity-карта всегда уступает им.
+На USB при каждом таком изменении ставятся `EVT1 type=0x14 SENSOR_MAP` с прямой
+32-элементной картой и совместимый 136-байтовый `STAT v5`. В `STAT v5` index/bit
+`0..30` означает старые `device_id 1..31`; прямой `device_id 0` доступен в `STAT v6`.
 
 EP0 варианты:
 
-- OUT без data stage: `bRequest=0x1D`, `wValue=mode`. Подходит для `MASTER`/`SLAVE`/`OFF`/`AUTO`,
-  но не передает `node_id`.
-- OUT с data stage: `bRequest=0x1D`, payload `[mode]` или `[mode,node_id]`. Этот вариант нужен
-  для forced `SLAVE` с конкретным номером.
+- OUT без data stage: `bRequest=0x1D`, `wValue=mode`. Подходит только для `OFF`/`AUTO`.
+  `MASTER` и `SLAVE` без timestamp возвращают STALL.
+- OUT с data stage: для назначения master/slave обязательно передать 9 байт
+  `[mode, unix_ms_u64_le]`; для `OFF`/`AUTO` достаточно `[mode]`.
 
 Контроль:
 
 - `LCDS.flags bit4` (`0x0010`) = `host_forced`.
-- `EVT1 SYNC_STATE` payload содержит `sync_mode_public` и `sync_mode_host_forced`.
-- `GET_STATUS` показывает `sync_local_status`/`sync_status_bytes`; номер slave в публичном
-  status byte лежит в bits0..4.
+- `LCDS.raw_mode` и `LCDS.node_id` дают роль/ID даже без sync; flags bit7=role persisted,
+  bit8=ID conflict, bit9=multiple master, bit10=persisted master.
+- `EVT1 SYNC_STATE` содержит те же роль/ID и flags bit5/bit6/bit7.
+- `GET_STATUS.flags_runtime`: `0x1000=role persisted`, `0x2000=any ID conflict`,
+  `0x4000=multiple master`, `0x8000=persisted role is master`
+  (`0x1000` без `0x8000` = persisted slave).
 
 ### 4.0.1. Оптический датчик в STAT и RS485 status byte
 
-Состояние локального оптического датчика должно быть доступно хосту в `STAT` и передаваться
-соседней антенне в RS485 status byte.
+Единый обработанный сигнал локального оптического датчика `optic_active` должен быть
+доступен хосту в `STAT` и передаваться соседним устройствам в RS485 status byte.
 
-- `flags_runtime bit 0x0020` — локальный оптический датчик активен.
+- `flags_runtime bit 0x0020` — локальный удержанный `optic_active`.
 - `flags_runtime bit 0x0080` — master optic активен: локально на master или принят по RS485 на slave.
 - `flags_runtime bit 0x0100` — активен любой локальный/RS485 optic в группе.
+- `flags_runtime bits 0x0200/0x0400/0x0800` — legacy selected-slave flags, не используются.
 - `reserved3 bit0` — legacy packed-дубль локального `optic_active`.
-- `sync_local_status bit5` (`0x20`) — локальный RS485 status bit оптического датчика.
-- `sync_status_bytes[node_id-1] bit5` (`0x20`) — состояние оптического датчика удаленной антенны.
+- `sync_local_status bit5` (`0x20`) — локальный `optic_active`.
+- `sync_status_bytes[device_id] bit5` (`0x20`) — переданный `optic_active` удаленного устройства.
 
 Формат RS485 status byte:
 
 ```text
 bits 0..4  node_id
-bit  5     optic_active, состояние оптического датчика
+bit  5     optic_active, обработанный вход с удержанием после HIGH
 bit  6     DetADC1
 bit  7     DetADC2
 ```
 
-Исключение на сырой RS485-шине: `master_status0 bits0..4` используются как selector слота опроса slave, а `master_status0 bit5` уже является статусом оптического датчика master. `master_status1` в штатном случае несет `0xC0 | master_id`; firmware на slave использует это как служебную информацию о master, публичные `sync_seen_mask`/`sync_status_bytes` содержат только slave nodes `1..N`. Для host-visible slave status свежий `master_status0 bit5` экспортируется в старом `STAT v5` как `flags_runtime bit0x0080`.
+Исключение на сырой RS485-шине: `master_status0 bits0..4` используются как selector слота опроса slave, а `master_status0 bit5` уже является статусом оптического датчика master. `master_status1` в штатном случае несет `0xC0 | master_id`; firmware на slave добавляет свежий статус master в публичные `sync_seen_mask`/`sync_status_bytes` по его постоянному ID. Для совместимости master optic также экспортируется как `flags_runtime bit0x0080`.
 
 Индикация onboard/system address WS2812:
 
+- Если актуальной RS485-связи нет (`sync_signal_alive=0`), устройство любой
+  назначенной роли показывает единый голубой цвет. Сохранённая роль сама по себе
+  не считается подтверждением связи.
+- При живой связи master имеет базовый синий цвет, slave — базовый белый.
 - Master при локальном `optic_active=1` меняет базовый синий на зеленый.
-- Каждый slave показывает свой локальный `optic_active=1` желтым; если локального срабатывания нет, но master сообщил `optic_active=1` через свежий `master_status0 bit5`, slave меняет базовый белый на магента/фиолетовый, пока master status не устареет.
-- Этот master bit не добавляет master в `sync_status_bytes`; slave-host читает его через `flags_runtime bit0x0080` в `STAT v5` без увеличения размера `STAT` выше 136 байт.
+- Каждый slave показывает свой локальный `optic_active=1` желтым; если локальный `optic_active=0`, но master сообщил `optic_active=1` через свежий `master_status0 bit5`, slave меняет базовый белый на магента/фиолетовый, пока master status не устареет.
+- Локальный `optic_active=1` имеет высший приоритет над ролью и диагностической ошибкой
+  и немедленно меняет только цвет системного LED. Если TX включен, независимая
+  модуляция яркости TX-breathe продолжается весь интервал `optic_active=1`.
+- Свежий master status добавляется в `sync_status_bytes[master_device_id]`; для совместимости
+  master optic также доступен как `flags_runtime bit0x0080`.
 
 Внешние эффекты имеют отдельный optic-gate:
 
-- TX200 не gated по оптическим датчикам. В текущей firmware подтверждённое состояние TX при любом состоянии USB следует persistent request `CMD_SET_TX_ENABLE`/`TX200`. `STOP_STREAM`, отсутствие SOF/heartbeat, `HOST_RX_ACK` и `HOST_RX_CLEAR` request не меняют.
+- TX200 не gated по оптическим датчикам. Действует `physical_tx = tx_request AND streaming`: `STOP_STREAM` гасит физические выходы без стирания request, а следующий START восстанавливает их. Краткие пропуски SOF/heartbeat, `HOST_RX_ACK` и `HOST_RX_CLEAR` не дёргают TX и не меняют request.
 - Оптический 38 kHz carrier не gated по приемнику: `SET_OPTIC_POWER=255` задает максимум для проверки фотоприемника.
 - `SET_LED_PATTERN` и `LED_EVENT` задают желаемое состояние внешней WS2812-ленты, но лента разрешается только при активном optic-gate.
 - Optic-gate активен, если есть локальный `optic_active=1`, свежий `master_status0 bit5=1` на slave или свежий `sync_status_bytes[*] bit5=1` от slave-узла.
@@ -219,31 +254,60 @@ bit  7     DetADC2
 
 COM/UART bench-команды без USB Vendor:
 
+- `VER` / `VERSION` — вернуть одну строку
+  `VERSION fw=<semver> git=<hash> build_date=<YYYY-MM-DD> build_time=<HH:MM:SS> pairs=<N>`.
+  Ответ передаётся напрямую в UART и не зависит от включения подробного отладочного `printf`.
 - `TX200 1` / `TX200 0` — вручную задать request TX200. `OPTIC` должен подтвердить соответственно `tx_req=1, tx200=1` или `tx_req=0, tx200=0`; также видны счётчик и значение последней host-команды.
 - `OPTP 255` — максимальная мощность 38 kHz carrier.
-- `OPTH 0..600` — hold локального `optic_active` в deciseconds (`0` = default).
-- `OPTIC` — распечатать `tx200/tx_req/power/hold_ds/rx/pd0/any/master_rx/local_status/master_status/master_flags`; `local_status bit5` (`0x20`) равен локальному `optic_active`.
+- `OPTH 0..600` — удержание публичного `optic_active=1` после последней принятой `1`
+  в deciseconds (`0` = default).
+- `OPTIC` — распечатать `tx200/tx_req/power/hold_ds/rx/activity_hold/pd0/any/master_rx/local_status/master_status/master_flags`; `pd0` — сырой вход, `rx`, `activity_hold` и `local_status bit5` (`0x20`) — единый удержанный `optic_active`.
 - `SYNCSTATE` — компактный sync/role status, также содержит `local_status` и `master_status`.
 
-Хост получает состояние двумя способами: по запросу `GET_STATUS` (`0x30`, полный `STAT` 136 байт)
-или как событие `STAT` при каждом изменении локального `optic_active`/bit5. При событии устройство
+Хост получает состояние двумя способами: по запросу `GET_STATUS` (`0x30`, полный `STAT` v6 137 байт)
+или как событие `STAT` при каждом изменении обработанного `optic_active`/bit5.
+Переход `0->1` создаётся немедленно по HIGH, переход `1->0` — после истечения hold;
+оба также создают `EVT1 SENSOR_MAP`. При событии устройство
 должно отправить `STAT` сразу, если IN endpoint свободен, либо поставить его в очередь до освобождения
 endpoint.
 
 ### 4.0.2. RS485 identity/IP (`RID1`)
 
 Устройства RS485 могут входить в одну рабочую группу, а могут только быть синхронизированы по
-шине. Поэтому кроме runtime status byte есть отдельная медленная таблица identity: короткий
-номер устройства и IPv4.
+шине. Поэтому кроме приоритетного runtime status byte есть общая таблица:
+`device_id 0..31 -> UID STM32 + номер RPI + IPv4`.
 
 Хост-команды:
 
 - `CMD_SET_RS485_IP` (`0x3E`): payload 4 байта IPv4 в порядке `a.b.c.d`. Firmware не знает IP
-  роутера/хоста самостоятельно. Если роутера нет, host должен записать fallback IP хоста.
-- `CMD_REQUEST_RS485_IDENT` (`0x3F`): без payload. Отправлять текущему master; master запускает
-  один полный проход страниц identity.
-- `CMD_GET_RS485_IDENT` (`0x40`): EP0 vendor IN, `wValue=node_id`, `node_id=0` значит локальная
-  строка USB-устройства. Длина чтения 32 байта.
+  RPI самостоятельно. Каждый RPI отправляет своей STM32 актуальный адрес после загрузки и при
+  каждом изменении адреса. Если роутера нет, RPI записывает свой fallback IP.
+- `CMD_REQUEST_RS485_IDENT` (`0x3F`): без payload. На master немедленно перезапускает полный
+  проход; на slave безопасно не передаёт отдельный RS485-кадр, потому что карта и так постоянно
+  реплицируется автоматическими проходами master.
+- `CMD_SET_RPI_INFO` (`0x42`): payload `u16 rpi_number LE + ip[4]`.
+- `CMD_GET_RS485_IDENT` (`0x40`): EP0 vendor IN, `wValue=0..31` выбирает `device_id`,
+  `wValue=0xFF` означает локальную плату. Длина чтения 32 байта.
+
+Master автоматически запускает новый проход через 5 секунд после предыдущего. Он передаёт
+собственные страницы и опрашивает каждый `device_id`; master и все слушающие slave сохраняют каждый
+услышанный ответ. Поэтому одинаковую карту можно читать через USB любой платы
+группы. RPI обычно читает `sync_seen_mask`, затем `RID1` для соответствующих `0..31`; готовый
+вариант — `HostTools/vendor_rs485_device_list.py`.
+
+`sync_seen_mask` является картой реально подключённых устройств: удалённый узел исчезает из неё
+через 1000 ms без status-кадров. `RID1` — более медленный фоновый кэш UID/RPI/IP. Если строка
+удалённого узла не обновлялась 30 секунд, firmware полностью очищает её: сбрасываются
+`seen_page_mask`, `last_ms`, UID/RPI/IP и все флаги назначения/валидности. Локальная строка платы
+не стареет. Хост должен скрывать устройство сразу после исчезновения его бита из
+`sync_seen_mask`, не дожидаясь очистки `RID1`.
+
+Новый удалённый ID попадает в живую карту только после трёх корректных двухбайтовых ответов в
+адресованном ему окне master за интервал не более 500 ms. Один шумовой/повреждённый пакет не
+создаёт устройство. После подтверждения обычные status и срочные sensor-event обновляют уже
+живой узел немедленно. Чтение `RID1` для удалённого ID выдаёт UID/RPI/IP и флаги назначения только
+пока этот ID присутствует в живой карте; 30-секундный кэш наружу как подключённое устройство не
+показывается.
 
 Формат ответа `RID1`:
 
@@ -251,13 +315,13 @@ endpoint.
 struct __attribute__((packed)) Rs485IdentV1 {
     char     sig[4];          // 'RID1'
     uint8_t  version;         // 1
-    uint8_t  node_id;         // 0 если строки нет
+    uint8_t  node_id;         // device_id 0..31; assignment is a flag
     uint16_t flags;           // bit flags ниже, LE
     char     short_id[10];    // 9 hex digits + NUL, '?' если неполно
     uint8_t  ip4[4];          // a.b.c.d
-    uint32_t seen_page_mask;  // bit0..bit16
+    uint32_t seen_page_mask;  // bit0..bit20
     uint32_t last_ms;         // HAL_GetTick() последнего обновления
-    uint16_t reserved;
+    uint16_t rpi_number;
 };
 ```
 
@@ -269,6 +333,9 @@ struct __attribute__((packed)) Rs485IdentV1 {
 - `0x0008 LOCAL`
 - `0x0010 RECENT`
 - `0x0020 SCAN_ACTIVE`
+- `0x0040 SELECTED_SLAVE` (legacy, в новой топологии не используется)
+- `0x0080 MASTER`
+- `0x0100 NODE_CONFLICT`
 
 Raw RS485 exchange не добавляет длинный пакет и не меняет sync cadence:
 
@@ -276,8 +343,7 @@ Raw RS485 exchange не добавляет длинный пакет и не м�
 - `master_status0 bits0..4` = адрес/selector запроса: `1..31` slave id, `0` служебный слот master
   без ответа slave. `bits5..7` остаются status-флагами master.
 - `master_status1 = 0xC0 | master_id`: штатный master info.
-- `master_status1 = 0xA0 | new_id`: compact-assignment для slave, чей адрес указан в
-  `master_status0 bits0..4`.
+- `master_status1 = 0xA0 | new_id`: legacy compact-assignment; новая прошивка игнорирует.
 - `master_status1 = 0x80 | page`: identity-запрос страницы `0..16` к slave, чей адрес указан в
   `master_status0 bits0..4`.
 - Ответ выбранного slave: первый байт обычный RS485 status byte, второй байт `0x40 | nibble`.
@@ -285,6 +351,14 @@ Raw RS485 exchange не добавляет длинный пакет и не м�
   в порядке `a.b.c.d`, старшая половина байта затем младшая.
 - Невыбранные slave во время identity-запроса не отвечают, но слушают ответ выбранного slave и
   тоже обновляют свою таблицу.
+- Собственная identity master передаётся парой служебных слов с selector `0`; все slave сохраняют
+  её по постоянному номеру RPI master в диапазоне `1..31` и дополнительно в legacy alias `32`.
+- Изменение `optic/DetADC1/DetADC2` имеет приоритет над identity. Slave передаёт слово события
+  (`status0` с номером RPI и актуальными sensor bits, `status1=0x20|sequence`) в ближайшем
+  200 Hz цикле, то есть первая попытка начинается не позднее 5 ms. Событие повторяется трижды;
+  обычный выбранный ответ идёт после короткого event-окна. Все устройства обновляют sensor-карту
+  сразу по событию. Пропущенная из-за события identity-страница восстанавливается следующим
+  автоматическим проходом.
 
 ## 4.1. Структура LCD sync-индикатора
 
@@ -306,7 +380,10 @@ struct __attribute__((packed)) VendorLcdStatus {
                                  // bit2 color_locked, bit3 display_fallback,
                                 // bit4 host_forced,
                                 // bit5 role_overlay_enabled,
-                                // bit6 role_overlay_active
+                                // bit6 role_overlay_active,
+                                // bit7 role_persisted, bit8 node_id_conflict
+                                // (reserved, zero in fixed-role build),
+                                // bit9 multiple_master, bit10 persisted_master
     uint32_t sync_age_ms;       // возраст последнего sync edge; 0xFFFFFFFF если edge не было
     char     text[4];           // готовый префикс LCD: "M03", "S07", "O  "
 };
@@ -315,12 +392,10 @@ struct __attribute__((packed)) VendorLcdStatus {
 Смысл полей:
 
 - `raw_mode` — реальный режим логики sync.
-- `display_mode` — режим, который фактически показан на LCD. В обычном маленьком индикаторе при
-  потере sync LCD принудительно показывает `M00`; когда активен большой role overlay, поля
-  `display_*` показывают raw-роль (`Mxx`/`Sxx`) без этого fallback.
-- `display_value` — для `MASTER` это число обнаруженных slave, для `SLAVE` это локальный slot/node id.
+- `display_mode` — режим, который фактически показан на LCD; потеря sync не меняет букву роли.
+- `display_value` — постоянный локальный `node_id` и для `MASTER`, и для `SLAVE`.
 - `display_color_id` / `display_rgb565` — цвет индикатора на LCD.
-- `flags.display_fallback=1` — LCD сейчас показывает аварийный fallback (`M00`, цвет `CYAN`).
+- `flags.display_fallback=1` — sync отсутствует; роль/ID при этом остаются `Mxx`/`Sxx`.
 - `flags.signal_alive=1` — LCD считает sync "живым".
 - `flags.sync_ok_visual=1` — LCD считает sync "хорошим"; после антидребезга цвет становится `GREEN`.
 - `flags.color_locked=1` — зелёный уже защёлкнут внутренним state machine LCD.
@@ -342,8 +417,9 @@ Payload:
 
 Формат на LCD:
 
-- `Mxx` — устройство в роли `MASTER`, `xx` = число активных slave из RS485 status table.
+- `Mxx` — устройство в роли `MASTER`, `xx` = постоянный локальный `node_id`.
 - `Sxx` — устройство в роли `SLAVE`, `xx` = локальный `node_id`.
+- При ID=0 показывается `M--`/`S--`, а не `M00`/`S00`.
 - `O  ` — sync выключен.
 
 Цвет большого текста выбирается случайно из ярких цветов `RED/GREEN/YELLOW/BLUE/CYAN/WHITE`.
@@ -430,98 +506,60 @@ CMD_SET_ROI_US: параметр — номер стартового семпл�
 и сдвигает окно ROI на указанный старт. Если старт выходит за пределы, он ограничивается
 в диапазоне 0..(samples-200). Это относится к режимам LOSSLESS_ROI и AVG_ROI.
 
-## 10.1. Настраиваемая скорость DC-компенсации
+## 10.1. Единственная скорость DC-компенсации
 
-DC-компенсация обучается в трёх режимах плавным slew-rate алгоритмом.
-Хост задаёт не фиксированный шаг и не число кадров, а время ухода максимальной ошибки
-32768 LSB к virtual zero/deadband в миллисекундах. Чем меньше `*_settle_ms`, тем больше
-допустимый шаг на новом ADC-кадре. Фиксированной частоты адаптации нет: частота кадров
-только даёт моменты обновления, а скорость задаёт `settle_ms`.
-Режимы работают постоянно до следующей команды хоста; меняется только скорость адаптации.
-Веб-интерфейс может показывать те же значения в секундах.
+В прошивке работает один процесс и одна таблица коэффициентов `[channel][parity][sample]`.
+RPI задаёт только `settle_ms`; значение действует на каждом новом raw ADC-кадре до следующей
+команды и не зависит от режима USB-потока.
 
-Режимы:
+`CMD_SET_DC_SPEED (0x1F)` имеет строго один payload:
 
-- `0=FREEZE/Stop` — DC вычитается, но новые значения не обучаются.
-- `1=WORK` — рабочая медленная подстройка постоянных изменений DC.
-- `2=DETECT` — средняя скорость для периода детекции метки.
-- `3=BOOT_FAST/Acquisition` — ускоренная подстройка, остаётся активной до следующей команды хоста.
-
-Дефолты прошивки/хоста: `WORK=5 s`, `BOOT_FAST/Acquisition=500 s`, `DETECT=10000 s`, `FREEZE/Stop=0 s`.
-
-`CMD_SET_DC_CONFIG` (`0x1F`) payload после opcode. `version=1` оставлен для совместимости
-и включает старое поведение: DC применяется/обучается до усреднения, post-stage выключен.
-
-```
-struct DcConfigSetV1 {
-    uint8_t  version;          // 1
-    uint8_t  mode;             // 0=FREEZE/Stop, 1=WORK, 2=DETECT, 3=BOOT_FAST/Acquisition
-    uint16_t flags;            // сейчас 0, зарезервировано
-    uint32_t work_settle_ms;   // default 5000 (5 s), минимум 1 ms
-    uint32_t detect_settle_ms; // default 10000000 (10000 s), минимум 1 ms
-    uint32_t fast_settle_ms;   // default 500000 (500 s Acquisition), минимум 1 ms
-    uint32_t adapt_settle_ms;  // legacy wire-name fast_duration_ms; скорость выбранного режима, не таймер
+```c
+struct DcSpeedSet {
+    uint32_t settle_ms; /* LE; 0=off, 1=fastest, 1000=1 second */
 };
 ```
 
-Новый payload `version=2` позволяет выбирать, где делать DC для `AVG_ROI`, и задавать
-скорость pre/post отдельно:
+Полный Bulk OUT пакет равен пяти байтам: `1F ss ss ss ss`. Пакет другой длины или значение
+выше `86400000` отвергается. При `settle_ms=0` обучение выключено, но накопленная коррекция
+продолжает применяться. При reset скорость становится равной нулю, поэтому RPI явно отправляет
+нужное значение при startup/reconnect. В STM32 нет режимов WORK/DETECT/BOOT_FAST, таймеров
+acquisition/detection, pre/post-stage и авто-заморозки по амплитуде.
 
-```
-struct DcConfigSetV2 {
-    uint8_t  version;          // 2
-    uint8_t  mode;             // 0=FREEZE/Stop, 1=WORK, 2=DETECT, 3=BOOT_FAST/Acquisition
-    uint16_t flags;            // stage flags ниже
-    uint32_t work_settle_ms;   // base WORK speed, минимум 1 ms
-    uint32_t detect_settle_ms; // base DETECT speed, минимум 1 ms
-    uint32_t fast_settle_ms;   // base BOOT_FAST speed, минимум 1 ms
-    uint32_t pre_settle_ms;    // pre-average override; 0 = use mode speed
-    uint32_t post_settle_ms;   // post-average override; 0 = use mode speed
+`settle_ms=1` — максимально быстро; `settle_ms=1000` — 1 секунда.
+Чем больше ненулевое значение, тем медленнее адаптация.
+И модуль, и знак шага рассчитываются отдельно для каждой из 200 точек ROI по её текущему
+отклонению. DC применяется ровно
+один раз: до усреднения в AVG_ROI или к копии ROI перед отправкой в LOSSLESS_ROI.
+
+В firmware v1.26 коррекция адаптивна для каждой точки:
+`corr[i] = abs(error[i]) * 8 * dt_ms / settle_ms`, с ограничением до границы deadband. Знак определяется отдельно
+по стороне от virtual zero. Q16-остаток также хранится отдельно для каждой точки, поэтому
+малый рассчитанный шаг не теряется. Коэффициент 8 даёт экспоненциальное приближение: максимальная
+ошибка 32768 LSB входит в deadband 16 LSB примерно за `0.953 * settle_ms`, а ошибка 1000 LSB —
+примерно за `0.518 * settle_ms`. Для `settle_ms=1000` и `dt=10 ms` начальный шаг равен примерно
+2620 LSB при максимальном отклонении и 79 LSB при отклонении 1000.
+USB START/STOP, повторный START и перезапуск ADC не сбрасывают полученную от RPI скорость или
+прошедшее время адаптации. При остановленном USB-потоке фоновая адаптация продолжает работать.
+
+`CMD_GET_DC_CONFIG (0x3A)` рекомендуется читать через EP0 vendor IN. Ответ:
+
+```c
+struct DcConfigStatusV2 {
+    char     sig[4];       /* "DCCF" */
+    uint8_t  version;      /* 2 */
+    uint8_t  enabled;      /* settle_ms != 0 */
+    uint16_t flags;        /* bit0: coefficients dirty */
+    uint32_t settle_ms;
+    uint32_t set_at_ms;    /* HAL_GetTick() последней принятой команды */
+    uint32_t adapt_updates;
+    uint32_t reserved[5];  /* zero; полный размер 40 байт */
 };
 ```
 
-Stage flags:
-
-- `0x0010 PRE_APPLY`
-- `0x0020 PRE_LEARN`  (также включает apply)
-- `0x0040 POST_APPLY`
-- `0x0080 POST_LEARN` (также включает apply)
-
-Если все stage flags равны 0, firmware применяет совместимый default `PRE_APPLY|PRE_LEARN`.
-Для pre и post используется одна общая таблица коэффициентов `[channel][parity][sample]`.
-Одновременно применять её в обеих точках нельзя, иначе компенсация удвоится. Поэтому firmware
-нормализует комбинации к одной эффективной стадии с приоритетом
-`POST_LEARN > PRE_LEARN > POST_APPLY > PRE_APPLY`; `GET_DC_CONFIG` возвращает эффективные флаги.
-Переключение стадии не очищает таблицу и не должно вызывать повторного появления DC.
-`LOSSLESS_ROI` использует только pre-stage. В `AVG_ROI` pre-stage обрабатывает raw ROI до суммы,
-post-stage обрабатывает уже усредненный ROI перед отправкой по USB.
-
-`CMD_GET_DC_CONFIG` (`0x3A`) рекомендуется читать через EP0 vendor IN, чтобы не вмешиваться
-в поток A/B. Ответ `DCCF`:
-
-```
-struct DcConfigStatusV1 {
-    char     sig[4];           // 'DCCF'
-    uint8_t  version;          // 1
-    uint8_t  mode;             // текущий/effective режим
-    uint16_t flags;            // bit0 adapt_enabled, bit1 auto_freeze, bit2 dirty,
-                               // bit4 pre_apply, bit5 pre_learn, bit6 post_apply, bit7 post_learn
-    uint32_t work_settle_ms;
-    uint32_t detect_settle_ms;
-    uint32_t fast_settle_ms;
-    uint32_t fast_duration_ms; // legacy wire-name; v2 reports pre_settle_ms override
-    uint32_t active_settle_ms; // settle выбранной эффективной стадии pre/post
-    uint32_t mode_enter_ms;    // HAL_GetTick() входа в режим
-    uint32_t fast_until_ms;    // legacy wire-name; v2 reports post_settle_ms override
-    uint32_t adapt_updates;    // счётчик принятых обновлений DC
-};
-```
-
-Legacy команды сохранены:
-
-- `CMD_SET_DC_ADAPT 0` теперь эквивалентен `mode=FREEZE`.
-- `CMD_SET_DC_ADAPT 1` теперь эквивалентен `mode=WORK`.
-- `CMD_CALIB_DC_FAST 0x1E`: ненулевой legacy-параметр выбирает `BOOT_FAST`, ноль выбирает `WORK`; режим действует до следующей DC-команды.
+Старые команды `CMD_SET_DC_ADAPT (0x1B)` и `CMD_CALIB_DC_FAST (0x1E)` не
+поддерживаются. Старые много-параметрические payload для opcode `0x1F` также
+отвергаются, поскольку их длина не равна четырём байтам.
 
 ## 11. Roadmap (расширения)
 - Динамическая смена размера кадра через новую команду (например 0x31) с подтверждением.
@@ -556,6 +594,24 @@ Legacy команды сохранены:
 Обновления документа фиксировать с версионным блоком CHANGELOG ниже.
 
 ### CHANGELOG
+v1.37 — Фазовая позиция DMA и полярность маркера исправляются раздельно. Регулятор продолжает доводку при переходе `sample 0/599`; подтверждённый `ANTI_PHASE` меняет полярность только в окне четырёх UART-битов возле целевой фазы, поэтому обычный проход границы больше не создаёт периодический срыв. ADC/DMA не перезапускаются, циклический набор полупериода через `ARR+64` удалён. Для M10/S11 тихая доводка использует `ARR±8` раз в два буфера: `±4` допускал потерю буфера примерно через 25 секунд, а `±16` перескакивал цель. Частота TX остаётся 200 Гц.
+v1.36 — Исключены фантомные устройства: новый удалённый ID становится живым только после трёх корректных ответов в своём адресном окне за 500 ms; одиночный шумовой status/sensor-пакет карту не меняет. `RID1` выдаёт сохранённую identity удалённого узла только пока тот подтверждён в текущей `sync_seen_mask`; внутренний 30-секундный кэш больше нельзя ошибочно показать как подключённое устройство.
+v1.35 — Удалённые устройства больше не остаются навсегда в реплицированной identity-карте. Живая карта `sync_seen_mask` исключает узел через 1000 ms без status-кадров, а не обновлявшаяся 30 секунд удалённая строка `RID1` полностью очищается на каждой STM32. Локальная identity не стареет; ADC и RS485 sync этим обслуживанием не перезапускаются.
+v1.34 — Исправлена гонка между применением RPI частоты и временным фазовым ARR-импульсом: новая частота атомарно становится номиналом TIM15 и отменяет импульс со старой базой. После его завершения больше нельзя восстановить загрузочный `ARR=4295`; загрузочный ARR также сразу установлен в штатный `1144` для 600 семплов × 400 буферов/с (TX 200 Гц).
+v1.33 — Onboard/system WS2812 теперь показывает единый голубой цвет при `sync_signal_alive=0` для любой назначенной роли. Роль больше не создаёт ложную индикацию связи; при живой связи сохранены синий master и белый slave, а optic-цвета и независимый TX-breathe не изменены.
+v1.32 — COM-команды `VER`/`VERSION` переведены на прямой raw UART-ответ, поэтому версия доступна и при выключенном отладочном `printf`. Строка содержит semantic version, git revision, дату/время сборки и число ADC-пар.
+v1.31 — Исправлено ложное срабатывание watchdog WS2812: устаревший `now_ms` из начала длинной итерации больше не превращается в огромный unsigned timeout, поэтому прошивка не выполняет десятки `HAL_SPI_Abort` в секунду и не мешает Vendor USB/EVT1. TX200 приведён к правилу `tx_request AND streaming` без heartbeat-gating. COM `OPTIC` дополнен счётчиками `usb_frame_age_ms/usb_txcplt/usb_recovery/usb_force_idle/usb_error` и `usb_evt_*`.
+v1.30 — Оптическое состояние системного WS2812 теперь меняет только цвет, не отключая независимый TX-breathe. Добавлен 100 ms watchdog SPI3 DMA: потерянный callback завершения больше не может навсегда заморозить системный LED; COM `OPTIC` сообщает `ws_busy/ws_frames/ws_recoveries`.
+v1.29 — Восстановлена локальная системная WS2812-индикация optic. Зафиксирован единый сигнал `optic_active = PD0 || hold_after_last_high`: HIGH немедленно включает и повторно запускает hold, LOW таймер не запускает и не продлевает. Этот же удержанный сигнал используется системным LED, LCD, USB, RS485 и картой группы; его изменения публикуются как `EVT1 SENSOR_MAP` и полный совместимый `STAT v5`. Локальный optic получил высший приоритет и постоянную яркость на системном LED, чтобы error-state и TX-breathe не скрывали срабатывание. Исправлено legacy-смещение ID в 136-байтовом статусе.
+v1.28 — Роль и `node_id` стали независимыми локальными настройками каждой платы и сохраняются во Flash. Отключены автоматическая нумерация, compact-assignment и сетевое переназначение роли. `Mxx/Sxx` показывают один постоянный ID; `STAT/LCDS/EVT1/RID1` сообщают сохранённую роль, конфликт ID и несколько master.
+v1.27 — Зафиксированы единицы `SET_DC_SPEED`: raw `uint32` задан в миллисекундах (`0` — off, `1` — максимально быстро, `1000` — 1 с). В UART-команду `DC` добавлен readback фактически принятого `settle_ms`.
+v1.26 — Общий постоянный DC-шаг заменён адаптивной коррекцией каждой точки пропорционально её текущему отклонению. Максимальная ошибка входит в deadband примерно за указанное RPI `settle_ms`; формат `SET_DC_SPEED` не изменён.
+v1.25 — Роли назначаются только RPI и восстанавливаются из Flash без UID-голосования; смена роли больше не трогает TX200, rate override и ADC/DMA sequence. `SET_DC_SPEED=1000` откалиброван как 32768 LSB/s; DC продолжает работать при USB STOP/ADC restart. Для S03 добавлено локальное восстановление hard-stall Bulk IN и идемпотентная обработка повторных START/rate-команд.
+v1.24 — DC сведен к одной непрерывной адаптации и одному параметру `SET_DC_SPEED settle_ms`; удалены режимы, таймеры, pre/post, amplitude gate и legacy DC-команды.
+v1.23 — Устранён повторный выброс DC после быстрой компенсации: mode-only v2 config больше не меняет pre/post stage, при явной смене stage очищаются только незавершённые AVG-группы, после ADC restart заново сопоставляются even/odd банки, а выход из BOOT_FAST ставит один save актуальной общей таблицы во Flash.
+v1.22 — DC хранится одной общей таблицей `[channel][parity][200]` для pre/post; стадии взаимоисключающие и не очищают коэффициенты при переключении. Автосохранение DC отключено, долговременная запись выполняется явной `SAVE_DC_TO_FLASH (0x2B)`.
+v1.21 — Добавлено сохраняемое timestamped-назначение одного sensor-slave с автоматическим освобождением старого выбранного slave. `STAT` и `RID1` показывают назначение и sensor status. Identity-scan master теперь реплицирует всем устройствам полный каталог номер/IP; master хранится в отдельной строке `32`, slave — в `1..31`.
+v1.20 — Сетевое назначение RS485 master теперь содержит `u64 Unix ms`, распространяется по UID96, сохраняется всеми устройствами и разрешает конфликт в пользу более нового назначения. Slave-нумерация стала последовательной, UID-адресованной и подтверждаемой; при отсутствии назначения сохранено прежнее UID-голосование.
 v1.19 — Восстановлена стабильная синхронизация TX200; устранено асинхронное вмешательство фонового TX service. Внешний host-контракт остаётся `SET_TX_ENABLE 0/1` плюс обязательный readback.
 v1.18 — Временный ошибочный вариант управления TX200, отменённый в v1.19. Временно отключена зависимость TX от streaming/SOF/heartbeat/STOP.
 v1.17 — `SET_TX_ENABLE`/`TX200` стал persistent request: только явный `0/1` меняет запрос. `STOP_STREAM` гасит физический TX без стирания request, а `START_STREAM` автоматически восстанавливает сохранённое состояние. Приём `0x33` теперь отражается в `last_cmd_received`.
@@ -568,7 +624,7 @@ v1.11 — Optic-gate для внешних световых эффектов: в
 v1.10 — Role-based optic indication: master меняет синий на зеленый при локальном `optic_active=1`; slave меняет белый на желтый при своем локальном `optic_active=1`, а по свежему `master_status0 bit5` без локального срабатывания меняет белый на магента/фиолетовый.
 v1.9 — `CMD_SET_DC_CONFIG` получил payload `version=2` для выбора pre/post DC стадии в `AVG_ROI` и отдельных `pre_settle_ms`/`post_settle_ms`.
 v1.8 — Добавлена host-управляемая крупная LCD-индикация роли `CMD_SET_LCD_ROLE_OVERLAY` (`0x41`) и флаги `LCDS.role_overlay_enabled/active`.
-v1.7 — `CMD_SET_SYNC_MODE` теперь документирует forced master/slave/off, возврат в auto (`0x03`/`0xFF`) и атомарное назначение slave-номера payload `[0x01,node_id]`.
+v1.7 — Исторический формат: `CMD_SET_SYNC_MODE` документировал forced master/slave/off, возврат в auto (`0x03`/`0xFF`) и назначение slave-номера payload `[0x01,node_id]`. Этот формат отменён актуальной схемой v1.21: mode 0/1 требует `u64 unix_ms`, а номера slave выдаёт master по UID.
 v1.6 — Добавлены `CMD_SET_RS485_IP`/`CMD_REQUEST_RS485_IDENT`/`CMD_GET_RS485_IDENT` и ответ `RID1`; identity/IP передаются по RS485 во втором байте существующего sync-обмена.
 v1.5 — Зафиксирована передача состояния оптического датчика: RS485 status byte bit5 и USB `STAT` по запросу/при изменении.
 v1.4 — DC-режимы работают постоянно до команды хоста; offset 16 трактуется как `adapt_settle_ms`/скорость, не таймер.

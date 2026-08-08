@@ -717,7 +717,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     __HAL_RCC_GPIOA_CLK_ENABLE();
     /**TIM2 GPIO Configuration
     PA0     ------> TIM2_CH1 (Open-Drain для управления светодиодом 5V)
-    (PA1 не используется как TIM2_CH2: удерживаем PA1 в GPIO low)
+    (PA1 не используется как TIM2_CH2: это GPIO-инверсия TX200-фазы PA2/PC7)
     PA2 зарезервирован под битовый sync GPIO output
     */
     GPIO_InitStruct.Pin = GPIO_PIN_0;

@@ -33,6 +33,22 @@
 #include "usbd_cdc_if.h"
 #include "adc_stream.h"
 #include "ws2812_spi.h"
+#include "font.h"
+
+#ifndef MAIN_COM_LOG_ENABLE
+#define MAIN_COM_LOG_ENABLE 0
+#endif
+#if !MAIN_COM_LOG_ENABLE
+#define printf(...) ((void)0)
+#endif
+
+#ifndef MAIN_LED_INDICATION_ENABLE
+#define MAIN_LED_INDICATION_ENABLE 0
+#endif
+
+#ifndef MAIN_WS2812_STATUS_ENABLE
+#define MAIN_WS2812_STATUS_ENABLE 1
+#endif
 
 /* Глобальные хэндлы периферии (стандарт для CubeMX, ранее отсутствовали в файле) */
 ADC_HandleTypeDef hadc1;
@@ -194,7 +210,8 @@ static volatile uint8_t rs485_phase_approach_have_prev_abs = 0u;
 static volatile uint32_t rs485_phase_approach_prev_abs_ticks = 0u;
 static volatile uint8_t rs485_phase_approach_worse_count = 0u;
 static volatile uint8_t optic_sensor_state_public = 0u;
-static volatile uint32_t optic_last_change_ms = 0u;
+static volatile uint8_t optic_input_level_public = 0u;
+static volatile uint32_t optic_last_high_ms = 0u;
 static volatile uint16_t optic_active_hold_deciseconds = 30u;
 static volatile uint8_t rs485_det_adc_bits = 0u;
 
@@ -232,6 +249,10 @@ static volatile uint32_t rs485_sync_control_tim15_cap = 0u;
 static volatile uint8_t rs485_anti_phase_recovery_active = 0u;
 static volatile uint8_t rs485_anti_phase_recovery_packets = 0u;
 static volatile uint8_t rs485_anti_phase_recovery_request = 0u;
+static volatile uint32_t rs485_phase_polarity_flip_count = 0u;
+static volatile uint32_t rs485_phase_slew_pulse_count = 0u;
+static volatile uint8_t rs485_phase_slew_active = 0u;
+static volatile uint32_t rs485_phase_slew_remaining_ticks = 0u;
 static volatile uint8_t rs485_sync_restart_request = 0u;
 static volatile uint32_t rs485_sync_restart_count = 0u;
 static volatile uint32_t rs485_sync_rejected_early_count = 0u;
@@ -255,15 +276,34 @@ static volatile uint8_t rs485_status_slot_response_first = 0u;
 static volatile uint8_t rs485_status_slot_response_second = 0u;
 static volatile uint8_t rs485_status_slave_reply_div_counter = 0u;
 static volatile uint32_t rs485_uart_error_count = 0u;
-static volatile uint8_t rs485_status_peer_bytes[31] = {0u};
-static volatile uint8_t rs485_status_peer_second_bytes[31] = {0u};
-static volatile uint32_t rs485_status_peer_last_ms[31] = {0u};
+static volatile uint32_t rs485_uart_pe_count = 0u;
+static volatile uint32_t rs485_uart_fe_count = 0u;
+static volatile uint32_t rs485_uart_ne_count = 0u;
+static volatile uint32_t rs485_uart_ore_count = 0u;
+static volatile uint32_t rs485_uart_sync_error_count = 0u;
+static volatile uint32_t rs485_anti_phase_sync_error_snapshot = 0u;
+static volatile uint32_t rs485_uart_ne_de_count = 0u;
+static volatile uint32_t rs485_uart_ne_sync_count = 0u;
+static volatile uint32_t rs485_uart_ne_discovery_count = 0u;
+static volatile uint32_t rs485_uart_ne_status_count = 0u;
+static volatile uint32_t rs485_uart_ne_other_count = 0u;
+static volatile uint8_t rs485_status_peer_bytes[32] = {0u};
+static volatile uint8_t rs485_status_peer_second_bytes[32] = {0u};
+static volatile uint32_t rs485_status_peer_last_ms[32] = {0u};
+static volatile uint8_t rs485_status_peer_candidate_count[32] = {0u};
+static volatile uint32_t rs485_status_peer_candidate_last_ms[32] = {0u};
 static volatile uint8_t rs485_status_rx_word_buf[2] = {0u};
 static volatile uint8_t rs485_status_rx_word_index = 0u;
 static volatile uint8_t rs485_status_rx_word_after_sync = 0u;
 static volatile uint8_t rs485_status_master_first = 0u;
 static volatile uint8_t rs485_status_master_second = 0u;
 static volatile uint8_t rs485_status_master_selector = 0u;
+static volatile uint8_t rs485_status_master_public_byte = 0u;
+static volatile uint8_t rs485_status_master_node_id = 0u;
+static volatile uint32_t rs485_status_master_last_ms = 0u;
+static volatile uint8_t rs485_status_master_candidate_id = 0u;
+static volatile uint8_t rs485_status_master_candidate_count = 0u;
+static volatile uint32_t rs485_status_master_candidate_last_ms = 0u;
 static volatile uint8_t rs485_master_status_tx_pending = 0u;
 static volatile uint8_t rs485_master_status_tx_first = 0u;
 static volatile uint8_t rs485_master_status_tx_second = 0u;
@@ -290,11 +330,32 @@ static volatile uint32_t rs485_status_window_miss_count = 0u;
 static volatile uint32_t rs485_status_local_slot_expected_count = 0u;
 static volatile uint32_t rs485_status_local_slot_miss_count = 0u;
 static volatile uint8_t rs485_status_local_slot_expected = 0u;
+static volatile uint16_t rs485_sensor_local_bits = 0u;
+static volatile uint32_t rs485_sensor_local_last_ms = 0u;
+static volatile uint8_t rs485_sensor_local_last_index = 0u;
+static volatile uint16_t rs485_sensor_peer_bits[32] = {0u};
+static volatile uint32_t rs485_sensor_peer_last_ms[32] = {0u};
+static volatile uint8_t rs485_sensor_peer_last_index[32] = {0u};
+#define RS485_SENSOR_EVENT_QUEUE_CAPACITY 17u /* ring holds all 16 sensor states */
+static volatile uint8_t rs485_sensor_event_queue_index[RS485_SENSOR_EVENT_QUEUE_CAPACITY] = {0u};
+static volatile uint8_t rs485_sensor_event_queue_value[RS485_SENSOR_EVENT_QUEUE_CAPACITY] = {0u};
+static volatile uint8_t rs485_sensor_event_queue_read = 0u;
+static volatile uint8_t rs485_sensor_event_queue_write = 0u;
+static volatile uint8_t rs485_sensor_event_current_valid = 0u;
+static volatile uint8_t rs485_sensor_event_current_index = 0u;
+static volatile uint8_t rs485_sensor_event_current_value = 0u;
+static volatile uint8_t rs485_sensor_event_retries = 0u;
+static volatile uint32_t rs485_sensor_event_cycle = 0u;
+static volatile uint32_t rs485_sensor_event_next_cycle = 0u;
+static volatile uint32_t rs485_sensor_event_tx_count = 0u;
+static volatile uint32_t rs485_sensor_event_rx_count = 0u;
+static volatile uint32_t rs485_sensor_event_queue_overflow = 0u;
 static uint8_t rs485_local_node_id = 0u;
 static uint8_t rs485_local_uid_hint = 1u;
 static volatile uint8_t rs485_local_node_id_assigned = 0u;
 static uint32_t rs485_master_claim_delay_ms = 1000u;
-static volatile uint8_t rs485_tx_queue[32] = {0};
+#define RS485_TX_QUEUE_CAPACITY  64u
+static volatile uint8_t rs485_tx_queue[RS485_TX_QUEUE_CAPACITY] = {0};
 static volatile uint8_t rs485_tx_queue_head = 0u;
 static volatile uint8_t rs485_tx_queue_tail = 0u;
 static volatile uint8_t rs485_tx_queue_count = 0u;
@@ -321,17 +382,141 @@ static volatile uint32_t rs485_sync_tx_suppressed_until_ms = 0u;
 static volatile uint8_t rs485_uid_rx_active = 0u;
 static volatile uint8_t rs485_uid_rx_index = 0u;
 static uint8_t rs485_uid_rx_buf[13] = {0u};
+/* Network-wide role assignment. Every board stores the UID of the MASTER;
+   only the board whose UID matches may enter MASTER mode. */
+static volatile uint8_t rs485_role_master_valid = 0u;
+static uint8_t rs485_role_master_uid[12] = {0u};
+static volatile uint32_t rs485_role_master_assigned_unix_s = 0u;
+static volatile uint16_t rs485_role_master_assigned_millis = 0u;
+static volatile uint8_t rs485_role_local_slave_persisted = 0u;
+/* The designated sensor SLAVE is independent from MASTER. slave_epoch_valid
+   remains set even after a clear, preventing an old claim from reviving the
+   previous selection after a reset or temporary bus split. */
+static volatile uint8_t rs485_role_slave_epoch_valid = 0u;
+static volatile uint8_t rs485_role_slave_valid = 0u;
+static volatile uint8_t rs485_role_slave_uid_prefix_only = 0u;
+static uint8_t rs485_role_slave_uid[12] = {0u};
+static volatile uint32_t rs485_role_slave_assigned_unix_s = 0u;
+static volatile uint16_t rs485_role_slave_assigned_millis = 0u;
+static volatile uint8_t rs485_role_selected_slave_node_id = 0u;
+static volatile uint8_t rs485_role_slave_id_high_water = 0u;
+static volatile uint8_t rs485_role_persist_dirty = 0u;
+static uint32_t rs485_role_persist_dirty_since_ms = 0u;
+static volatile uint8_t rs485_role_persist_save_pending = 0u;
+static uint32_t rs485_role_persist_save_ok_snapshot = 0u;
+static uint32_t rs485_role_persist_last_request_ms = 0u;
+static volatile uint8_t rs485_role_boot_listen_active = 1u;
+static uint32_t rs485_role_boot_listen_until_ms = 0u;
+
+/* In fallback (no host-assigned MASTER), remember the strongest MASTER UID
+   accepted on E7. A rebooting lower-UID board can briefly elect itself while
+   the real bus is quiet; its stale E7 must not erase every slave number. */
+static volatile uint8_t rs485_role_auto_master_valid = 0u;
+static uint8_t rs485_role_auto_master_uid[12] = {0u};
+static uint32_t rs485_role_auto_master_conflict_ms = 0u;
+static volatile uint8_t rs485_role_auto_probe_active = 0u;
+static uint32_t rs485_role_auto_probe_until_ms = 0u;
+static volatile uint8_t rs485_role_auto_heartbeat_tx_remaining = 0u;
+static uint32_t rs485_role_auto_heartbeat_tx_next_ms = 0u;
+
+/* Host MASTER assignment is propagated over RS485. Regular announcements let
+   a board which was powered off learn the current assignment before it can
+   restore an obsolete local MASTER role. */
+static volatile uint8_t rs485_role_claim_tx_pending = 0u;
+static volatile uint8_t rs485_role_claim_tx_force = 0u;
+static volatile uint8_t rs485_role_claim_tx_retries = 0u;
+static uint32_t rs485_role_claim_tx_next_ms = 0u;
+static uint32_t rs485_role_claim_last_periodic_ms = 0u;
+static volatile uint8_t rs485_role_slave_claim_tx_pending = 0u;
+static volatile uint8_t rs485_role_slave_claim_tx_force = 0u;
+static volatile uint8_t rs485_role_slave_claim_tx_retries = 0u;
+static uint32_t rs485_role_slave_claim_tx_next_ms = 0u;
+static uint32_t rs485_role_slave_claim_last_periodic_ms = 0u;
+
+/* UID-addressed slave enumeration: the MASTER gives IDs 1,2,3... to one UID
+   at a time. Unassigned slaves keep node_id=0 and therefore cannot collide in
+   the normal status slots. */
+static volatile uint8_t rs485_role_enum_state = 0u;
+static volatile uint8_t rs485_role_enum_round = 0u;
+static volatile uint8_t rs485_role_enum_collect_pass = 0u;
+static volatile uint8_t rs485_role_enum_target_id = 0u;
+static volatile uint8_t rs485_role_enum_candidate_valid = 0u;
+static uint8_t rs485_role_enum_candidate_uid[12] = {0u};
+static volatile uint8_t rs485_role_enum_assign_retries = 0u;
+static volatile uint8_t rs485_role_enum_ack_received = 0u;
+static volatile uint8_t rs485_role_enum_ack_tx_pending = 0u;
+static volatile uint8_t rs485_role_enum_ack_tx_id = 0u;
+/* On a slave, E7 makes node_id=0 only provisionally. Do not overwrite the
+   last confirmed Flash id until the matching UID-addressed E4 arrives. */
+static volatile uint8_t rs485_role_enum_waiting_assignment = 0u;
+static volatile uint8_t rs485_role_last_confirmed_node_id = 0u;
+static uint32_t rs485_role_enum_ack_tx_next_ms = 0u;
+static volatile uint8_t rs485_role_enum_reset_tx_remaining = 0u;
+static uint32_t rs485_role_enum_reset_tx_next_ms = 0u;
+static uint32_t rs485_role_enum_deadline_ms = 0u;
+static uint32_t rs485_role_enum_next_ms = 0u;
+static uint32_t rs485_role_enum_stable_mask = 0u;
+static uint32_t rs485_role_enum_stable_since_ms = 0u;
+/* Stable node IDs are configured by the local RPI.  UID-bearing announcements
+   are used only to detect duplicate IDs; they never allocate or renumber. */
+static uint8_t rs485_node_claim_uid[32][12] = {{0u}};
+static volatile uint32_t rs485_node_claim_last_ms[32] = {0u};
+static uint8_t rs485_node_claim_alt_uid[32][12] = {{0u}};
+static volatile uint32_t rs485_node_claim_alt_last_ms[32] = {0u};
+static volatile uint32_t rs485_node_conflict_mask = 0u;
+static volatile uint8_t rs485_node_claim_tx_pending = 0u;
+static volatile uint8_t rs485_node_claim_tx_retries = 0u;
+static uint32_t rs485_node_claim_tx_next_ms = 0u;
+static uint32_t rs485_node_claim_last_periodic_ms = 0u;
+static volatile uint32_t rs485_foreign_master_last_ms = 0u;
+
+static volatile uint8_t rs485_role_rx_magic = 0u;
+static volatile uint8_t rs485_role_rx_index = 0u;
+static volatile uint8_t rs485_role_rx_expected = 0u;
+static uint8_t rs485_role_rx_buf[20] = {0u};
+#define RS485_ROLE_PENDING_CAPACITY 4u
+static volatile uint8_t rs485_role_frame_pending_write = 0u;
+static volatile uint8_t rs485_role_frame_pending_read = 0u;
+static uint8_t rs485_role_frame_pending_magic[RS485_ROLE_PENDING_CAPACITY] = {0u};
+static uint8_t rs485_role_frame_pending_buf[RS485_ROLE_PENDING_CAPACITY][20] = {{0u}};
+static uint64_t rs485_local_short_id36 = 0u;
+static volatile uint16_t rs485_identity_local_rpi_number = 0u;
+static uint8_t rs485_identity_local_ip4[4] = {0u, 0u, 0u, 0u};
+static volatile uint8_t rs485_identity_local_ip_set = 0u;
+static uint8_t rs485_identity_nibbles[32][21] = {{0u}};
+static volatile uint32_t rs485_identity_seen_page_mask[32] = {0u};
+static volatile uint32_t rs485_identity_last_ms[32] = {0u};
+static uint8_t rs485_identity_local_catalog_id = 0u;
+static volatile uint8_t rs485_identity_local_catalog_valid = 0u;
+static volatile uint8_t rs485_identity_scan_active = 0u;
+static volatile uint8_t rs485_identity_scan_page = 0u;
+static volatile uint8_t rs485_identity_self_tx_state = 0u;
+static volatile uint8_t rs485_identity_current_req_active = 0u;
+static volatile uint8_t rs485_identity_current_req_page = 0u;
+static volatile uint8_t rs485_identity_current_req_selector = 0u;
+static volatile uint8_t rs485_identity_master_self_page = 0xFFu;
+static volatile uint8_t rs485_identity_master_self_node_id = 0u;
+static volatile uint8_t rs485_identity_master_self_node_valid = 0u;
+static volatile uint32_t rs485_identity_scan_last_start_ms = 0u;
+static volatile uint32_t rs485_identity_scan_last_complete_ms = 0u;
+static volatile uint8_t rs485_identity_rescan_requested = 0u;
+static volatile uint32_t rs485_identity_uid_dedupe_count = 0u;
+static volatile uint8_t rs485_master_status_tx_no_response = 0u;
+static volatile uint8_t rs485_status_window_no_response_expected = 0u;
+static volatile uint8_t rs485_status_master_no_reply_slot = 0u;
 
 #define RS485_DISCOVERY_REQ_BASE 0x40u
 #define RS485_DISCOVERY_ACK_BASE 0x80u
 #define RS485_DISCOVERY_ID_MASK  0x1Fu
 #define RS485_DISCOVERY_MAX_ID   31u
+#define RS485_DEVICE_ID_COUNT    32u
 #define RS485_SYNC7_BASE         0x25u
 #define RS485_SYNC_EDGE_BIT      0x80u
 #define RS485_UID_FRAME_MAGIC    0xE1u
 #define RS485_UID_FRAME_BYTES    12u
 #define RS485_UID_FRAME_TAIL     (RS485_UID_FRAME_BYTES + 1u)
 #define RS485_SYNC_PRESENT_MS    250u
+#define RS485_AUTO_ROLE_MASTER_LOSS_MS 1000u
 #define RS485_BOOT_LISTEN_MS     1000u
 #define RS485_MASTER_CLAIM_MS    1000u
 #define RS485_PEER_UID_STALE_MS  1500u
@@ -341,7 +526,62 @@ static uint8_t rs485_uid_rx_buf[13] = {0u};
 #define RS485_UID_SLOT_STEP_MS   7u
 #define RS485_UID_SLOT_COUNT     16u
 #define RS485_UID_ARBITRATION_QUIET_MS 220u
-#define RS485_TX_QUEUE_CAPACITY  32u
+#define RS485_ROLE_CLAIM_MAGIC          0xE2u
+#define RS485_ROLE_ENUM_REQ_MAGIC       0xE3u
+#define RS485_ROLE_ENUM_ASSIGN_MAGIC    0xE4u
+#define RS485_ROLE_ENUM_ACK_MAGIC       0xE5u
+#define RS485_ROLE_SLAVE_CLAIM_MAGIC    0xE6u
+#define RS485_ROLE_ENUM_RESET_MAGIC     0xE7u
+#define RS485_ROLE_AUTO_HEARTBEAT_MAGIC 0xE8u
+#define RS485_ROLE_NODE_CLAIM_MAGIC     0xE9u
+#define RS485_ROLE_CLAIM_FORCE_BIT      0x80u
+#define RS485_ROLE_SLAVE_VALID_BIT      0x01u
+#define RS485_ROLE_SLAVE_NODE_SHIFT     1u
+#define RS485_ROLE_SLAVE_NODE_MASK      0x3Eu
+#define RS485_ROLE_CLAIM_PAYLOAD_BYTES  20u /* flags + Unix s/ms + UID96 + checksum */
+#define RS485_ROLE_ENUM_REQ_BYTES       3u  /* round + target id + checksum */
+#define RS485_ROLE_ENUM_ASSIGN_BYTES    14u /* target id + UID96 + checksum */
+#define RS485_ROLE_ENUM_ACK_BYTES       14u /* assigned id + UID96 + checksum */
+#define RS485_ROLE_ENUM_RESET_BYTES     13u /* master UID96 + checksum */
+#define RS485_ROLE_AUTO_HEARTBEAT_BYTES 13u /* candidate MASTER UID96 + checksum */
+#define RS485_ROLE_NODE_CLAIM_BYTES     14u /* stable node id + UID96 + checksum */
+#define RS485_ROLE_CLAIM_PERIODIC       0u
+#define RS485_ROLE_CLAIM_HOST           1u
+#define RS485_ROLE_CLAIM_BOOT           2u
+#define RS485_ROLE_BOOT_LISTEN_MS       1200u
+#define RS485_ROLE_CLAIM_PERIOD_MS      10000u
+#define RS485_ROLE_CLAIM_RETRY_MS       25u
+#define RS485_ROLE_BUS_QUIET_MS         12u
+#define RS485_ROLE_ENUM_COLLECT_MS      96u
+#define RS485_ROLE_ENUM_COLLECT_PASSES  8u
+#define RS485_ROLE_ENUM_RETRY_MS        500u
+#define RS485_ROLE_ENUM_IDLE_RETRY_MS   10000u
+#define RS485_ROLE_ENUM_SETTLE_MS       250u
+#define RS485_ROLE_ENUM_ACK_TIMEOUT_MS  120u
+#define RS485_ROLE_ENUM_ASSIGN_RETRY_MS 35u
+#define RS485_ROLE_ENUM_RESET_RETRY_MS  35u
+#define RS485_ROLE_ENUM_RESET_RETRIES   3u
+#define RS485_ROLE_ENUM_GUARD_BYTES     RS485_ROLE_CLAIM_PAYLOAD_BYTES
+#define RS485_ROLE_ENUM_RECONCILE_MS    6000u
+#define RS485_ROLE_AUTO_CONFLICT_HOLDOFF_MS 2000u
+#define RS485_ROLE_AUTO_PROBE_MS        1600u
+#define RS485_ROLE_AUTO_HEARTBEAT_RETRIES 3u
+#define RS485_ROLE_AUTO_HEARTBEAT_RETRY_MS 40u
+#define RS485_ROLE_PERSIST_DEBOUNCE_MS  1000u
+#define RS485_ROLE_AUTO_ENUM_ENABLE     0u
+#define RS485_ROLE_NETWORK_ASSIGN_ENABLE 0u
+#define RS485_STATUS_COMPACT_ENABLE     0u
+#define RS485_NODE_CLAIM_PERIOD_MS      5000u
+#define RS485_NODE_CLAIM_HOLD_MS        15000u
+#define RS485_NODE_CLAIM_RETRY_MS       37u
+#define RS485_NODE_CLAIM_RETRIES        3u
+/* A free-running 15-byte claim cannot be inserted safely into the continuous
+   200 Hz SYNC/status exchange: receivers that are already inside a two-byte
+   status window interpret its payload as node status.  Role and node_id are
+   therefore reported to each board's RPI through USB/UART status; a managing
+   host detects duplicates by comparing those readbacks. */
+#define RS485_NODE_CLAIM_TX_ENABLE      0u
+#define RS485_MULTI_MASTER_HOLD_MS      3000u
 #define RS485_STATUS_ID_MASK          0x1Fu
 #define RS485_STATUS_OPTIC_BIT        0x20u
 #define RS485_STATUS_DET_ADC1_BIT     0x40u
@@ -358,25 +598,76 @@ static uint8_t rs485_uid_rx_buf[13] = {0u};
 #define RS485_STATUS_MASTER_WORD_DELAY_MS 1u
 #define RS485_STATUS_MASTER_WORD_DELAY_BITS 24u
 #define RS485_STATUS_LEGACY_PROBE_DIV 16u
+#define RS485_STATUS_MASTER_INFO_MASK  0xE0u
+#define RS485_STATUS_MASTER_INFO_VALUE 0xC0u
 #define RS485_STATUS_ASSIGN_CMD_MASK  0xE0u
 #define RS485_STATUS_ASSIGN_CMD_VALUE 0xA0u
+#define RS485_STATUS_IDENT_REQ_MASK   0xE0u
+#define RS485_STATUS_IDENT_REQ_VALUE  0x80u
+#define RS485_STATUS_IDENT_RESP_MASK  0xF0u
+#define RS485_STATUS_IDENT_RESP_VALUE 0x40u
+#define RS485_STATUS_SENSOR_EVENT_MASK  0xE0u
+#define RS485_STATUS_SENSOR_EVENT_VALUE 0x20u
+#define RS485_STATUS_MASTER_SELF_PAGE_MASK  0xE0u
+#define RS485_STATUS_MASTER_SELF_PAGE_VALUE 0xE0u
+#define RS485_STATUS_MASTER_SELF_DATA_MASK  0xF0u
+#define RS485_STATUS_MASTER_SELF_DATA_VALUE 0x60u
+#define RS485_STATUS_SENSOR_MASK        0xE0u
+#define RS485_SENSOR_EVENT_RETRIES      3u
+#define RS485_SENSOR_EVENT_RETRY_SLOTS  4u
+#define RS485_STATUS_EVENT_DELAY_BITS   2u
+/* A regular selected-slave reply waits until an immediate sensor event has
+   had enough time to put its two-byte word on the bus. */
+#define RS485_STATUS_REGULAR_DELAY_BITS 32u
+#define RS485_IDENT_SHORT_NIBBLES     9u
+#define RS485_IDENT_RPI_NIBBLES       4u
+#define RS485_IDENT_IP_NIBBLES        8u
+#define RS485_IDENT_PAGE_COUNT        (RS485_IDENT_SHORT_NIBBLES + \
+                                       RS485_IDENT_RPI_NIBBLES + \
+                                       RS485_IDENT_IP_NIBBLES)
+#define RS485_IDENT_SHORT_PAGE_MASK   ((1u << RS485_IDENT_SHORT_NIBBLES) - 1u)
+#define RS485_IDENT_ALL_PAGES_MASK    ((1u << RS485_IDENT_PAGE_COUNT) - 1u)
+#define RS485_IDENT_TABLE_COUNT       32u
+#define RS485_IDENT_RECENT_MS         30000u
+#define RS485_IDENT_EXPIRE_CHECK_MS   1000u
+#define RS485_IDENT_AUTO_SCAN_BOOT_MS 1000u
+#define RS485_IDENT_AUTO_SCAN_PERIOD_MS 5000u
+#define RS485_IDENT_SELF_STATE_NONE   0u
+#define RS485_IDENT_SELF_STATE_PAGE   1u
+#define RS485_IDENT_SELF_STATE_DATA   2u
 #define RS485_STATUS_ASSIGN_RETRY_LIMIT 8u
 #define RS485_STATUS_ASSIGN_ID_HOLD_MS 5000u
-#define RS485_STATUS_PEER_HOLD_MS     500u
+#define RS485_STATUS_PEER_HOLD_MS     1000u
+#define RS485_STATUS_PEER_CONFIRM_COUNT 3u
+#define RS485_STATUS_PEER_CONFIRM_WINDOW_MS 500u
 #define RS485_SYNC_RELATION_UNKNOWN   0u
 #define RS485_SYNC_RELATION_IN_PHASE  1u
 #define RS485_SYNC_RELATION_ANTI_PHASE 2u
-#define RS485_SYNC_RELATION_CONFIRM_SCORE 3
-#define RS485_SYNC_ANTI_PHASE_CONFIRM_PACKETS 4u
+#define RS485_SYNC_RELATION_CONFIRM_SCORE 5
+#define RS485_SYNC_ANTI_PHASE_CONFIRM_PACKETS 200u
+#define RS485_SYNC_ANTI_PHASE_MASTER_FRESH_MS RS485_STATUS_PEER_HOLD_MS
 #define RS485_SYNC_RESTART_MIN_MS 250u
 #define RS485_SYNC_EARLY_REJECT_NUM 3u
 #define RS485_SYNC_EARLY_REJECT_DEN 4u
 #define RS485_SYNC_EARLY_REJECT_MAX_TICKS 550000u
-#define RS485_SYNC_PERIOD_GUARD_ENABLE 0u
+#define RS485_SYNC_PERIOD_GUARD_ENABLE 1u
 #define RS485_SYNC_UART_PERIODIC_LOG_ENABLE 0u
 #define RS485_SYNC_UART_PERIODIC_LOG_EDGES 10u
 #define RS485_SYNC_ANTI_PHASE_RECOVERY_ENABLE 1u
 #define RS485_SYNC_PHASE_TRACK_ENABLE 1u
+
+/* Public device IDs are the native five-bit values 00..31. Whether an ID is
+   configured is carried by rs485_local_node_id_assigned, never inferred from
+   the numeric value zero. */
+static inline uint8_t rs485_status_id_to_wire(uint8_t device_id)
+{
+  return (uint8_t)(device_id & RS485_STATUS_ID_MASK);
+}
+
+static inline uint8_t rs485_status_id_from_wire(uint8_t wire_id)
+{
+  return (uint8_t)(wire_id & RS485_STATUS_ID_MASK);
+}
 
 static inline uint8_t rs485_sync_read_local_marker_phase(void)
 {
@@ -514,16 +805,43 @@ static void rs485_status_wait_bit_times(uint32_t bit_count);
 static void rs485_status_wait_response_delay(void);
 static uint8_t rs485_status_count_recent_peers(uint32_t now_ms, uint32_t hold_ms);
 static uint32_t rs485_status_get_recent_peer_mask(uint32_t now_ms, uint32_t hold_ms);
+static uint8_t rs485_status_confirm_peer_candidate(uint8_t node_id,
+                                                   uint32_t now_ms);
+static uint8_t rs485_status_confirm_master_candidate(uint8_t node_id,
+                                                     uint32_t now_ms);
 static void rs485_status_clear_peer_id(uint8_t node_id);
+static void rs485_status_clear_peer_table(void);
+static void rs485_status_assignment_reset(void);
 static void rs485_status_compact_schedule_assignment(uint32_t now_ms);
 static void rs485_status_compact_on_master_response(uint8_t response_id);
 static void rs485_status_apply_master_assignment(uint8_t first, uint8_t second);
 static uint8_t rs485_status_build_local_byte(void);
+static uint8_t rs485_status_build_public_local_byte(void);
+static uint8_t rs485_status_build_master_identity_first_byte(void);
 static uint8_t rs485_status_build_local_second_byte(uint8_t selector);
+static void rs485_status_note_master_word(uint8_t first, uint8_t second);
+static uint8_t rs485_sensor_event_set_local(uint8_t sensor_index, uint8_t active);
+static uint8_t rs485_sensor_event_prepare(uint8_t *sensor_index, uint8_t *active);
+static void rs485_sensor_event_commit_tx(void);
+static void rs485_sensor_queue_active_snapshot(void);
+static void rs485_sensor_note_remote(uint8_t device_id,
+                                     uint8_t sensor_index,
+                                     uint8_t active,
+                                     uint32_t now_ms);
+static void rs485_identity_clear_row(uint8_t node_id);
+static void rs485_identity_expire_rows(uint32_t now_ms);
+static uint8_t rs485_identity_get_local_nibble(uint8_t page);
+static void rs485_identity_store_local_row(uint32_t now_ms);
+static void rs485_identity_note_local_id_change(uint8_t old_id, uint8_t new_id);
+static void rs485_identity_note_master_request(uint8_t first, uint8_t second);
+static void rs485_identity_note_master_self_word(uint8_t first, uint8_t second);
+static void rs485_identity_note_response(uint8_t node_id, uint8_t second);
+static void rs485_identity_master_on_selector_wrap(void);
+static void rs485_identity_service(uint32_t now_ms);
 static void rs485_status_reset_window_state(void);
 static void rs485_status_finalize_window(void);
 static void rs485_status_begin_window(void);
-static void rs485_status_on_received(uint8_t first, uint8_t second);
+static uint8_t rs485_status_on_received(uint8_t first, uint8_t second);
 static void rs485_status_on_master_word(uint8_t first, uint8_t second);
 static void rs485_status_service(void);
 static void rs485_master_status_service(uint32_t now_ms);
@@ -543,7 +861,37 @@ static uint32_t rs485_uid_get_announce_delay_ms(void);
 static uint32_t rs485_compute_uid_mix(void);
 static uint8_t rs485_compute_local_node_id(void);
 static uint32_t rs485_compute_master_claim_delay_ms(void);
-static void rs485_sync_auto_role_service(uint32_t now_ms);
+static void rs485_role_reset_local_assignment_epoch(void);
+static void rs485_role_mark_persist_dirty(void);
+static void rs485_role_mark_persist_dirty_immediate(void);
+static void rs485_role_persist_service(uint32_t now_ms);
+static void rs485_role_schedule_master_claim(uint8_t reason);
+static void rs485_role_claim_service(uint32_t now_ms);
+static void rs485_role_schedule_slave_claim(uint8_t reason);
+static void rs485_role_slave_claim_service(uint32_t now_ms);
+static void rs485_role_enumeration_service(uint32_t now_ms);
+static void rs485_role_start_enumeration_epoch(uint32_t now_ms);
+static void rs485_node_claim_reset_registry(void);
+static void rs485_node_claim_schedule(uint32_t now_ms, uint8_t retries);
+static void rs485_node_claim_service(uint32_t now_ms);
+static void rs485_node_claim_note(uint8_t node_id, const uint8_t uid[12]);
+static void rs485_role_schedule_auto_heartbeat(uint32_t now_ms,
+                                               uint8_t retries);
+static void rs485_role_auto_heartbeat_tx_service(uint32_t now_ms);
+static uint8_t rs485_role_frame_checksum(uint8_t magic,
+                                         const uint8_t *payload,
+                                         uint8_t payload_len);
+static int8_t rs485_role_compare_assignment(uint32_t unix_s,
+                                            uint16_t millis,
+                                            const uint8_t uid[12]);
+static int8_t rs485_role_compare_slave_assignment(uint32_t unix_s,
+                                                  uint16_t millis,
+                                                  const uint8_t uid[12]);
+static uint8_t rs485_role_local_is_selected_slave(void);
+static void rs485_role_reset_rx(void);
+static void rs485_role_rx_service(void);
+static void rs485_role_process_frame(uint8_t magic, const uint8_t *payload);
+static void rs485_sync_assigned_role_service(uint32_t now_ms);
 static void arr_auto_tune_service(void);
 static uint32_t tim15_sync_get_deadband_ticks(void);
 static int32_t arr_auto_abs_i32(int32_t value);
@@ -582,7 +930,10 @@ static volatile int err_code = 0;
 #ifndef STAGE
 #define STAGE(idx, tag) do{ (void)(idx); (void)(tag); }while(0)
 #endif
-static char stage_log[32][16] __attribute__((unused));
+/* Boot-only CPU log.  It does not need DMA access and is deliberately kept
+   out of the nearly full D1 RAM so nested IRQ stack frames cannot hit .bss. */
+static char stage_log[32][16]
+    __attribute__((section(".ram_dtcm"), aligned(32), unused));
 static int stage_count __attribute__((unused)) = 0;
 static void FlushStageLog(void) __attribute__((unused));
 static void FlushStageLog(void) { /* no-op в безопасном режиме */ }
@@ -826,8 +1177,501 @@ void uart1_raw_putc(char c)
   }
 }
 
+static void uart1_raw_write_str(const char *text)
+{
+  if (text == NULL) {
+    return;
+  }
+  while (*text != '\0') {
+    uart1_raw_putc(*text++);
+  }
+}
+
+static void uart1_raw_write_u32_dec(uint32_t value)
+{
+  char buf[10];
+  uint8_t len = 0u;
+
+  if (value == 0u) {
+    uart1_raw_putc('0');
+    return;
+  }
+
+  while ((value != 0u) && (len < (uint8_t)sizeof(buf))) {
+    buf[len++] = (char)('0' + (value % 10u));
+    value /= 10u;
+  }
+  while (len != 0u) {
+    uart1_raw_putc(buf[--len]);
+  }
+}
+
+static void uart1_raw_write_i32_dec(int32_t value)
+{
+  uint32_t magnitude;
+
+  if (value < 0) {
+    uart1_raw_putc('-');
+    magnitude = 0u - (uint32_t)value;
+  } else {
+    magnitude = (uint32_t)value;
+  }
+  uart1_raw_write_u32_dec(magnitude);
+}
+
+static void uart1_raw_write_hex_nibble(uint8_t value)
+{
+  value &= 0x0Fu;
+  uart1_raw_putc((char)((value < 10u) ? ('0' + value) : ('A' + (value - 10u))));
+}
+
+static void uart1_raw_write_u8_hex(uint8_t value)
+{
+  uart1_raw_write_hex_nibble((uint8_t)(value >> 4));
+  uart1_raw_write_hex_nibble(value);
+}
+
+static void uart1_raw_write_u32_hex(uint32_t value)
+{
+  for (int8_t shift = 28; shift >= 0; shift = (int8_t)(shift - 4)) {
+    uart1_raw_write_hex_nibble((uint8_t)(value >> (uint8_t)shift));
+  }
+}
+
+static void uart1_raw_print_version(void)
+{
+  uart1_raw_write_str("\r\nVERSION fw=");
+  uart1_raw_write_str(FW_VERSION_STR);
+  uart1_raw_write_str(" git=");
+  uart1_raw_write_str(fw_git_hash);
+  uart1_raw_write_str(" build_date=");
+  uart1_raw_write_str(fw_build_date);
+  uart1_raw_write_str(" build_time=");
+  uart1_raw_write_str(fw_build_time);
+  uart1_raw_write_str(" pairs=8\r\n");
+}
+
+static void uart1_raw_print_sync_state(void)
+{
+  extern volatile uint32_t sync_buffers_between_edges;
+  vnd_lcd_sync_snapshot_t lcd;
+  uint8_t local_status = 0u;
+  uint8_t active_status_count = 0u;
+  uint8_t master_status = 0u;
+  uint8_t master_flags = 0u;
+  uint16_t master_age_ms = 0xFFFFu;
+  uint8_t total_devices = 1u;
+  uint8_t persisted_mode = VND_SYNC_MODE_SLAVE;
+  uint8_t role_persisted = 0u;
+  uint32_t seen_mask = 0u;
+
+  memset(&lcd, 0, sizeof(lcd));
+  vnd_get_lcd_sync_snapshot(&lcd);
+  (void)rs485_status_get_snapshot(&local_status,
+                                  &active_status_count,
+                                  &seen_mask,
+                                  NULL,
+                                  32u);
+  (void)rs485_status_get_master_snapshot(&master_status,
+                                         &master_age_ms,
+                                         &master_flags);
+  role_persisted = rs485_role_get_local_persisted_mode(&persisted_mode);
+
+  if ((lcd.raw_mode == VND_SYNC_MODE_MASTER) ||
+      (lcd.raw_mode == VND_SYNC_MODE_SLAVE)) {
+    total_devices = (active_status_count != 0u) ? active_status_count : 1u;
+  }
+
+  uart1_raw_write_str("\r\nSYNC_STATE raw=");
+  uart1_raw_write_u32_dec(lcd.raw_mode);
+  uart1_raw_write_str(" display=");
+  uart1_raw_write_u32_dec(lcd.display_mode);
+  uart1_raw_write_str(" char=");
+  uart1_raw_putc((char)lcd.display_char);
+  uart1_raw_write_str(" node=");
+  uart1_raw_write_u32_dec(lcd.node_id);
+  uart1_raw_write_str(" id_assigned=");
+  uart1_raw_write_u32_dec(lcd.node_id_assigned);
+  uart1_raw_write_str(" display_value=");
+  uart1_raw_write_u32_dec(lcd.display_value);
+  uart1_raw_write_str(" active_status_count=");
+  uart1_raw_write_u32_dec(active_status_count);
+  uart1_raw_write_str(" total_devices=");
+  uart1_raw_write_u32_dec(total_devices);
+  uart1_raw_write_str(" sync_seen_mask=0x");
+  uart1_raw_write_u32_hex(seen_mask);
+  uart1_raw_write_str(" uid_dedupe=");
+  uart1_raw_write_u32_dec(rs485_identity_uid_dedupe_count);
+  uart1_raw_write_str(" local_status=0x");
+  uart1_raw_write_u8_hex(local_status);
+  uart1_raw_write_str(" master_status=0x");
+  uart1_raw_write_u8_hex(master_status);
+  uart1_raw_write_str(" master_age_ms=");
+  uart1_raw_write_u32_dec((uint32_t)master_age_ms);
+  uart1_raw_write_str(" master_flags=0x");
+  uart1_raw_write_u8_hex(master_flags);
+  uart1_raw_write_str(" role_persisted=");
+  uart1_raw_write_u32_dec(role_persisted);
+  uart1_raw_write_str(" persisted_mode=");
+  uart1_raw_write_u32_dec((uint32_t)persisted_mode);
+  uart1_raw_write_str(" id_conflicts=0x");
+  uart1_raw_write_u32_hex(rs485_node_get_conflict_mask());
+  uart1_raw_write_str(" multiple_master=");
+  uart1_raw_write_u32_dec((uint32_t)rs485_multiple_master_detected());
+  uart1_raw_write_str(" sync_alive=");
+  uart1_raw_write_u32_dec((uint32_t)lcd.sync_signal_alive);
+  uart1_raw_write_str(" sync_ok=");
+  uart1_raw_write_u32_dec((uint32_t)lcd.sync_ok_visual);
+  uart1_raw_write_str(" sync_locked=");
+  uart1_raw_write_u32_dec((uint32_t)lcd.sync_color_locked);
+  uart1_raw_write_str(" sync_age_ms=");
+  uart1_raw_write_u32_dec(lcd.sync_age_ms);
+  uart1_raw_write_str(" sync_edges=");
+  uart1_raw_write_u32_dec(sync_edge_count);
+  uart1_raw_write_str(" phase_rel=");
+  uart1_raw_write_u32_dec((uint32_t)rs485_sync_phase_relation);
+  uart1_raw_write_str(" phase_score=");
+  uart1_raw_write_i32_dec((int32_t)rs485_sync_relation_score);
+  uart1_raw_write_str(" anti_active=");
+  uart1_raw_write_u32_dec((uint32_t)rs485_anti_phase_recovery_active);
+  uart1_raw_write_str(" anti_packets=");
+  uart1_raw_write_u32_dec((uint32_t)rs485_anti_phase_recovery_packets);
+  uart1_raw_write_str(" anti_request=");
+  uart1_raw_write_u32_dec((uint32_t)rs485_anti_phase_recovery_request);
+  uart1_raw_write_str(" anti_sync_err=");
+  uart1_raw_write_u32_dec(rs485_anti_phase_sync_error_snapshot);
+  uart1_raw_write_str(" phase_flip=");
+  uart1_raw_write_u32_dec(rs485_phase_polarity_flip_count);
+  uart1_raw_write_str(" phase_slew=");
+  uart1_raw_write_u32_dec(rs485_phase_slew_pulse_count);
+  uart1_raw_write_str(" phase_slew_active=");
+  uart1_raw_write_u32_dec((uint32_t)rs485_phase_slew_active);
+  uart1_raw_write_str(" phase_slew_left=");
+  uart1_raw_write_u32_dec(rs485_phase_slew_remaining_ticks);
+  uart1_raw_write_str(" phase_locked=");
+  uart1_raw_write_u32_dec((uint32_t)rs485_sync_locked);
+  uart1_raw_write_str(" phase_err=");
+  uart1_raw_write_i32_dec(sync_phase_last_error_ticks);
+  uart1_raw_write_str(" phase_ctrl=");
+  uart1_raw_write_i32_dec(sync_phase_last_control_error_ticks);
+  uart1_raw_write_str(" phase_pulse=");
+  uart1_raw_write_i32_dec(sync_phase_last_pulse_delta);
+  uart1_raw_write_str(" phase_updates=");
+  uart1_raw_write_u32_dec(sync_phase_fast_edges);
+  uart1_raw_write_str("/");
+  uart1_raw_write_u32_dec(sync_phase_fast_pulses);
+  uart1_raw_write_str(" phase_skip=");
+  uart1_raw_write_u32_dec(sync_phase_fast_skip_busy);
+  uart1_raw_write_str("/");
+  uart1_raw_write_u32_dec(sync_phase_fast_skip_spacing);
+  uart1_raw_write_str(" phase_restart=");
+  uart1_raw_write_u32_dec(rs485_sync_restart_count);
+  uart1_raw_write_str(" rs485_rx=");
+  uart1_raw_write_u32_dec(rs485_rx_packets);
+  uart1_raw_write_str(" rs485_tx=");
+  uart1_raw_write_u32_dec(rs485_tx_packets);
+  uart1_raw_write_str(" uart_err=");
+  uart1_raw_write_u32_dec(rs485_uart_error_count);
+  uart1_raw_write_str(" uart_pe=");
+  uart1_raw_write_u32_dec(rs485_uart_pe_count);
+  uart1_raw_write_str(" uart_fe=");
+  uart1_raw_write_u32_dec(rs485_uart_fe_count);
+  uart1_raw_write_str(" uart_ne=");
+  uart1_raw_write_u32_dec(rs485_uart_ne_count);
+  uart1_raw_write_str(" uart_ore=");
+  uart1_raw_write_u32_dec(rs485_uart_ore_count);
+  uart1_raw_write_str(" sync_err=");
+  uart1_raw_write_u32_dec(rs485_uart_sync_error_count);
+  uart1_raw_write_str(" ne_de=");
+  uart1_raw_write_u32_dec(rs485_uart_ne_de_count);
+  uart1_raw_write_str(" ne_sync=");
+  uart1_raw_write_u32_dec(rs485_uart_ne_sync_count);
+  uart1_raw_write_str(" ne_disc=");
+  uart1_raw_write_u32_dec(rs485_uart_ne_discovery_count);
+  uart1_raw_write_str(" ne_status=");
+  uart1_raw_write_u32_dec(rs485_uart_ne_status_count);
+  uart1_raw_write_str(" ne_other=");
+  uart1_raw_write_u32_dec(rs485_uart_ne_other_count);
+  uart1_raw_write_str(" period=");
+  uart1_raw_write_u32_dec(sync_tim5_period_ticks);
+  uart1_raw_write_str(" sample=");
+  uart1_raw_write_u32_dec((uint32_t)sync_phase_diag_sample);
+  uart1_raw_write_str("/");
+  uart1_raw_write_u32_dec((uint32_t)sync_phase_diag_samples);
+  uart1_raw_write_str(" tim15=");
+  uart1_raw_write_u32_dec(TIM15->CNT);
+  uart1_raw_write_str("/");
+  uart1_raw_write_u32_dec(TIM15->ARR);
+  uart1_raw_write_str(" bufs_per_sync=");
+  uart1_raw_write_u32_dec(sync_buffers_between_edges);
+  uart1_raw_write_str(" sync_reject=");
+  uart1_raw_write_u32_dec(rs485_sync_rejected_early_count);
+  uart1_raw_write_str("\r\n");
+}
+
+static uint8_t uart1_parse_long_arg(char *arg, long min_value, long max_value, long *out_value)
+{
+  char *end_ptr = NULL;
+  long value;
+
+  if ((arg == NULL) || (out_value == NULL)) {
+    return 0u;
+  }
+
+  while (*arg == ' ') {
+    arg++;
+  }
+  if (*arg == 0) {
+    return 0u;
+  }
+
+  value = strtol(arg, &end_ptr, 10);
+  while ((end_ptr != NULL) && (*end_ptr == ' ')) {
+    end_ptr++;
+  }
+  if ((end_ptr == arg) || ((end_ptr != NULL) && (*end_ptr != 0)) ||
+      (value < min_value) || (value > max_value)) {
+    return 0u;
+  }
+
+  *out_value = value;
+  return 1u;
+}
+
+static void uart1_raw_print_optic_state(void)
+{
+  adc_stream_debug_t adc_dbg;
+  vnd_change_event_diag_t usb_event_diag;
+  uint8_t local_status = 0u;
+  uint8_t active_status_count = 0u;
+  uint8_t master_status = 0u;
+  uint8_t master_flags = 0u;
+  uint8_t status_bytes[RS485_DEVICE_ID_COUNT] = {0u};
+  uint16_t master_age_ms = 0xFFFFu;
+  uint32_t seen_mask = 0u;
+  uint32_t optic_mask = 0u;
+  uint32_t now_ms = HAL_GetTick();
+  uint32_t host_rx_ack_ms = vnd_get_last_host_rx_ack_ms();
+  uint32_t host_rx_age_ms = (host_rx_ack_ms == 0u) ? 0xFFFFFFFFu : (now_ms - host_rx_ack_ms);
+  uint32_t frame_txcplt_ms = vnd_get_last_frame_txcplt_ms();
+  uint32_t frame_txcplt_age_ms = (frame_txcplt_ms == 0u) ? 0xFFFFFFFFu : (now_ms - frame_txcplt_ms);
+  uint32_t tx_cmd_last_ms = vnd_get_tx_host_cmd_last_ms();
+  uint32_t tx_cmd_age_ms = (tx_cmd_last_ms == 0u) ? 0xFFFFFFFFu : (now_ms - tx_cmd_last_ms);
+  uint32_t tx_change_last_ms = vnd_get_tx_effective_last_change_ms();
+  uint32_t tx_change_age_ms = (tx_change_last_ms == 0u) ? 0xFFFFFFFFu : (now_ms - tx_change_last_ms);
+  uint32_t dc_set_age_ms = (vnd_dc_speed_set_at_ms == 0u)
+                         ? 0xFFFFFFFFu
+                         : (now_ms - vnd_dc_speed_set_at_ms);
+  uint32_t dc_adapt_age_ms = (vnd_dc_adapt_last_ms == 0u)
+                           ? 0xFFFFFFFFu
+                           : (now_ms - vnd_dc_adapt_last_ms);
+  uint32_t adc_publish_age_ms = 0xFFFFFFFFu;
+  uint8_t pd0_level = (HAL_GPIO_ReadPin(OPTIC_RX_GPIO_Port, OPTIC_RX_Pin) == GPIO_PIN_SET) ? 1u : 0u;
+  uint8_t marker_phase = 0u;
+  uint8_t pa1_level = 0u;
+  uint8_t pa2_level = 0u;
+  uint8_t pc7_level = 0u;
+  uint32_t primask = __get_PRIMASK();
+
+  memset(&adc_dbg, 0, sizeof(adc_dbg));
+  memset(&usb_event_diag, 0, sizeof(usb_event_diag));
+  adc_stream_get_debug(&adc_dbg);
+  vnd_get_change_event_diag(&usb_event_diag);
+  if (adc_dbg.last_publish_ms != 0u) {
+    adc_publish_age_ms = now_ms - adc_dbg.last_publish_ms;
+  }
+
+  /* Capture the phase and all TX200 pins before the slow UART print starts.
+     Reading each pin inline while printing can span several 200 Hz edges and
+     falsely report a mixed phase. */
+  __disable_irq();
+  marker_phase = adc_stream_get_marker_level();
+  pa1_level = (GPIOA->IDR & GPIO_PIN_1) ? 1u : 0u;
+  pa2_level = (GPIOA->IDR & GPIO_PIN_2) ? 1u : 0u;
+  pc7_level = (GPIOC->IDR & GPIO_PIN_7) ? 1u : 0u;
+  if (primask == 0u) {
+    __enable_irq();
+  }
+
+  (void)rs485_status_get_snapshot(&local_status,
+                                  &active_status_count,
+                                  &seen_mask,
+                                  status_bytes,
+                                  RS485_DEVICE_ID_COUNT);
+  for (uint8_t device_id = 0u;
+       device_id < RS485_DEVICE_ID_COUNT;
+       device_id++) {
+    if (((seen_mask & (1u << device_id)) != 0u) &&
+        ((status_bytes[device_id] & RS485_STATUS_OPTIC_BIT) != 0u)) {
+      optic_mask |= (1u << device_id);
+    }
+  }
+  (void)rs485_status_get_master_snapshot(&master_status,
+                                         &master_age_ms,
+                                         &master_flags);
+
+  uart1_raw_write_str("\r\nOPTIC tx200=");
+  uart1_raw_write_u32_dec((uint32_t)vnd_is_tx_enabled());
+  uart1_raw_write_str(" tx_req=");
+  uart1_raw_write_u32_dec((uint32_t)vnd_is_tx_requested_enabled());
+  uart1_raw_write_str(" stream=");
+  uart1_raw_write_u32_dec((uint32_t)vnd_is_streaming());
+  uart1_raw_write_str(" dc_ms=");
+  uart1_raw_write_u32_dec(vnd_dc_speed_settle_ms);
+  uart1_raw_write_str(" dc_cmd=");
+  uart1_raw_write_u32_dec(vnd_dc_speed_cmd_count);
+  uart1_raw_write_str(" dc_rej=");
+  uart1_raw_write_u32_dec(vnd_dc_speed_reject_count);
+  uart1_raw_write_str(" dc_set_age_ms=");
+  uart1_raw_write_u32_dec(dc_set_age_ms);
+  uart1_raw_write_str(" dc_calls=");
+  uart1_raw_write_u32_dec(vnd_dc_adapt_call_count);
+  uart1_raw_write_str(" dc_updates=");
+  uart1_raw_write_u32_dec(vnd_dc_adapt_updates);
+  uart1_raw_write_str(" dc_adapt_age_ms=");
+  uart1_raw_write_u32_dec(dc_adapt_age_ms);
+  uart1_raw_write_str(" dc_dt_ms=");
+  uart1_raw_write_u32_dec(vnd_dc_adapt_last_dt_ms);
+  uart1_raw_write_str(" dc_maxerr=");
+  uart1_raw_write_u32_dec(vnd_dc_adapt_max_abs_err);
+  uart1_raw_write_str(" dc_maxcorr=");
+  uart1_raw_write_u32_dec(vnd_dc_adapt_max_corr);
+  uart1_raw_write_str(" dc_meanerr=");
+  uart1_raw_write_i32_dec(vnd_dc_adapt_mean_err);
+  uart1_raw_write_str(" adc_wr=");
+  uart1_raw_write_u32_dec(adc_dbg.frame_wr_seq);
+  uart1_raw_write_str(" adc_rd=");
+  uart1_raw_write_u32_dec(adc_dbg.frame_rd_seq);
+  uart1_raw_write_str(" adc_drop=");
+  uart1_raw_write_u32_dec(adc_dbg.frame_overflow_drops);
+  uart1_raw_write_str(" adc_pause=");
+  uart1_raw_write_u32_dec((uint32_t)adc_stream_paused);
+  uart1_raw_write_str(" adc_pub_age_ms=");
+  uart1_raw_write_u32_dec(adc_publish_age_ms);
+  uart1_raw_write_str(" adc_restart=");
+  uart1_raw_write_u32_dec(adc_dbg.restart_attempts);
+  uart1_raw_write_str("/");
+  uart1_raw_write_u32_dec(adc_dbg.restart_success);
+  uart1_raw_write_str(" adc_restart_suppressed=");
+  uart1_raw_write_u32_dec(adc_dbg.restart_suppressed_live);
+  uart1_raw_write_str(" adc_restart_reason=");
+  uart1_raw_write_u32_dec(adc_dbg.restart_reason);
+  uart1_raw_write_str(" adc_restart_ndtr=");
+  uart1_raw_write_u32_dec(adc_dbg.restart_ndtr_a);
+  uart1_raw_write_str("/");
+  uart1_raw_write_u32_dec(adc_dbg.restart_ndtr_b);
+  uart1_raw_write_str(" adc_restart_age_ms=");
+  uart1_raw_write_u32_dec(adc_dbg.restart_publish_age_ms);
+  uart1_raw_write_str(" adc_tc_rearm_fail=");
+  uart1_raw_write_u32_dec(adc_dbg.tc_rearm_failures);
+  uart1_raw_write_str(" adc_gap_max_ms=");
+  uart1_raw_write_u32_dec(adc_dbg.publish_gap_max_ms);
+  uart1_raw_write_str(" adc_gap10=");
+  uart1_raw_write_u32_dec(adc_dbg.publish_gap_over_10ms);
+  uart1_raw_write_str(" tx_cmd_count=");
+  uart1_raw_write_u32_dec(vnd_get_tx_host_cmd_count());
+  uart1_raw_write_str(" tx_cmd_val=");
+  uart1_raw_write_u32_dec((uint32_t)vnd_get_tx_host_cmd_last_value());
+  uart1_raw_write_str(" tx_cmd_age_ms=");
+  uart1_raw_write_u32_dec(tx_cmd_age_ms);
+  uart1_raw_write_str(" tx_change=");
+  uart1_raw_write_u32_dec(vnd_get_tx_effective_change_count());
+  uart1_raw_write_str(" tx_off=");
+  uart1_raw_write_u32_dec(vnd_get_tx_effective_off_count());
+  uart1_raw_write_str(" tx_change_val=");
+  uart1_raw_write_u32_dec((uint32_t)vnd_get_tx_effective_last_value());
+  uart1_raw_write_str(" tx_change_age_ms=");
+  uart1_raw_write_u32_dec(tx_change_age_ms);
+  uart1_raw_write_str(" marker_phase=");
+  uart1_raw_write_u32_dec((uint32_t)marker_phase);
+  uart1_raw_write_str(" pa1=");
+  uart1_raw_write_u32_dec((uint32_t)pa1_level);
+  uart1_raw_write_str(" pa2=");
+  uart1_raw_write_u32_dec((uint32_t)pa2_level);
+  uart1_raw_write_str(" pc7=");
+  uart1_raw_write_u32_dec((uint32_t)pc7_level);
+  uart1_raw_write_str(" host_rx_age_ms=");
+  uart1_raw_write_u32_dec(host_rx_age_ms);
+  uart1_raw_write_str(" usb_frame_age_ms=");
+  uart1_raw_write_u32_dec(frame_txcplt_age_ms);
+  uart1_raw_write_str(" usb_txcplt=");
+  uart1_raw_write_u32_dec(vnd_get_stream_tx_cplt_count());
+  uart1_raw_write_str(" usb_recovery=");
+  uart1_raw_write_u32_dec(vnd_get_stream_recovery_count());
+  uart1_raw_write_str(" usb_force_idle=");
+  uart1_raw_write_u32_dec(vnd_get_stream_force_idle_count());
+  uart1_raw_write_str(" usb_error=");
+  uart1_raw_write_u32_dec(vnd_get_last_error());
+  uart1_raw_write_str(" power=");
+  uart1_raw_write_u32_dec((uint32_t)optic_tx_get_power());
+  uart1_raw_write_str(" hold_ds=");
+  uart1_raw_write_u32_dec((uint32_t)optic_sensor_get_hold_deciseconds());
+  uart1_raw_write_str(" rx=");
+  uart1_raw_write_u32_dec((uint32_t)optic_sensor_get_state());
+  uart1_raw_write_str(" activity_hold=");
+  uart1_raw_write_u32_dec((uint32_t)optic_sensor_state_public);
+  uart1_raw_write_str(" pd0=");
+  uart1_raw_write_u32_dec((uint32_t)pd0_level);
+  uart1_raw_write_str(" any=");
+  uart1_raw_write_u32_dec((uint32_t)optic_any_sensor_active());
+  uart1_raw_write_str(" master_rx=");
+  uart1_raw_write_u32_dec((uint32_t)rs485_status_master_optic_active());
+  uart1_raw_write_str(" active_status_count=");
+  uart1_raw_write_u32_dec((uint32_t)active_status_count);
+  uart1_raw_write_str(" sync_seen_mask=0x");
+  uart1_raw_write_u32_hex(seen_mask);
+  uart1_raw_write_str(" optic_mask=0x");
+  uart1_raw_write_u32_hex(optic_mask);
+  uart1_raw_write_str(" local_status=0x");
+  uart1_raw_write_u8_hex(local_status);
+  uart1_raw_write_str(" local_optic_bit=");
+  uart1_raw_write_u32_dec((uint32_t)(((local_status & RS485_STATUS_OPTIC_BIT) != 0u) ? 1u : 0u));
+  uart1_raw_write_str(" master_status=0x");
+  uart1_raw_write_u8_hex(master_status);
+  uart1_raw_write_str(" master_age_ms=");
+  uart1_raw_write_u32_dec((uint32_t)master_age_ms);
+  uart1_raw_write_str(" master_flags=0x");
+  uart1_raw_write_u8_hex(master_flags);
+  uart1_raw_write_str(" sensor_evt_tx=");
+  uart1_raw_write_u32_dec(rs485_sensor_event_tx_count);
+  uart1_raw_write_str(" sensor_evt_rx=");
+  uart1_raw_write_u32_dec(rs485_sensor_event_rx_count);
+  uart1_raw_write_str(" sensor_evt_overflow=");
+  uart1_raw_write_u32_dec(rs485_sensor_event_queue_overflow);
+  uart1_raw_write_str(" ws_busy=");
+  uart1_raw_write_u32_dec((uint32_t)ws2812_spi_is_busy());
+  uart1_raw_write_str(" ws_frames=");
+  uart1_raw_write_u32_dec(ws2812_spi_get_frame_count());
+  uart1_raw_write_str(" ws_recoveries=");
+  uart1_raw_write_u32_dec(ws2812_spi_get_recovery_count());
+  uart1_raw_write_str(" ws_start_delay_max_us=");
+  uart1_raw_write_u32_dec(ws2812_spi_get_phase_start_delay_max_us());
+  uart1_raw_write_str(" ws_wire_us=");
+  uart1_raw_write_u32_dec(ws2812_spi_get_wire_time_us());
+  uart1_raw_write_str(" ws_late_skip=");
+  uart1_raw_write_u32_dec(ws2812_spi_get_phase_late_skip_count());
+  uart1_raw_write_str(" usb_evt_enq=");
+  uart1_raw_write_u32_dec(usb_event_diag.enqueued);
+  uart1_raw_write_str(" usb_evt_ok=");
+  uart1_raw_write_u32_dec(usb_event_diag.tx_ok);
+  uart1_raw_write_str(" usb_evt_cplt=");
+  uart1_raw_write_u32_dec(usb_event_diag.tx_cplt);
+  uart1_raw_write_str(" usb_evt_drop=");
+  uart1_raw_write_u32_dec(usb_event_diag.dropped);
+  uart1_raw_write_str(" usb_evt_q=");
+  uart1_raw_write_u32_dec((uint32_t)usb_event_diag.queued);
+  uart1_raw_write_str(" usb_evt_last=0x");
+  uart1_raw_write_u8_hex(usb_event_diag.last_enqueue_type);
+  uart1_raw_write_str("\r\n");
+}
+
+#if MAIN_LED_INDICATION_ENABLE
 static inline void LED_ON(void) { HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_SET); }
 static inline void LED_OFF(void) { HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_RESET); }
+#else
+static inline void LED_ON(void) { HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_RESET); }
+static inline void LED_OFF(void) { HAL_GPIO_WritePin(Led_Test_GPIO_Port, Led_Test_Pin, GPIO_PIN_RESET); }
+#endif
 
 #if ENABLE_UART_HEARTBEAT
 #define PROG(ch) uart1_raw_putc((ch))
@@ -879,12 +1723,17 @@ static volatile uint8_t optic_tx_started = 0u;
 
 static inline void uart1_rx_led_pulse(void)
 {
+#if MAIN_LED_INDICATION_ENABLE
   LED_ON();
   uart1_led_off_tick = HAL_GetTick() + 100u;
+#else
+  uart1_led_off_tick = 0u;
+#endif
 }
 
 uint8_t dynamic_led_set_pattern(uint8_t pattern_id)
 {
+#if MAIN_WS2812_STATUS_ENABLE
   ws2812_pattern_t pattern = (ws2812_pattern_t)pattern_id;
 
   if ((uint32_t)pattern >= (uint32_t)WS2812_PATTERN_COUNT) {
@@ -893,6 +1742,11 @@ uint8_t dynamic_led_set_pattern(uint8_t pattern_id)
 
   g_ws2812_test_pattern = pattern;
   return (uint8_t)g_ws2812_test_pattern;
+#else
+  (void)pattern_id;
+  g_ws2812_test_pattern = WS2812_PATTERN_OFF;
+  return (uint8_t)g_ws2812_test_pattern;
+#endif
 }
 
 uint8_t dynamic_led_get_pattern(void)
@@ -902,7 +1756,228 @@ uint8_t dynamic_led_get_pattern(void)
 
 uint8_t optic_sensor_get_state(void)
 {
+  /* This is the one canonical optical-sensor signal used by every consumer:
+     HIGH immediately follows PD0 HIGH and remains HIGH for the configured
+     hold time after the last observed HIGH. PD0 LOW never starts/retriggers
+     the hold timer. */
   return optic_sensor_state_public;
+}
+
+static uint8_t rs485_sensor_event_set_local(uint8_t sensor_index, uint8_t active)
+{
+  uint32_t primask = __get_PRIMASK();
+  uint32_t now_ms = HAL_GetTick();
+  uint16_t bit;
+  uint8_t write_index;
+  uint8_t next_index;
+
+  if (sensor_index >= 16u) {
+    return 0u;
+  }
+  active = (active != 0u) ? 1u : 0u;
+  bit = (uint16_t)(1u << sensor_index);
+  __disable_irq();
+  if ((((rs485_sensor_local_bits & bit) != 0u) ? 1u : 0u) != active) {
+    if (active != 0u) {
+      rs485_sensor_local_bits |= bit;
+    } else {
+      rs485_sensor_local_bits &= (uint16_t)~bit;
+    }
+    rs485_sensor_local_last_ms = now_ms;
+    rs485_sensor_local_last_index = sensor_index;
+
+    if (rs485_local_node_id_assigned != 0u) {
+      write_index = rs485_sensor_event_queue_write;
+      next_index = (uint8_t)((write_index + 1u) %
+                             RS485_SENSOR_EVENT_QUEUE_CAPACITY);
+      if (next_index != rs485_sensor_event_queue_read) {
+        rs485_sensor_event_queue_index[write_index] = sensor_index;
+        rs485_sensor_event_queue_value[write_index] = active;
+        __DMB();
+        rs485_sensor_event_queue_write = next_index;
+        rs485_sensor_event_next_cycle = rs485_sensor_event_cycle;
+      } else {
+        rs485_sensor_event_queue_overflow++;
+      }
+    }
+  }
+  if (primask == 0u) {
+    __enable_irq();
+  }
+  return active;
+}
+
+static void rs485_sensor_queue_active_snapshot(void)
+{
+  rs485_sensor_event_queue_read = 0u;
+  rs485_sensor_event_queue_write = 0u;
+  rs485_sensor_event_current_valid = 0u;
+  rs485_sensor_event_retries = 0u;
+  for (uint8_t sensor_index = 0u; sensor_index < 16u; sensor_index++) {
+    uint16_t bit = (uint16_t)(1u << sensor_index);
+    uint8_t write_index;
+    uint8_t next_index;
+
+    if ((rs485_sensor_local_bits & bit) == 0u) {
+      continue;
+    }
+    write_index = rs485_sensor_event_queue_write;
+    next_index = (uint8_t)((write_index + 1u) %
+                           RS485_SENSOR_EVENT_QUEUE_CAPACITY);
+    if (next_index == rs485_sensor_event_queue_read) {
+      break;
+    }
+    rs485_sensor_event_queue_index[write_index] = sensor_index;
+    rs485_sensor_event_queue_value[write_index] = 1u;
+    rs485_sensor_event_queue_write = next_index;
+  }
+  rs485_sensor_event_next_cycle = rs485_sensor_event_cycle;
+}
+
+uint8_t rs485_status_set_controlled_sensor(uint8_t sensor_index, uint8_t active)
+{
+  uint8_t applied = rs485_sensor_event_set_local(sensor_index, active);
+  if (applied != 0u) {
+    need_usb_status_refresh = 1u;
+  }
+  return applied;
+}
+
+static uint8_t rs485_sensor_event_prepare(uint8_t *sensor_index,
+                                          uint8_t *active)
+{
+  if ((sensor_index == NULL) || (active == NULL)) {
+    return 0u;
+  }
+
+  if (rs485_sensor_event_current_valid == 0u) {
+    uint8_t read_index = rs485_sensor_event_queue_read;
+    if (read_index == rs485_sensor_event_queue_write) {
+      return 0u;
+    }
+    rs485_sensor_event_current_index =
+        rs485_sensor_event_queue_index[read_index];
+    rs485_sensor_event_current_value =
+        rs485_sensor_event_queue_value[read_index];
+    rs485_sensor_event_retries = RS485_SENSOR_EVENT_RETRIES;
+    rs485_sensor_event_next_cycle = rs485_sensor_event_cycle;
+    rs485_sensor_event_current_valid = 1u;
+  }
+
+  if ((int32_t)(rs485_sensor_event_cycle -
+                rs485_sensor_event_next_cycle) < 0) {
+    return 0u;
+  }
+
+  *sensor_index = rs485_sensor_event_current_index;
+  *active = rs485_sensor_event_current_value;
+  return 1u;
+}
+
+static void rs485_sensor_event_commit_tx(void)
+{
+  rs485_sensor_event_tx_count++;
+  if (rs485_sensor_event_retries > 1u) {
+    uint32_t retry_slots =
+        1u + ((uint32_t)rs485_local_node_id &
+              (RS485_SENSOR_EVENT_RETRY_SLOTS - 1u));
+    rs485_sensor_event_retries--;
+    rs485_sensor_event_next_cycle = rs485_sensor_event_cycle + retry_slots;
+    return;
+  }
+
+  if (rs485_sensor_event_queue_read != rs485_sensor_event_queue_write) {
+    rs485_sensor_event_queue_read =
+        (uint8_t)((rs485_sensor_event_queue_read + 1u) %
+                  RS485_SENSOR_EVENT_QUEUE_CAPACITY);
+  }
+  rs485_sensor_event_retries = 0u;
+  rs485_sensor_event_current_valid = 0u;
+  rs485_sensor_event_next_cycle = rs485_sensor_event_cycle + 1u;
+}
+
+static void rs485_sensor_note_remote(uint8_t device_id,
+                                     uint8_t sensor_index,
+                                     uint8_t active,
+                                     uint32_t now_ms)
+{
+  uint8_t index;
+  uint16_t bit;
+  uint16_t before;
+
+  if ((device_id > RS485_DISCOVERY_MAX_ID) ||
+      (sensor_index >= 16u)) {
+    return;
+  }
+
+  index = device_id;
+  bit = (uint16_t)(1u << sensor_index);
+  before = rs485_sensor_peer_bits[index];
+  if (active != 0u) {
+    rs485_sensor_peer_bits[index] |= bit;
+  } else {
+    rs485_sensor_peer_bits[index] &= (uint16_t)~bit;
+  }
+  if (before != rs485_sensor_peer_bits[index]) {
+    rs485_sensor_peer_last_ms[index] = now_ms;
+    rs485_sensor_peer_last_index[index] = sensor_index;
+    need_usb_status_refresh = 1u;
+  }
+}
+
+uint8_t rs485_sensor_get_snapshot(uint8_t device_id,
+                                  rs485_sensor_snapshot_t *out)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint32_t primask;
+  uint32_t now_ms = HAL_GetTick();
+  uint8_t local_request = (device_id == 0xFFu) ? 1u : 0u;
+  uint8_t target_id = local_request ? rs485_local_node_id : device_id;
+
+  if ((out == NULL) ||
+      ((local_request == 0u) && (target_id > RS485_DISCOVERY_MAX_ID))) {
+    return 0u;
+  }
+
+  memset(out, 0, sizeof(*out));
+  out->device_id = target_id;
+  primask = __get_PRIMASK();
+  __disable_irq();
+  if (local_request != 0u) {
+    out->flags = RS485_SENSOR_FLAG_VALID | RS485_SENSOR_FLAG_LOCAL;
+    out->sensor_bits = rs485_sensor_local_bits;
+    out->last_changed_index = rs485_sensor_local_last_index;
+    out->last_change_ms = rs485_sensor_local_last_ms;
+    if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+      out->flags |= RS485_SENSOR_FLAG_MASTER;
+    }
+  } else {
+    uint32_t peer_ms = rs485_status_peer_last_ms[target_id];
+    uint32_t master_ms = rs485_status_master_last_ms;
+    uint8_t is_master =
+        (uint8_t)(((master_ms != 0u) &&
+                   (target_id == rs485_status_master_node_id)) ? 1u : 0u);
+
+    if ((peer_ms != 0u) || (is_master != 0u)) {
+      out->flags |= RS485_SENSOR_FLAG_VALID;
+      out->sensor_bits = rs485_sensor_peer_bits[target_id];
+      out->last_changed_index = rs485_sensor_peer_last_index[target_id];
+      out->last_change_ms = rs485_sensor_peer_last_ms[target_id];
+      if (((peer_ms != 0u) &&
+           ((now_ms - peer_ms) <= RS485_STATUS_PEER_HOLD_MS)) ||
+          ((is_master != 0u) &&
+           ((now_ms - master_ms) <= RS485_STATUS_PEER_HOLD_MS))) {
+        out->flags |= RS485_SENSOR_FLAG_RECENT;
+      }
+      if (is_master != 0u) {
+        out->flags |= RS485_SENSOR_FLAG_MASTER;
+      }
+    }
+  }
+  if (primask == 0u) {
+    __enable_irq();
+  }
+  return 1u;
 }
 
 uint8_t optic_sensor_set_hold_seconds(uint8_t seconds)
@@ -928,6 +2003,7 @@ uint16_t optic_sensor_set_hold_deciseconds(uint16_t deciseconds)
     deciseconds = OPTIC_ACTIVE_HOLD_MAX_DS;
   }
   optic_active_hold_deciseconds = deciseconds;
+  need_usb_status_refresh = 1u;
   return optic_active_hold_deciseconds;
 }
 
@@ -938,8 +2014,19 @@ uint16_t optic_sensor_get_hold_deciseconds(void)
 
 uint8_t rs485_status_set_det_adc_bits(uint8_t bits)
 {
-  rs485_det_adc_bits = (uint8_t)(bits & 0x03u);
-  need_usb_status_refresh = 1u;
+  uint8_t applied = (uint8_t)(bits & 0x03u);
+
+  if (rs485_det_adc_bits != applied) {
+    uint8_t changed = (uint8_t)(rs485_det_adc_bits ^ applied);
+    rs485_det_adc_bits = applied;
+    if ((changed & 0x01u) != 0u) {
+      (void)rs485_sensor_event_set_local(1u, applied & 0x01u);
+    }
+    if ((changed & 0x02u) != 0u) {
+      (void)rs485_sensor_event_set_local(2u, applied & 0x02u);
+    }
+    need_usb_status_refresh = 1u;
+  }
   return rs485_det_adc_bits;
 }
 
@@ -962,21 +2049,36 @@ static uint32_t optic_tim1_get_input_clk_hz(void)
 static void optic_sensor_service(uint32_t now_ms)
 {
   uint32_t hold_ms = (uint32_t)optic_active_hold_deciseconds * 100u;
+  uint8_t input_level =
+      (HAL_GPIO_ReadPin(OPTIC_RX_GPIO_Port, OPTIC_RX_Pin) == GPIO_PIN_SET)
+          ? 1u
+          : 0u;
 
-  if ((optic_sensor_state_public != 0u) &&
-      ((now_ms - optic_last_change_ms) >= hold_ms)) {
+  optic_input_level_public = input_level;
+
+  if (input_level != 0u) {
+    /* A HIGH level starts/retriggers the hold. A sustained HIGH therefore
+       remains active indefinitely and the hold starts only after it goes LOW. */
+    optic_last_high_ms = now_ms;
+    if (optic_sensor_state_public == 0u) {
+      optic_sensor_state_public = 1u;
+      (void)rs485_sensor_event_set_local(0u, 1u);
+      need_usb_status_refresh = 1u;
+    }
+  } else if ((optic_sensor_state_public != 0u) &&
+             ((now_ms - optic_last_high_ms) >= hold_ms)) {
     optic_sensor_state_public = 0u;
+    (void)rs485_sensor_event_set_local(0u, 0u);
     need_usb_status_refresh = 1u;
   }
 }
 
 static void optic_tx_apply_runtime_pattern(void)
 {
-  extern uint8_t vnd_is_tx_enabled(void);
   uint32_t period_ticks;
   uint32_t max_compare;
   uint32_t compare;
-  uint8_t output_power = (vnd_is_tx_enabled() != 0u) ? (uint8_t)optic_tx_power_level : 0u;
+  uint8_t output_power = (uint8_t)optic_tx_power_level;
 
   period_ticks = __HAL_TIM_GET_AUTORELOAD(&htim1) + 1u;
   if (period_ticks < 2u) {
@@ -1034,6 +2136,7 @@ void optic_tx_refresh_enable(void)
   optic_tx_apply_runtime_pattern();
 }
 
+#if MAIN_WS2812_STATUS_ENABLE
 static const char *ws2812_test_pattern_name(ws2812_pattern_t pattern)
 {
   switch (pattern) {
@@ -1061,9 +2164,14 @@ static const char *ws2812_test_pattern_name(ws2812_pattern_t pattern)
       return "UNKNOWN";
   }
 }
+#endif
 
 static void ws2812_test_button_service(uint32_t now_ms)
 {
+#if !MAIN_WS2812_STATUS_ENABLE
+  (void)now_ms;
+  return;
+#else
   static const ws2812_pattern_t test_patterns[] = {
     WS2812_PATTERN_OFF,
     WS2812_PATTERN_TEST_DRIP,
@@ -1110,6 +2218,7 @@ static void ws2812_test_button_service(uint32_t now_ms)
              ws2812_test_pattern_name(g_ws2812_test_pattern));
     }
   }
+#endif
 }
 
 static void optic_tx_start(void)
@@ -1195,33 +2304,59 @@ static void rs485_sync_on_packet_received(uint8_t edge_kind)
       }
     }
 
-    /* Сравниваем именно edge-kind, а не raw-уровень GPIO.
-       Sync-байт принимается после фронта master, поэтому совпадение
-       edge-kind здесь соответствует ПРОТИВОФАЗЕ, а отличие — синфазе. */
-    if (rs485_sync_relation_score >= RS485_SYNC_RELATION_CONFIRM_SCORE) {
-      rs485_sync_phase_relation = RS485_SYNC_RELATION_ANTI_PHASE;
-    } else if (rs485_sync_relation_score <= -RS485_SYNC_RELATION_CONFIRM_SCORE) {
+    /* Compare edge-kind, not the raw GPIO level. The UART byte is observed
+       after the master's edge, so equal kinds mean anti-phase and different
+       kinds mean in-phase. Near the circular buffer boundary an otherwise
+       healthy PLL can briefly see the master's edge just before the local
+       edge. Do not publish that short crossing as ANTI_PHASE: the existing
+       200 clean-packet recovery qualifier is also the public-state debounce. */
+    if (rs485_sync_relation_score <= -RS485_SYNC_RELATION_CONFIRM_SCORE) {
       rs485_sync_phase_relation = RS485_SYNC_RELATION_IN_PHASE;
-    } else {
+    } else if ((rs485_sync_phase_relation != RS485_SYNC_RELATION_IN_PHASE) &&
+               (rs485_sync_phase_relation != RS485_SYNC_RELATION_ANTI_PHASE)) {
       rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
     }
 
     if ((RS485_SYNC_ANTI_PHASE_RECOVERY_ENABLE != 0u) &&
-        (rs485_sync_phase_relation == RS485_SYNC_RELATION_ANTI_PHASE)) {
-      rs485_anti_phase_recovery_active = 1u;
-      if (rs485_anti_phase_recovery_packets < 255u) {
-        rs485_anti_phase_recovery_packets++;
-      }
-      if (rs485_anti_phase_recovery_packets >= RS485_SYNC_ANTI_PHASE_CONFIRM_PACKETS) {
-        rs485_anti_phase_recovery_request = 1u;
+        (rs485_sync_relation_score >= RS485_SYNC_RELATION_CONFIRM_SCORE)) {
+      uint32_t now_ms = HAL_GetTick();
+      uint8_t master_fresh =
+          (uint8_t)(((rs485_status_master_last_ms != 0u) &&
+                     ((now_ms - rs485_status_master_last_ms) <=
+                      RS485_SYNC_ANTI_PHASE_MASTER_FRESH_MS)) ? 1u : 0u);
+
+      if ((master_fresh != 0u) &&
+          (rs485_uart_sync_error_count ==
+           rs485_anti_phase_sync_error_snapshot)) {
+        rs485_anti_phase_recovery_active = 1u;
+        if (rs485_anti_phase_recovery_packets < 255u) {
+          rs485_anti_phase_recovery_packets++;
+        }
+        if (rs485_anti_phase_recovery_packets >=
+            RS485_SYNC_ANTI_PHASE_CONFIRM_PACKETS) {
+          rs485_sync_phase_relation = RS485_SYNC_RELATION_ANTI_PHASE;
+          rs485_anti_phase_recovery_request = 1u;
+        }
+      } else {
+        rs485_anti_phase_sync_error_snapshot =
+            rs485_uart_sync_error_count;
+        rs485_anti_phase_recovery_active = 0u;
+        rs485_anti_phase_recovery_packets = 0u;
+        rs485_anti_phase_recovery_request = 0u;
       }
     } else {
+      rs485_anti_phase_sync_error_snapshot = rs485_uart_sync_error_count;
       rs485_anti_phase_recovery_active = 0u;
       rs485_anti_phase_recovery_packets = 0u;
       rs485_anti_phase_recovery_request = 0u;
       rs485_sync_restart_request = 0u;
+      if ((rs485_sync_phase_relation == RS485_SYNC_RELATION_ANTI_PHASE) &&
+          (rs485_phase_slew_active == 0u)) {
+        rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+      }
     }
   } else {
+    rs485_anti_phase_sync_error_snapshot = rs485_uart_sync_error_count;
     rs485_sync_relation_score = 0;
     rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
     rs485_anti_phase_recovery_active = 0u;
@@ -1276,6 +2411,19 @@ static uint32_t rs485_compute_uid_mix(void)
   return uid0 ^ uid1 ^ uid2 ^ (uid0 >> 16) ^ (uid1 >> 11) ^ (uid2 >> 7);
 }
 
+static uint64_t rs485_compute_short_id36(void)
+{
+  uint64_t hash = 1469598103934665603ULL;
+
+  for (uint32_t index = 0u; index < sizeof(rs485_local_uid_bytes); index++) {
+    hash ^= (uint64_t)rs485_local_uid_bytes[index];
+    hash *= 1099511628211ULL;
+  }
+  hash ^= (hash >> 36);
+  hash &= 0xFFFFFFFFFULL;
+  return (hash != 0u) ? hash : 1u;
+}
+
 static void rs485_load_local_uid(void)
 {
   uint32_t uid0 = *(const uint32_t *)(UID_BASE + 0x00u);
@@ -1288,6 +2436,7 @@ static void rs485_load_local_uid(void)
   memcpy(&rs485_local_uid_bytes[0], &uid0, sizeof(uid0));
   memcpy(&rs485_local_uid_bytes[4], &uid1, sizeof(uid1));
   memcpy(&rs485_local_uid_bytes[8], &uid2, sizeof(uid2));
+  rs485_local_short_id36 = rs485_compute_short_id36();
 }
 
 static uint8_t rs485_compute_local_node_id(void)
@@ -1303,6 +2452,397 @@ static uint32_t rs485_compute_master_claim_delay_ms(void)
   return 250u + (mix % 1024u);
 }
 
+static uint8_t rs485_role_local_is_selected_master(void)
+{
+  return (uint8_t)((rs485_role_master_valid != 0u) &&
+                   (memcmp(rs485_role_master_uid,
+                           rs485_local_uid_bytes,
+                           sizeof(rs485_role_master_uid)) == 0));
+}
+
+static uint8_t rs485_role_slave_uid_matches(const uint8_t uid[12])
+{
+  size_t compare_len = (rs485_role_slave_uid_prefix_only != 0u) ? 8u : 12u;
+
+  return (uint8_t)((rs485_role_slave_valid != 0u) &&
+                   (memcmp(rs485_role_slave_uid, uid, compare_len) == 0));
+}
+
+static uint8_t rs485_role_local_is_selected_slave(void)
+{
+  return rs485_role_slave_uid_matches(rs485_local_uid_bytes);
+}
+
+static int8_t rs485_role_compare_time(uint32_t lhs_s,
+                                      uint16_t lhs_ms,
+                                      uint32_t rhs_s,
+                                      uint16_t rhs_ms)
+{
+  if (lhs_s < rhs_s) {
+    return -1;
+  }
+  if (lhs_s > rhs_s) {
+    return 1;
+  }
+  if (lhs_ms < rhs_ms) {
+    return -1;
+  }
+  if (lhs_ms > rhs_ms) {
+    return 1;
+  }
+  return 0;
+}
+
+/* A direct RPI assignment is a user decision and must win on the first
+   command even if Flash contains an assignment timestamp slightly in the
+   future (clock correction, delayed command or an earlier host). Preserve the
+   timestamp ordering used on RS-485 by advancing the accepted host time to one
+   millisecond after the newest locally known role event when necessary. */
+static void rs485_role_make_host_time_newest(uint32_t *unix_s,
+                                             uint16_t *millis)
+{
+  uint32_t newest_s = 0u;
+  uint16_t newest_ms = 0u;
+
+  if ((unix_s == NULL) || (millis == NULL)) {
+    return;
+  }
+
+  if (rs485_role_master_valid != 0u) {
+    newest_s = rs485_role_master_assigned_unix_s;
+    newest_ms = rs485_role_master_assigned_millis;
+  }
+  if ((rs485_role_slave_epoch_valid != 0u) &&
+      ((newest_s == 0u) ||
+       (rs485_role_compare_time(rs485_role_slave_assigned_unix_s,
+                                rs485_role_slave_assigned_millis,
+                                newest_s,
+                                newest_ms) > 0))) {
+    newest_s = rs485_role_slave_assigned_unix_s;
+    newest_ms = rs485_role_slave_assigned_millis;
+  }
+
+  if ((newest_s != 0u) &&
+      (rs485_role_compare_time(*unix_s, *millis,
+                               newest_s, newest_ms) <= 0)) {
+    *unix_s = newest_s;
+    *millis = newest_ms;
+    if (*millis < 999u) {
+      (*millis)++;
+    } else if (*unix_s < 0xFFFFFFFFu) {
+      (*unix_s)++;
+      *millis = 0u;
+    }
+  }
+}
+
+static void rs485_role_clear_selected_slave_at(uint32_t unix_s,
+                                                uint16_t millis)
+{
+  rs485_role_slave_epoch_valid = 1u;
+  rs485_role_slave_valid = 0u;
+  rs485_role_slave_uid_prefix_only = 0u;
+  rs485_role_slave_assigned_unix_s = unix_s;
+  rs485_role_slave_assigned_millis = millis;
+  rs485_role_selected_slave_node_id = 0u;
+  memset(rs485_role_slave_uid, 0, sizeof(rs485_role_slave_uid));
+}
+
+static void rs485_role_reset_local_assignment_epoch(void)
+{
+  /* A role change starts a fresh runtime/status epoch, but the stable node ID
+     belongs to the physical board and must never be cleared or renumbered. */
+  rs485_role_enum_waiting_assignment = 0u;
+  rs485_role_slave_id_high_water = 0u;
+  rs485_status_slave_reply_div_counter = 0u;
+  rs485_status_seen_mask = 0u;
+  rs485_status_cycle_count = 0u;
+  rs485_status_slot_response_seen = 0u;
+  rs485_status_slot_response_first = 0u;
+  rs485_status_slot_response_second = 0u;
+  rs485_slave_count_estimate = 0u;
+  rs485_role_enum_state = 0u;
+  rs485_role_enum_collect_pass = 0u;
+  rs485_role_enum_target_id = 0u;
+  rs485_role_enum_candidate_valid = 0u;
+  rs485_role_enum_assign_retries = 0u;
+  rs485_role_enum_ack_received = 0u;
+  rs485_role_enum_next_ms = HAL_GetTick() + RS485_ROLE_BUS_QUIET_MS;
+  rs485_role_enum_stable_mask = 0u;
+  rs485_role_enum_stable_since_ms = HAL_GetTick();
+  rs485_role_enum_ack_tx_pending = 0u;
+  rs485_role_enum_ack_tx_id = 0u;
+  rs485_status_assignment_reset();
+  rs485_node_claim_reset_registry();
+}
+
+static void rs485_role_mark_persist_dirty(void)
+{
+  rs485_role_persist_dirty = 1u;
+  rs485_role_persist_dirty_since_ms = HAL_GetTick();
+}
+
+static void rs485_role_mark_persist_dirty_immediate(void)
+{
+  uint32_t now_ms = HAL_GetTick();
+
+  /* A host role command is authoritative and must survive even if the role
+     change immediately starts a long slave-enumeration pass. Queue the Flash
+     write here instead of waiting for role-service/debounce. The actual Flash
+     operation still runs from Vendor_Stream_Task(), never from the USB IRQ. */
+  if (rs485_role_persist_save_pending == 0u) {
+    rs485_role_persist_dirty = 0u;
+    rs485_role_persist_save_pending = 1u;
+    rs485_role_persist_save_ok_snapshot = vnd_dc_save_ok_count;
+    rs485_role_persist_last_request_ms = now_ms;
+  } else {
+    /* A previous snapshot may already be inside the Flash writer. Keep one
+       dirty generation so the newest role is written after it completes. */
+    rs485_role_persist_dirty = 1u;
+    rs485_role_persist_dirty_since_ms =
+        now_ms - RS485_ROLE_PERSIST_DEBOUNCE_MS;
+  }
+  vnd_dc_request_save_to_flash();
+}
+
+void rs485_role_persist_export(rs485_role_persist_state_t *out)
+{
+  uint32_t primask = 0u;
+
+  if (out == NULL) {
+    return;
+  }
+
+  primask = __get_PRIMASK();
+  __disable_irq();
+  memset(out, 0, sizeof(*out));
+  if (rs485_role_master_valid != 0u) {
+    out->flags |= RS485_ROLE_PERSIST_MASTER_VALID;
+    out->master_assigned_unix_s = rs485_role_master_assigned_unix_s;
+    out->master_assigned_millis = rs485_role_master_assigned_millis;
+    memcpy(out->master_uid,
+           rs485_role_master_uid,
+           sizeof(out->master_uid));
+  }
+  if (rs485_role_local_slave_persisted != 0u) {
+    out->flags |= RS485_ROLE_PERSIST_LOCAL_SLAVE;
+  }
+  if (rs485_role_slave_epoch_valid != 0u) {
+    out->flags |= RS485_ROLE_PERSIST_SLAVE_EPOCH;
+    out->slave_assigned_unix_s = rs485_role_slave_assigned_unix_s;
+    out->slave_assigned_millis = rs485_role_slave_assigned_millis;
+    if (rs485_role_slave_valid != 0u) {
+      out->flags |= RS485_ROLE_PERSIST_SLAVE_VALID;
+      memcpy(out->slave_uid,
+             rs485_role_slave_uid,
+             sizeof(out->slave_uid));
+    }
+    if (rs485_role_slave_uid_prefix_only != 0u) {
+      out->flags |= RS485_ROLE_PERSIST_SLAVE_UID64;
+    }
+    out->selected_slave_node_id = rs485_role_selected_slave_node_id;
+  }
+  if ((rs485_local_node_id_assigned != 0u) &&
+      (rs485_local_node_id <= RS485_DISCOVERY_MAX_ID)) {
+    out->flags |= RS485_ROLE_PERSIST_NODE_VALID;
+    out->node_id = rs485_local_node_id;
+  }
+  /* Kept in the on-Flash v2 layout for backward compatibility only. */
+  out->slave_id_high_water = 0u;
+  if (primask == 0u) {
+    __enable_irq();
+  }
+}
+
+void rs485_role_persist_import(const rs485_role_persist_state_t *state)
+{
+  uint8_t old_id = rs485_local_node_id;
+
+  if (state == NULL) {
+    return;
+  }
+
+  rs485_role_master_valid = 0u;
+  rs485_role_master_assigned_unix_s = 0u;
+  rs485_role_master_assigned_millis = 0u;
+  memset(rs485_role_master_uid, 0, sizeof(rs485_role_master_uid));
+  if (((state->flags & RS485_ROLE_PERSIST_MASTER_VALID) != 0u) &&
+      (state->master_assigned_unix_s != 0u) &&
+      (state->master_assigned_millis < 1000u)) {
+    memcpy(rs485_role_master_uid,
+           state->master_uid,
+           sizeof(rs485_role_master_uid));
+    rs485_role_master_assigned_unix_s = state->master_assigned_unix_s;
+    rs485_role_master_assigned_millis = state->master_assigned_millis;
+    rs485_role_master_valid = 1u;
+  }
+
+  rs485_role_slave_epoch_valid = 0u;
+  rs485_role_slave_valid = 0u;
+  rs485_role_slave_uid_prefix_only = 0u;
+  rs485_role_slave_assigned_unix_s = 0u;
+  rs485_role_slave_assigned_millis = 0u;
+  rs485_role_selected_slave_node_id = 0u;
+  memset(rs485_role_slave_uid, 0, sizeof(rs485_role_slave_uid));
+  if (((state->flags & RS485_ROLE_PERSIST_SLAVE_EPOCH) != 0u) &&
+      (state->slave_assigned_unix_s != 0u) &&
+      (state->slave_assigned_millis < 1000u)) {
+    rs485_role_slave_epoch_valid = 1u;
+    rs485_role_slave_assigned_unix_s = state->slave_assigned_unix_s;
+    rs485_role_slave_assigned_millis = state->slave_assigned_millis;
+    if ((state->flags & RS485_ROLE_PERSIST_SLAVE_VALID) != 0u) {
+      rs485_role_slave_valid = 1u;
+      rs485_role_slave_uid_prefix_only =
+          ((state->flags & RS485_ROLE_PERSIST_SLAVE_UID64) != 0u) ? 1u : 0u;
+      memcpy(rs485_role_slave_uid,
+             state->slave_uid,
+             sizeof(rs485_role_slave_uid));
+      if (state->selected_slave_node_id <= RS485_DISCOVERY_MAX_ID) {
+        rs485_role_selected_slave_node_id = state->selected_slave_node_id;
+      }
+    }
+  }
+
+  rs485_role_local_slave_persisted =
+      ((state->flags & RS485_ROLE_PERSIST_LOCAL_SLAVE) != 0u) ? 1u : 0u;
+  if ((rs485_role_local_slave_persisted == 0u) &&
+      (((rs485_role_master_valid != 0u) &&
+        (rs485_role_local_is_selected_master() == 0u)) ||
+       (rs485_role_local_is_selected_slave() != 0u))) {
+    /* Migrate old network-wide records: a stored remote MASTER or a locally
+       selected legacy sensor-SLAVE both mean that this board was a SLAVE. */
+    rs485_role_local_slave_persisted = 1u;
+  }
+
+  rs485_local_node_id = 0u;
+  rs485_local_node_id_assigned = 0u;
+  rs485_role_enum_waiting_assignment = 0u;
+  rs485_role_last_confirmed_node_id = 0u;
+  if (((state->flags & RS485_ROLE_PERSIST_NODE_VALID) != 0u) &&
+      (state->node_id <= RS485_DISCOVERY_MAX_ID)) {
+    rs485_local_node_id = state->node_id;
+    rs485_local_node_id_assigned = 1u;
+    rs485_role_last_confirmed_node_id = state->node_id;
+  }
+  rs485_role_slave_id_high_water = 0u;
+  if (rs485_role_local_is_selected_slave() != 0u) {
+    memcpy(rs485_role_slave_uid,
+           rs485_local_uid_bytes,
+           sizeof(rs485_role_slave_uid));
+    rs485_role_slave_uid_prefix_only = 0u;
+    rs485_role_selected_slave_node_id = rs485_local_node_id;
+  }
+  rs485_identity_note_local_id_change(old_id, rs485_local_node_id);
+  rs485_node_claim_reset_registry();
+  rs485_node_claim_schedule(HAL_GetTick(), RS485_NODE_CLAIM_RETRIES);
+  rs485_role_persist_dirty = 0u;
+  rs485_role_persist_save_pending = 0u;
+}
+
+uint8_t rs485_role_assign_master_from_host(uint64_t assigned_unix_ms)
+{
+  uint64_t assigned_unix_s = assigned_unix_ms / 1000ULL;
+  uint32_t unix_s32 = 0u;
+  uint16_t millis16 = 0u;
+
+  if ((assigned_unix_ms == 0ULL) ||
+      (assigned_unix_s == 0ULL) ||
+      (assigned_unix_s > 0xFFFFFFFFULL)) {
+    return 0u;
+  }
+
+  unix_s32 = (uint32_t)assigned_unix_s;
+  millis16 = (uint16_t)(assigned_unix_ms % 1000ULL);
+  rs485_role_make_host_time_newest(&unix_s32, &millis16);
+  rs485_role_reset_local_assignment_epoch();
+  memcpy(rs485_role_master_uid,
+         rs485_local_uid_bytes,
+         sizeof(rs485_role_master_uid));
+  rs485_role_master_assigned_unix_s = unix_s32;
+  rs485_role_master_assigned_millis = millis16;
+  rs485_role_master_valid = 1u;
+  rs485_role_local_slave_persisted = 0u;
+  rs485_role_clear_selected_slave_at(unix_s32, millis16);
+  rs485_role_boot_listen_active = 0u;
+  vnd_sync_apply_network_mode(VND_SYNC_MODE_MASTER);
+  rs485_role_mark_persist_dirty_immediate();
+  rs485_node_claim_schedule(HAL_GetTick(), RS485_NODE_CLAIM_RETRIES);
+  return 1u;
+}
+
+uint8_t rs485_role_assign_slave_from_host(uint64_t assigned_unix_ms)
+{
+  uint64_t assigned_unix_s = assigned_unix_ms / 1000ULL;
+  uint32_t unix_s32 = 0u;
+  uint16_t millis16 = 0u;
+
+  if ((assigned_unix_ms == 0ULL) ||
+      (assigned_unix_s == 0ULL) ||
+      (assigned_unix_s > 0xFFFFFFFFULL)) {
+    return 0u;
+  }
+
+  unix_s32 = (uint32_t)assigned_unix_s;
+  millis16 = (uint16_t)(assigned_unix_ms % 1000ULL);
+  rs485_role_make_host_time_newest(&unix_s32, &millis16);
+  rs485_role_reset_local_assignment_epoch();
+
+  /* SLAVE is a local persistent role, not a special "selected sensor" in the
+     group. Clearing MASTER here is what makes a duplicate master visible and
+     explicitly repairable by the user/RPI. */
+  rs485_role_master_valid = 0u;
+  rs485_role_master_assigned_unix_s = 0u;
+  rs485_role_master_assigned_millis = 0u;
+  memset(rs485_role_master_uid, 0, sizeof(rs485_role_master_uid));
+  rs485_role_local_slave_persisted = 1u;
+  rs485_role_clear_selected_slave_at(unix_s32, millis16);
+  rs485_role_boot_listen_active = 0u;
+  vnd_sync_apply_network_mode(VND_SYNC_MODE_SLAVE);
+  rs485_role_mark_persist_dirty_immediate();
+  rs485_node_claim_schedule(HAL_GetTick(), RS485_NODE_CLAIM_RETRIES);
+  return 1u;
+}
+
+uint8_t rs485_role_get_local_persisted_mode(uint8_t *mode)
+{
+  if (mode == NULL) {
+    return 0u;
+  }
+  if (rs485_role_local_is_selected_master() != 0u) {
+    *mode = VND_SYNC_MODE_MASTER;
+    return 1u;
+  }
+  if (rs485_role_local_slave_persisted != 0u) {
+    *mode = VND_SYNC_MODE_SLAVE;
+    return 1u;
+  }
+  return 0u;
+}
+
+static void rs485_role_persist_service(uint32_t now_ms)
+{
+  if (rs485_role_persist_save_pending != 0u) {
+    if (vnd_dc_save_ok_count != rs485_role_persist_save_ok_snapshot) {
+      rs485_role_persist_save_pending = 0u;
+    } else if ((now_ms - rs485_role_persist_last_request_ms) >= 5000u) {
+      rs485_role_persist_save_ok_snapshot = vnd_dc_save_ok_count;
+      rs485_role_persist_last_request_ms = now_ms;
+      vnd_dc_request_save_to_flash();
+    }
+  }
+
+  if ((rs485_role_persist_dirty != 0u) &&
+      (rs485_role_persist_save_pending == 0u) &&
+      ((now_ms - rs485_role_persist_dirty_since_ms) >=
+       RS485_ROLE_PERSIST_DEBOUNCE_MS)) {
+    rs485_role_persist_dirty = 0u;
+    rs485_role_persist_save_pending = 1u;
+    rs485_role_persist_save_ok_snapshot = vnd_dc_save_ok_count;
+    rs485_role_persist_last_request_ms = now_ms;
+    vnd_dc_request_save_to_flash();
+  }
+}
+
 uint32_t rs485_get_master_claim_delay_ms(void)
 {
   return rs485_master_claim_delay_ms;
@@ -1316,6 +2856,518 @@ static uint8_t rs485_count_bits_u32(uint32_t value)
     value >>= 1;
   }
   return count;
+}
+
+static uint32_t rs485_status_make_contiguous_mask(uint8_t node_count)
+{
+  uint32_t mask = 0u;
+
+  if (node_count > RS485_DEVICE_ID_COUNT) {
+    node_count = RS485_DEVICE_ID_COUNT;
+  }
+
+  for (uint8_t node_id = 0u; node_id < node_count; node_id++) {
+    mask |= (1u << node_id);
+  }
+
+  return mask;
+}
+
+static uint8_t rs485_status_contiguous_count_from_mask(uint32_t mask)
+{
+  uint8_t count = 0u;
+
+  while ((count < RS485_DEVICE_ID_COUNT) &&
+         ((mask & (1u << count)) != 0u)) {
+    count++;
+  }
+
+  return count;
+}
+
+static uint8_t rs485_status_normalize_slave_count(uint8_t mode,
+                                                  uint8_t local_id,
+                                                  uint8_t raw_count,
+                                                  uint32_t raw_mask)
+{
+  uint8_t count = 0u;
+
+  (void)raw_count;
+
+  if (mode == VND_SYNC_MODE_OFF) {
+    return 0u;
+  }
+
+  count = rs485_status_contiguous_count_from_mask(raw_mask);
+  if (rs485_slave_count_estimate > count) {
+    count = rs485_slave_count_estimate;
+  }
+  if ((mode == VND_SYNC_MODE_SLAVE) &&
+      (local_id != 0u) &&
+      (local_id > count)) {
+    count = local_id;
+  }
+  if (count > RS485_DISCOVERY_MAX_ID) {
+    count = RS485_DISCOVERY_MAX_ID;
+  }
+
+  return count;
+}
+
+static void rs485_status_set_slave_count_estimate(uint8_t count)
+{
+  if (count > RS485_DISCOVERY_MAX_ID) {
+    count = RS485_DISCOVERY_MAX_ID;
+  }
+
+  if (rs485_slave_count_estimate != count) {
+    rs485_slave_count_estimate = count;
+    need_usb_status_refresh = 1u;
+  }
+}
+
+static char rs485_identity_hex_digit(uint8_t value)
+{
+  value &= 0x0Fu;
+  return (char)((value < 10u) ? ('0' + value) : ('A' + (value - 10u)));
+}
+
+static uint8_t rs485_identity_ip_is_set(const uint8_t ip4[4])
+{
+  return (uint8_t)(((ip4[0] | ip4[1] | ip4[2] | ip4[3]) != 0u) ? 1u : 0u);
+}
+
+static void rs485_identity_clear_row(uint8_t node_id)
+{
+  uint8_t index = 0u;
+
+  if (node_id >= RS485_IDENT_TABLE_COUNT) {
+    return;
+  }
+
+  index = node_id;
+  memset(rs485_identity_nibbles[index], 0, RS485_IDENT_PAGE_COUNT);
+  rs485_identity_seen_page_mask[index] = 0u;
+  rs485_identity_last_ms[index] = 0u;
+}
+
+static uint8_t rs485_identity_short_rows_equal(uint8_t lhs_id,
+                                                uint8_t rhs_id)
+{
+  if ((lhs_id >= RS485_IDENT_TABLE_COUNT) ||
+      (rhs_id >= RS485_IDENT_TABLE_COUNT) ||
+      ((rs485_identity_seen_page_mask[lhs_id] &
+        RS485_IDENT_SHORT_PAGE_MASK) != RS485_IDENT_SHORT_PAGE_MASK) ||
+      ((rs485_identity_seen_page_mask[rhs_id] &
+        RS485_IDENT_SHORT_PAGE_MASK) != RS485_IDENT_SHORT_PAGE_MASK)) {
+    return 0u;
+  }
+
+  return (uint8_t)((memcmp(rs485_identity_nibbles[lhs_id],
+                           rs485_identity_nibbles[rhs_id],
+                           RS485_IDENT_SHORT_NIBBLES) == 0) ? 1u : 0u);
+}
+
+static void rs485_identity_deduplicate_row(uint8_t current_id)
+{
+  if ((current_id >= RS485_IDENT_TABLE_COUNT) ||
+      ((rs485_identity_seen_page_mask[current_id] &
+        RS485_IDENT_SHORT_PAGE_MASK) != RS485_IDENT_SHORT_PAGE_MASK)) {
+    return;
+  }
+
+  for (uint8_t old_id = 0u; old_id < RS485_IDENT_TABLE_COUNT; old_id++) {
+    if ((old_id == current_id) ||
+        (rs485_identity_short_rows_equal(current_id, old_id) == 0u)) {
+      continue;
+    }
+
+    /* The local catalog row is authoritative. A theoretical 36-bit hash
+       collision must never hide this board; a real local ID change has already
+       moved that row to current_id in rs485_identity_note_local_id_change(). */
+    if ((rs485_identity_local_catalog_valid != 0u) &&
+        (old_id == rs485_identity_local_catalog_id) &&
+        (current_id != rs485_identity_local_catalog_id)) {
+      continue;
+    }
+
+    /* A single STM32 UID may occupy only one live RS-485 address. As soon as
+       its identity pages arrive at the new address, remove the former status,
+       sensor and identity cache entry instead of waiting for their timeouts. */
+    rs485_status_clear_peer_id(old_id);
+    if (rs485_identity_uid_dedupe_count < 0xFFFFFFFFu) {
+      rs485_identity_uid_dedupe_count++;
+    }
+    need_usb_status_refresh = 1u;
+  }
+}
+
+static void rs485_identity_expire_rows(uint32_t now_ms)
+{
+  static uint32_t last_check_ms = 0u;
+  uint8_t expired_any = 0u;
+
+  if ((last_check_ms != 0u) &&
+      ((now_ms - last_check_ms) < RS485_IDENT_EXPIRE_CHECK_MS)) {
+    return;
+  }
+  last_check_ms = now_ms;
+
+  for (uint8_t node_id = 0u; node_id < RS485_IDENT_TABLE_COUNT; node_id++) {
+    uint32_t primask;
+    uint32_t row_last_ms;
+
+    /* The local identity is configuration, not a peer-cache entry. On a
+       slave it does not receive its own RS-485 pages, so it must never expire. */
+    if ((rs485_identity_local_catalog_valid != 0u) &&
+        (node_id == rs485_identity_local_catalog_id)) {
+      continue;
+    }
+
+    primask = __get_PRIMASK();
+    __disable_irq();
+    row_last_ms = rs485_identity_last_ms[node_id];
+    if ((row_last_ms != 0u) &&
+        ((now_ms - row_last_ms) > RS485_IDENT_RECENT_MS)) {
+      rs485_identity_clear_row(node_id);
+      expired_any = 1u;
+    }
+    if (primask == 0u) {
+      __enable_irq();
+    }
+  }
+
+  if (expired_any != 0u) {
+    need_usb_status_refresh = 1u;
+  }
+}
+
+static uint8_t rs485_identity_get_local_nibble(uint8_t page)
+{
+  if (page < RS485_IDENT_SHORT_NIBBLES) {
+    uint8_t shift = (uint8_t)((RS485_IDENT_SHORT_NIBBLES - 1u - page) * 4u);
+    return (uint8_t)((rs485_local_short_id36 >> shift) & 0x0Fu);
+  }
+
+  page = (uint8_t)(page - RS485_IDENT_SHORT_NIBBLES);
+  if (page < RS485_IDENT_RPI_NIBBLES) {
+    uint8_t shift =
+        (uint8_t)((RS485_IDENT_RPI_NIBBLES - 1u - page) * 4u);
+    return (uint8_t)((rs485_identity_local_rpi_number >> shift) & 0x0Fu);
+  }
+
+  page = (uint8_t)(page - RS485_IDENT_RPI_NIBBLES);
+  if (page < RS485_IDENT_IP_NIBBLES) {
+    uint8_t byte_index = (uint8_t)(page >> 1);
+    uint8_t byte_value = rs485_identity_local_ip4[byte_index];
+    if ((page & 1u) == 0u) {
+      return (uint8_t)((byte_value >> 4) & 0x0Fu);
+    }
+    return (uint8_t)(byte_value & 0x0Fu);
+  }
+
+  return 0u;
+}
+
+static void rs485_identity_store_nibble(uint8_t node_id,
+                                        uint8_t page,
+                                        uint8_t nibble,
+                                        uint32_t now_ms)
+{
+  uint8_t index = 0u;
+
+  if ((node_id >= RS485_IDENT_TABLE_COUNT) ||
+      (page >= RS485_IDENT_PAGE_COUNT)) {
+    return;
+  }
+
+  index = node_id;
+  rs485_identity_nibbles[index][page] = (uint8_t)(nibble & 0x0Fu);
+  rs485_identity_seen_page_mask[index] |= (1u << page);
+  rs485_identity_last_ms[index] = now_ms;
+  if ((rs485_identity_seen_page_mask[index] &
+       RS485_IDENT_SHORT_PAGE_MASK) == RS485_IDENT_SHORT_PAGE_MASK) {
+    rs485_identity_deduplicate_row(index);
+  }
+}
+
+static void rs485_identity_store_local_row(uint32_t now_ms)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint8_t catalog_id = rs485_local_node_id;
+
+  (void)vnd_sync_mode_public;
+
+  if ((rs485_local_node_id_assigned == 0u) ||
+      (catalog_id >= RS485_IDENT_TABLE_COUNT)) {
+    return;
+  }
+
+  if ((rs485_identity_local_catalog_valid != 0u) &&
+      (rs485_identity_local_catalog_id != catalog_id)) {
+    rs485_identity_clear_row(rs485_identity_local_catalog_id);
+  }
+
+  for (uint8_t page = 0u; page < RS485_IDENT_PAGE_COUNT; page++) {
+    rs485_identity_store_nibble(catalog_id,
+                                page,
+                                rs485_identity_get_local_nibble(page),
+                                now_ms);
+  }
+  rs485_identity_local_catalog_id = catalog_id;
+  rs485_identity_local_catalog_valid = 1u;
+}
+
+static void rs485_identity_note_local_id_change(uint8_t old_id, uint8_t new_id)
+{
+  uint8_t new_catalog_id = new_id;
+
+  (void)old_id;
+  if ((rs485_identity_local_catalog_valid != 0u) &&
+      (rs485_identity_local_catalog_id != new_catalog_id)) {
+    rs485_identity_clear_row(rs485_identity_local_catalog_id);
+    rs485_identity_local_catalog_valid = 0u;
+  }
+  if ((rs485_local_node_id_assigned != 0u) &&
+      (new_catalog_id < RS485_IDENT_TABLE_COUNT)) {
+    rs485_identity_store_local_row(HAL_GetTick());
+  }
+  rs485_identity_rescan_requested = 1u;
+}
+
+void rs485_identity_set_local_ip4(const uint8_t ip4[4])
+{
+  uint32_t primask;
+
+  if (ip4 == NULL) {
+    return;
+  }
+
+  primask = __get_PRIMASK();
+  __disable_irq();
+  rs485_identity_local_ip4[0] = ip4[0];
+  rs485_identity_local_ip4[1] = ip4[1];
+  rs485_identity_local_ip4[2] = ip4[2];
+  rs485_identity_local_ip4[3] = ip4[3];
+  rs485_identity_local_ip_set = rs485_identity_ip_is_set(rs485_identity_local_ip4);
+  rs485_identity_store_local_row(HAL_GetTick());
+  need_usb_status_refresh = 1u;
+  if (primask == 0u) {
+    __enable_irq();
+  }
+}
+
+void rs485_identity_set_local_rpi_info(uint16_t rpi_number,
+                                       const uint8_t ip4[4])
+{
+  uint32_t primask;
+
+  if (ip4 == NULL) {
+    return;
+  }
+
+  primask = __get_PRIMASK();
+  __disable_irq();
+  rs485_identity_local_rpi_number = rpi_number;
+  memcpy(rs485_identity_local_ip4, ip4, 4u);
+  rs485_identity_local_ip_set =
+      rs485_identity_ip_is_set(rs485_identity_local_ip4);
+  rs485_identity_store_local_row(HAL_GetTick());
+  need_usb_status_refresh = 1u;
+  if (primask == 0u) {
+    __enable_irq();
+  }
+}
+
+void rs485_identity_request_scan(void)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint32_t primask = __get_PRIMASK();
+  uint32_t now_ms = HAL_GetTick();
+
+  __disable_irq();
+  if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+      (rs485_local_node_id_assigned != 0u)) {
+    rs485_identity_rescan_requested = 0u;
+    rs485_identity_scan_active = 1u;
+    rs485_identity_scan_page = 0u;
+    rs485_status_master_selector = 0u;
+    rs485_identity_self_tx_state = RS485_IDENT_SELF_STATE_PAGE;
+    rs485_identity_current_req_active = 0u;
+    rs485_identity_current_req_page = 0u;
+    rs485_identity_current_req_selector = 0u;
+    rs485_identity_master_self_page = 0xFFu;
+    rs485_identity_master_self_node_id = 0u;
+    rs485_identity_master_self_node_valid = 0u;
+    rs485_identity_scan_last_start_ms = now_ms;
+  }
+  rs485_identity_store_local_row(HAL_GetTick());
+  need_usb_status_refresh = 1u;
+  if (primask == 0u) {
+    __enable_irq();
+  }
+}
+
+uint8_t rs485_identity_get_snapshot(uint8_t node_id, rs485_identity_snapshot_t *out)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint32_t primask;
+  uint8_t local_request = (node_id == 0xFFu) ? 1u : 0u;
+  uint8_t local_id = rs485_local_node_id;
+  uint8_t target_id = local_request ? local_id : node_id;
+  uint32_t now_ms = HAL_GetTick();
+  uint32_t mask = 0u;
+  uint32_t last_ms = 0u;
+  uint16_t flags = 0u;
+  uint16_t rpi_number = 0u;
+  uint8_t target_live = local_request;
+  uint8_t nibbles[RS485_IDENT_PAGE_COUNT];
+  uint8_t ip4[4] = {0u, 0u, 0u, 0u};
+
+  if (out == NULL) {
+    return 0u;
+  }
+  memset(out, 0, sizeof(*out));
+  memset(nibbles, 0, sizeof(nibbles));
+  memset(out->short_id, '?', 9u);
+  out->short_id[9] = '\0';
+
+  if ((local_request == 0u) &&
+      (target_id >= RS485_IDENT_TABLE_COUNT)) {
+    return 0u;
+  }
+
+  primask = __get_PRIMASK();
+  __disable_irq();
+  mask = rs485_identity_seen_page_mask[target_id];
+  last_ms = rs485_identity_last_ms[target_id];
+  memcpy(nibbles, rs485_identity_nibbles[target_id], sizeof(nibbles));
+  if (local_request != 0u) {
+    flags |= RS485_IDENTITY_FLAG_LOCAL;
+    if (rs485_local_node_id_assigned != 0u) {
+      flags |= RS485_IDENTITY_FLAG_DEVICE_ID_ASSIGNED;
+    }
+    if (rs485_identity_local_ip_set != 0u) {
+      flags |= RS485_IDENTITY_FLAG_IP_VALID;
+    }
+    if (rs485_identity_local_rpi_number != 0u) {
+      flags |= RS485_IDENTITY_FLAG_RPI_NUMBER_VALID;
+    }
+    mask |= RS485_IDENT_ALL_PAGES_MASK;
+    for (uint8_t page = 0u; page < RS485_IDENT_PAGE_COUNT; page++) {
+      nibbles[page] = rs485_identity_get_local_nibble(page);
+    }
+    last_ms = now_ms;
+  } else {
+    uint32_t peer_ms = rs485_status_peer_last_ms[target_id];
+    uint32_t master_ms = rs485_status_master_last_ms;
+
+    if (((rs485_local_node_id_assigned != 0u) &&
+         (target_id == local_id)) ||
+        ((peer_ms != 0u) &&
+         ((now_ms - peer_ms) <= RS485_STATUS_PEER_HOLD_MS)) ||
+        ((master_ms != 0u) &&
+         (target_id == rs485_status_master_node_id) &&
+         ((now_ms - master_ms) <= RS485_STATUS_PEER_HOLD_MS))) {
+      target_live = 1u;
+    }
+
+    /* Keep the 30 s cache internally for a quick reconnect, but never expose
+       cached identity as a currently connected device. */
+    if (target_live == 0u) {
+      mask = 0u;
+      last_ms = 0u;
+      memset(nibbles, 0, sizeof(nibbles));
+    }
+  }
+  if ((local_request == 0u) && (mask != 0u)) {
+    flags |= RS485_IDENTITY_FLAG_DEVICE_ID_ASSIGNED;
+  }
+  if (rs485_identity_scan_active != 0u) {
+    flags |= RS485_IDENTITY_FLAG_SCAN_ACTIVE;
+  }
+  if (primask == 0u) {
+    __enable_irq();
+  }
+
+  if (((local_request != 0u) &&
+       (vnd_sync_mode_public == VND_SYNC_MODE_MASTER)) ||
+      ((target_live != 0u) &&
+       (rs485_status_master_last_ms != 0u) &&
+       ((now_ms - rs485_status_master_last_ms) <=
+        RS485_STATUS_PEER_HOLD_MS) &&
+       (target_id == rs485_status_master_node_id))) {
+    flags |= RS485_IDENTITY_FLAG_MASTER;
+  }
+  if ((target_live != 0u) &&
+      (target_id <= RS485_DISCOVERY_MAX_ID) &&
+      ((rs485_node_conflict_mask & (1u << target_id)) != 0u)) {
+    flags |= RS485_IDENTITY_FLAG_NODE_CONFLICT;
+  }
+  if (((local_request != 0u) &&
+       (rs485_role_local_is_selected_slave() != 0u)) ||
+      ((target_live != 0u) &&
+       (local_request == 0u) &&
+       (target_id == rs485_role_selected_slave_node_id) &&
+       (rs485_role_slave_valid != 0u))) {
+    flags |= RS485_IDENTITY_FLAG_SELECTED_SLAVE;
+  }
+
+  if ((mask & ((1u << RS485_IDENT_SHORT_NIBBLES) - 1u)) ==
+      ((1u << RS485_IDENT_SHORT_NIBBLES) - 1u)) {
+    flags |= RS485_IDENTITY_FLAG_SHORT_VALID;
+    for (uint8_t page = 0u; page < RS485_IDENT_SHORT_NIBBLES; page++) {
+      out->short_id[page] = rs485_identity_hex_digit(nibbles[page]);
+    }
+  }
+
+  for (uint8_t page = 0u; page < RS485_IDENT_RPI_NIBBLES; page++) {
+    rpi_number = (uint16_t)((rpi_number << 4) |
+        nibbles[RS485_IDENT_SHORT_NIBBLES + page]);
+  }
+  if ((mask & ((((1u << RS485_IDENT_RPI_NIBBLES) - 1u)
+                << RS485_IDENT_SHORT_NIBBLES))) ==
+      (((1u << RS485_IDENT_RPI_NIBBLES) - 1u)
+       << RS485_IDENT_SHORT_NIBBLES)) {
+    if (rpi_number != 0u) {
+      flags |= RS485_IDENTITY_FLAG_RPI_NUMBER_VALID;
+    }
+  }
+
+  for (uint8_t page = 0u; page < RS485_IDENT_IP_NIBBLES; page++) {
+    uint8_t nibble =
+        nibbles[RS485_IDENT_SHORT_NIBBLES +
+                RS485_IDENT_RPI_NIBBLES + page];
+    if ((page & 1u) == 0u) {
+      ip4[page >> 1] = (uint8_t)(nibble << 4);
+    } else {
+      ip4[page >> 1] |= nibble;
+    }
+  }
+  if ((mask & (((1u << RS485_IDENT_IP_NIBBLES) - 1u)
+               << (RS485_IDENT_SHORT_NIBBLES +
+                   RS485_IDENT_RPI_NIBBLES))) ==
+      (((1u << RS485_IDENT_IP_NIBBLES) - 1u)
+       << (RS485_IDENT_SHORT_NIBBLES +
+           RS485_IDENT_RPI_NIBBLES))) {
+    if (rs485_identity_ip_is_set(ip4) != 0u) {
+      flags |= RS485_IDENTITY_FLAG_IP_VALID;
+    }
+  }
+  if ((mask & RS485_IDENT_ALL_PAGES_MASK) == RS485_IDENT_ALL_PAGES_MASK) {
+    flags |= RS485_IDENTITY_FLAG_COMPLETE;
+  }
+  if ((last_ms != 0u) && ((now_ms - last_ms) <= RS485_IDENT_RECENT_MS)) {
+    flags |= RS485_IDENTITY_FLAG_RECENT;
+  }
+
+  out->node_id = target_id;
+  out->flags = flags;
+  out->rpi_number = rpi_number;
+  memcpy(out->ip4, ip4, sizeof(out->ip4));
+  out->seen_page_mask = mask & RS485_IDENT_ALL_PAGES_MASK;
+  out->last_ms = last_ms;
+  return 1u;
 }
 
 static uint32_t rs485_status_get_effective_period_ticks(void)
@@ -1407,7 +3459,7 @@ static uint8_t rs485_status_count_recent_peers(uint32_t now_ms, uint32_t hold_ms
   uint8_t count = 0u;
   uint32_t index = 0u;
 
-  for (index = 0u; index < RS485_DISCOVERY_MAX_ID; index++) {
+  for (index = 0u; index < RS485_DEVICE_ID_COUNT; index++) {
     uint32_t peer_ms = rs485_status_peer_last_ms[index];
     if ((peer_ms != 0u) && ((now_ms - peer_ms) <= hold_ms)) {
       count++;
@@ -1422,7 +3474,7 @@ static uint32_t rs485_status_get_recent_peer_mask(uint32_t now_ms, uint32_t hold
   uint32_t mask = 0u;
   uint8_t index = 0u;
 
-  for (index = 0u; index < RS485_DISCOVERY_MAX_ID; index++) {
+  for (index = 0u; index < RS485_DEVICE_ID_COUNT; index++) {
     uint32_t peer_ms = rs485_status_peer_last_ms[index];
     if ((peer_ms != 0u) && ((now_ms - peer_ms) <= hold_ms)) {
       mask |= (1u << index);
@@ -1432,38 +3484,112 @@ static uint32_t rs485_status_get_recent_peer_mask(uint32_t now_ms, uint32_t hold
   return mask;
 }
 
+static uint8_t rs485_status_confirm_peer_candidate(uint8_t node_id,
+                                                   uint32_t now_ms)
+{
+  uint32_t peer_ms;
+  uint32_t candidate_ms;
+  uint8_t count;
+
+  if (node_id > RS485_DISCOVERY_MAX_ID) {
+    return 0u;
+  }
+
+  peer_ms = rs485_status_peer_last_ms[node_id];
+  if ((peer_ms != 0u) &&
+      ((now_ms - peer_ms) <= RS485_STATUS_PEER_HOLD_MS)) {
+    rs485_status_peer_candidate_count[node_id] =
+        RS485_STATUS_PEER_CONFIRM_COUNT;
+    rs485_status_peer_candidate_last_ms[node_id] = now_ms;
+    return 1u;
+  }
+
+  candidate_ms = rs485_status_peer_candidate_last_ms[node_id];
+  count = rs485_status_peer_candidate_count[node_id];
+  if ((candidate_ms == 0u) ||
+      ((now_ms - candidate_ms) > RS485_STATUS_PEER_CONFIRM_WINDOW_MS)) {
+    count = 1u;
+  } else if (count < RS485_STATUS_PEER_CONFIRM_COUNT) {
+    count++;
+  }
+
+  rs485_status_peer_candidate_count[node_id] = count;
+  rs485_status_peer_candidate_last_ms[node_id] = now_ms;
+  return (uint8_t)((count >= RS485_STATUS_PEER_CONFIRM_COUNT) ? 1u : 0u);
+}
+
+static uint8_t rs485_status_confirm_master_candidate(uint8_t node_id,
+                                                     uint32_t now_ms)
+{
+  if (node_id > RS485_DISCOVERY_MAX_ID) {
+    return 0u;
+  }
+
+  if ((rs485_status_master_last_ms != 0u) &&
+      ((now_ms - rs485_status_master_last_ms) <= RS485_STATUS_PEER_HOLD_MS) &&
+      (node_id == rs485_status_master_node_id)) {
+    rs485_status_master_candidate_id = node_id;
+    rs485_status_master_candidate_count = RS485_STATUS_PEER_CONFIRM_COUNT;
+    rs485_status_master_candidate_last_ms = now_ms;
+    return 1u;
+  }
+
+  if ((rs485_status_master_candidate_last_ms == 0u) ||
+      ((now_ms - rs485_status_master_candidate_last_ms) >
+       RS485_STATUS_PEER_CONFIRM_WINDOW_MS) ||
+      (node_id != rs485_status_master_candidate_id)) {
+    rs485_status_master_candidate_id = node_id;
+    rs485_status_master_candidate_count = 1u;
+  } else if (rs485_status_master_candidate_count <
+             RS485_STATUS_PEER_CONFIRM_COUNT) {
+    rs485_status_master_candidate_count++;
+  }
+  rs485_status_master_candidate_last_ms = now_ms;
+
+  return (uint8_t)((rs485_status_master_candidate_count >=
+                    RS485_STATUS_PEER_CONFIRM_COUNT) ? 1u : 0u);
+}
+
 static void rs485_status_clear_peer_id(uint8_t node_id)
 {
   uint8_t index = 0u;
 
-  if ((node_id == 0u) || (node_id > RS485_DISCOVERY_MAX_ID)) {
+  if (node_id > RS485_DISCOVERY_MAX_ID) {
     return;
   }
 
-  index = (uint8_t)(node_id - 1u);
+  index = node_id;
   rs485_status_peer_bytes[index] = 0u;
   rs485_status_peer_second_bytes[index] = 0u;
   rs485_status_peer_last_ms[index] = 0u;
+  rs485_status_peer_candidate_count[index] = 0u;
+  rs485_status_peer_candidate_last_ms[index] = 0u;
+  rs485_sensor_peer_bits[index] = 0u;
+  rs485_sensor_peer_last_ms[index] = 0u;
+  rs485_sensor_peer_last_index[index] = 0u;
   rs485_status_seen_mask &= ~(1u << index);
   rs485_discovery_seen_mask &= ~(1u << index);
   rs485_discovery_scan_mask &= ~(1u << index);
+  rs485_identity_clear_row(node_id);
 }
 
 static void rs485_status_clear_peer_table(void)
 {
   uint8_t index = 0u;
 
-  for (index = 0u; index < RS485_DISCOVERY_MAX_ID; index++) {
+  for (index = 0u; index < RS485_DEVICE_ID_COUNT; index++) {
     rs485_status_peer_bytes[index] = 0u;
     rs485_status_peer_second_bytes[index] = 0u;
     rs485_status_peer_last_ms[index] = 0u;
+    rs485_status_peer_candidate_count[index] = 0u;
+    rs485_status_peer_candidate_last_ms[index] = 0u;
   }
 }
 
 static void rs485_status_assignment_reset(void)
 {
   rs485_status_clear_peer_table();
-  rs485_status_master_selector = 1u;
+  rs485_status_master_selector = 0u;
   rs485_status_assign_from_id = 0u;
   rs485_status_assign_to_id = 0u;
   rs485_status_assign_attempts = 0u;
@@ -1475,6 +3601,11 @@ static void rs485_status_compact_schedule_assignment(uint32_t now_ms)
   uint32_t active_mask = 0u;
   uint8_t target_id = 0u;
   uint8_t from_id = 0u;
+
+#if !RS485_STATUS_COMPACT_ENABLE
+  (void)now_ms;
+  return;
+#endif
 
   if (rs485_status_assign_from_id != 0u) {
     return;
@@ -1506,6 +3637,9 @@ static void rs485_status_compact_schedule_assignment(uint32_t now_ms)
 
 static void rs485_status_compact_on_master_response(uint8_t response_id)
 {
+  uint32_t compacted_mask = 0u;
+  uint8_t compacted_high_water = 0u;
+
   if ((rs485_status_assign_from_id == 0u) ||
       (rs485_status_assign_to_id == 0u)) {
     return;
@@ -1518,6 +3652,15 @@ static void rs485_status_compact_on_master_response(uint8_t response_id)
   }
 
   rs485_status_clear_peer_id(rs485_status_assign_from_id);
+  compacted_mask = rs485_status_get_recent_peer_mask(
+      HAL_GetTick(), RS485_STATUS_ASSIGN_ID_HOLD_MS);
+  compacted_high_water = rs485_status_contiguous_count_from_mask(compacted_mask);
+  if (rs485_role_slave_id_high_water != compacted_high_water) {
+    rs485_role_slave_id_high_water = compacted_high_water;
+    rs485_role_mark_persist_dirty();
+  }
+  rs485_role_enum_stable_mask = 0u;
+  rs485_role_enum_stable_since_ms = HAL_GetTick();
   rs485_status_assign_from_id = 0u;
   rs485_status_assign_to_id = 0u;
   rs485_status_assign_attempts = 0u;
@@ -1526,16 +3669,12 @@ static void rs485_status_compact_on_master_response(uint8_t response_id)
 
 static void rs485_status_master_advance_selector(void)
 {
-  if (rs485_status_master_selector == 0u) {
-    rs485_status_master_selector = 1u;
-    return;
-  }
-
-  rs485_status_master_selector++;
-  if ((rs485_status_master_selector == 0u) ||
-      (rs485_status_master_selector > RS485_DISCOVERY_MAX_ID)) {
-    rs485_status_master_selector = 1u;
+  if (rs485_status_master_selector >= RS485_DISCOVERY_MAX_ID) {
+    rs485_status_master_selector = 0u;
     rs485_status_compact_schedule_assignment(HAL_GetTick());
+    rs485_identity_master_on_selector_wrap();
+  } else {
+    rs485_status_master_selector++;
   }
 }
 
@@ -1545,9 +3684,9 @@ static uint8_t rs485_status_build_local_byte(void)
   uint8_t status = 0u;
 
   if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
-    status = (uint8_t)(rs485_status_master_selector & RS485_STATUS_ID_MASK);
+    status = rs485_status_id_to_wire(rs485_status_master_selector);
   } else {
-    status = (uint8_t)(rs485_local_node_id & RS485_STATUS_ID_MASK);
+    status = rs485_status_id_to_wire(rs485_local_node_id);
   }
 
   if (optic_sensor_get_state() != 0u) {
@@ -1563,11 +3702,166 @@ static uint8_t rs485_status_build_local_byte(void)
   return status;
 }
 
+static uint8_t rs485_status_build_public_local_byte(void)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint8_t status = rs485_status_build_local_byte();
+
+  if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+    status = (uint8_t)((status & (uint8_t)~RS485_STATUS_ID_MASK) |
+                       rs485_status_id_to_wire(rs485_local_node_id));
+  }
+
+  return status;
+}
+
+static uint8_t rs485_status_build_master_identity_first_byte(void)
+{
+  /* Device ID 0 is a valid public address. Carry the actual MASTER id in
+     self-identity words instead of using zero as an in-band sentinel. */
+  return rs485_status_build_public_local_byte();
+}
+
+static void rs485_identity_note_master_request(uint8_t first, uint8_t second)
+{
+  uint8_t selector =
+      rs485_status_id_from_wire((uint8_t)(first & RS485_STATUS_ID_MASK));
+  uint8_t page = (uint8_t)(second & RS485_STATUS_ID_MASK);
+
+  if (((second & RS485_STATUS_IDENT_REQ_MASK) == RS485_STATUS_IDENT_REQ_VALUE) &&
+      (page < RS485_IDENT_PAGE_COUNT)) {
+    rs485_identity_current_req_active = 1u;
+    rs485_identity_current_req_page = page;
+    rs485_identity_current_req_selector = selector;
+  } else {
+    rs485_identity_current_req_active = 0u;
+    rs485_identity_current_req_page = 0u;
+    rs485_identity_current_req_selector = 0u;
+  }
+}
+
+static void rs485_identity_note_master_self_word(uint8_t first, uint8_t second)
+{
+  uint8_t master_id =
+      rs485_status_id_from_wire((uint8_t)(first & RS485_STATUS_ID_MASK));
+
+  if (master_id > RS485_DISCOVERY_MAX_ID) {
+    return;
+  }
+
+  if ((second & RS485_STATUS_MASTER_SELF_PAGE_MASK) ==
+      RS485_STATUS_MASTER_SELF_PAGE_VALUE) {
+    uint8_t page = (uint8_t)(second & RS485_STATUS_ID_MASK);
+    rs485_identity_master_self_page = (page < RS485_IDENT_PAGE_COUNT) ? page : 0xFFu;
+    rs485_identity_master_self_node_id = master_id;
+    rs485_identity_master_self_node_valid = 1u;
+    return;
+  }
+
+  if (((second & RS485_STATUS_MASTER_SELF_DATA_MASK) ==
+       RS485_STATUS_MASTER_SELF_DATA_VALUE) &&
+      (rs485_identity_master_self_page < RS485_IDENT_PAGE_COUNT)) {
+    uint8_t target_id = rs485_identity_master_self_node_id;
+
+    if ((rs485_identity_master_self_node_valid != 0u) &&
+        (target_id <= RS485_DISCOVERY_MAX_ID)) {
+      rs485_identity_store_nibble(target_id,
+                                  rs485_identity_master_self_page,
+                                  (uint8_t)(second & 0x0Fu),
+                                  HAL_GetTick());
+    }
+    rs485_identity_master_self_page = 0xFFu;
+    rs485_identity_master_self_node_id = 0u;
+    rs485_identity_master_self_node_valid = 0u;
+    need_usb_status_refresh = 1u;
+  }
+}
+
+static void rs485_identity_note_response(uint8_t node_id, uint8_t second)
+{
+  uint32_t now_ms = HAL_GetTick();
+
+  if ((rs485_identity_current_req_active == 0u) ||
+      (rs485_identity_current_req_page >= RS485_IDENT_PAGE_COUNT) ||
+      (node_id != rs485_identity_current_req_selector) ||
+      ((second & RS485_STATUS_IDENT_RESP_MASK) != RS485_STATUS_IDENT_RESP_VALUE)) {
+    return;
+  }
+  if ((rs485_status_peer_last_ms[node_id] == 0u) ||
+      ((now_ms - rs485_status_peer_last_ms[node_id]) >
+       RS485_STATUS_PEER_HOLD_MS)) {
+    return;
+  }
+
+  rs485_identity_store_nibble(node_id,
+                              rs485_identity_current_req_page,
+                              (uint8_t)(second & 0x0Fu),
+                              now_ms);
+  need_usb_status_refresh = 1u;
+}
+
+static void rs485_identity_master_on_selector_wrap(void)
+{
+  if (rs485_identity_scan_active == 0u) {
+    return;
+  }
+
+  if ((uint8_t)(rs485_identity_scan_page + 1u) >= RS485_IDENT_PAGE_COUNT) {
+    rs485_identity_scan_active = 0u;
+    rs485_identity_self_tx_state = RS485_IDENT_SELF_STATE_NONE;
+    rs485_identity_current_req_active = 0u;
+    rs485_identity_current_req_page = 0u;
+    rs485_identity_current_req_selector = 0u;
+    rs485_identity_scan_last_complete_ms = HAL_GetTick();
+    need_usb_status_refresh = 1u;
+    return;
+  }
+
+  rs485_identity_scan_page++;
+  rs485_identity_self_tx_state = RS485_IDENT_SELF_STATE_PAGE;
+}
+
+static void rs485_identity_service(uint32_t now_ms)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+
+  /* Presence and sensor status disappear from the live map after 500 ms.
+     Identity is a slower background cache, but it must not retain disconnected
+     devices forever: evict remote rows after the existing 30 s RECENT window. */
+  rs485_identity_expire_rows(now_ms);
+
+  if (vnd_sync_mode_public != VND_SYNC_MODE_MASTER) {
+    rs485_identity_scan_active = 0u;
+    rs485_identity_self_tx_state = RS485_IDENT_SELF_STATE_NONE;
+    return;
+  }
+  if ((rs485_local_node_id_assigned == 0u) ||
+      (rs485_identity_scan_active != 0u)) {
+    return;
+  }
+
+  if (rs485_identity_rescan_requested != 0u) {
+    rs485_identity_request_scan();
+    return;
+  }
+
+  if (((rs485_identity_scan_last_start_ms == 0u) &&
+       (now_ms >= RS485_IDENT_AUTO_SCAN_BOOT_MS)) ||
+      ((rs485_identity_scan_last_complete_ms != 0u) &&
+       ((now_ms - rs485_identity_scan_last_complete_ms) >=
+        RS485_IDENT_AUTO_SCAN_PERIOD_MS))) {
+    rs485_identity_request_scan();
+  }
+}
+
 static uint8_t rs485_status_build_local_second_byte(uint8_t selector)
 {
   extern volatile uint8_t vnd_sync_mode_public;
 
   if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+    rs485_identity_current_req_active = 0u;
+    rs485_identity_current_req_page = 0u;
+    rs485_identity_current_req_selector = 0u;
     if ((rs485_status_assign_from_id != 0u) &&
         (rs485_status_assign_to_id != 0u) &&
         (selector == rs485_status_assign_from_id)) {
@@ -1592,11 +3886,78 @@ static uint8_t rs485_status_build_local_second_byte(uint8_t selector)
       return (uint8_t)(RS485_STATUS_ASSIGN_CMD_VALUE |
                        (rs485_status_assign_to_id & RS485_STATUS_ID_MASK));
     }
+    if ((rs485_identity_scan_active != 0u) &&
+        (rs485_identity_scan_page < RS485_IDENT_PAGE_COUNT) &&
+        (selector <= RS485_DISCOVERY_MAX_ID)) {
+      rs485_identity_current_req_active = 1u;
+      rs485_identity_current_req_page = rs485_identity_scan_page;
+      rs485_identity_current_req_selector = selector;
+      return (uint8_t)(RS485_STATUS_IDENT_REQ_VALUE |
+                       (rs485_identity_scan_page & RS485_STATUS_ID_MASK));
+    }
+    if (rs485_local_node_id_assigned != 0u) {
+      return (uint8_t)(RS485_STATUS_MASTER_INFO_VALUE |
+                       rs485_status_id_to_wire(rs485_local_node_id));
+    }
     return 0u;
   }
   (void)selector;
 
+  if ((rs485_identity_current_req_active != 0u) &&
+      (rs485_identity_current_req_page < RS485_IDENT_PAGE_COUNT)) {
+    return (uint8_t)(RS485_STATUS_IDENT_RESP_VALUE |
+                     rs485_identity_get_local_nibble(rs485_identity_current_req_page));
+  }
+
   return 0u;
+}
+
+static void rs485_status_note_master_word(uint8_t first, uint8_t second)
+{
+  uint8_t master_id = 0u;
+  uint8_t master_id_valid = 0u;
+  uint8_t public_byte = 0u;
+  uint32_t now_ms = HAL_GetTick();
+
+  if (((second & RS485_STATUS_SENSOR_EVENT_MASK) ==
+       RS485_STATUS_SENSOR_EVENT_VALUE) ||
+      ((second & RS485_STATUS_MASTER_SELF_PAGE_MASK) ==
+       RS485_STATUS_MASTER_SELF_PAGE_VALUE) ||
+      ((second & RS485_STATUS_MASTER_SELF_DATA_MASK) ==
+       RS485_STATUS_MASTER_SELF_DATA_VALUE)) {
+    master_id =
+        rs485_status_id_from_wire((uint8_t)(first & RS485_STATUS_ID_MASK));
+    master_id_valid = 1u;
+  } else if ((second & RS485_STATUS_MASTER_INFO_MASK) ==
+             RS485_STATUS_MASTER_INFO_VALUE) {
+    master_id =
+        rs485_status_id_from_wire((uint8_t)(second & RS485_STATUS_ID_MASK));
+    master_id_valid = 1u;
+  } else if ((rs485_status_master_last_ms != 0u) &&
+             ((now_ms - rs485_status_master_last_ms) <=
+              RS485_STATUS_PEER_HOLD_MS)) {
+    master_id = rs485_status_master_node_id;
+    master_id_valid = 1u;
+  }
+
+  if ((master_id_valid == 0u) ||
+      (master_id > RS485_DISCOVERY_MAX_ID)) {
+    return;
+  }
+  if (rs485_status_confirm_master_candidate(master_id, now_ms) == 0u) {
+    return;
+  }
+
+  public_byte = (uint8_t)((first & (uint8_t)~RS485_STATUS_ID_MASK) |
+                          rs485_status_id_to_wire(master_id));
+  if ((rs485_status_master_last_ms == 0u) ||
+      (rs485_status_master_public_byte != public_byte)) {
+    need_usb_status_refresh = 1u;
+  }
+
+  rs485_status_master_node_id = master_id;
+  rs485_status_master_public_byte = public_byte;
+  rs485_status_master_last_ms = now_ms;
 }
 
 uint8_t rs485_status_get_snapshot(uint8_t *local_status,
@@ -1606,15 +3967,18 @@ uint8_t rs485_status_get_snapshot(uint8_t *local_status,
                                   uint8_t max_status_bytes)
 {
   extern volatile uint8_t vnd_sync_mode_public;
+  uint8_t mode = vnd_sync_mode_public;
   uint32_t now_ms = HAL_GetTick();
   uint32_t mask = 0u;
   uint8_t count = 0u;
-  uint8_t local = rs485_status_build_local_byte();
-  uint8_t local_id = (uint8_t)(local & RS485_STATUS_ID_MASK);
+  uint8_t local = rs485_status_build_public_local_byte();
+  uint8_t local_id = (rs485_local_node_id_assigned != 0u)
+      ? rs485_local_node_id
+      : 0u;
   uint8_t limit = max_status_bytes;
 
-  if (limit > RS485_DISCOVERY_MAX_ID) {
-    limit = RS485_DISCOVERY_MAX_ID;
+  if (limit > RS485_DEVICE_ID_COUNT) {
+    limit = RS485_DEVICE_ID_COUNT;
   }
 
   if (status_bytes != NULL) {
@@ -1633,17 +3997,54 @@ uint8_t rs485_status_get_snapshot(uint8_t *local_status,
     }
   }
 
-  if ((vnd_sync_mode_public != VND_SYNC_MODE_MASTER) &&
-      (local_id != 0u) && (local_id <= limit)) {
-    uint8_t idx = (uint8_t)(local_id - 1u);
+  if ((mode != VND_SYNC_MODE_OFF) &&
+      (rs485_local_node_id_assigned != 0u) &&
+      (local_id < limit)) {
+    uint8_t idx = local_id;
+    uint32_t bit = (1u << idx);
     if ((mask & (1u << idx)) == 0u) {
       count++;
     }
     if (status_bytes != NULL) {
-      status_bytes[idx] = local;
+      status_bytes[idx] = (status_bytes[idx] == 0u)
+          ? local
+          : (uint8_t)(local | (status_bytes[idx] & (uint8_t)~RS485_STATUS_ID_MASK));
     }
-    mask |= (1u << idx);
+    mask |= bit;
   }
+
+  if ((mode == VND_SYNC_MODE_SLAVE) &&
+      (rs485_status_master_node_id < limit) &&
+      (rs485_status_master_last_ms != 0u) &&
+      ((now_ms - rs485_status_master_last_ms) <= RS485_STATUS_PEER_HOLD_MS)) {
+    uint8_t idx = rs485_status_master_node_id;
+    uint32_t bit = (1u << idx);
+    if ((mask & bit) == 0u) {
+      count++;
+    }
+    if (status_bytes != NULL) {
+      status_bytes[idx] = rs485_status_master_public_byte;
+    }
+    mask |= bit;
+  }
+
+  if (status_bytes != NULL) {
+    for (uint8_t index = 0u; index < limit; index++) {
+      uint32_t bit = (1u << index);
+      if ((mask & bit) == 0u) {
+        status_bytes[index] = 0u;
+      } else if ((rs485_node_conflict_mask & bit) != 0u) {
+        /* Keep the address visible but suppress ambiguous sensor state. */
+        status_bytes[index] =
+            rs485_status_id_to_wire(index);
+      } else if (status_bytes[index] == 0u) {
+        status_bytes[index] =
+            rs485_status_id_to_wire(index);
+      }
+    }
+  }
+
+  count = rs485_count_bits_u32(mask);
 
   if (local_status != NULL) {
     *local_status = local;
@@ -1658,18 +4059,128 @@ uint8_t rs485_status_get_snapshot(uint8_t *local_status,
   return count;
 }
 
+void rs485_role_get_selected_slave_snapshot(rs485_selected_slave_snapshot_t *out)
+{
+  if (out == NULL) {
+    return;
+  }
+  memset(out, 0, sizeof(*out));
+  out->age_ms = 0xFFFFu;
+
+  /* Deprecated topology concept. Every fixed node now publishes its own
+     sensors in sync_status_bytes[device_id]. */
+}
+
+uint8_t rs485_status_master_optic_active(void)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint32_t now_ms = HAL_GetTick();
+
+  if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+    return 0u;
+  }
+  if (rs485_status_master_last_ms == 0u) {
+    return 0u;
+  }
+  if ((now_ms - rs485_status_master_last_ms) > RS485_STATUS_PEER_HOLD_MS) {
+    return 0u;
+  }
+  if ((rs485_status_master_last_ms != 0u) &&
+      ((rs485_node_conflict_mask &
+        (1u << rs485_status_master_node_id)) != 0u)) {
+    return 0u;
+  }
+
+  return (uint8_t)(((rs485_status_master_public_byte & RS485_STATUS_OPTIC_BIT) != 0u) ? 1u : 0u);
+}
+
+uint8_t rs485_status_get_master_snapshot(uint8_t *master_status,
+                                         uint16_t *age_ms,
+                                         uint8_t *flags)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint32_t now_ms = HAL_GetTick();
+  uint32_t age = 0xFFFFFFFFu;
+  uint8_t status = 0u;
+  uint8_t out_flags = 0u;
+  uint8_t fresh = 0u;
+
+  if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+    status = rs485_status_build_public_local_byte();
+    age = 0u;
+    out_flags |= 0x01u; /* valid */
+    out_flags |= 0x02u; /* fresh */
+    out_flags |= 0x08u; /* local master */
+    fresh = 1u;
+  } else if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
+             (rs485_status_master_last_ms != 0u)) {
+    status = rs485_status_master_public_byte;
+    age = now_ms - rs485_status_master_last_ms;
+    out_flags |= 0x01u; /* valid */
+    if (age <= RS485_STATUS_PEER_HOLD_MS) {
+      out_flags |= 0x02u; /* fresh */
+      fresh = 1u;
+    }
+  }
+
+  if ((fresh != 0u) && ((status & RS485_STATUS_OPTIC_BIT) != 0u)) {
+    out_flags |= 0x04u; /* master optic active */
+  }
+
+  if (master_status != NULL) {
+    *master_status = status;
+  }
+  if (age_ms != NULL) {
+    *age_ms = (age > 0xFFFEu) ? 0xFFFFu : (uint16_t)age;
+  }
+  if (flags != NULL) {
+    *flags = out_flags;
+  }
+
+  return fresh;
+}
+
+uint8_t optic_any_sensor_active(void)
+{
+  uint32_t now_ms = HAL_GetTick();
+
+  /* The same held optical signal is used by local effects, public status,
+     onboard indication and RS485 bit5. */
+  if (optic_sensor_get_state() != 0u) {
+    return 1u;
+  }
+
+  if (rs485_status_master_optic_active() != 0u) {
+    return 1u;
+  }
+
+  for (uint8_t index = 0u; index < RS485_DEVICE_ID_COUNT; index++) {
+    uint32_t peer_ms = rs485_status_peer_last_ms[index];
+    if (((rs485_node_conflict_mask & (1u << index)) == 0u) &&
+        (peer_ms != 0u) &&
+        ((now_ms - peer_ms) <= RS485_STATUS_PEER_HOLD_MS) &&
+        ((rs485_status_peer_bytes[index] & RS485_STATUS_OPTIC_BIT) != 0u)) {
+      return 1u;
+    }
+  }
+
+  return 0u;
+}
+
 void rs485_set_local_node_id_from_host(uint8_t node_id)
 {
   uint32_t primask = 0u;
+  uint8_t old_id = rs485_local_node_id;
 
   if (node_id > RS485_DISCOVERY_MAX_ID) {
-    node_id = 0u;
+    return;
   }
-
   primask = __get_PRIMASK();
   __disable_irq();
   rs485_local_node_id = node_id;
-  rs485_local_node_id_assigned = (node_id != 0u) ? 1u : 0u;
+  rs485_local_node_id_assigned = 1u;
+  rs485_role_enum_waiting_assignment = 0u;
+  rs485_role_last_confirmed_node_id = node_id;
   rs485_status_slave_reply_div_counter = 0u;
   rs485_status_seen_mask = 0u;
   rs485_status_cycle_count = 0u;
@@ -1677,9 +4188,20 @@ void rs485_set_local_node_id_from_host(uint8_t node_id)
   rs485_status_slot_response_first = 0u;
   rs485_status_slot_response_second = 0u;
   rs485_slave_count_estimate = 0u;
+  rs485_status_clear_peer_table();
+  rs485_sensor_queue_active_snapshot();
+  rs485_identity_note_local_id_change(old_id, rs485_local_node_id);
+  if (rs485_role_local_is_selected_slave() != 0u) {
+    rs485_role_selected_slave_node_id = node_id;
+    rs485_role_schedule_slave_claim(RS485_ROLE_CLAIM_HOST);
+  }
   if (primask == 0u) {
     __enable_irq();
   }
+  rs485_role_slave_id_high_water = 0u;
+  rs485_node_claim_reset_registry();
+  rs485_node_claim_schedule(HAL_GetTick(), RS485_NODE_CLAIM_RETRIES);
+  rs485_role_mark_persist_dirty_immediate();
 }
 
 uint8_t rs485_sync_has_active_peer(void)
@@ -1760,6 +4282,61 @@ static void rs485_process_received_byte(uint8_t value)
   uint8_t sync_candidate = rs485_is_sync_byte(value);
   uint8_t read_master_status = 1u;
 
+  /* Once a framed UID/role packet has started, payload bytes must not be
+     reinterpreted as sync/status markers. */
+  if (rs485_uid_rx_active != 0u) {
+    if (rs485_uid_rx_index < RS485_UID_FRAME_TAIL) {
+      rs485_uid_rx_buf[rs485_uid_rx_index++] = value;
+    } else {
+      rs485_uid_rx_reset();
+    }
+
+    if ((rs485_uid_rx_active != 0u) &&
+        (rs485_uid_rx_index >= RS485_UID_FRAME_TAIL)) {
+      if (rs485_uid_rx_buf[RS485_UID_FRAME_BYTES] ==
+          rs485_uid_checksum(rs485_uid_rx_buf)) {
+        rs485_uid_handle_received(rs485_uid_rx_buf);
+      }
+      rs485_uid_rx_reset();
+    }
+    return;
+  }
+
+  if (rs485_role_rx_magic != 0u) {
+    if (rs485_role_rx_index < rs485_role_rx_expected) {
+      rs485_role_rx_buf[rs485_role_rx_index++] = value;
+    } else {
+      rs485_role_reset_rx();
+      return;
+    }
+
+    if (rs485_role_rx_index >= rs485_role_rx_expected) {
+      uint8_t magic = rs485_role_rx_magic;
+      uint8_t payload_len = (uint8_t)(rs485_role_rx_expected - 1u);
+      uint8_t received_checksum = rs485_role_rx_buf[payload_len];
+      if (received_checksum ==
+          rs485_role_frame_checksum(magic,
+                                     rs485_role_rx_buf,
+                                     payload_len)) {
+        uint8_t write_index = rs485_role_frame_pending_write;
+        uint8_t next_index = (uint8_t)((write_index + 1u) %
+                                       RS485_ROLE_PENDING_CAPACITY);
+        if (next_index != rs485_role_frame_pending_read) {
+          memcpy(rs485_role_frame_pending_buf[write_index],
+                 rs485_role_rx_buf,
+                 sizeof(rs485_role_frame_pending_buf[write_index]));
+          rs485_role_frame_pending_magic[write_index] = magic;
+          /* Publish the producer index last so the main loop never observes
+             a partial payload written by the USART IRQ. */
+          __DMB();
+          rs485_role_frame_pending_write = next_index;
+        }
+      }
+      rs485_role_reset_rx();
+    }
+    return;
+  }
+
   if (rs485_status_rx_word_after_sync != 0u) {
     if ((sync_candidate != 0u) &&
         (rs485_status_sync_candidate_is_late() != 0u)) {
@@ -1786,14 +4363,24 @@ static void rs485_process_received_byte(uint8_t value)
     rs485_status_rx_word_buf[rs485_status_rx_word_index++] = value;
     if (rs485_status_rx_word_index >= RS485_STATUS_WORD_BYTES) {
       rs485_status_rx_word_index = 0u;
-      rs485_status_on_received(rs485_status_rx_word_buf[0], rs485_status_rx_word_buf[1]);
-      rs485_status_finalize_window();
+      if (rs485_status_on_received(rs485_status_rx_word_buf[0],
+                                   rs485_status_rx_word_buf[1]) == 0u) {
+        rs485_status_finalize_window();
+      }
     }
   } else if (sync_candidate != 0u) {
 process_sync_byte:
     read_master_status = 1u;
     if (rs485_sync_accept_by_period_guard() == 0u) {
       return;
+    }
+    /* Only a period-valid sync byte can indicate another MASTER.  Payload
+       bytes and the local transceiver echo may have the same 0x25/0xA5 value,
+       but arrive far too early after our own buffer boundary. */
+    if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+        (rs485_tx_busy == 0u)) {
+      rs485_foreign_master_last_ms = HAL_GetTick();
+      need_usb_status_refresh = 1u;
     }
     if (rs485_status_legacy_master_mode != 0u) {
       if (rs485_status_legacy_probe_count < RS485_STATUS_LEGACY_PROBE_DIV) {
@@ -1805,6 +4392,8 @@ process_sync_byte:
     }
     rs485_status_rx_word_index = 0u;
     rs485_status_rx_word_after_sync = read_master_status;
+    rs485_role_reset_rx();
+    rs485_uid_rx_reset();
     rs485_sync_on_packet_received((value & RS485_SYNC_EDGE_BIT) ? 1u : 0u);
     rs485_discovery_on_sync_received();
     if ((rs485_status_legacy_master_mode != 0u) &&
@@ -1812,24 +4401,41 @@ process_sync_byte:
       rs485_status_master_first = 0u;
       rs485_status_master_second = 0u;
       rs485_status_master_selector = 0u;
+      /* A single missing two-byte status word must not remove the MASTER from
+         the public topology. Keep the confirmed cache through legacy probes;
+         the normal RS485_STATUS_PEER_HOLD_MS expiry still removes a genuinely
+         absent master. */
       rs485_status_begin_window();
-    }
-  } else if (rs485_uid_rx_active != 0u) {
-    if (rs485_uid_rx_index < RS485_UID_FRAME_TAIL) {
-      rs485_uid_rx_buf[rs485_uid_rx_index++] = value;
-    } else {
-      rs485_uid_rx_reset();
-    }
-
-    if ((rs485_uid_rx_active != 0u) && (rs485_uid_rx_index >= RS485_UID_FRAME_TAIL)) {
-      if (rs485_uid_rx_buf[RS485_UID_FRAME_BYTES] == rs485_uid_checksum(rs485_uid_rx_buf)) {
-        rs485_uid_handle_received(rs485_uid_rx_buf);
-      }
-      rs485_uid_rx_reset();
     }
   } else if (value == RS485_UID_FRAME_MAGIC) {
     rs485_uid_rx_active = 1u;
     rs485_uid_rx_index = 0u;
+  } else if ((value == RS485_ROLE_CLAIM_MAGIC) ||
+             (value == RS485_ROLE_ENUM_REQ_MAGIC) ||
+             (value == RS485_ROLE_ENUM_ASSIGN_MAGIC) ||
+             (value == RS485_ROLE_ENUM_ACK_MAGIC) ||
+             (value == RS485_ROLE_SLAVE_CLAIM_MAGIC) ||
+             (value == RS485_ROLE_ENUM_RESET_MAGIC) ||
+             (value == RS485_ROLE_AUTO_HEARTBEAT_MAGIC) ||
+             (value == RS485_ROLE_NODE_CLAIM_MAGIC)) {
+    rs485_role_rx_magic = value;
+    rs485_role_rx_index = 0u;
+    if ((value == RS485_ROLE_CLAIM_MAGIC) ||
+        (value == RS485_ROLE_SLAVE_CLAIM_MAGIC)) {
+      rs485_role_rx_expected = RS485_ROLE_CLAIM_PAYLOAD_BYTES;
+    } else if (value == RS485_ROLE_ENUM_REQ_MAGIC) {
+      rs485_role_rx_expected = RS485_ROLE_ENUM_REQ_BYTES;
+    } else if (value == RS485_ROLE_ENUM_RESET_MAGIC) {
+      rs485_role_rx_expected = RS485_ROLE_ENUM_RESET_BYTES;
+    } else if (value == RS485_ROLE_AUTO_HEARTBEAT_MAGIC) {
+      rs485_role_rx_expected = RS485_ROLE_AUTO_HEARTBEAT_BYTES;
+    } else if (value == RS485_ROLE_NODE_CLAIM_MAGIC) {
+      rs485_role_rx_expected = RS485_ROLE_NODE_CLAIM_BYTES;
+    } else if (value == RS485_ROLE_ENUM_ASSIGN_MAGIC) {
+      rs485_role_rx_expected = RS485_ROLE_ENUM_ASSIGN_BYTES;
+    } else {
+      rs485_role_rx_expected = RS485_ROLE_ENUM_ACK_BYTES;
+    }
   } else if ((value & (uint8_t)~RS485_DISCOVERY_ID_MASK) == RS485_DISCOVERY_REQ_BASE) {
     rs485_discovery_on_request(value);
   } else if ((value & (uint8_t)~RS485_DISCOVERY_ID_MASK) == RS485_DISCOVERY_ACK_BASE) {
@@ -1901,14 +4507,56 @@ static void rs485_dma_rx_service(void)
 void rs485_usart2_irq_rx_service(void)
 {
   uint32_t error_flags = huart2.Instance->ISR & (USART_ISR_PE | USART_ISR_FE | USART_ISR_NE | USART_ISR_ORE);
+  uint8_t error_during_local_tx = rs485_tx_busy;
+  uint8_t error_in_status_context =
+      (uint8_t)(((rs485_status_rx_word_after_sync != 0u) ||
+                 (rs485_status_window_active != 0u)) ? 1u : 0u);
+  uint8_t first_value = 0u;
+  uint8_t have_value = 0u;
 
   while ((huart2.Instance->ISR & USART_ISR_RXNE_RXFNE) != 0u) {
     uint8_t value = (uint8_t)(huart2.Instance->RDR & 0xFFu);
+    if (have_value == 0u) {
+      first_value = value;
+      have_value = 1u;
+    }
     rs485_process_received_byte(value);
   }
 
   if (error_flags != 0u) {
     rs485_uart_error_count++;
+    if ((have_value != 0u) &&
+        (rs485_is_sync_byte(first_value) != 0u)) {
+      rs485_uart_sync_error_count++;
+    }
+    if ((error_flags & USART_ISR_PE) != 0u) {
+      rs485_uart_pe_count++;
+    }
+    if ((error_flags & USART_ISR_FE) != 0u) {
+      rs485_uart_fe_count++;
+    }
+    if ((error_flags & USART_ISR_NE) != 0u) {
+      rs485_uart_ne_count++;
+      if (error_during_local_tx != 0u) {
+        rs485_uart_ne_de_count++;
+      }
+      if ((have_value != 0u) && (rs485_is_sync_byte(first_value) != 0u)) {
+        rs485_uart_ne_sync_count++;
+      } else if ((have_value != 0u) &&
+                 ((((first_value & (uint8_t)~RS485_DISCOVERY_ID_MASK) ==
+                    RS485_DISCOVERY_REQ_BASE)) ||
+                  (((first_value & (uint8_t)~RS485_DISCOVERY_ID_MASK) ==
+                    RS485_DISCOVERY_ACK_BASE)))) {
+        rs485_uart_ne_discovery_count++;
+      } else if (error_in_status_context != 0u) {
+        rs485_uart_ne_status_count++;
+      } else {
+        rs485_uart_ne_other_count++;
+      }
+    }
+    if ((error_flags & USART_ISR_ORE) != 0u) {
+      rs485_uart_ore_count++;
+    }
     /* Do not reset the status parser here. On the shared RS-485 bus FE/NE/ORE
        can be latched near DE turn-around after RXNE already carried a valid
        sync byte. Clearing the parser here drops master_status and leaves
@@ -1940,12 +4588,33 @@ static void rs485_status_reset_window_state(void)
   rs485_status_rx_word_after_sync = 0u;
   rs485_status_legacy_master_mode = 0u;
   rs485_status_legacy_probe_count = 0u;
+  rs485_status_master_public_byte = 0u;
+  rs485_status_master_node_id = 0u;
+  rs485_status_master_last_ms = 0u;
+  rs485_status_master_candidate_id = 0u;
+  rs485_status_master_candidate_count = 0u;
+  rs485_status_master_candidate_last_ms = 0u;
   rs485_status_slave_reply_div_counter = 0u;
   rs485_status_local_slot_expected = 0u;
+  rs485_sensor_event_queue_read = 0u;
+  rs485_sensor_event_queue_write = 0u;
+  rs485_sensor_event_current_valid = 0u;
+  rs485_sensor_event_retries = 0u;
+  rs485_sensor_event_cycle = 0u;
+  rs485_sensor_event_next_cycle = 0u;
   rs485_status_assign_from_id = 0u;
   rs485_status_assign_to_id = 0u;
   rs485_status_assign_attempts = 0u;
   rs485_status_reply_alias_id = 0u;
+  rs485_identity_current_req_active = 0u;
+  rs485_identity_current_req_page = 0u;
+  rs485_identity_current_req_selector = 0u;
+  rs485_identity_master_self_page = 0xFFu;
+  rs485_identity_master_self_node_id = 0u;
+  rs485_identity_master_self_node_valid = 0u;
+  rs485_master_status_tx_no_response = 0u;
+  rs485_status_window_no_response_expected = 0u;
+  rs485_status_master_no_reply_slot = 0u;
 }
 
 static void rs485_status_reset_slot_state(void)
@@ -1962,24 +4631,34 @@ static void rs485_status_reset_slot_state(void)
   rs485_status_slot_response_second = 0u;
   rs485_status_rx_word_index = 0u;
   rs485_status_local_slot_expected = 0u;
+  rs485_status_window_no_response_expected = 0u;
 }
 
 static void rs485_status_finalize_window(void)
 {
   extern volatile uint8_t vnd_sync_mode_public;
+  uint32_t now_ms = HAL_GetTick();
   uint8_t slot_had_response = (uint8_t)((rs485_status_slot_response_seen != 0u) || (rs485_status_slot_local_tx != 0u));
   uint8_t response_first = rs485_status_slot_response_first;
   uint8_t response_second = rs485_status_slot_response_second;
-  uint8_t recent_count = rs485_status_count_recent_peers(HAL_GetTick(), RS485_STATUS_PEER_HOLD_MS);
-  uint8_t response_id = (uint8_t)(response_first & RS485_STATUS_ID_MASK);
+  uint32_t recent_mask = rs485_status_get_recent_peer_mask(now_ms, RS485_STATUS_PEER_HOLD_MS);
+  uint8_t recent_count = rs485_count_bits_u32(recent_mask);
+  uint8_t response_id =
+      rs485_status_id_from_wire(
+          (uint8_t)(response_first & RS485_STATUS_ID_MASK));
+  uint8_t response_is_sensor_event =
+      (uint8_t)(((response_second & RS485_STATUS_SENSOR_EVENT_MASK) ==
+                 RS485_STATUS_SENSOR_EVENT_VALUE) ? 1u : 0u);
   uint8_t active_count = rs485_status_cycle_count;
+  uint8_t no_response_expected = rs485_status_window_no_response_expected;
 
   if ((rs485_status_window_active == 0u) &&
       (slot_had_response == 0u)) {
     return;
   }
 
-  if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+  if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+      (no_response_expected == 0u)) {
     rs485_status_window_total_count++;
     if (slot_had_response != 0u) {
       rs485_status_window_ok_count++;
@@ -1993,39 +4672,69 @@ static void rs485_status_finalize_window(void)
   }
 
   if (slot_had_response != 0u) {
-    if (rs485_status_cycle_count < RS485_DISCOVERY_MAX_ID) {
+    if (rs485_status_cycle_count < RS485_DEVICE_ID_COUNT) {
       rs485_status_cycle_count++;
       active_count = rs485_status_cycle_count;
     }
 
-    if ((response_id != 0u) &&
+    if ((rs485_status_slot_response_seen != 0u) &&
         (response_id <= RS485_DISCOVERY_MAX_ID)) {
-      rs485_status_seen_mask |= (1u << (response_id - 1u));
-      rs485_status_master_expected_phase = rs485_status_current_window_phase;
-      rs485_status_peer_bytes[response_id - 1u] = response_first;
-      rs485_status_peer_second_bytes[response_id - 1u] = response_second;
-      rs485_status_peer_last_ms[response_id - 1u] = HAL_GetTick();
-      if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
-        rs485_status_compact_on_master_response(response_id);
-        rs485_slave_count_estimate = rs485_status_count_recent_peers(HAL_GetTick(), RS485_STATUS_PEER_HOLD_MS);
+      uint8_t response_index = response_id;
+      uint8_t response_was_live =
+          (uint8_t)(((rs485_status_peer_last_ms[response_index] != 0u) &&
+                     ((now_ms - rs485_status_peer_last_ms[response_index]) <=
+                      RS485_STATUS_PEER_HOLD_MS)) ? 1u : 0u);
+      uint8_t response_confirmed =
+          (response_is_sensor_event != 0u)
+              ? (uint8_t)(((rs485_status_peer_last_ms[response_index] != 0u) &&
+                           ((now_ms - rs485_status_peer_last_ms[response_index]) <=
+                            RS485_STATUS_PEER_HOLD_MS)) ? 1u : 0u)
+              : rs485_status_confirm_peer_candidate(response_id, now_ms);
+
+      if (response_confirmed != 0u) {
+        if (response_was_live == 0u) {
+          /* Never merge new pages with a complete identity left at this ID by
+             an older device. The MASTER immediately starts a network scan so
+             every board can associate the new ID with its UID signature. */
+          rs485_identity_clear_row(response_id);
+          if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+            rs485_identity_rescan_requested = 1u;
+          }
+        }
+        rs485_status_seen_mask |= (1u << response_index);
+        rs485_status_master_expected_phase = rs485_status_current_window_phase;
+        if ((rs485_status_peer_last_ms[response_index] == 0u) ||
+            (rs485_status_peer_bytes[response_index] != response_first)) {
+          need_usb_status_refresh = 1u;
+        }
+        rs485_status_peer_bytes[response_index] = response_first;
+        rs485_status_peer_second_bytes[response_index] = response_second;
+        rs485_status_peer_last_ms[response_index] = now_ms;
+        rs485_identity_note_response(response_id, response_second);
+        if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+          rs485_status_compact_on_master_response(response_id);
+          recent_mask = rs485_status_get_recent_peer_mask(now_ms, RS485_STATUS_PEER_HOLD_MS);
+          rs485_status_set_slave_count_estimate(rs485_count_bits_u32(recent_mask));
+        }
       }
-    } else if ((rs485_local_node_id != 0u) &&
+    } else if ((rs485_status_slot_local_tx != 0u) &&
+               (rs485_local_node_id_assigned != 0u) &&
                (rs485_local_node_id <= RS485_DISCOVERY_MAX_ID)) {
-      rs485_status_seen_mask |= (1u << (rs485_local_node_id - 1u));
+      rs485_status_seen_mask |= (1u << rs485_local_node_id);
     }
 
     rs485_discovery_seen_mask = rs485_status_seen_mask;
     rs485_discovery_scan_mask = rs485_status_seen_mask;
-  } else {
+  } else if (no_response_expected == 0u) {
     rs485_discovery_seen_mask = rs485_status_seen_mask;
     rs485_discovery_scan_mask = rs485_status_seen_mask;
 
     if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
-      rs485_slave_count_estimate = recent_count;
+      rs485_status_set_slave_count_estimate(recent_count);
     } else if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
-      rs485_slave_count_estimate = active_count;
+      rs485_status_set_slave_count_estimate(active_count);
     } else {
-      rs485_slave_count_estimate = 0u;
+      rs485_status_set_slave_count_estimate(0u);
     }
 
     rs485_status_seen_mask = 0u;
@@ -2033,7 +4742,8 @@ static void rs485_status_finalize_window(void)
     rs485_status_cycle_count = 0u;
   }
 
-  if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+  if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+      (no_response_expected == 0u)) {
     rs485_status_master_advance_selector();
   }
 
@@ -2044,7 +4754,12 @@ static void rs485_status_begin_window(void)
 {
   extern volatile uint8_t vnd_sync_mode_public;
   uint8_t should_reply = 0u;
-  uint32_t delay_ticks = 0u;
+  uint8_t sensor_event_reply = 0u;
+  uint8_t local_selected = 0u;
+  uint8_t first = 0u;
+  uint8_t second = 0u;
+  uint8_t sensor_index = 0u;
+  uint8_t sensor_active = 0u;
 
   if (rs485_status_window_active != 0u) {
     rs485_status_finalize_window();
@@ -2052,25 +4767,37 @@ static void rs485_status_begin_window(void)
 
   rs485_status_reset_slot_state();
   rs485_status_window_active = 1u;
+  if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
+    rs485_status_window_no_response_expected = rs485_master_status_tx_no_response;
+    rs485_master_status_tx_no_response = 0u;
+  }
   if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
     rs485_status_current_window_phase = rs485_last_sync_edge_kind;
+    rs485_sensor_event_cycle++;
   }
 
   if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
       (RS485_STATUS_SLAVE_REPLY_ENABLE != 0u)) {
-    if (rs485_local_node_id == 0u) {
-      rs485_local_node_id = rs485_local_uid_hint;
-      rs485_local_node_id_assigned = 0u;
-    }
-    if ((rs485_local_node_id != 0u) &&
+    if ((rs485_local_node_id_assigned != 0u) &&
+        (rs485_status_master_no_reply_slot == 0u) &&
         ((rs485_status_master_selector == rs485_local_node_id) ||
          (rs485_status_master_selector == rs485_status_reply_alias_id))) {
+      local_selected = 1u;
+    }
+
+    if ((rs485_local_node_id_assigned != 0u) &&
+        (rs485_sensor_event_prepare(&sensor_index,
+                                    &sensor_active) != 0u)) {
+      sensor_event_reply = 1u;
+      should_reply = 1u;
+    } else if (local_selected != 0u) {
       should_reply = 1u;
     }
   }
 
   if (should_reply != 0u) {
-    if (RS485_STATUS_SLAVE_REPLY_DIV > 1u) {
+    if ((sensor_event_reply == 0u) &&
+        (RS485_STATUS_SLAVE_REPLY_DIV > 1u)) {
       rs485_status_slave_reply_div_counter++;
       if (rs485_status_slave_reply_div_counter < RS485_STATUS_SLAVE_REPLY_DIV) {
         rs485_status_finalize_window();
@@ -2079,50 +4806,53 @@ static void rs485_status_begin_window(void)
       rs485_status_slave_reply_div_counter = 0u;
     }
 
-    rs485_status_local_slot_expected = 1u;
-    rs485_status_local_slot_expected_count++;
-    delay_ticks = rs485_status_get_response_delay_ticks();
-    rs485_status_window_ticks = delay_ticks;
+    if (sensor_event_reply == 0u) {
+      rs485_status_local_slot_expected = 1u;
+      rs485_status_local_slot_expected_count++;
+      rs485_status_wait_bit_times(RS485_STATUS_REGULAR_DELAY_BITS);
+    } else {
+      rs485_status_wait_bit_times(RS485_STATUS_EVENT_DELAY_BITS);
+    }
+
+    first = rs485_status_build_local_byte();
+    second = (sensor_event_reply != 0u)
+        ? (uint8_t)(RS485_STATUS_SENSOR_EVENT_VALUE |
+                    ((sensor_index & 0x0Fu) << 1) |
+                    (sensor_active & 0x01u))
+        : rs485_status_build_local_second_byte(rs485_status_master_selector);
 
     if (rs485_tx_busy == 0u) {
-      if (delay_ticks != 0u) {
-        rs485_status_wait_response_delay();
-      }
-      if (rs485_tx_busy == 0u) {
-        rs485_status_tx_sent = 1u;
-        rs485_status_slot_local_tx = 1u;
-        rs485_status_local_tx_count++;
-        rs485_sync_start_tx_status_word(rs485_status_build_local_byte(),
-                                        rs485_status_build_local_second_byte(rs485_status_master_selector));
-        rs485_status_reply_alias_id = 0u;
-      } else {
-        rs485_status_tx_due_ticks = 0u;
-        rs485_status_tx_pending = 1u;
-        rs485_status_deferred_tx_count++;
+      rs485_status_tx_sent = 1u;
+      rs485_status_slot_local_tx = 1u;
+      rs485_status_local_tx_count++;
+      rs485_sync_start_tx_status_word(first, second);
+      rs485_status_reply_alias_id = 0u;
+
+      if (sensor_event_reply != 0u) {
+        rs485_sensor_event_commit_tx();
       }
     } else {
-    rs485_status_tx_due_ticks = (delay_ticks != 0u)
-        ? (htim5.Instance->CNT + delay_ticks)
-        : 0u;
-    rs485_status_tx_pending = 1u;
-    rs485_status_deferred_tx_count++;
+      /* Keep a sensor event pending for the next 5 ms cycle. A regular
+         response may be skipped, but it must never displace the event. */
+      rs485_status_deferred_tx_count++;
     }
   }
 
-  if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
-      (rs485_status_window_active != 0u) &&
-      (rs485_status_local_slot_expected == 0u) &&
-      (rs485_status_tx_pending == 0u) &&
-      (rs485_status_tx_sent == 0u)) {
-    rs485_status_finalize_window();
-  }
+  /* Keep non-local slave windows open: every slave must overhear peer replies
+     so its public SYNC_STATE describes the whole slave group 1..N. */
 }
 
 static void rs485_status_apply_master_assignment(uint8_t first, uint8_t second)
 {
+#if !RS485_STATUS_COMPACT_ENABLE
+  (void)first;
+  (void)second;
+  return;
+#else
   extern volatile uint8_t vnd_sync_mode_public;
   uint8_t selector = (uint8_t)(first & RS485_STATUS_ID_MASK);
   uint8_t assigned_id = (uint8_t)(second & RS485_STATUS_ID_MASK);
+  uint8_t old_id = rs485_local_node_id;
 
   if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
     return;
@@ -2135,11 +4865,8 @@ static void rs485_status_apply_master_assignment(uint8_t first, uint8_t second)
       (assigned_id > RS485_DISCOVERY_MAX_ID)) {
     return;
   }
-  if (rs485_local_node_id == 0u) {
-    rs485_local_node_id = rs485_local_uid_hint;
-    rs485_local_node_id_assigned = 0u;
-  }
-  if (selector != rs485_local_node_id) {
+  if ((rs485_local_node_id_assigned == 0u) ||
+      (selector != rs485_local_node_id)) {
     return;
   }
 
@@ -2149,7 +4876,19 @@ static void rs485_status_apply_master_assignment(uint8_t first, uint8_t second)
   rs485_status_assign_apply_count++;
   rs485_local_node_id = assigned_id;
   rs485_local_node_id_assigned = 1u;
+  rs485_role_enum_waiting_assignment = 0u;
+  rs485_role_last_confirmed_node_id = assigned_id;
+  /* A slave only needs to persist its own confirmed id. The MASTER keeps the
+     network high-water separately after validating the UID-addressed ACK. */
+  rs485_role_slave_id_high_water = assigned_id;
   rs485_status_slave_reply_div_counter = 0u;
+  rs485_identity_note_local_id_change(old_id, assigned_id);
+  if (rs485_role_local_is_selected_slave() != 0u) {
+    rs485_role_selected_slave_node_id = assigned_id;
+    rs485_role_schedule_slave_claim(RS485_ROLE_CLAIM_HOST);
+  }
+  rs485_role_mark_persist_dirty();
+#endif
 }
 
 static void rs485_status_on_master_word(uint8_t first, uint8_t second)
@@ -2158,25 +4897,127 @@ static void rs485_status_on_master_word(uint8_t first, uint8_t second)
 
   rs485_status_master_first = first;
   rs485_status_master_second = second;
-  rs485_status_master_selector = (uint8_t)(first & RS485_STATUS_ID_MASK);
+  if (((second & RS485_STATUS_MASTER_SELF_PAGE_MASK) ==
+       RS485_STATUS_MASTER_SELF_PAGE_VALUE) ||
+      ((second & RS485_STATUS_MASTER_SELF_DATA_MASK) ==
+       RS485_STATUS_MASTER_SELF_DATA_VALUE) ||
+      ((second & RS485_STATUS_SENSOR_EVENT_MASK) ==
+       RS485_STATUS_SENSOR_EVENT_VALUE)) {
+    rs485_status_master_selector = 0u;
+    rs485_status_master_no_reply_slot = 1u;
+  } else {
+    rs485_status_master_selector =
+        rs485_status_id_from_wire((uint8_t)(first & RS485_STATUS_ID_MASK));
+    rs485_status_master_no_reply_slot = 0u;
+  }
 
   if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
+    rs485_status_note_master_word(first, second);
+    if ((second & RS485_STATUS_SENSOR_EVENT_MASK) ==
+        RS485_STATUS_SENSOR_EVENT_VALUE) {
+      uint8_t master_device_id =
+          rs485_status_id_from_wire((uint8_t)(first & RS485_STATUS_ID_MASK));
+      uint8_t sensor_index = (uint8_t)((second >> 1) & 0x0Fu);
+      uint8_t sensor_active = (uint8_t)(second & 0x01u);
+      uint32_t now_ms = HAL_GetTick();
+
+      rs485_sensor_note_remote(
+          master_device_id, 0u,
+          (uint8_t)((first & RS485_STATUS_OPTIC_BIT) != 0u), now_ms);
+      rs485_sensor_note_remote(
+          master_device_id, 1u,
+          (uint8_t)((first & RS485_STATUS_DET_ADC1_BIT) != 0u), now_ms);
+      rs485_sensor_note_remote(
+          master_device_id, 2u,
+          (uint8_t)((first & RS485_STATUS_DET_ADC2_BIT) != 0u), now_ms);
+      rs485_sensor_note_remote(master_device_id, sensor_index,
+                               sensor_active, now_ms);
+      rs485_sensor_event_rx_count++;
+    }
+    rs485_identity_note_master_request(first, second);
+    rs485_identity_note_master_self_word(first, second);
     rs485_status_apply_master_assignment(first, second);
     rs485_status_begin_window();
   }
 }
 
-static void rs485_status_on_received(uint8_t first, uint8_t second)
+static uint8_t rs485_status_on_received(uint8_t first, uint8_t second)
 {
   extern volatile uint8_t vnd_sync_mode_public;
-  uint8_t node_id = (uint8_t)(first & RS485_STATUS_ID_MASK);
+  uint8_t node_id =
+      rs485_status_id_from_wire((uint8_t)(first & RS485_STATUS_ID_MASK));
+  uint8_t is_sensor_event =
+      (uint8_t)(((second & RS485_STATUS_SENSOR_EVENT_MASK) ==
+                 RS485_STATUS_SENSOR_EVENT_VALUE) ? 1u : 0u);
+  uint32_t now_ms = HAL_GetTick();
 
   if ((rs485_status_window_active == 0u) ||
       (node_id > RS485_DISCOVERY_MAX_ID)) {
-    return;
+    return 0u;
   }
-  if (node_id == 0u) {
-    return;
+  if (is_sensor_event != 0u) {
+    uint8_t index = node_id;
+    uint32_t bit = (1u << index);
+    uint8_t sensor_index = (uint8_t)((second >> 1) & 0x0Fu);
+    uint8_t sensor_active = (uint8_t)(second & 0x01u);
+    uint8_t peer_confirmed =
+        rs485_status_confirm_peer_candidate(node_id, now_ms);
+
+    if (peer_confirmed != 0u) {
+      if ((rs485_status_peer_last_ms[index] == 0u) ||
+          (rs485_status_peer_bytes[index] != first)) {
+        need_usb_status_refresh = 1u;
+      }
+      rs485_status_peer_bytes[index] = first;
+      rs485_status_peer_second_bytes[index] = second;
+      rs485_status_peer_last_ms[index] = now_ms;
+      rs485_status_seen_mask |= bit;
+      rs485_discovery_seen_mask |= bit;
+      rs485_discovery_scan_mask |= bit;
+      rs485_sensor_note_remote(node_id, 0u,
+                               (uint8_t)((first & RS485_STATUS_OPTIC_BIT) != 0u),
+                               now_ms);
+      rs485_sensor_note_remote(node_id, 1u,
+                               (uint8_t)((first & RS485_STATUS_DET_ADC1_BIT) != 0u),
+                               now_ms);
+      rs485_sensor_note_remote(node_id, 2u,
+                               (uint8_t)((first & RS485_STATUS_DET_ADC2_BIT) != 0u),
+                               now_ms);
+      rs485_sensor_note_remote(node_id, sensor_index, sensor_active, now_ms);
+    }
+    rs485_status_peer_rx_count++;
+    rs485_sensor_event_rx_count++;
+
+    if ((peer_confirmed != 0u) &&
+        (vnd_sync_mode_public == VND_SYNC_MODE_MASTER)) {
+      uint32_t recent_mask =
+          rs485_status_get_recent_peer_mask(now_ms, RS485_STATUS_PEER_HOLD_MS);
+      rs485_status_set_slave_count_estimate(rs485_count_bits_u32(recent_mask));
+    }
+
+    /* If the event came from the selected node it replaces that node's
+       regular reply for this cycle.  Otherwise keep the window open for the
+       delayed selected-node word. */
+    if (node_id != rs485_status_master_selector) {
+      return 1u;
+    }
+  } else if (node_id != rs485_status_master_selector) {
+    /* A regular word is valid only for the node selected by the master.
+       Keeping the window open rejects collision garbage without losing a
+       later valid selected response. */
+    return 1u;
+  }
+
+  if (is_sensor_event == 0u) {
+    rs485_sensor_note_remote(node_id, 0u,
+                             (uint8_t)((first & RS485_STATUS_OPTIC_BIT) != 0u),
+                             now_ms);
+    rs485_sensor_note_remote(node_id, 1u,
+                             (uint8_t)((first & RS485_STATUS_DET_ADC1_BIT) != 0u),
+                             now_ms);
+    rs485_sensor_note_remote(node_id, 2u,
+                             (uint8_t)((first & RS485_STATUS_DET_ADC2_BIT) != 0u),
+                             now_ms);
   }
 
   if (rs485_status_slot_response_seen == 0u) {
@@ -2185,6 +5026,7 @@ static void rs485_status_on_received(uint8_t first, uint8_t second)
     rs485_status_slot_response_second = second;
     rs485_status_peer_rx_count++;
   }
+  return 0u;
 }
 
 static void rs485_status_service(void)
@@ -2278,6 +5120,33 @@ static int8_t rs485_compare_uid_words(const uint32_t *lhs, const uint32_t *rhs)
   return 0;
 }
 
+static int8_t rs485_compare_uid_bytes_numeric(const uint8_t lhs[12],
+                                               const uint8_t rhs[12])
+{
+  uint32_t lhs_words[3] = {0u, 0u, 0u};
+  uint32_t rhs_words[3] = {0u, 0u, 0u};
+
+  memcpy(lhs_words, lhs, sizeof(lhs_words));
+  memcpy(rhs_words, rhs, sizeof(rhs_words));
+  return rs485_compare_uid_words(lhs_words, rhs_words);
+}
+
+static void rs485_role_remember_auto_master(const uint8_t uid[12])
+{
+  memcpy(rs485_role_auto_master_uid,
+         uid,
+         sizeof(rs485_role_auto_master_uid));
+  rs485_role_auto_master_valid = 1u;
+}
+
+static void rs485_role_forget_auto_master(void)
+{
+  rs485_role_auto_master_valid = 0u;
+  memset(rs485_role_auto_master_uid,
+         0,
+         sizeof(rs485_role_auto_master_uid));
+}
+
 static void rs485_uid_schedule_announce(uint32_t now_ms, uint8_t retries, uint32_t delay_ms)
 {
   uint32_t target_ms;
@@ -2341,6 +5210,18 @@ static void rs485_uid_handle_received(const uint8_t *uid_bytes)
   rs485_peer_uid_cmp = cmp;
   rs485_peer_uid_valid = 1u;
   rs485_peer_uid_last_ms = HAL_GetTick();
+
+  if (rs485_role_enum_state == 2u) {
+    if ((rs485_role_enum_candidate_valid == 0u) ||
+        (memcmp(uid_bytes,
+                rs485_role_enum_candidate_uid,
+                sizeof(rs485_role_enum_candidate_uid)) > 0)) {
+      memcpy(rs485_role_enum_candidate_uid,
+             uid_bytes,
+             sizeof(rs485_role_enum_candidate_uid));
+      rs485_role_enum_candidate_valid = 1u;
+    }
+  }
   /* PEER_UID debug-лог отключён для чистого phase-monitor потока. */
 }
 
@@ -2348,6 +5229,1201 @@ static uint32_t rs485_uid_get_announce_delay_ms(void)
 {
   uint32_t slot = rs485_compute_uid_mix() & (RS485_UID_SLOT_COUNT - 1u);
   return RS485_UID_ANNOUNCE_DELAY_MS + (slot * RS485_UID_SLOT_STEP_MS);
+}
+
+static uint8_t rs485_role_frame_checksum(uint8_t magic,
+                                         const uint8_t *payload,
+                                         uint8_t payload_len)
+{
+  uint8_t checksum = magic;
+
+  for (uint8_t index = 0u; index < payload_len; index++) {
+    checksum ^= payload[index];
+  }
+  return checksum;
+}
+
+static void rs485_role_queue_frame(uint8_t magic,
+                                   const uint8_t *payload,
+                                   uint8_t payload_len)
+{
+  rs485_tx_queue_push(magic);
+  for (uint8_t index = 0u; index < payload_len; index++) {
+    rs485_tx_queue_push(payload[index]);
+  }
+  rs485_tx_queue_push(rs485_role_frame_checksum(magic, payload, payload_len));
+  rs485_tx_kick();
+}
+
+static void rs485_node_claim_reset_registry(void)
+{
+  memset(rs485_node_claim_uid, 0, sizeof(rs485_node_claim_uid));
+  memset((void *)rs485_node_claim_last_ms, 0, sizeof(rs485_node_claim_last_ms));
+  memset(rs485_node_claim_alt_uid, 0, sizeof(rs485_node_claim_alt_uid));
+  memset((void *)rs485_node_claim_alt_last_ms, 0,
+         sizeof(rs485_node_claim_alt_last_ms));
+  rs485_node_conflict_mask = 0u;
+
+  if ((rs485_local_node_id_assigned != 0u) &&
+      (rs485_local_node_id <= RS485_DISCOVERY_MAX_ID)) {
+    uint8_t index = rs485_local_node_id;
+    memcpy(rs485_node_claim_uid[index], rs485_local_uid_bytes, 12u);
+    rs485_node_claim_last_ms[index] = HAL_GetTick();
+  }
+  need_usb_status_refresh = 1u;
+}
+
+static void rs485_node_claim_schedule(uint32_t now_ms, uint8_t retries)
+{
+  uint32_t slot_delay_ms;
+
+  if (RS485_NODE_CLAIM_TX_ENABLE == 0u) {
+    (void)now_ms;
+    (void)retries;
+    rs485_node_claim_tx_pending = 0u;
+    rs485_node_claim_tx_retries = 0u;
+    return;
+  }
+
+  if ((retries == 0u) ||
+      (rs485_local_node_id_assigned == 0u) ||
+      (rs485_local_node_id > RS485_DISCOVERY_MAX_ID)) {
+    return;
+  }
+
+  slot_delay_ms = RS485_ROLE_BUS_QUIET_MS +
+                  ((rs485_compute_uid_mix() & 0x1Fu) * 3u);
+  rs485_node_claim_tx_pending = 1u;
+  rs485_node_claim_tx_retries = retries;
+  rs485_node_claim_tx_next_ms = now_ms + slot_delay_ms;
+}
+
+static void rs485_node_claim_note(uint8_t node_id, const uint8_t uid[12])
+{
+  uint8_t index;
+  uint32_t now_ms;
+  uint32_t bit;
+
+  if ((uid == NULL) ||
+      (node_id > RS485_DISCOVERY_MAX_ID) ||
+      (memcmp(uid, rs485_local_uid_bytes, 12u) == 0)) {
+    return;
+  }
+
+  index = node_id;
+  bit = (1u << index);
+  now_ms = HAL_GetTick();
+
+  if ((rs485_node_claim_last_ms[index] == 0u) ||
+      ((now_ms - rs485_node_claim_last_ms[index]) >
+       RS485_NODE_CLAIM_HOLD_MS)) {
+    memcpy(rs485_node_claim_uid[index], uid, 12u);
+    rs485_node_claim_last_ms[index] = now_ms;
+    memset(rs485_node_claim_alt_uid[index], 0, 12u);
+    rs485_node_claim_alt_last_ms[index] = 0u;
+    rs485_node_conflict_mask &= ~bit;
+  } else if (memcmp(rs485_node_claim_uid[index], uid, 12u) == 0) {
+    rs485_node_claim_last_ms[index] = now_ms;
+  } else {
+    memcpy(rs485_node_claim_alt_uid[index], uid, 12u);
+    rs485_node_claim_alt_last_ms[index] = now_ms;
+    rs485_node_conflict_mask |= bit;
+  }
+
+  need_usb_status_refresh = 1u;
+}
+
+static void rs485_node_claim_service(uint32_t now_ms)
+{
+  uint8_t payload[RS485_ROLE_NODE_CLAIM_BYTES - 1u];
+
+  for (uint8_t index = 0u; index < RS485_DEVICE_ID_COUNT; index++) {
+    uint32_t bit = (1u << index);
+    uint8_t primary_is_local =
+        (uint8_t)(((rs485_local_node_id_assigned != 0u) &&
+                   (rs485_local_node_id == index) &&
+                   (memcmp(rs485_node_claim_uid[index],
+                           rs485_local_uid_bytes, 12u) == 0)) ? 1u : 0u);
+
+    if ((primary_is_local == 0u) &&
+        (rs485_node_claim_last_ms[index] != 0u) &&
+        ((now_ms - rs485_node_claim_last_ms[index]) >
+         RS485_NODE_CLAIM_HOLD_MS)) {
+      if ((rs485_node_claim_alt_last_ms[index] != 0u) &&
+          ((now_ms - rs485_node_claim_alt_last_ms[index]) <=
+           RS485_NODE_CLAIM_HOLD_MS)) {
+        memcpy(rs485_node_claim_uid[index],
+               rs485_node_claim_alt_uid[index], 12u);
+        rs485_node_claim_last_ms[index] =
+            rs485_node_claim_alt_last_ms[index];
+      } else {
+        memset(rs485_node_claim_uid[index], 0, 12u);
+        rs485_node_claim_last_ms[index] = 0u;
+      }
+      memset(rs485_node_claim_alt_uid[index], 0, 12u);
+      rs485_node_claim_alt_last_ms[index] = 0u;
+      rs485_node_conflict_mask &= ~bit;
+      need_usb_status_refresh = 1u;
+    } else if ((rs485_node_claim_alt_last_ms[index] != 0u) &&
+               ((now_ms - rs485_node_claim_alt_last_ms[index]) >
+                RS485_NODE_CLAIM_HOLD_MS)) {
+      memset(rs485_node_claim_alt_uid[index], 0, 12u);
+      rs485_node_claim_alt_last_ms[index] = 0u;
+      rs485_node_conflict_mask &= ~bit;
+      need_usb_status_refresh = 1u;
+    }
+  }
+
+  if ((rs485_local_node_id_assigned != 0u) &&
+      (rs485_local_node_id <= RS485_DISCOVERY_MAX_ID) &&
+      (rs485_node_claim_tx_pending == 0u) &&
+      ((rs485_node_claim_last_periodic_ms == 0u) ||
+       ((now_ms - rs485_node_claim_last_periodic_ms) >=
+        RS485_NODE_CLAIM_PERIOD_MS))) {
+    rs485_node_claim_last_periodic_ms = now_ms;
+    rs485_node_claim_schedule(now_ms, RS485_NODE_CLAIM_RETRIES);
+  }
+
+  if ((rs485_node_claim_tx_pending == 0u) ||
+      ((int32_t)(now_ms - rs485_node_claim_tx_next_ms) < 0) ||
+      (rs485_tx_busy != 0u) ||
+      (rs485_tx_queue_count != 0u) ||
+      (rs485_status_window_active != 0u)) {
+    return;
+  }
+
+  /* The service only enters after the current status window has closed.
+     Keep this frame short enough to finish in the gap before the next 200 Hz
+     SYNC; a legacy 20-byte guard here could cross that edge and be decoded as
+     false status IDs. */
+  payload[0] = rs485_local_node_id;
+  memcpy(payload + 1u, rs485_local_uid_bytes, 12u);
+  rs485_role_queue_frame(RS485_ROLE_NODE_CLAIM_MAGIC,
+                         payload,
+                         (uint8_t)sizeof(payload));
+
+  if (rs485_node_claim_tx_retries > 1u) {
+    rs485_node_claim_tx_retries--;
+    rs485_node_claim_tx_next_ms = now_ms + RS485_NODE_CLAIM_RETRY_MS;
+  } else {
+    rs485_node_claim_tx_retries = 0u;
+    rs485_node_claim_tx_pending = 0u;
+  }
+}
+
+uint32_t rs485_node_get_conflict_mask(void)
+{
+  return rs485_node_conflict_mask;
+}
+
+uint8_t rs485_node_local_id_conflict(void)
+{
+  if ((rs485_local_node_id_assigned == 0u) ||
+      (rs485_local_node_id > RS485_DISCOVERY_MAX_ID)) {
+    return 0u;
+  }
+  return (uint8_t)(((rs485_node_conflict_mask &
+                     (1u << rs485_local_node_id)) != 0u) ? 1u : 0u);
+}
+
+uint8_t rs485_multiple_master_detected(void)
+{
+  uint32_t last_ms = rs485_foreign_master_last_ms;
+
+  if ((vnd_sync_mode_public != VND_SYNC_MODE_MASTER) ||
+      (last_ms == 0u)) {
+    return 0u;
+  }
+  return (uint8_t)(((HAL_GetTick() - last_ms) <=
+                    RS485_MULTI_MASTER_HOLD_MS) ? 1u : 0u);
+}
+
+static void rs485_role_schedule_auto_heartbeat(uint32_t now_ms,
+                                               uint8_t retries)
+{
+  uint32_t slot_delay_ms =
+      RS485_ROLE_BUS_QUIET_MS + ((rs485_compute_uid_mix() & 0x1Fu) * 3u);
+
+  if (retries == 0u) {
+    return;
+  }
+  rs485_role_auto_heartbeat_tx_remaining = retries;
+  rs485_role_auto_heartbeat_tx_next_ms = now_ms + slot_delay_ms;
+  rs485_sync_tx_suppressed_until_ms =
+      now_ms + RS485_UID_ARBITRATION_QUIET_MS;
+  if (rs485_status_window_active != 0u) {
+    rs485_status_finalize_window();
+  }
+}
+
+static void rs485_role_auto_heartbeat_tx_service(uint32_t now_ms)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+
+  if (rs485_role_auto_heartbeat_tx_remaining == 0u) {
+    return;
+  }
+  if (vnd_sync_mode_public != VND_SYNC_MODE_MASTER) {
+    rs485_role_auto_heartbeat_tx_remaining = 0u;
+    return;
+  }
+  if ((int32_t)(now_ms - rs485_role_auto_heartbeat_tx_next_ms) < 0) {
+    return;
+  }
+  if ((rs485_tx_busy != 0u) ||
+      (rs485_tx_queue_count != 0u) ||
+      (rs485_status_window_active != 0u)) {
+    return;
+  }
+
+  rs485_role_queue_frame(RS485_ROLE_AUTO_HEARTBEAT_MAGIC,
+                         rs485_local_uid_bytes,
+                         12u);
+  rs485_role_auto_heartbeat_tx_remaining--;
+  rs485_role_auto_heartbeat_tx_next_ms =
+      now_ms + RS485_ROLE_AUTO_HEARTBEAT_RETRY_MS;
+}
+
+static int8_t rs485_role_compare_assignment(uint32_t unix_s,
+                                            uint16_t millis,
+                                            const uint8_t uid[12])
+{
+  if (unix_s < rs485_role_master_assigned_unix_s) {
+    return -1;
+  }
+  if (unix_s > rs485_role_master_assigned_unix_s) {
+    return 1;
+  }
+  if (millis < rs485_role_master_assigned_millis) {
+    return -1;
+  }
+  if (millis > rs485_role_master_assigned_millis) {
+    return 1;
+  }
+
+  /* Two host commands in the same millisecond are ordered by UID so every
+     board still reaches the same result. */
+  {
+    int cmp = memcmp(uid, rs485_role_master_uid, 12u);
+    return (cmp < 0) ? -1 : ((cmp > 0) ? 1 : 0);
+  }
+}
+
+static uint8_t rs485_role_uid_is_zero(const uint8_t uid[12])
+{
+  uint8_t any = 0u;
+
+  for (uint8_t index = 0u; index < 12u; index++) {
+    any |= uid[index];
+  }
+  return (uint8_t)((any == 0u) ? 1u : 0u);
+}
+
+static int8_t rs485_role_compare_slave_assignment(uint32_t unix_s,
+                                                  uint16_t millis,
+                                                  const uint8_t uid[12])
+{
+  int8_t time_order = rs485_role_compare_time(unix_s,
+                                               millis,
+                                               rs485_role_slave_assigned_unix_s,
+                                               rs485_role_slave_assigned_millis);
+
+  if (time_order != 0) {
+    return time_order;
+  }
+
+  /* A clear wins an exact-timestamp tie and remains a tombstone. This keeps a
+     delayed old selected-SLAVE frame from reviving the former assignment. */
+  if (rs485_role_uid_is_zero(uid) != 0u) {
+    return (rs485_role_slave_valid != 0u) ? 1 : 0;
+  }
+  if (rs485_role_slave_valid == 0u) {
+    return -1;
+  }
+
+  {
+    size_t compare_len = (rs485_role_slave_uid_prefix_only != 0u) ? 8u : 12u;
+    int cmp = memcmp(uid, rs485_role_slave_uid, compare_len);
+    return (cmp < 0) ? -1 : ((cmp > 0) ? 1 : 0);
+  }
+}
+
+static void rs485_role_schedule_master_claim(uint8_t reason)
+{
+#if !RS485_ROLE_NETWORK_ASSIGN_ENABLE
+  (void)reason;
+  return;
+#else
+  uint32_t now_ms = HAL_GetTick();
+  uint32_t delay_ms = RS485_ROLE_BUS_QUIET_MS;
+  uint8_t retries = (reason == RS485_ROLE_CLAIM_PERIODIC) ? 1u : 3u;
+
+  if ((rs485_role_master_valid == 0u) ||
+      (rs485_role_local_is_selected_master() == 0u)) {
+    return;
+  }
+
+  if (reason == RS485_ROLE_CLAIM_BOOT) {
+    /* Simultaneously powered boards with different saved assignments must not
+       transmit their claims in lockstep. A newer claim received meanwhile
+       replaces this delayed one immediately. */
+    uint32_t mix = rs485_compute_uid_mix() ^
+                   rs485_role_master_assigned_unix_s ^
+                   (uint32_t)rs485_role_master_assigned_millis;
+    delay_ms += (mix & 0x7Fu);
+  }
+  rs485_role_claim_tx_pending = 1u;
+  rs485_role_claim_tx_force =
+      (reason == RS485_ROLE_CLAIM_HOST) ? 1u : 0u;
+  rs485_role_claim_tx_retries = retries;
+  rs485_role_claim_tx_next_ms = now_ms + delay_ms;
+  rs485_sync_tx_suppressed_until_ms =
+      now_ms + delay_ms +
+      ((uint32_t)(retries - 1u) * RS485_ROLE_CLAIM_RETRY_MS) + 5u;
+#endif
+}
+
+static void rs485_role_claim_service(uint32_t now_ms)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint8_t payload[RS485_ROLE_CLAIM_PAYLOAD_BYTES - 1u] = {0u};
+
+  if ((rs485_role_claim_tx_pending != 0u) &&
+      ((vnd_sync_mode_public != VND_SYNC_MODE_MASTER) ||
+       (rs485_role_local_is_selected_master() == 0u))) {
+    /* A newer network claim may have demoted us while an old frame was still
+       delayed. Never put that obsolete assignment back on the bus. */
+    rs485_role_claim_tx_pending = 0u;
+    rs485_role_claim_tx_retries = 0u;
+    rs485_role_claim_tx_force = 0u;
+  }
+
+  if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+      (rs485_role_local_is_selected_master() != 0u) &&
+      (rs485_role_claim_tx_pending == 0u) &&
+      (rs485_role_enum_state == 0u) &&
+      ((rs485_role_claim_last_periodic_ms == 0u) ||
+       ((now_ms - rs485_role_claim_last_periodic_ms) >=
+        RS485_ROLE_CLAIM_PERIOD_MS))) {
+    rs485_role_claim_last_periodic_ms = now_ms;
+    rs485_role_schedule_master_claim(RS485_ROLE_CLAIM_PERIODIC);
+  }
+
+  if ((rs485_role_claim_tx_pending == 0u) ||
+      ((int32_t)(now_ms - rs485_role_claim_tx_next_ms) < 0)) {
+    return;
+  }
+  if ((rs485_tx_busy != 0u) ||
+      (rs485_tx_queue_count != 0u) ||
+      (rs485_status_window_active != 0u)) {
+    return;
+  }
+
+  payload[0] = (uint8_t)(0x01u |
+                         (rs485_role_claim_tx_force ?
+                          RS485_ROLE_CLAIM_FORCE_BIT : 0u));
+  payload[1] = (uint8_t)(rs485_role_master_assigned_unix_s & 0xFFu);
+  payload[2] = (uint8_t)((rs485_role_master_assigned_unix_s >> 8) & 0xFFu);
+  payload[3] = (uint8_t)((rs485_role_master_assigned_unix_s >> 16) & 0xFFu);
+  payload[4] = (uint8_t)((rs485_role_master_assigned_unix_s >> 24) & 0xFFu);
+  payload[5] = (uint8_t)(rs485_role_master_assigned_millis & 0xFFu);
+  payload[6] = (uint8_t)((rs485_role_master_assigned_millis >> 8) & 0xFFu);
+  memcpy(payload + 7u, rs485_role_master_uid, 12u);
+  rs485_role_queue_frame(RS485_ROLE_CLAIM_MAGIC,
+                         payload,
+                         (uint8_t)sizeof(payload));
+
+  if (rs485_role_claim_tx_retries > 1u) {
+    rs485_role_claim_tx_retries--;
+    rs485_role_claim_tx_next_ms = now_ms + RS485_ROLE_CLAIM_RETRY_MS;
+  } else {
+    rs485_role_claim_tx_retries = 0u;
+    rs485_role_claim_tx_pending = 0u;
+  }
+}
+
+static void rs485_role_schedule_slave_claim(uint8_t reason)
+{
+#if !RS485_ROLE_NETWORK_ASSIGN_ENABLE
+  (void)reason;
+  return;
+#else
+  uint32_t now_ms = HAL_GetTick();
+  uint32_t delay_ms = RS485_ROLE_BUS_QUIET_MS;
+  uint8_t retries = (reason == RS485_ROLE_CLAIM_PERIODIC) ? 1u : 3u;
+
+  if (rs485_role_slave_epoch_valid == 0u) {
+    return;
+  }
+  if ((rs485_role_local_is_selected_master() == 0u) &&
+      (rs485_role_local_is_selected_slave() == 0u)) {
+    return;
+  }
+
+  if (reason == RS485_ROLE_CLAIM_BOOT) {
+    uint32_t mix = rs485_compute_uid_mix() ^
+                   rs485_role_slave_assigned_unix_s ^
+                   (uint32_t)rs485_role_slave_assigned_millis;
+    delay_ms += (mix & 0x7Fu);
+  }
+  rs485_role_slave_claim_tx_pending = 1u;
+  rs485_role_slave_claim_tx_force =
+      (reason == RS485_ROLE_CLAIM_HOST) ? 1u : 0u;
+  rs485_role_slave_claim_tx_retries = retries;
+  rs485_role_slave_claim_tx_next_ms = now_ms + delay_ms;
+  if (rs485_role_local_is_selected_master() != 0u) {
+    uint32_t until_ms = now_ms + delay_ms +
+        ((uint32_t)(retries - 1u) * RS485_ROLE_CLAIM_RETRY_MS) + 5u;
+    if ((int32_t)(until_ms - rs485_sync_tx_suppressed_until_ms) > 0) {
+      rs485_sync_tx_suppressed_until_ms = until_ms;
+    }
+  }
+#endif
+}
+
+static void rs485_role_slave_claim_service(uint32_t now_ms)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint8_t payload[RS485_ROLE_CLAIM_PAYLOAD_BYTES - 1u] = {0u};
+  uint8_t local_is_master = rs485_role_local_is_selected_master();
+  uint8_t local_is_slave = rs485_role_local_is_selected_slave();
+
+  if ((rs485_role_slave_claim_tx_pending != 0u) &&
+      (local_is_master == 0u) &&
+      (local_is_slave == 0u)) {
+    rs485_role_slave_claim_tx_pending = 0u;
+    rs485_role_slave_claim_tx_retries = 0u;
+    rs485_role_slave_claim_tx_force = 0u;
+  }
+
+  if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+      (local_is_master != 0u) &&
+      (rs485_role_slave_epoch_valid != 0u) &&
+      (rs485_role_slave_claim_tx_pending == 0u) &&
+      (rs485_role_enum_state == 0u) &&
+      ((rs485_role_slave_claim_last_periodic_ms == 0u) ||
+       ((now_ms - rs485_role_slave_claim_last_periodic_ms) >=
+        RS485_ROLE_CLAIM_PERIOD_MS))) {
+    rs485_role_slave_claim_last_periodic_ms = now_ms;
+    rs485_role_schedule_slave_claim(RS485_ROLE_CLAIM_PERIODIC);
+  }
+
+  if ((rs485_role_slave_claim_tx_pending == 0u) ||
+      ((int32_t)(now_ms - rs485_role_slave_claim_tx_next_ms) < 0)) {
+    return;
+  }
+  if ((rs485_tx_busy != 0u) ||
+      (rs485_tx_queue_count != 0u) ||
+      (rs485_status_window_active != 0u)) {
+    return;
+  }
+
+  if (rs485_role_slave_valid != 0u) {
+    uint8_t node_id = rs485_role_selected_slave_node_id;
+    if (node_id > RS485_DISCOVERY_MAX_ID) {
+      node_id = 0u;
+    }
+    payload[0] = (uint8_t)(RS485_ROLE_SLAVE_VALID_BIT |
+                           ((node_id << RS485_ROLE_SLAVE_NODE_SHIFT) &
+                            RS485_ROLE_SLAVE_NODE_MASK));
+    memcpy(payload + 7u, rs485_role_slave_uid, 12u);
+  }
+  if (rs485_role_slave_claim_tx_force != 0u) {
+    payload[0] |= RS485_ROLE_CLAIM_FORCE_BIT;
+  }
+  payload[1] = (uint8_t)(rs485_role_slave_assigned_unix_s & 0xFFu);
+  payload[2] = (uint8_t)((rs485_role_slave_assigned_unix_s >> 8) & 0xFFu);
+  payload[3] = (uint8_t)((rs485_role_slave_assigned_unix_s >> 16) & 0xFFu);
+  payload[4] = (uint8_t)((rs485_role_slave_assigned_unix_s >> 24) & 0xFFu);
+  payload[5] = (uint8_t)(rs485_role_slave_assigned_millis & 0xFFu);
+  payload[6] = (uint8_t)((rs485_role_slave_assigned_millis >> 8) & 0xFFu);
+  rs485_role_queue_frame(RS485_ROLE_SLAVE_CLAIM_MAGIC,
+                         payload,
+                         (uint8_t)sizeof(payload));
+
+  if (rs485_role_slave_claim_tx_retries > 1u) {
+    rs485_role_slave_claim_tx_retries--;
+    rs485_role_slave_claim_tx_next_ms = now_ms + RS485_ROLE_CLAIM_RETRY_MS;
+  } else {
+    rs485_role_slave_claim_tx_retries = 0u;
+    rs485_role_slave_claim_tx_pending = 0u;
+  }
+}
+
+static uint32_t rs485_role_enum_response_delay_ms(uint8_t round)
+{
+  uint32_t value = rs485_compute_uid_mix() ^
+                   ((uint32_t)round * 0x9E3779B9u);
+
+  value ^= value >> 16;
+  value *= 0x7FEB352Du;
+  value ^= value >> 15;
+  /* 32 two-millisecond UID slots fit inside a sub-100 ms commissioning
+     window. Collisions are resolved by changing the hash with every round. */
+  return 12u + ((value & 0x1Fu) * 2u);
+}
+
+static uint8_t rs485_role_max_id_from_mask(uint32_t mask)
+{
+  for (uint8_t node_id = RS485_DISCOVERY_MAX_ID; node_id != 0u; node_id--) {
+    if ((mask & (1u << (node_id - 1u))) != 0u) {
+      return node_id;
+    }
+  }
+  return 0u;
+}
+
+static void rs485_role_start_enumeration_epoch(uint32_t now_ms)
+{
+#if !RS485_ROLE_AUTO_ENUM_ENABLE
+  (void)now_ms;
+  rs485_role_enum_state = 0u;
+  rs485_role_enum_reset_tx_remaining = 0u;
+  rs485_role_enum_ack_tx_pending = 0u;
+  rs485_role_enum_waiting_assignment = 0u;
+  return;
+#else
+  /* The RPI-assigned MASTER is authoritative for the complete numbering pass.
+     Never reuse a saved high-water value here: it can describe a different
+     network partition and can hide duplicated persisted slave ids. */
+  rs485_role_auto_probe_active = 0u;
+  rs485_role_auto_heartbeat_tx_remaining = 0u;
+  rs485_role_enum_waiting_assignment = 0u;
+  rs485_role_reset_local_assignment_epoch();
+  rs485_role_enum_reset_tx_remaining = RS485_ROLE_ENUM_RESET_RETRIES;
+  rs485_role_enum_reset_tx_next_ms = now_ms + RS485_ROLE_BUS_QUIET_MS;
+  rs485_role_enum_next_ms = now_ms + RS485_ROLE_ENUM_SETTLE_MS;
+  rs485_role_mark_persist_dirty();
+#endif
+}
+
+static void rs485_role_enumeration_service(uint32_t now_ms)
+{
+#if !RS485_ROLE_AUTO_ENUM_ENABLE
+  (void)now_ms;
+  rs485_role_enum_state = 0u;
+  rs485_role_enum_reset_tx_remaining = 0u;
+  rs485_role_enum_ack_tx_pending = 0u;
+  return;
+#else
+  extern volatile uint8_t vnd_sync_mode_public;
+  uint32_t recent_mask = 0u;
+  uint8_t recent_max_id = 0u;
+
+  if ((rs485_role_enum_ack_tx_pending != 0u) &&
+      ((int32_t)(now_ms - rs485_role_enum_ack_tx_next_ms) >= 0) &&
+      (rs485_tx_busy == 0u) &&
+      (rs485_tx_queue_count == 0u) &&
+      (rs485_status_window_active == 0u)) {
+    uint8_t payload[RS485_ROLE_ENUM_ACK_BYTES - 1u];
+    payload[0] = rs485_role_enum_ack_tx_id;
+    memcpy(payload + 1u, rs485_local_uid_bytes, 12u);
+    rs485_role_queue_frame(RS485_ROLE_ENUM_ACK_MAGIC,
+                           payload,
+                           (uint8_t)sizeof(payload));
+    rs485_role_enum_ack_tx_pending = 0u;
+  }
+
+  if (vnd_sync_mode_public != VND_SYNC_MODE_MASTER) {
+    rs485_role_enum_state = 0u;
+    rs485_role_enum_reset_tx_remaining = 0u;
+    return;
+  }
+  if ((rs485_role_master_valid != 0u) &&
+      (rs485_role_local_is_selected_master() == 0u)) {
+    rs485_role_enum_state = 0u;
+    return;
+  }
+  if ((rs485_role_auto_probe_active != 0u) ||
+      (rs485_role_auto_heartbeat_tx_remaining != 0u)) {
+    return;
+  }
+
+  if (rs485_role_enum_reset_tx_remaining != 0u) {
+    uint8_t payload[RS485_ROLE_ENUM_RESET_BYTES - 1u];
+
+    if ((int32_t)(now_ms - rs485_role_enum_reset_tx_next_ms) < 0) {
+      return;
+    }
+    if ((rs485_tx_busy != 0u) ||
+        (rs485_tx_queue_count != 0u) ||
+        (rs485_status_window_active != 0u) ||
+        (rs485_role_claim_tx_pending != 0u) ||
+        (rs485_role_slave_claim_tx_pending != 0u)) {
+      return;
+    }
+
+    /* A slave may still be waiting for the two status bytes following the
+       last sync marker, or for the tail of a truncated framed message. Drain
+       every such parser before E7. Without this guard a non-rebooted S01 can
+       consume the E7 magic as status data, keep its old id, and collide with
+       the newly assigned S01 until the six-second recovery epoch. */
+    for (uint8_t index = 0u; index < RS485_ROLE_ENUM_GUARD_BYTES; index++) {
+      rs485_tx_queue_push(0u);
+    }
+    memcpy(payload, rs485_local_uid_bytes, sizeof(payload));
+    rs485_role_queue_frame(RS485_ROLE_ENUM_RESET_MAGIC,
+                           payload,
+                           (uint8_t)sizeof(payload));
+    rs485_role_enum_reset_tx_remaining--;
+    rs485_role_enum_reset_tx_next_ms =
+        now_ms + RS485_ROLE_ENUM_RESET_RETRY_MS;
+    rs485_role_enum_next_ms = now_ms + RS485_ROLE_ENUM_SETTLE_MS;
+    rs485_sync_tx_suppressed_until_ms =
+        now_ms + RS485_ROLE_ENUM_RESET_RETRY_MS + 5u;
+    return;
+  }
+
+  recent_mask = rs485_status_get_recent_peer_mask(now_ms,
+                                                   RS485_STATUS_ASSIGN_ID_HOLD_MS);
+  recent_max_id = rs485_role_max_id_from_mask(recent_mask);
+  if ((recent_mask != 0u) &&
+      (recent_mask == rs485_status_make_contiguous_mask(recent_max_id))) {
+    if (recent_mask != rs485_role_enum_stable_mask) {
+      rs485_role_enum_stable_mask = recent_mask;
+      rs485_role_enum_stable_since_ms = now_ms;
+    } else if ((rs485_role_enum_state == 0u) &&
+               (rs485_role_slave_id_high_water > recent_max_id) &&
+               ((now_ms - rs485_role_enum_stable_since_ms) >=
+                RS485_ROLE_ENUM_RECONCILE_MS)) {
+      /* A stale saved high-water value must not make the next slave skip from
+         S03 to S23. Reconcile downward only after the exact contiguous mask
+         has remained unchanged long enough to exclude an in-flight ACK. */
+      rs485_role_slave_id_high_water = recent_max_id;
+      rs485_role_mark_persist_dirty();
+    }
+  } else if (recent_mask != rs485_role_enum_stable_mask) {
+    rs485_role_enum_stable_mask = recent_mask;
+    rs485_role_enum_stable_since_ms = now_ms;
+  }
+  if ((recent_mask == 0u) &&
+      (rs485_role_enum_state == 0u) &&
+      (rs485_role_slave_id_high_water != 0u) &&
+      ((now_ms - rs485_role_enum_stable_since_ms) >=
+       RS485_ROLE_ENUM_RECONCILE_MS)) {
+    /* If all confirmed status slots disappeared, a saturated/stale high-water
+       must not strand returning boards at S-- forever. Start one clean epoch;
+       its UID-addressed ACKs rebuild the contiguous list from S01. */
+    rs485_role_start_enumeration_epoch(now_ms);
+    return;
+  }
+  /* Never advance the allocator from anonymous status slots. During role
+     changes a delayed/colliding status byte can look like an arbitrary node
+     id. Only the UID96-matched ENUM_ACK below is authoritative for consuming
+     a new id. The status mask is used only for conservative downward repair. */
+
+  if (rs485_role_slave_id_high_water >= RS485_DISCOVERY_MAX_ID) {
+    return;
+  }
+
+  if (rs485_role_enum_state == 0u) {
+    if ((int32_t)(now_ms - rs485_role_enum_next_ms) < 0) {
+      return;
+    }
+    if ((rs485_role_claim_tx_pending != 0u) ||
+        (rs485_role_slave_claim_tx_pending != 0u)) {
+      return;
+    }
+
+    rs485_role_enum_round++;
+    if (rs485_role_enum_round == 0u) {
+      rs485_role_enum_round = 1u;
+    }
+    if (rs485_role_enum_collect_pass == 0u) {
+      rs485_role_enum_target_id =
+          (uint8_t)(rs485_role_slave_id_high_water + 1u);
+      rs485_role_enum_candidate_valid = 0u;
+      memset(rs485_role_enum_candidate_uid,
+             0,
+             sizeof(rs485_role_enum_candidate_uid));
+    }
+    /* Close the current status window before suppressing new sync markers.
+       Otherwise the ISR returns at the suppression check and leaves
+       status_window_active latched, so state 1 can wait forever. */
+    if (rs485_status_window_active != 0u) {
+      rs485_status_finalize_window();
+    }
+    rs485_sync_tx_suppressed_until_ms =
+        now_ms + RS485_ROLE_BUS_QUIET_MS +
+        RS485_ROLE_ENUM_COLLECT_MS + 30u;
+    /* A non-addressed slave deliberately keeps its last status window open.
+       Drain that two-byte state, and also any truncated UID/role parser, with
+       zeros before the framed E3 request. Zero cannot start any protocol
+       frame; the longest pending parser consumes at most 20 bytes. */
+    for (uint8_t index = 0u; index < RS485_ROLE_ENUM_GUARD_BYTES; index++) {
+      rs485_tx_queue_push(0u);
+    }
+    rs485_tx_kick();
+    rs485_role_enum_state = 1u;
+    rs485_role_enum_deadline_ms = now_ms + RS485_ROLE_BUS_QUIET_MS;
+    return;
+  }
+
+  if (rs485_role_enum_state == 1u) {
+    uint8_t payload[RS485_ROLE_ENUM_REQ_BYTES - 1u];
+    if ((int32_t)(now_ms - rs485_role_enum_deadline_ms) < 0) {
+      return;
+    }
+    if ((rs485_tx_busy != 0u) ||
+        (rs485_tx_queue_count != 0u) ||
+        (rs485_status_window_active != 0u)) {
+      return;
+    }
+    payload[0] = rs485_role_enum_round;
+    payload[1] = rs485_role_enum_target_id;
+    rs485_role_queue_frame(RS485_ROLE_ENUM_REQ_MAGIC,
+                           payload,
+                           (uint8_t)sizeof(payload));
+    rs485_role_enum_state = 2u;
+    rs485_role_enum_deadline_ms = now_ms + RS485_ROLE_ENUM_COLLECT_MS;
+    return;
+  }
+
+  if (rs485_role_enum_state == 2u) {
+    if ((int32_t)(now_ms - rs485_role_enum_deadline_ms) < 0) {
+      return;
+    }
+    if ((uint8_t)(rs485_role_enum_collect_pass + 1u) <
+        RS485_ROLE_ENUM_COLLECT_PASSES) {
+      /* Run every differently hashed response round even when no UID was
+         decoded in the first one. A collision can hide all first-round
+         replies; stopping there incorrectly creates a 10-second idle retry.
+         The candidate, once received, is accumulated across all passes. */
+      rs485_role_enum_collect_pass++;
+      rs485_role_enum_state = 0u;
+      rs485_role_enum_next_ms = now_ms + RS485_ROLE_BUS_QUIET_MS;
+      return;
+    }
+    if (rs485_role_enum_candidate_valid != 0u) {
+      uint8_t payload[RS485_ROLE_ENUM_ASSIGN_BYTES - 1u];
+      if ((rs485_tx_busy != 0u) || (rs485_tx_queue_count != 0u)) {
+        return;
+      }
+      payload[0] = rs485_role_enum_target_id;
+      memcpy(payload + 1u, rs485_role_enum_candidate_uid, 12u);
+      rs485_role_queue_frame(RS485_ROLE_ENUM_ASSIGN_MAGIC,
+                             payload,
+                             (uint8_t)sizeof(payload));
+      rs485_role_enum_assign_retries = 2u;
+      rs485_role_enum_ack_received = 0u;
+      rs485_role_enum_state = 3u;
+      rs485_role_enum_next_ms = now_ms + RS485_ROLE_ENUM_ASSIGN_RETRY_MS;
+      rs485_role_enum_deadline_ms = now_ms + RS485_ROLE_ENUM_ACK_TIMEOUT_MS;
+      rs485_sync_tx_suppressed_until_ms =
+          now_ms + RS485_ROLE_ENUM_ACK_TIMEOUT_MS + 10u;
+    } else {
+      rs485_role_enum_collect_pass = 0u;
+      rs485_role_enum_state = 0u;
+      rs485_role_enum_next_ms =
+          now_ms + ((rs485_role_slave_id_high_water != 0u)
+                        ? RS485_ROLE_ENUM_IDLE_RETRY_MS
+                        : RS485_ROLE_ENUM_RETRY_MS);
+    }
+    return;
+  }
+
+  if (rs485_role_enum_state == 3u) {
+    if (rs485_role_enum_ack_received != 0u) {
+      rs485_role_slave_id_high_water = rs485_role_enum_target_id;
+      rs485_role_enum_collect_pass = 0u;
+      rs485_role_mark_persist_dirty();
+      rs485_role_enum_stable_mask = 0u;
+      rs485_role_enum_stable_since_ms = now_ms;
+      rs485_role_enum_state = 0u;
+      rs485_role_enum_next_ms = now_ms + RS485_ROLE_ENUM_SETTLE_MS;
+      rs485_sync_tx_suppressed_until_ms = now_ms;
+      return;
+    }
+
+    if ((rs485_role_enum_assign_retries != 0u) &&
+        ((int32_t)(now_ms - rs485_role_enum_next_ms) >= 0) &&
+        (rs485_tx_busy == 0u) &&
+        (rs485_tx_queue_count == 0u)) {
+      uint8_t payload[RS485_ROLE_ENUM_ASSIGN_BYTES - 1u];
+      payload[0] = rs485_role_enum_target_id;
+      memcpy(payload + 1u, rs485_role_enum_candidate_uid, 12u);
+      rs485_role_queue_frame(RS485_ROLE_ENUM_ASSIGN_MAGIC,
+                             payload,
+                             (uint8_t)sizeof(payload));
+      rs485_role_enum_assign_retries--;
+      rs485_role_enum_next_ms = now_ms + RS485_ROLE_ENUM_ASSIGN_RETRY_MS;
+      return;
+    }
+
+    if ((int32_t)(now_ms - rs485_role_enum_deadline_ms) >= 0) {
+      /* Do not consume the id without an UID-addressed acknowledgement. The
+         next round retries the same high-water+1 value. */
+      rs485_role_enum_collect_pass = 0u;
+      rs485_role_enum_state = 0u;
+      rs485_role_enum_next_ms = now_ms + RS485_ROLE_ENUM_SETTLE_MS;
+      rs485_sync_tx_suppressed_until_ms = now_ms;
+    }
+  }
+#endif
+}
+
+static void rs485_role_reset_rx(void)
+{
+  rs485_role_rx_magic = 0u;
+  rs485_role_rx_index = 0u;
+  rs485_role_rx_expected = 0u;
+}
+
+static void rs485_role_rx_service(void)
+{
+  for (uint8_t drained = 0u; drained < RS485_ROLE_PENDING_CAPACITY; drained++) {
+    uint8_t magic = 0u;
+    uint8_t payload[20];
+    uint32_t primask = __get_PRIMASK();
+
+    __disable_irq();
+    if (rs485_role_frame_pending_read != rs485_role_frame_pending_write) {
+      uint8_t read_index = rs485_role_frame_pending_read;
+      magic = rs485_role_frame_pending_magic[read_index];
+      memcpy(payload,
+             rs485_role_frame_pending_buf[read_index],
+             sizeof(payload));
+      rs485_role_frame_pending_magic[read_index] = 0u;
+      rs485_role_frame_pending_read =
+          (uint8_t)((read_index + 1u) % RS485_ROLE_PENDING_CAPACITY);
+    }
+    if (primask == 0u) {
+      __enable_irq();
+    }
+
+    if (magic == 0u) {
+      break;
+    }
+    rs485_role_process_frame(magic, payload);
+  }
+}
+
+static void rs485_role_process_frame(uint8_t magic, const uint8_t *payload)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+
+  if (payload == NULL) {
+    return;
+  }
+
+  if (magic == RS485_ROLE_NODE_CLAIM_MAGIC) {
+    rs485_node_claim_note(payload[0], payload + 1u);
+    return;
+  }
+
+#if !RS485_ROLE_NETWORK_ASSIGN_ENABLE
+  if ((magic == RS485_ROLE_CLAIM_MAGIC) ||
+      (magic == RS485_ROLE_SLAVE_CLAIM_MAGIC)) {
+    /* Roles are local persistent configuration. A peer may report its role,
+       but it is never allowed to rewrite this board's role. */
+    return;
+  }
+#endif
+#if !RS485_ROLE_AUTO_ENUM_ENABLE
+  if ((magic == RS485_ROLE_ENUM_REQ_MAGIC) ||
+      (magic == RS485_ROLE_ENUM_ASSIGN_MAGIC) ||
+      (magic == RS485_ROLE_ENUM_ACK_MAGIC) ||
+      (magic == RS485_ROLE_ENUM_RESET_MAGIC)) {
+    return;
+  }
+#endif
+
+  if (magic == RS485_ROLE_CLAIM_MAGIC) {
+    uint8_t flags = payload[0];
+    uint32_t unix_s = (uint32_t)payload[1] |
+                      ((uint32_t)payload[2] << 8) |
+                      ((uint32_t)payload[3] << 16) |
+                      ((uint32_t)payload[4] << 24);
+    uint16_t millis = (uint16_t)payload[5] |
+                      ((uint16_t)payload[6] << 8);
+    const uint8_t *master_uid = payload + 7u;
+    int8_t order = 1;
+    uint8_t assignment_epoch_changed = 0u;
+    uint8_t clears_selected_slave = 0u;
+
+    if (((flags & 0x01u) == 0u) ||
+        (unix_s == 0u) ||
+        (millis >= 1000u)) {
+      return;
+    }
+    if (rs485_role_slave_uid_matches(master_uid) != 0u) {
+      if (rs485_role_compare_time(unix_s,
+                                  millis,
+                                  rs485_role_slave_assigned_unix_s,
+                                  rs485_role_slave_assigned_millis) < 0) {
+        return;
+      }
+      clears_selected_slave = 1u;
+    }
+    if (rs485_role_master_valid != 0u) {
+      order = rs485_role_compare_assignment(unix_s, millis, master_uid);
+    }
+    if (order < 0) {
+      if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+          (rs485_role_local_is_selected_master() != 0u)) {
+        rs485_role_schedule_master_claim(RS485_ROLE_CLAIM_PERIODIC);
+      }
+      return;
+    }
+    if ((order == 0) &&
+        (memcmp(master_uid, rs485_role_master_uid, 12u) == 0)) {
+      if (clears_selected_slave != 0u) {
+        rs485_role_clear_selected_slave_at(unix_s, millis);
+        rs485_role_mark_persist_dirty_immediate();
+        need_usb_status_refresh = 1u;
+        if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+            (rs485_role_local_is_selected_master() != 0u)) {
+          rs485_role_schedule_slave_claim(RS485_ROLE_CLAIM_HOST);
+        }
+      }
+      return;
+    }
+
+    assignment_epoch_changed =
+        (uint8_t)((rs485_role_master_valid == 0u) ||
+                  (rs485_role_master_assigned_unix_s != unix_s) ||
+                  (rs485_role_master_assigned_millis != millis) ||
+                  (memcmp(master_uid, rs485_role_master_uid, 12u) != 0));
+    if (assignment_epoch_changed != 0u) {
+      rs485_role_reset_local_assignment_epoch();
+    }
+    memcpy(rs485_role_master_uid, master_uid, 12u);
+    rs485_role_master_assigned_unix_s = unix_s;
+    rs485_role_master_assigned_millis = millis;
+    rs485_role_master_valid = 1u;
+    if (clears_selected_slave != 0u) {
+      rs485_role_clear_selected_slave_at(unix_s, millis);
+    }
+    rs485_role_boot_listen_active = 0u;
+    rs485_role_mark_persist_dirty_immediate();
+
+    if (memcmp(master_uid, rs485_local_uid_bytes, 12u) != 0) {
+      if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+        vnd_sync_apply_network_mode(VND_SYNC_MODE_SLAVE);
+      }
+    }
+    return;
+  }
+
+  if (magic == RS485_ROLE_SLAVE_CLAIM_MAGIC) {
+    uint8_t flags = payload[0];
+    uint8_t slave_valid =
+        ((flags & RS485_ROLE_SLAVE_VALID_BIT) != 0u) ? 1u : 0u;
+    uint8_t selected_node =
+        (uint8_t)((flags & RS485_ROLE_SLAVE_NODE_MASK) >>
+                  RS485_ROLE_SLAVE_NODE_SHIFT);
+    uint32_t unix_s = (uint32_t)payload[1] |
+                      ((uint32_t)payload[2] << 8) |
+                      ((uint32_t)payload[3] << 16) |
+                      ((uint32_t)payload[4] << 24);
+    uint16_t millis = (uint16_t)payload[5] |
+                      ((uint16_t)payload[6] << 8);
+    const uint8_t *slave_uid = payload + 7u;
+    uint8_t zero_uid = rs485_role_uid_is_zero(slave_uid);
+    int8_t order = 1;
+    uint8_t was_local_selected = rs485_role_local_is_selected_slave();
+
+    if ((unix_s == 0u) ||
+        (millis >= 1000u) ||
+        ((slave_valid != 0u) && (zero_uid != 0u)) ||
+        ((slave_valid == 0u) && (zero_uid == 0u)) ||
+        (selected_node > RS485_DISCOVERY_MAX_ID)) {
+      return;
+    }
+    if ((slave_valid != 0u) &&
+        (rs485_role_master_valid != 0u) &&
+        (memcmp(slave_uid, rs485_role_master_uid, 12u) == 0)) {
+      return;
+    }
+    if (rs485_role_slave_epoch_valid != 0u) {
+      order = rs485_role_compare_slave_assignment(unix_s,
+                                                   millis,
+                                                   slave_uid);
+    }
+    if (order < 0) {
+      if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+          (rs485_role_local_is_selected_master() != 0u)) {
+        rs485_role_schedule_slave_claim(RS485_ROLE_CLAIM_PERIODIC);
+      }
+      return;
+    }
+    if ((order == 0) &&
+        (slave_valid == rs485_role_slave_valid)) {
+      uint8_t claim_changed = 0u;
+      if ((slave_valid != 0u) &&
+          (rs485_role_slave_uid_prefix_only != 0u)) {
+        memcpy(rs485_role_slave_uid, slave_uid, 12u);
+        rs485_role_slave_uid_prefix_only = 0u;
+        rs485_role_mark_persist_dirty();
+        claim_changed = 1u;
+      }
+      if ((slave_valid != 0u) &&
+          (selected_node != 0u) &&
+          (rs485_role_selected_slave_node_id != selected_node)) {
+        rs485_role_selected_slave_node_id = selected_node;
+        rs485_role_mark_persist_dirty();
+        claim_changed = 1u;
+      }
+      if (claim_changed != 0u) {
+        need_usb_status_refresh = 1u;
+        if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+            (rs485_role_local_is_selected_master() != 0u)) {
+          rs485_role_schedule_slave_claim(RS485_ROLE_CLAIM_PERIODIC);
+        }
+      }
+      return;
+    }
+
+    rs485_role_slave_epoch_valid = 1u;
+    rs485_role_slave_assigned_unix_s = unix_s;
+    rs485_role_slave_assigned_millis = millis;
+    rs485_role_slave_uid_prefix_only = 0u;
+    rs485_role_slave_valid = slave_valid;
+    rs485_role_selected_slave_node_id =
+        (slave_valid != 0u) ? selected_node : 0u;
+    if (slave_valid != 0u) {
+      memcpy(rs485_role_slave_uid, slave_uid, 12u);
+      if (rs485_role_local_is_selected_slave() != 0u) {
+        if ((rs485_local_node_id_assigned != 0u) &&
+            (rs485_local_node_id != 0u)) {
+          rs485_role_selected_slave_node_id = rs485_local_node_id;
+        }
+        vnd_sync_apply_network_mode(VND_SYNC_MODE_SLAVE);
+      }
+    } else {
+      memset(rs485_role_slave_uid, 0, sizeof(rs485_role_slave_uid));
+    }
+    if ((was_local_selected != 0u) &&
+        (rs485_role_local_is_selected_slave() == 0u) &&
+        (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE)) {
+      vnd_sync_apply_network_mode(VND_SYNC_MODE_SLAVE);
+    }
+    rs485_role_mark_persist_dirty_immediate();
+    need_usb_status_refresh = 1u;
+    if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+        (rs485_role_local_is_selected_master() != 0u)) {
+      rs485_role_schedule_slave_claim(RS485_ROLE_CLAIM_PERIODIC);
+    }
+    return;
+  }
+
+  if (magic == RS485_ROLE_AUTO_HEARTBEAT_MAGIC) {
+    /* Legacy UID-election heartbeat. Roles are assigned only by RPI, so this
+       frame is intentionally ignored and can never change a board's role. */
+    return;
+  }
+
+  if (magic == RS485_ROLE_ENUM_RESET_MAGIC) {
+    const uint8_t *master_uid = payload;
+    uint8_t accept_reset = 0u;
+    uint32_t now_ms = HAL_GetTick();
+
+    if (memcmp(master_uid, rs485_local_uid_bytes, 12u) == 0) {
+      return;
+    }
+    if (rs485_role_master_valid != 0u) {
+      if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+        return;
+      }
+      accept_reset =
+          (memcmp(master_uid, rs485_role_master_uid, 12u) == 0) ? 1u : 0u;
+    } else {
+      /* E7 is accepted only from the MASTER UID previously assigned by RPI.
+         Without a saved assignment no peer may invent an automatic role. */
+      return;
+    }
+    if (accept_reset != 0u) {
+      rs485_role_reset_local_assignment_epoch();
+      rs485_role_enum_waiting_assignment = 1u;
+      rs485_last_rx_ms = now_ms;
+      rs485_role_mark_persist_dirty();
+      need_usb_status_refresh = 1u;
+    }
+    return;
+  }
+
+  if (magic == RS485_ROLE_ENUM_REQ_MAGIC) {
+    uint8_t round = payload[0];
+    uint8_t target_id = payload[1];
+    if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
+        (target_id != 0u) &&
+        (target_id <= RS485_DISCOVERY_MAX_ID)) {
+      uint32_t now_ms = HAL_GetTick();
+      rs485_last_rx_ms = now_ms;
+      if ((rs485_local_node_id_assigned == 0u) ||
+          (rs485_local_node_id == target_id)) {
+        /* A slave which accepted E4 but whose ACK was lost also answers for
+           the same target. The MASTER then retries that UID instead of giving
+           the already-used number to another board. */
+        rs485_uid_schedule_announce(now_ms,
+                                    1u,
+                                    rs485_role_enum_response_delay_ms(round));
+      }
+    }
+    return;
+  }
+
+  if (magic == RS485_ROLE_ENUM_ASSIGN_MAGIC) {
+    uint8_t assigned_id = payload[0];
+    const uint8_t *target_uid = payload + 1u;
+    if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
+        (assigned_id != 0u) &&
+        (assigned_id <= RS485_DISCOVERY_MAX_ID) &&
+        (memcmp(target_uid, rs485_local_uid_bytes, 12u) == 0)) {
+      uint8_t old_id = rs485_local_node_id;
+      rs485_local_node_id = assigned_id;
+      rs485_local_node_id_assigned = 1u;
+      rs485_role_slave_id_high_water = assigned_id;
+      rs485_role_enum_waiting_assignment = 0u;
+      rs485_role_last_confirmed_node_id = assigned_id;
+      rs485_status_slave_reply_div_counter = 0u;
+      rs485_identity_note_local_id_change(old_id, assigned_id);
+      if (rs485_role_local_is_selected_slave() != 0u) {
+        rs485_role_selected_slave_node_id = assigned_id;
+        rs485_role_schedule_slave_claim(RS485_ROLE_CLAIM_HOST);
+      }
+      rs485_role_mark_persist_dirty();
+      rs485_role_enum_ack_tx_id = assigned_id;
+      rs485_role_enum_ack_tx_pending = 1u;
+      rs485_role_enum_ack_tx_next_ms = HAL_GetTick() + RS485_ROLE_BUS_QUIET_MS;
+    }
+    return;
+  }
+
+  if (magic == RS485_ROLE_ENUM_ACK_MAGIC) {
+    uint8_t assigned_id = payload[0];
+    const uint8_t *assigned_uid = payload + 1u;
+
+    if ((assigned_id == 0u) ||
+        (assigned_id > RS485_DISCOVERY_MAX_ID)) {
+      return;
+    }
+    /* Never let an unsolicited, delayed or falsely framed E5 byte sequence
+       change numbering. Only the current MASTER may accept the exact ACK for
+       its in-flight target id and UID96. */
+    if ((vnd_sync_mode_public != VND_SYNC_MODE_MASTER) ||
+        ((rs485_role_master_valid != 0u) &&
+         (rs485_role_local_is_selected_master() == 0u)) ||
+        (rs485_role_enum_state != 3u) ||
+        (assigned_id != rs485_role_enum_target_id) ||
+        (memcmp(assigned_uid,
+                rs485_role_enum_candidate_uid,
+                sizeof(rs485_role_enum_candidate_uid)) != 0)) {
+      return;
+    }
+    if (rs485_role_slave_uid_matches(assigned_uid) != 0u) {
+      memcpy(rs485_role_slave_uid, assigned_uid, 12u);
+      rs485_role_slave_uid_prefix_only = 0u;
+      rs485_role_selected_slave_node_id = assigned_id;
+      rs485_role_mark_persist_dirty();
+      need_usb_status_refresh = 1u;
+      if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+          (rs485_role_local_is_selected_master() != 0u)) {
+        rs485_role_schedule_slave_claim(RS485_ROLE_CLAIM_PERIODIC);
+      }
+    }
+    rs485_role_enum_ack_received = 1u;
+  }
 }
 
 static void rs485_uid_begin_arbitration_window(uint32_t now_ms)
@@ -2442,7 +6518,9 @@ static void rs485_discovery_on_request(uint8_t value)
   if (request_id == 0u) {
     return;
   }
-  if ((rs485_local_node_id == 0u) || (request_id != rs485_local_node_id)) {
+  if ((rs485_local_node_id_assigned == 0u) ||
+      (rs485_local_node_id == 0u) ||
+      (request_id != rs485_local_node_id)) {
     return;
   }
 
@@ -2468,7 +6546,7 @@ static void rs485_discovery_on_response(uint8_t value)
 
   rs485_discovery_scan_mask |= (1u << (response_id - 1u));
   updated_mask = rs485_discovery_seen_mask | rs485_discovery_scan_mask;
-  rs485_slave_count_estimate = rs485_count_bits_u32(updated_mask);
+  rs485_status_set_slave_count_estimate(rs485_count_bits_u32(updated_mask));
   rs485_discovery_response_seen = 1u;
 }
 
@@ -2499,13 +6577,11 @@ static void rs485_sync_service_tx(void)
   rs485_tx_kick();
 }
 
-static void rs485_sync_auto_role_service(uint32_t now_ms)
+static void rs485_sync_assigned_role_service(uint32_t now_ms)
 {
-  extern void vnd_sync_set_mode_auto(uint8_t mode);
   extern uint8_t vnd_sync_is_mode_host_forced(void);
   extern volatile uint8_t vnd_sync_mode_public;
-  static uint8_t auto_init_done = 0u;
-  static uint32_t auto_start_ms = 0u;
+  static uint8_t role_init_done = 0u;
   static uint8_t prev_mode = 0xFFu;
 
   if (vnd_sync_mode_public != prev_mode) {
@@ -2526,103 +6602,50 @@ static void rs485_sync_auto_role_service(uint32_t now_ms)
     rs485_status_window_miss_count = 0u;
     rs485_status_local_slot_expected_count = 0u;
     rs485_status_local_slot_miss_count = 0u;
-    if (vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) {
-      if ((rs485_local_node_id == 0u) || (rs485_local_node_id_assigned == 0u)) {
-        rs485_local_node_id = rs485_local_uid_hint;
-        rs485_local_node_id_assigned = 0u;
-      }
-    } else if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
-      if (rs485_local_node_id == 0u) {
-        rs485_local_node_id = rs485_local_uid_hint;
-      }
-      rs485_local_node_id_assigned = 0u;
-      rs485_status_assignment_reset();
+    if ((vnd_sync_mode_public == VND_SYNC_MODE_MASTER) &&
+        (rs485_role_local_is_selected_master() != 0u)) {
+      rs485_role_start_enumeration_epoch(now_ms);
     }
+    rs485_role_auto_probe_active = 0u;
+    rs485_role_auto_heartbeat_tx_remaining = 0u;
     tim15_request_hold_offset(0);
   }
 
-  if (vnd_sync_is_mode_host_forced()) {
-    return;
-  }
-
-  if (!auto_init_done) {
-    auto_init_done = 1u;
-    auto_start_ms = now_ms;
-    vnd_sync_set_mode_auto(VND_SYNC_MODE_SLAVE);
+  if (!role_init_done) {
+    role_init_done = 1u;
     rs485_last_rx_ms = 0u;
-    rs485_local_node_id = rs485_local_uid_hint;
-    rs485_local_node_id_assigned = 0u;
     rs485_reply_pending_id = 0u;
     rs485_slave_count_estimate = 0u;
     rs485_discovery_seen_mask = 0u;
     rs485_discovery_reset_master_scan();
     rs485_status_assignment_reset();
-    /* AUTO_ROLE init-лог отключён для чистого phase-monitor потока. */
+    rs485_role_boot_listen_active = 0u;
+  }
+
+  /* There is no automatic MASTER election. RPI is the only role authority.
+     A blank/erased Flash record leaves the board passive as SLAVE until RPI
+     assigns a MASTER. Explicit local OFF remains respected. */
+  if (vnd_sync_is_mode_host_forced() != 0u) {
+    return;
+  }
+  if (rs485_role_master_valid == 0u) {
+    if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+      vnd_sync_apply_network_mode(VND_SYNC_MODE_SLAVE);
+    }
     return;
   }
 
-  if (vnd_sync_mode_public == VND_SYNC_MODE_MASTER) {
-    uint8_t peer_uid_recent = (uint8_t)((rs485_peer_uid_valid != 0u) &&
-                                       ((now_ms - rs485_peer_uid_last_ms) <= RS485_PEER_UID_STALE_MS));
-    uint8_t foreign_sync_recent = (uint8_t)((sync_last_edge_ms != 0u) &&
-                                           ((now_ms - sync_last_edge_ms) <= RS485_SYNC_PRESENT_MS));
-
-    if (foreign_sync_recent != 0u) {
-      vnd_sync_set_mode_auto(VND_SYNC_MODE_SLAVE);
-      rs485_local_node_id = rs485_local_uid_hint;
-      rs485_local_node_id_assigned = 0u;
-      rs485_reply_pending_id = 0u;
-      rs485_slave_count_estimate = 0u;
-      rs485_uid_begin_arbitration_window(now_ms);
-      return;
-    }
-
-    if ((peer_uid_recent != 0u) && (rs485_peer_uid_cmp > 0)) {
-      vnd_sync_set_mode_auto(VND_SYNC_MODE_SLAVE);
-      rs485_uid_begin_arbitration_window(now_ms);
-      return;
-    }
-
-    if ((rs485_slave_count_estimate == 0u) &&
-        ((foreign_sync_recent != 0u) || (peer_uid_recent != 0u))) {
-      static uint32_t last_master_uid_announce_ms = 0u;
-      if ((last_master_uid_announce_ms == 0u) ||
-          ((now_ms - last_master_uid_announce_ms) >= RS485_UID_MASTER_ANNOUNCE_MS)) {
-        last_master_uid_announce_ms = now_ms;
-        rs485_uid_schedule_announce(now_ms, 3u, rs485_uid_get_announce_delay_ms());
-        rs485_uid_begin_arbitration_window(now_ms);
+  if (rs485_role_local_is_selected_master() != 0u) {
+    if (vnd_sync_mode_public != VND_SYNC_MODE_MASTER) {
+      vnd_sync_apply_network_mode(VND_SYNC_MODE_MASTER);
+      rs485_role_schedule_master_claim(RS485_ROLE_CLAIM_BOOT);
+      if (rs485_role_slave_epoch_valid != 0u) {
+        rs485_role_schedule_slave_claim(RS485_ROLE_CLAIM_BOOT);
       }
     }
-    return;
+  } else if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+    vnd_sync_apply_network_mode(VND_SYNC_MODE_SLAVE);
   }
-
-  if (rs485_last_rx_ms != 0u) {
-    if ((now_ms - rs485_last_rx_ms) <= RS485_SYNC_PRESENT_MS) {
-      return;
-    }
-    rs485_last_rx_ms = 0u;
-    if (rs485_local_node_id_assigned == 0u) {
-      rs485_local_node_id = rs485_local_uid_hint;
-    }
-    rs485_reply_pending_id = 0u;
-    rs485_slave_count_estimate = 0u;
-    auto_start_ms = now_ms;
-    return;
-  }
-
-  if ((now_ms - auto_start_ms) < rs485_master_claim_delay_ms) {
-    return;
-  }
-
-  vnd_sync_set_mode_auto(VND_SYNC_MODE_MASTER);
-  rs485_local_node_id = rs485_local_uid_hint;
-  rs485_local_node_id_assigned = 0u;
-  rs485_reply_pending_id = 0u;
-  rs485_slave_count_estimate = 0u;
-  rs485_discovery_seen_mask = 0u;
-  rs485_discovery_reset_master_scan();
-  rs485_status_assignment_reset();
-  /* AUTO_ROLE claim-лог отключён для чистого phase-monitor потока. */
 }
 
 typedef struct {
@@ -2658,8 +6681,8 @@ static volatile uint8_t g_tune_led_freq_active = 0u;
 #define TIM15_SYNC_QUIET_EXIT_BITS        32u
 #define TIM15_SYNC_QUIET_ENTER_PACKETS    1u
 #define TIM15_SYNC_QUIET_FILTER_DIVISOR   8u
-#define TIM15_SYNC_QUIET_MAX_OFFSET       4
-#define TIM15_SYNC_QUIET_SPACING_BUFFERS  8u
+#define TIM15_SYNC_QUIET_MAX_OFFSET       8
+#define TIM15_SYNC_QUIET_SPACING_BUFFERS  2u
 #define TIM15_SYNC_NEAR_RAW_BITS          2u
 #define TIM15_SYNC_NEAR_RAW_MAX_OFFSET    1
 #define TIM15_SYNC_NEAR_RAW_SPACING       16u
@@ -2740,6 +6763,57 @@ static void arr_auto_apply_tim15(uint32_t arr)
   __HAL_TIM_SET_COMPARE(&htim15, TIM_CHANNEL_1, (arr + 1u) / 2u);
 }
 
+void tim15_sync_apply_nominal_arr(uint32_t nominal_arr)
+{
+  extern TIM_HandleTypeDef htim15;
+  uint32_t primask;
+  uint32_t previous_nominal_arr;
+
+  if (nominal_arr < 1u) {
+    nominal_arr = 1u;
+  }
+
+  /* A host/profile rate change owns the nominal frequency. Atomically cancel
+     a temporary phase pulse so its completion IRQ cannot restore the stale
+     boot/profile ARR after the new rate has already been applied. */
+  primask = __get_PRIMASK();
+  __disable_irq();
+  tim15_arr_pulse_stage = 0u;
+  tim15_arr_pulse_nominal = nominal_arr;
+  tim15_arr_hold_offset = 0;
+  tim15_arr_hold_target_offset = 0;
+  previous_nominal_arr = g_tim15_slave_base_arr;
+  g_tim15_slave_base_arr = nominal_arr;
+  /* A rate/profile change invalidates the distance accumulated by an active
+     anti-phase slew. Leaving the old distance alive can finish a correction
+     sized for the boot ARR, classify the marker as anti-phase again, and run
+     a second full slew. Reapplying an already active stream/profile is common
+     host behaviour, though, and must not keep clearing the 200-packet
+     qualifier before a slew has even started. */
+  if ((previous_nominal_arr != nominal_arr) &&
+      ((rs485_phase_slew_active != 0u) ||
+       (rs485_anti_phase_recovery_request != 0u))) {
+    rs485_phase_slew_active = 0u;
+    rs485_phase_slew_remaining_ticks = 0u;
+    rs485_anti_phase_recovery_active = 0u;
+    rs485_anti_phase_recovery_packets = 0u;
+    rs485_anti_phase_recovery_request = 0u;
+    rs485_phase_guard_recovery_packets = 0u;
+    rs485_sync_relation_score = 0;
+    rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+    rs485_sync_locked = 0u;
+    rs485_sync_led_active = 0u;
+    sync_phase_fast_last_buf = 0xFFFFFFFFu;
+    sync_phase_filter_reset_request = 1u;
+  }
+  __HAL_TIM_DISABLE_IT(&htim15, TIM_IT_UPDATE);
+  __HAL_TIM_CLEAR_FLAG(&htim15, TIM_FLAG_UPDATE);
+  arr_auto_apply_tim15(nominal_arr);
+  if (primask == 0u) {
+    __enable_irq();
+  }
+}
+
 static int32_t arr_auto_abs_i32(int32_t value)
 {
   return (value < 0) ? -value : value;
@@ -2802,6 +6876,9 @@ static int32_t tim15_compute_phase_pulse_delta(int32_t phase_ticks)
     pulse = (int32_t)pulse_cap;
   }
 
+  /* Increasing ARR delays the next local buffer boundary and decreases the
+     measured sample phase. Thus a positive phase error needs +ARR and a
+     negative error needs -ARR. */
   return (phase_ticks > 0) ? pulse : -pulse;
 }
 
@@ -3035,6 +7112,8 @@ static void rs485_freq_trim_service(uint32_t now_ms)
 
   if ((rs485_freq_trim_enabled == 0u) ||
       (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) ||
+      (rs485_sync_phase_relation != RS485_SYNC_RELATION_IN_PHASE) ||
+      (rs485_phase_slew_active != 0u) ||
       (sync_last_edge_ms == 0u) ||
       ((now_ms - sync_last_edge_ms) > RS485_SYNC_PRESENT_MS)) {
     rs485_freq_trim_reset(0u);
@@ -3459,7 +7538,11 @@ static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samp
 #if TIM15_SYNC_PHASE_PULSE_ENABLE
   pulse_delta = tim15_compute_phase_pulse_delta(control_phase_error);
   pulse_spacing = tim15_phase_pulse_spacing_buffers(control_abs_phase);
-  if (rs485_sync_phase_relation != RS485_SYNC_RELATION_IN_PHASE) {
+  /* Keep the newer boundary-safe phase loop active while the relation is
+     being classified. Only the explicit full-half-cycle slew owns TIM15
+     exclusively; running normal PLL pulses during that operation would
+     subtract from its accumulated delay. */
+  if (rs485_phase_slew_active != 0u) {
     pulse_delta = 0;
   }
   if (near_raw_mode != 0u) {
@@ -3480,7 +7563,8 @@ static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samp
   pulse_delta = 0;
   pulse_spacing = TIM15_SYNC_SLOW_SPACING_BUFFERS;
 #endif
-  {
+  if ((rs485_sync_phase_relation == RS485_SYNC_RELATION_IN_PHASE) &&
+      (rs485_phase_slew_active == 0u)) {
     int32_t approach_delta = rs485_phase_approach_compute_delta(phase_error,
                                                                 raw_abs_phase,
                                                                 bit_ticks);
@@ -3495,6 +7579,16 @@ static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samp
       rs485_phase_approach_last_spacing = pulse_spacing;
       approach_pulse = 1u;
     }
+  } else {
+    /* The coarse anti-phase slew owns TIM15 until the logical half-cycle is
+       correct. Running the normal approach loop here schedules opposite ARR
+       pulses and can cancel the coarse slew indefinitely. */
+    rs485_phase_approach_active = 0u;
+    rs485_phase_approach_last_delta = 0;
+    rs485_phase_approach_prev_sign = 0;
+    rs485_phase_approach_holdoff_edges = 0u;
+    rs485_phase_approach_have_prev_abs = 0u;
+    rs485_phase_approach_worse_count = 0u;
   }
 
   sync_phase_fast_edges++;
@@ -3505,7 +7599,9 @@ static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samp
   sync_phase_fast_last_spacing = pulse_spacing;
   rs485_sync_locked = phase_locked_now;
   rs485_sync_led_active = rs485_sync_locked;
-  if ((rs485_phase_approach_active != 0u) ||
+  if ((rs485_sync_phase_relation != RS485_SYNC_RELATION_IN_PHASE) ||
+      (rs485_phase_slew_active != 0u) ||
+      (rs485_phase_approach_active != 0u) ||
       (rs485_phase_approach_holdoff_edges != 0u)) {
     rs485_freq_trim_reset(0u);
   } else {
@@ -3607,8 +7703,9 @@ static void arr_auto_tune_service(void)
 static void phase_micro_adjust_service(void)
 {
   extern volatile uint8_t vnd_sync_mode_public;
+  extern volatile uint32_t adc_stream_total_buffer_count;
   uint32_t now_ms = HAL_GetTick();
-  static uint32_t last_phase_flip_ms = 0u;
+  static uint32_t last_phase_slew_buffer = 0xFFFFFFFFu;
   static uint32_t last_sync_restart_ms = 0u;
 
   tim15_request_hold_offset(0);
@@ -3618,11 +7715,13 @@ static void phase_micro_adjust_service(void)
       ((now_ms - sync_last_edge_ms) <= RS485_SYNC_PRESENT_MS)) {
     if (rs485_phase_half_snap_request != 0u) {
       int32_t snap_error = rs485_phase_half_snap_last_error;
+      (void)snap_error;
       rs485_phase_half_snap_request = 0u;
 
       if ((rs485_phase_half_snap_last_ms == 0u) ||
           ((now_ms - rs485_phase_half_snap_last_ms) >= RS485_PHASE_HALF_SNAP_COOLDOWN_MS)) {
-        adc_stream_restart_sync();
+        /* Keep ADC/DMA continuous. Phase/relation is relocked by the RS-485
+           control loop without resetting the acquisition cycle. */
         rs485_phase_half_snap_last_ms = now_ms;
         if (rs485_phase_half_snap_count < 0xFFFFFFFFu) {
           rs485_phase_half_snap_count++;
@@ -3645,28 +7744,78 @@ static void phase_micro_adjust_service(void)
         sync_phase_fast_last_buf = 0xFFFFFFFFu;
         sync_phase_filter_reset_request = 1u;
         rs485_freq_trim_reset(0u);
-        printf("[SYNC] coarse phase restart err=%ld\r\n",
+        printf("[SYNC] coarse phase relock without ADC restart err=%ld\r\n",
                (long)snap_error);
       }
     }
 
     if ((RS485_SYNC_ANTI_PHASE_RECOVERY_ENABLE != 0u) &&
-        rs485_anti_phase_recovery_request &&
-        ((now_ms - last_phase_flip_ms) >= 250u)) {
-      adc_stream_invert_phase_polarity();
-      last_phase_flip_ms = now_ms;
-      rs485_sync_relation_score = 0;
-      rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
-      rs485_sync_locked = 0u;
-      rs485_sync_led_active = 0u;
-      rs485_anti_phase_recovery_active = 0u;
-      rs485_anti_phase_recovery_packets = 0u;
-      rs485_anti_phase_recovery_request = 0u;
-      rs485_sync_restart_request = 0u;
-      rs485_phase_guard_recovery_packets = 0u;
-      sync_phase_fast_last_buf = 0xFFFFFFFFu;
-      sync_phase_filter_reset_request = 1u;
-      printf("[SYNC] anti-phase detected -> invert local marker polarity, relock IN-PHASE\r\n");
+        (rs485_phase_slew_active == 0u) &&
+        (rs485_anti_phase_recovery_request != 0u)) {
+      uint32_t half_period_ticks = sync_tim5_period_ticks;
+
+      if (half_period_ticks == 0u) {
+        uint32_t samples = adc_stream_get_active_samples();
+        half_period_ticks = samples * (TIM15->ARR + 1u);
+      }
+      if (half_period_ticks != 0u) {
+        /* Correct polarity without an asynchronous GPIO toggle. A complete
+           extra half-period of accumulated timer delay changes marker parity
+           while returning the buffer boundary to the same phase position. */
+        rs485_phase_slew_remaining_ticks = half_period_ticks;
+        rs485_phase_slew_active = 1u;
+        last_phase_slew_buffer = 0xFFFFFFFFu;
+        rs485_anti_phase_recovery_request = 0u;
+        sync_phase_fast_last_buf = 0xFFFFFFFFu;
+        sync_phase_filter_reset_request = 1u;
+        rs485_freq_trim_reset(0u);
+      }
+    }
+
+    if ((RS485_SYNC_ANTI_PHASE_RECOVERY_ENABLE != 0u) &&
+        (rs485_phase_slew_active != 0u) &&
+        (last_phase_slew_buffer != adc_stream_total_buffer_count) &&
+        (tim15_arr_pulse_stage == 0u)) {
+      uint32_t step_ticks = (uint32_t)((g_tim15_slave_arr_step_ticks < 0)
+                                      ? -g_tim15_slave_arr_step_ticks
+                                      : g_tim15_slave_arr_step_ticks);
+      uint32_t pulse_ticks = 0u;
+
+      if (step_ticks == 0u) {
+        step_ticks = 1u;
+      }
+      pulse_ticks = (uint32_t)TIM15_SYNC_PULSE_MAX_OFFSET *
+                    (uint32_t)TIM15_SYNC_PULSE_HOLD_UPDATES *
+                    step_ticks;
+
+      /* Never invert the physical TX marker while it is running: the immediate
+         GPIO toggle creates one short/long half-cycle and is visible as a
+         magnetic-field interruption. Accumulate exactly one complete
+         half-period using bounded +ARR pulses. The temporary relation change
+         at the buffer boundary must not stop this operation early. */
+      if (tim15_schedule_arr_pulse(TIM15_SYNC_PULSE_MAX_OFFSET) != 0u) {
+        last_phase_slew_buffer = adc_stream_total_buffer_count;
+        if (rs485_phase_slew_pulse_count < 0xFFFFFFFFu) {
+          rs485_phase_slew_pulse_count++;
+        }
+        if (rs485_phase_slew_remaining_ticks <= pulse_ticks) {
+          rs485_phase_slew_remaining_ticks = 0u;
+          rs485_phase_slew_active = 0u;
+          rs485_sync_relation_score = 0;
+          rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+          rs485_sync_locked = 0u;
+          rs485_sync_led_active = 0u;
+          rs485_anti_phase_recovery_active = 0u;
+          rs485_anti_phase_recovery_packets = 0u;
+          rs485_anti_phase_recovery_request = 0u;
+          rs485_phase_guard_recovery_packets = 0u;
+          sync_phase_fast_last_buf = 0xFFFFFFFFu;
+          sync_phase_filter_reset_request = 1u;
+          rs485_freq_trim_reset(0u);
+        } else {
+          rs485_phase_slew_remaining_ticks -= pulse_ticks;
+        }
+      }
     }
 
     extern uint8_t vnd_is_streaming(void);
@@ -3678,9 +7827,7 @@ static void phase_micro_adjust_service(void)
     }
     if (rs485_sync_restart_request &&
         ((now_ms - last_sync_restart_ms) >= RS485_SYNC_RESTART_MIN_MS)) {
-        adc_stream_restart_sync();
         last_sync_restart_ms = now_ms;
-        rs485_sync_restart_count++;
         rs485_sync_relation_score = 0;
         rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
         rs485_sync_locked = 0u;
@@ -3692,9 +7839,11 @@ static void phase_micro_adjust_service(void)
         rs485_phase_guard_recovery_packets = 0u;
         sync_phase_fast_last_buf = 0xFFFFFFFFu;
         sync_phase_filter_reset_request = 1u;
-        printf("[SYNC] bad phase/relation -> restart ADC sync capture\r\n");
+        printf("[SYNC] bad phase/relation -> relock without ADC restart\r\n");
     }
   } else {
+    rs485_phase_slew_active = 0u;
+    rs485_phase_slew_remaining_ticks = 0u;
     rs485_phase_half_snap_armed = 1u;
     rs485_phase_half_snap_request = 0u;
     rs485_sync_locked = 0u;
@@ -3786,6 +7935,12 @@ static void sync_phase_monitor_service(void)
 
 static void tune_led_service(uint32_t now_ms)
 {
+#if !MAIN_LED_INDICATION_ENABLE
+  (void)now_ms;
+  uart1_led_off_tick = 0u;
+  LED_OFF();
+  return;
+#else
   extern volatile uint8_t vnd_sync_mode_public;
 
   /* Если только что был RX по UART1, держим LED включенным поверх фоновой анимации. */
@@ -3808,6 +7963,7 @@ static void tune_led_service(uint32_t now_ms)
   }
 
   LED_OFF();
+#endif
 }
 
 static void tim2_led_breathe_service(uint32_t now_ms)
@@ -3826,6 +7982,16 @@ static void tim2_led_breathe_service(uint32_t now_ms)
 
 static void ws2812_status_service(uint32_t now_ms)
 {
+#if !MAIN_WS2812_STATUS_ENABLE
+  static uint8_t off_applied = 0u;
+  (void)now_ms;
+  g_ws2812_test_pattern = WS2812_PATTERN_OFF;
+  if(off_applied == 0u) {
+    ws2812_spi_set_pattern(WS2812_PATTERN_OFF);
+    off_applied = 1u;
+  }
+  return;
+#else
 #if WS2812_GPIO_BITBANG_TEST_MODE
   (void)now_ms;
   return;
@@ -3846,6 +8012,7 @@ static void ws2812_status_service(uint32_t now_ms)
   pattern = WS2812_PATTERN_TEST_COLOR_CYCLE;
 #endif
   ws2812_spi_set_pattern(pattern);
+#endif
 #endif
 }
 
@@ -4066,6 +8233,9 @@ void rs485_sync_on_buffer_complete(uint8_t parity)
   uint8_t sync_byte = 0u;
   uint8_t status_first = 0u;
   uint8_t status_second = 0u;
+  uint8_t status_no_response = 0u;
+  uint8_t sensor_index = 0u;
+  uint8_t sensor_active = 0u;
 
   rs485_sync_buf_div4 = adc_stream_total_buffer_count;
 
@@ -4073,6 +8243,13 @@ void rs485_sync_on_buffer_complete(uint8_t parity)
      adc_marker_pa3_toggle(). parity = текущее состояние PA2/PC7. */
   if (vnd_sync_mode_public != VND_SYNC_MODE_MASTER) {
     rs485_discovery_reset_master_scan();
+    return;
+  }
+  /* Role and device ID are independent persistent settings. An unassigned
+     MASTER keeps ADC/USB running but is silent on the shared bus, because ID0
+     is a real address and must never be used as an implicit default. */
+  if (rs485_local_node_id_assigned == 0u) {
+    rs485_master_status_tx_pending = 0u;
     return;
   }
 
@@ -4084,17 +8261,50 @@ void rs485_sync_on_buffer_complete(uint8_t parity)
   if (rs485_status_window_active != 0u) {
     rs485_status_finalize_window();
   }
+  rs485_sensor_event_cycle++;
   sync_tim5_period_ticks = htim5.Instance->CNT;
   htim5.Instance->CNT = 0u;
   rs485_status_current_window_phase = (uint8_t)(parity % RS485_STATUS_SLOT_STRIDE);
   sync_byte = (uint8_t)(RS485_SYNC7_BASE | (parity ? RS485_SYNC_EDGE_BIT : 0u));
-  status_first = rs485_status_build_local_byte();
-  status_second = rs485_status_build_local_second_byte(rs485_status_master_selector);
+  if ((rs485_local_node_id_assigned != 0u) &&
+      (rs485_sensor_event_prepare(&sensor_index, &sensor_active) != 0u)) {
+    status_first = rs485_status_build_public_local_byte();
+    status_second = (uint8_t)(RS485_STATUS_SENSOR_EVENT_VALUE |
+                              ((sensor_index & 0x0Fu) << 1) |
+                              (sensor_active & 0x01u));
+    status_no_response = 1u;
+    rs485_sensor_event_commit_tx();
+  } else if ((rs485_identity_scan_active != 0u) &&
+      (rs485_identity_scan_page < RS485_IDENT_PAGE_COUNT) &&
+      (rs485_identity_self_tx_state != RS485_IDENT_SELF_STATE_NONE)) {
+    status_first = rs485_status_build_master_identity_first_byte();
+    status_no_response = 1u;
+    rs485_identity_current_req_active = 0u;
+    rs485_identity_current_req_page = 0u;
+    rs485_identity_current_req_selector = 0u;
+    if (rs485_identity_self_tx_state == RS485_IDENT_SELF_STATE_PAGE) {
+      status_second = (uint8_t)(RS485_STATUS_MASTER_SELF_PAGE_VALUE |
+                                (rs485_identity_scan_page & RS485_STATUS_ID_MASK));
+      rs485_identity_self_tx_state = RS485_IDENT_SELF_STATE_DATA;
+    } else {
+      status_second = (uint8_t)(RS485_STATUS_MASTER_SELF_DATA_VALUE |
+                                rs485_identity_get_local_nibble(rs485_identity_scan_page));
+      rs485_identity_self_tx_state = RS485_IDENT_SELF_STATE_NONE;
+    }
+  } else {
+    status_first = rs485_status_build_local_byte();
+    status_second = rs485_status_build_local_second_byte(rs485_status_master_selector);
+  }
   rs485_status_master_first = status_first;
   rs485_status_master_second = status_second;
-  rs485_status_master_selector = (uint8_t)(status_first & RS485_STATUS_ID_MASK);
+  if (status_no_response == 0u) {
+    rs485_status_master_selector =
+        rs485_status_id_from_wire(
+            (uint8_t)(status_first & RS485_STATUS_ID_MASK));
+  }
   rs485_master_status_tx_first = status_first;
   rs485_master_status_tx_second = status_second;
+  rs485_master_status_tx_no_response = status_no_response;
   rs485_master_status_tx_due_ms = HAL_GetTick() + RS485_STATUS_MASTER_WORD_DELAY_MS;
   rs485_master_status_tx_pending = 1u;
   /* sync должен уходить максимально близко к событию DMA завершения буфера.
@@ -4255,8 +8465,13 @@ int main(void)
     IWDG1->PR = 0x06;
     // Reload максимум 0x0FFF
     IWDG1->RLR = 0x0FFF;
-    // Дождаться применения (PVU/RVU сброшены)
-    while(IWDG1->SR != 0) { /* wait */ }
+    // Дождаться применения (PVU/RVU сброшены), но не блокировать весь boot,
+    // если IWDG после watchdog-reset оставил update-флаг активным.
+    for (volatile uint32_t iwdg_update_timeout = 100000u;
+         (IWDG1->SR != 0u) && (iwdg_update_timeout != 0u);
+         iwdg_update_timeout--) {
+      __NOP();
+    }
     // Немедленно перезагрузим
     IWDG1->KR = 0xAAAA;
     iwdg_extended_early = 1;
@@ -4436,6 +8651,10 @@ int main(void)
       printf("[ADC1][CFG] ADC1->CFGR=0x%08lX EXTSEL=%lu EXTEN=%lu (expected EXTSEL=%lu EXTEN=%lu from HAL)\r\n",
         (unsigned long)ADC1->CFGR, ext_sel, ext_en, exp_sel, exp_en);
     }
+  /* Load DC plus the network-wide RS485 MASTER UID/timestamp before USB is
+     exposed to the host. Otherwise a very early host assignment could be
+     overwritten by the old Flash record immediately after enumeration. */
+  vnd_persistent_config_load_once();
   printf("[INIT] Before USB_DEVICE_Init\r\n");
   MX_USB_DEVICE_Init();
 #if DIAG_DISABLE_IWDG
@@ -4502,9 +8721,13 @@ int main(void)
   // --- ПОДСВЕТКА через TIM1 CH2N (PE10) ---
   printf("[PWM] Starting LCD backlight PWM...\r\n");
 
-  // Устанавливаем duty cycle (попробуем 70% вместо 60%)
-  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 1750); // ~70% при ARR=2499
-  printf("[PWM] Duty cycle set to 1750\r\n");
+  /* PE10 is TIM1_CH2N and the LCD backlight is active-low.  For PWM1 the
+     complementary output stays LOW for the whole cycle when CCR2=ARR+1,
+     which gives the backlight its maximum (100%) brightness. */
+  uint32_t bl_period_ticks = __HAL_TIM_GET_AUTORELOAD(&htim1) + 1u;
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, bl_period_ticks);
+  printf("[PWM] LCD backlight set to maximum: CCR2=%lu\r\n",
+         (unsigned long)bl_period_ticks);
 
   // Правильный порядок запуска для complementary PWM:
   // 1. Сначала включаем главный выход (MOE)
@@ -4539,7 +8762,9 @@ int main(void)
   uint32_t ccr2 = TIM1->CCR2;
   uint32_t arr = TIM1->ARR;
   // Избегаем float в printf (отсутствует поддержка): duty x10 (одна десятая процента)
-  uint32_t duty_x10 = (arr ? (ccr2 * 1000UL + arr/2)/arr : 0); // в десятых процента
+  uint32_t duty_x10 = (bl_period_ticks != 0u)
+                    ? ((ccr2 * 1000UL + bl_period_ticks / 2u) / bl_period_ticks)
+                    : 0u;
   printf("[PWM] TIM1: ARR=%lu, CCR2=%lu, Duty=%lu.%lu%%\r\n",
          (unsigned long)arr, (unsigned long)ccr2,
          (unsigned long)(duty_x10/10), (unsigned long)(duty_x10%10));
@@ -4911,7 +9136,9 @@ int main(void)
 
   /* USB детект временно отключен для упрощения */
 
-  /* Авто-STOP: если хост не активен (нет SOF) — выключить передачу */
+  /* Опциональный авто-STOP USB-потока при отсутствии SOF.
+     Логическая фаза и ADC не зависят от USB; физический TX200 разрешён только
+     сочетанием сохранённого host-request и активного stream. */
 #ifndef USB_AUTO_STOP_ON_NO_SOF
 #define USB_AUTO_STOP_ON_NO_SOF 0u
 #endif
@@ -4924,9 +9151,6 @@ int main(void)
       if (!host_present) {
         extern void vnd_pipeline_stop_reset(int deep);
         vnd_pipeline_stop_reset(0);
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
       }
     }
   }
@@ -4963,9 +9187,16 @@ main_loop_second_half:
   }
 #if !MAIN_LOOP_ISOLATION_TEST || (MAIN_LOOP_ISOLATION_STAGE != 3) || (MAIN_LOOP_ISOLATION_STAGE3_PART == 1)
   /* Периодический SYNC-лог отключён: COM оставляем под compact phase-monitor. */
-  rs485_sync_auto_role_service(now);
+  rs485_role_rx_service();
+  rs485_sync_assigned_role_service(now);
+  rs485_role_claim_service(now);
+  rs485_role_slave_claim_service(now);
+  rs485_role_enumeration_service(now);
+  rs485_node_claim_service(now);
+  rs485_identity_service(now);
   rs485_uid_service(now);
-  /* UID-фрейм используется только для разруливания конфликта MASTER/MASTER. */
+  rs485_role_persist_service(now);
+  /* UID discovery remains available for numbering/identity, never for roles. */
   /* Периодический ROLE-лог отключён: в COM оставляем только компактный phase-monitor. */
   if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
       (sync_last_edge_ms != 0u) &&
@@ -5190,7 +9421,12 @@ main_loop_second_half:
           printf("VER          - firmware version\r\n");
           printf("STATUS       - current state\r\n");
           printf("RS485        - RS485 sync/role detailed status\r\n");
-          printf("ROLE MASTER  - force master role (host-forced)\r\n");
+          printf("SYNCSTATE    - compact sync state over raw UART\r\n");
+          printf("OPTIC        - optic tx/rx status over raw UART\r\n");
+          printf("TX200 0|1    - set 200Hz marker TX request; OPTIC shows tx_req/tx200\r\n");
+          printf("OPTP 0..255  - set 38kHz optic TX power over UART\r\n");
+          printf("OPTH 0..600  - set optic hold time in deciseconds\r\n");
+          printf("ROLE MASTER  - rejected; MASTER requires host Unix timestamp\r\n");
           printf("ROLE SLAVE   - force slave role (host-forced)\r\n");
           printf("ROLE AUTO    - release host-forced, return to auto\r\n");
           printf("EVT          - EVT1 queue/send diagnostics\r\n");
@@ -5201,19 +9437,14 @@ main_loop_second_half:
           printf("ARR [offset] - show/set TIM15 ARR fine offset (- speeds up)\r\n");
           printf("FTRIM [0|1] - slow fractional sync frequency trim\r\n");
           printf("APPROACH [0|1] - faster phase approach before slow trim\r\n");
-          printf("RS485ID [0..31] - show/set temporary RS485 slave id\r\n");
+          printf("RS485ID [0..31] - show/set persistent role-independent node id\r\n");
           printf("PERF         - performance stats\r\n");
           printf("FPS          - FPS statistics only\r\n");
           printf("RESET        - software reset\r\n");
           printf("HELP         - this help message\r\n");
           printf("===============================\r\n");
         } else if(strncmp(uart1_cmd_buf, "VER", 3) == 0 || strncmp(uart1_cmd_buf, "VERSION", 7) == 0){
-          printf("\r\n=== FIRMWARE VERSION (UART1) ===\r\n");
-          printf("Version: %s\r\n", FW_VERSION_STR);
-          printf("Git:     %s\r\n", fw_git_hash);
-          printf("Built:   %s %s\r\n", fw_build_date, fw_build_time);
-          printf("VND_PAIR_BUFFERS: %d\r\n", 8);
-          printf("================================\r\n");
+          uart1_raw_print_version();
         } else if(strncmp(uart1_cmd_buf, "STATUS", 6) == 0){
           printf("\r\n=== DEVICE STATUS (UART1) ===\r\n");
           printf("Uptime: %lu ms\r\n", HAL_GetTick());
@@ -5259,6 +9490,50 @@ main_loop_second_half:
           printf("\r\n=== EVT1 STATUS (UART1) ===\r\n");
           Vendor_ChangeEvent_DiagPrint();
           printf("===========================\r\n");
+        } else if(strncmp(uart1_cmd_buf, "SYNCSTATE", 9) == 0 ||
+                  strncmp(uart1_cmd_buf, "SYNC", 4) == 0){
+          uart1_raw_print_sync_state();
+        } else if(strncmp(uart1_cmd_buf, "OPTIC", 5) == 0){
+          uart1_raw_print_optic_state();
+        } else if(strncmp(uart1_cmd_buf, "TX200", 5) == 0){
+          char *arg = uart1_cmd_buf + 5;
+          long enable = 0;
+          while(*arg == ' ') arg++;
+          if(*arg == 0){
+            uart1_raw_print_optic_state();
+          } else if(uart1_parse_long_arg(arg, 0, 1, &enable) == 0u) {
+            uart1_raw_write_str("\r\nTX200 usage: TX200 0 | TX200 1\r\n");
+          } else {
+            (void)vnd_set_tx_enabled((uint8_t)enable);
+            uart1_raw_write_str("\r\nTX200 OK\r\n");
+            uart1_raw_print_optic_state();
+          }
+        } else if(strncmp(uart1_cmd_buf, "OPTP", 4) == 0){
+          char *arg = uart1_cmd_buf + 4;
+          long power = 0;
+          while(*arg == ' ') arg++;
+          if(*arg == 0){
+            uart1_raw_print_optic_state();
+          } else if(uart1_parse_long_arg(arg, 0, 255, &power) == 0u) {
+            uart1_raw_write_str("\r\nOPTP usage: OPTP 0..255\r\n");
+          } else {
+            (void)optic_tx_set_power((uint8_t)power);
+            uart1_raw_write_str("\r\nOPTP OK\r\n");
+            uart1_raw_print_optic_state();
+          }
+        } else if(strncmp(uart1_cmd_buf, "OPTH", 4) == 0){
+          char *arg = uart1_cmd_buf + 4;
+          long hold_ds = 0;
+          while(*arg == ' ') arg++;
+          if(*arg == 0){
+            uart1_raw_print_optic_state();
+          } else if(uart1_parse_long_arg(arg, 0, OPTIC_ACTIVE_HOLD_MAX_DS, &hold_ds) == 0u) {
+            uart1_raw_write_str("\r\nOPTH usage: OPTH 0..600\r\n");
+          } else {
+            (void)optic_sensor_set_hold_deciseconds((uint16_t)hold_ds);
+            uart1_raw_write_str("\r\nOPTH OK\r\n");
+            uart1_raw_print_optic_state();
+          }
         } else if(strncmp(uart1_cmd_buf, "VND", 3) == 0){
           printf("\r\n=== VENDOR STREAM DIAG (UART1) ===\r\n");
           Vendor_StreamDiagPrint();
@@ -5373,6 +9648,8 @@ main_loop_second_half:
           uint32_t now_ms = HAL_GetTick();
           uint32_t dirty_age = (vnd_dc_dirty_since_ms == 0u) ? 0xFFFFFFFFu : (now_ms - vnd_dc_dirty_since_ms);
           printf("\r\n=== DC STATUS (UART1) ===\r\n");
+          printf("settle_ms    : %lu (0=off, 1=fastest, 1000=1s)\r\n",
+                 (unsigned long)vnd_dc_speed_settle_ms);
           printf("dirty        : %u\r\n", (unsigned)vnd_dc_dirty_public);
           printf("dirty_age_ms : %lu\r\n", (unsigned long)dirty_age);
           printf("save_period  : %lu\r\n", (unsigned long)vnd_dc_save_period_ms);
@@ -5652,9 +9929,7 @@ main_loop_second_half:
           char *arg = uart1_cmd_buf + 4;
           while(*arg == ' ') arg++;
           if(strncmp(arg, "MASTER", 6) == 0){
-            extern void vnd_sync_apply_mode_forced(uint8_t mode);
-            vnd_sync_apply_mode_forced(VND_SYNC_MODE_MASTER);
-            printf("[UART] ROLE forced -> MASTER\r\n");
+            printf("[UART] ROLE MASTER rejected: use host SET_SYNC_MODE with Unix timestamp\r\n");
           } else if(strncmp(arg, "SLAVE", 5) == 0){
             extern void vnd_sync_apply_mode_forced(uint8_t mode);
             vnd_sync_apply_mode_forced(VND_SYNC_MODE_SLAVE);
@@ -6336,10 +10611,8 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  /* TIM2_CH2 (PA1): маркер синхронизации (меандр как CH3)
-     - Используем PWM1 режим для генерации меандра
-     - Полярность HIGH для нормального выхода
-  */
+  /* Legacy TIM2_CH2 configuration. PA1 is reconfigured below as GPIO and
+     driven as the complement of the PA2/PC7 TX200 phase. */
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
@@ -6491,7 +10764,9 @@ static void MX_TIM15_Init(void)
   htim15.Instance = TIM15;
   htim15.Init.Prescaler = 0;     // Без предделителя: 275 MHz тактовая
   htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim15.Init.Period = 4295;     // 275 MHz / (4295+1) ≈ 64 kHz UPDATE (примерно 200Hz PWM с делением)
+  /* Default profile is fixed at 600 samples * 400 buffers/s = 240 kHz.
+     Start at the correct rate even before the RPI repeats its configuration. */
+  htim15.Init.Period = 1144;     // 275 MHz / (1144+1) ≈ 240 kHz UPDATE
   htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim15.Init.RepetitionCounter = 0;
   htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -6758,8 +11033,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PA1 */
   GPIO_InitStruct.Pin = GPIO_PIN_1;
-    /* PA1 инверсен PA2: при импульсах на PA2 -> PA1=0, иначе PA1=1.
-      Начальное состояние при PA2=0: PA1=1. */
+    /* PA1: инверсия TX200-фазы PA2/PC7. До явной команды enable держим HIGH (OFF). */
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -6977,6 +11251,8 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     rs485_tx_start_ms = 0u;
     rs485_status_rx_word_index = 0u;
     rs485_status_rx_word_after_sync = 0u;
+    rs485_role_reset_rx();
+    rs485_uid_rx_reset();
     CLEAR_BIT(huart->Instance->CR1, USART_CR1_TCIE);
     HAL_GPIO_WritePin(RS485_RDE_GPIO_Port, RS485_RDE_Pin, GPIO_PIN_RESET);
     huart->Instance->ICR = USART_ICR_PECF |
@@ -7002,10 +11278,20 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   if (GPIO_Pin == OPTIC_RX_Pin) {
     uint32_t now_ms = HAL_GetTick();
+    uint8_t input_level =
+        (HAL_GPIO_ReadPin(OPTIC_RX_GPIO_Port, OPTIC_RX_Pin) == GPIO_PIN_SET)
+            ? 1u
+            : 0u;
 
-    optic_last_change_ms = now_ms;
-    optic_sensor_state_public = 1u;
-    need_usb_status_refresh = 1u;
+    optic_input_level_public = input_level;
+    if (input_level != 0u) {
+      optic_last_high_ms = now_ms;
+      if (optic_sensor_state_public == 0u) {
+        optic_sensor_state_public = 1u;
+        (void)rs485_sensor_event_set_local(0u, 1u);
+        need_usb_status_refresh = 1u;
+      }
+    }
   }
 }
 
@@ -7107,6 +11393,178 @@ static uint8_t vnd_lcd_sync_color_to_id(uint16_t color)
   }
 }
 
+static uint16_t lcd_role_overlay_pick_color(void)
+{
+  static uint32_t prng = 0xA53C5A7Bu;
+  /* Keep only the highest-luminance RGB565 colors.  Pure red and blue were
+     technically saturated but looked much darker from a distance. */
+  static const uint16_t colors[] = {
+    WHITE, YELLOW, CYAN
+  };
+  prng ^= (HAL_GetTick() + 0x9E3779B9u);
+  prng ^= (sync_edge_count << 7);
+  prng ^= (prng << 13);
+  prng ^= (prng >> 17);
+  prng ^= (prng << 5);
+  return colors[prng % (uint32_t)(sizeof(colors) / sizeof(colors[0]))];
+}
+
+static void lcd_draw_scaled_char_1608(uint16_t x, uint16_t y, char ch,
+                                      uint8_t scale, uint16_t color)
+{
+  uint8_t idx;
+
+  if ((ch < ' ') || ((uint8_t)(ch - ' ') >= 159u) || (scale == 0u)) {
+    return;
+  }
+
+  idx = (uint8_t)(ch - ' ');
+  for (uint8_t col = 0u; col < 8u; col++) {
+    for (uint8_t row = 0u; row < 16u; row++) {
+      uint8_t b = asc2_1608[idx][(uint8_t)(col * 2u + (row / 8u))];
+      if ((b & (uint8_t)(0x80u >> (row & 7u))) != 0u) {
+        LCD_FillRect((uint16_t)(x + ((uint16_t)col * scale)),
+                     (uint16_t)(y + ((uint16_t)row * scale)),
+                     scale,
+                     scale,
+                     color);
+      }
+    }
+  }
+}
+
+static void lcd_role_overlay_make_text(char out[4])
+{
+  vnd_lcd_sync_snapshot_t snap;
+  uint8_t value = 0u;
+
+  vnd_get_lcd_sync_snapshot(&snap);
+  if (snap.raw_mode == VND_SYNC_MODE_SLAVE) {
+    out[0] = 'S';
+    value = (uint8_t)(snap.node_id & 0x1Fu);
+  } else if (snap.raw_mode == VND_SYNC_MODE_MASTER) {
+    out[0] = 'M';
+    value = (uint8_t)(snap.node_id & 0x1Fu);
+  } else {
+    out[0] = 'O';
+  }
+
+  if (((snap.raw_mode == VND_SYNC_MODE_SLAVE) ||
+       (snap.raw_mode == VND_SYNC_MODE_MASTER)) &&
+      (snap.node_id_assigned == 0u)) {
+    /* Assignment is a separate state; numeric ID 0 is a public M00/S00. */
+    out[1] = '-';
+    out[2] = '-';
+  } else if (snap.raw_mode == VND_SYNC_MODE_OFF) {
+    out[1] = ' ';
+    out[2] = ' ';
+  } else {
+    out[1] = (char)('0' + ((value / 10u) % 10u));
+    out[2] = (char)('0' + (value % 10u));
+  }
+  out[3] = '\0';
+}
+
+static void lcd_draw_role_overlay_text(const char text[4], uint16_t color)
+{
+  const uint8_t scale = 5u;
+  const uint16_t char_w = (uint16_t)(8u * scale);
+  uint16_t x = (uint16_t)((LCD_W - (3u * char_w)) / 2u);
+
+  LCD_FillRect(0, 0, LCD_W, LCD_H, BLACK);
+  for (uint8_t i = 0u; i < 3u; i++) {
+    if (text[i] != ' ') {
+      lcd_draw_scaled_char_1608((uint16_t)(x + ((uint16_t)i * char_w)),
+                                0u,
+                                text[i],
+                                scale,
+                                color);
+    }
+  }
+}
+
+static uint8_t lcd_role_overlay_service(uint32_t now, uint8_t *normal_redraw_needed)
+{
+  static uint8_t active = 0u;
+  static uint8_t was_enabled = 0u;
+  static uint32_t phase_start_ms = 0u;
+  static uint32_t seen_config_seq = 0xFFFFFFFFu;
+  static uint16_t current_color = WHITE;
+  static char last_text[4] = "";
+  uint8_t enabled = vnd_lcd_role_overlay_enabled;
+  uint32_t period_ms = (uint32_t)vnd_lcd_role_overlay_period_s * 1000u;
+  uint32_t duration_ms = (uint32_t)vnd_lcd_role_overlay_duration_s * 1000u;
+
+  if (period_ms < 3000u) {
+    period_ms = 3000u;
+  }
+  if (duration_ms < 3000u) {
+    duration_ms = 3000u;
+  }
+
+  if (seen_config_seq != vnd_lcd_role_overlay_config_seq) {
+    seen_config_seq = vnd_lcd_role_overlay_config_seq;
+    active = 0u;
+    phase_start_ms = now - period_ms;
+    last_text[0] = '\0';
+    vnd_lcd_role_overlay_active = 0u;
+    if (normal_redraw_needed != NULL) {
+      *normal_redraw_needed = 1u;
+    }
+  }
+
+  if (enabled == 0u) {
+    if ((active != 0u) || (was_enabled != 0u)) {
+      active = 0u;
+      was_enabled = 0u;
+      vnd_lcd_role_overlay_active = 0u;
+      LCD_FillRect(0, 0, LCD_W, LCD_H, BLACK);
+      if (normal_redraw_needed != NULL) {
+        *normal_redraw_needed = 1u;
+      }
+    }
+    return 0u;
+  }
+  was_enabled = 1u;
+
+  if (active == 0u) {
+    if ((now - phase_start_ms) < period_ms) {
+      return 0u;
+    }
+    active = 1u;
+    phase_start_ms = now;
+    current_color = lcd_role_overlay_pick_color();
+    vnd_lcd_role_overlay_rgb565 = current_color;
+    vnd_lcd_role_overlay_color_id = vnd_lcd_sync_color_to_id(current_color);
+    vnd_lcd_role_overlay_active = 1u;
+    last_text[0] = '\0';
+  }
+
+  if ((now - phase_start_ms) >= duration_ms) {
+    active = 0u;
+    phase_start_ms = now;
+    vnd_lcd_role_overlay_active = 0u;
+    LCD_FillRect(0, 0, LCD_W, LCD_H, BLACK);
+    if (normal_redraw_needed != NULL) {
+      *normal_redraw_needed = 1u;
+    }
+    return 0u;
+  }
+
+  {
+    char text[4];
+    lcd_role_overlay_make_text(text);
+    if ((last_text[0] != text[0]) ||
+        (last_text[1] != text[1]) ||
+        (last_text[2] != text[2])) {
+      lcd_draw_role_overlay_text(text, current_color);
+      memcpy(last_text, text, sizeof(last_text));
+    }
+  }
+
+  return 1u;
+}
+
 void vnd_get_lcd_sync_snapshot(vnd_lcd_sync_snapshot_t *out)
 {
   static uint32_t last_eval_ms = 0xFFFFFFFFu;
@@ -7146,8 +11604,10 @@ void vnd_get_lcd_sync_snapshot(vnd_lcd_sync_snapshot_t *out)
   }
 
   if (!sync_signal_alive) {
-    display_mode = VND_SYNC_MODE_MASTER;
-    display_value = 0u;
+    /* Loss of SYNC is a link state, not a role change. Keep the RPI-assigned
+       MASTER/SLAVE/OFF role on LCD; a slave without sync remains Sxx/S-- and
+       must never be presented as a second master. */
+    display_mode = vnd_sync_mode_public;
     sync_color_locked = 0u;
     sync_color_rise_count = 0u;
     sync_color_fall_count = 0u;
@@ -7170,10 +11630,7 @@ void vnd_get_lcd_sync_snapshot(vnd_lcd_sync_snapshot_t *out)
   }
 
   if (display_mode == VND_SYNC_MODE_MASTER) {
-    display_value = (uint8_t)(rs485_slave_count_estimate & 0x1Fu);
-    if (!sync_signal_alive) {
-      display_value = 0u;
-    }
+    display_value = (uint8_t)(rs485_local_node_id & 0x1Fu);
   } else if (display_mode == VND_SYNC_MODE_SLAVE) {
     display_value = (uint8_t)(rs485_local_node_id & 0x1Fu);
   }
@@ -7207,13 +11664,19 @@ void vnd_get_lcd_sync_snapshot(vnd_lcd_sync_snapshot_t *out)
     }
     color = (sync_color_locked != 0u) ? GREEN : RED;
   }
+  if ((rs485_node_local_id_conflict() != 0u) ||
+      (rs485_multiple_master_detected() != 0u)) {
+    color = RED;
+    sync_color_locked = 0u;
+  }
 
   memset(&cached, 0, sizeof(cached));
   cached.raw_mode = vnd_sync_mode_public;
   cached.display_mode = display_mode;
   cached.display_value = display_value;
-  cached.slave_count = (uint8_t)(rs485_slave_count_estimate & 0x1Fu);
+  cached.slave_count = rs485_slave_count_estimate;
   cached.node_id = (uint8_t)(rs485_local_node_id & 0x1Fu);
+  cached.node_id_assigned = rs485_local_node_id_assigned;
   cached.display_char = (uint8_t)display_char;
   cached.display_color_id = vnd_lcd_sync_color_to_id(color);
   cached.sync_signal_alive = sync_signal_alive;
@@ -7287,22 +11750,10 @@ void DrawUSBStatus(void){
     // LCD not ready
         return;
     }
-    /* Heartbeat основного цикла: '*' мигает ~1 Гц в правом конце первой строки. */
-    {
-      static uint32_t last_star_toggle_ms = 0;
-      static uint8_t star_on = 0;
-      static uint8_t star_prev = 0xFF;
-      uint32_t now_ms = HAL_GetTick();
-      if(last_star_toggle_ms == 0u) last_star_toggle_ms = now_ms;
-      if((now_ms - last_star_toggle_ms) >= 500u){ /* 0.5с on / 0.5с off */
-        last_star_toggle_ms = now_ms;
-        star_on = (uint8_t)!star_on;
-      }
-      if(star_prev != star_on){
-        LCD_ShowString_Size(151, 0, star_on?"*":" ", 16, YELLOW, BLACK);
-        star_prev = star_on;
-      }
-    }
+    uint32_t now = HAL_GetTick();
+    static uint32_t last_star_toggle_ms = 0;
+    static uint8_t star_on = 0;
+    static uint8_t star_prev = 0xFF;
     static char prev_line0[16] = "";
     static char prev_line1[16] = "";
     static char prev_line2[16] = "";
@@ -7315,7 +11766,75 @@ void DrawUSBStatus(void){
     static uint32_t prev_rate_calc_ms = 0;
     static uint32_t last_rate_bps __attribute__((unused)) = 0; /* приблизительно bytes/sec */
     static uint32_t last_rate_sps = 0; /* семплов в секунду (оба канала суммарно) */
-    uint32_t now = HAL_GetTick();
+    static uint16_t prev_line0_fg = 0, prev_line0_bg = 0;
+    static uint16_t prev_line1_fg = 0, prev_line1_bg = 0;
+    static uint16_t prev_line2_fg = 0, prev_line2_bg = 0;
+    static uint16_t prev_line3_fg = 0, prev_line3_bg = 0;
+    static uint16_t prev_line4_fg = 0, prev_line4_bg = 0;
+    static uint16_t prev_optic_fg = 0, prev_optic_bg = 0;
+    static uint16_t prev_optic_power_fg = 0, prev_optic_power_bg = 0;
+    static char prev_optic_line[8] = "";
+    static char prev_optic_power_line[8] = "";
+    static uint8_t lcd_sync_prev_mode = 0xFF;
+    static uint8_t lcd_sync_prev_display_value = 0xFF;
+    static uint16_t lcd_sync_prev_color = 0xFFFFu;
+    static uint8_t force_full_redraw = 1u;
+    uint8_t overlay_redraw_needed = 0u;
+
+    if (lcd_role_overlay_service(now, &overlay_redraw_needed) != 0u) {
+      PROG('u');
+      return;
+    }
+
+    if (overlay_redraw_needed != 0u) {
+      force_full_redraw = 1u;
+    }
+
+    if (force_full_redraw != 0u) {
+      LCD_FillRect(0, 0, LCD_W, LCD_H, BLACK);
+      memset(prev_line0, 0, sizeof(prev_line0));
+      memset(prev_line1, 0, sizeof(prev_line1));
+      memset(prev_line2, 0, sizeof(prev_line2));
+      memset(prev_line3, 0, sizeof(prev_line3));
+      memset(prev_line4, 0, sizeof(prev_line4));
+      memset(prev_optic_line, 0, sizeof(prev_optic_line));
+      memset(prev_optic_power_line, 0, sizeof(prev_optic_power_line));
+      prev_line0_fg = prev_line0_bg = 0xFFFFu;
+      prev_line1_fg = prev_line1_bg = 0xFFFFu;
+      prev_line2_fg = prev_line2_bg = 0xFFFFu;
+      prev_line3_fg = prev_line3_bg = 0xFFFFu;
+      prev_line4_fg = prev_line4_bg = 0xFFFFu;
+      prev_optic_fg = prev_optic_bg = 0xFFFFu;
+      prev_optic_power_fg = prev_optic_power_bg = 0xFFFFu;
+      dc_bar_prev_len = 0xFFFFu;
+      dc_bar_prev_color = 0xFFFFu;
+      lcd_sync_prev_mode = 0xFFu;
+      lcd_sync_prev_display_value = 0xFFu;
+      lcd_sync_prev_color = 0xFFFFu;
+      star_prev = 0xFFu;
+      last_star_toggle_ms = now;
+      star_on = 0u;
+      prev_tx_bytes = vnd_get_total_tx_bytes();
+      prev_tx_samples = vnd_get_total_tx_samples();
+      prev_rate_calc_ms = now;
+      last_rate_bps = 0u;
+      last_rate_sps = 0u;
+      force_full_redraw = 0u;
+    }
+
+    /* Heartbeat основного цикла: '*' мигает ~1 Гц в правом конце первой строки. */
+    {
+      uint32_t now_ms = now;
+      if(last_star_toggle_ms == 0u) last_star_toggle_ms = now_ms;
+      if((now_ms - last_star_toggle_ms) >= 500u){ /* 0.5с on / 0.5с off */
+        last_star_toggle_ms = now_ms;
+        star_on = (uint8_t)!star_on;
+      }
+      if(star_prev != star_on){
+        LCD_ShowString_Size(151, 0, star_on?"*":" ", 16, YELLOW, BLACK);
+        star_prev = star_on;
+      }
+    }
     /* Хост присутствует только при свежем SOF (<400мс) или SUSPENDED */
     uint32_t dt_sof = now - g_usb_last_sof_ms;
     uint8_t host_present = (hUsbDeviceHS.dev_state == USBD_STATE_SUSPENDED) || (dt_sof < 400);
@@ -7331,48 +11850,41 @@ void DrawUSBStatus(void){
             default: text0 = "USB:--"; color0 = RED; break;
         }
     }
-    static uint16_t prev_line0_fg = 0, prev_line0_bg = 0;
-    static uint16_t prev_line1_fg = 0, prev_line1_bg = 0;
-    static uint16_t prev_line2_fg = 0, prev_line2_bg = 0;
-    static uint16_t prev_line3_fg = 0, prev_line3_bg = 0;
-    static uint16_t prev_line4_fg = 0, prev_line4_bg = 0;
-    static uint16_t prev_optic_fg = 0, prev_optic_bg = 0;
-    static uint16_t prev_optic_power_fg = 0, prev_optic_power_bg = 0;
-    static char prev_optic_line[8] = "";
-    static char prev_optic_power_line[8] = "";
     
     /* Первая строка (y=0): USB статус */
     lcd_print_padded_if_changed(0,0,text0, prev_line0, sizeof(prev_line0), 7, 16, color0, BLACK, &prev_line0_fg, &prev_line0_bg);
 
-    /* Индикатор SYNC рядом со звездочкой: 2 цифры slave-count/slot + M/S/O.
-       MASTER показывает число ответивших slave, SLAVE — занятый номер слота. */
+    /* Индикатор SYNC: постоянный node_id и сохранённая локальная роль. */
     {
-      static uint8_t prev_mode = 0xFF;
-      static uint8_t prev_display_value = 0xFF;
-      static uint16_t prev_color = 0xFFFFu;
       vnd_lcd_sync_snapshot_t sync_snapshot;
       char count_buf[3] = "  ";
       vnd_get_lcd_sync_snapshot(&sync_snapshot);
 
-      if (sync_snapshot.display_mode != VND_SYNC_MODE_OFF) {
+      if (((sync_snapshot.display_mode == VND_SYNC_MODE_SLAVE) ||
+           (sync_snapshot.display_mode == VND_SYNC_MODE_MASTER)) &&
+          (sync_snapshot.node_id_assigned == 0u)) {
+        count_buf[0] = '-';
+        count_buf[1] = '-';
+        count_buf[2] = '\0';
+      } else if (sync_snapshot.display_mode != VND_SYNC_MODE_OFF) {
         count_buf[0] = (char)('0' + ((sync_snapshot.display_value / 10u) % 10u));
         count_buf[1] = (char)('0' + (sync_snapshot.display_value % 10u));
         count_buf[2] = '\0';
       }
 
-      if(prev_mode != sync_snapshot.display_mode ||
-         prev_display_value != sync_snapshot.display_value ||
-         prev_color != sync_snapshot.display_rgb565){
+      if(lcd_sync_prev_mode != sync_snapshot.display_mode ||
+         lcd_sync_prev_display_value != sync_snapshot.display_value ||
+         lcd_sync_prev_color != sync_snapshot.display_rgb565){
         LCD_ShowString_Size(132, 0, count_buf, 16, sync_snapshot.display_rgb565, BLACK);
         char buf[2] = {(char)sync_snapshot.display_char, 0};
         LCD_ShowString_Size(124, 0, buf, 16, sync_snapshot.display_rgb565, BLACK);
-        prev_mode = sync_snapshot.display_mode;
-        prev_display_value = sync_snapshot.display_value;
-        prev_color = sync_snapshot.display_rgb565;
+        lcd_sync_prev_mode = sync_snapshot.display_mode;
+        lcd_sync_prev_display_value = sync_snapshot.display_value;
+        lcd_sync_prev_color = sync_snapshot.display_rgb565;
       }
     }
 
-  /* Строка 1 (y=14): частота маркера (PA1/PA2) */
+  /* Строка 1 (y=14): частота TX200/фазового маркера PA1/PA2/PC7 */
   {
     uint16_t buf_rate = adc_stream_get_buf_rate();
     uint16_t marker_hz = buf_rate / 2;  // TIM2 делит buf_rate на 2 для получения меандра
@@ -7413,20 +11925,20 @@ void DrawUSBStatus(void){
       prev_tx_samples = cur_samples;
       prev_rate_calc_ms = now;
     }
-    /* Для диагностики показываем фактический уровень входа PD0 (OPTIC_RX). */
+    /* LCD shows the canonical held optical-sensor signal, not raw PD0. */
     char rate_buf[16];
-    uint8_t pd0_level = (HAL_GPIO_ReadPin(OPTIC_RX_GPIO_Port, OPTIC_RX_Pin) == GPIO_PIN_SET) ? 1u : 0u;
-    snprintf(rate_buf, sizeof(rate_buf), "PD0:%u", (unsigned)pd0_level);
+    uint8_t optic_active = optic_sensor_get_state();
+    snprintf(rate_buf, sizeof(rate_buf), "OPT:%u", (unsigned)optic_active);
   /* Очистка legacy VID/PID убрана */
     /* Используем ширину 12 символов для гарантированного затирания хвоста */
-    lcd_print_padded_if_changed(0,28, rate_buf, prev_line2, sizeof(prev_line2), 12, 16, pd0_level ? GREEN : WHITE, BLACK, &prev_line2_fg, &prev_line2_bg);
+    lcd_print_padded_if_changed(0,28, rate_buf, prev_line2, sizeof(prev_line2), 12, 16, optic_active ? GREEN : WHITE, BLACK, &prev_line2_fg, &prev_line2_bg);
   } else {
   /* Очистка legacy VID/PID убрана */
     {
-      char pd0_buf[16];
-      uint8_t pd0_level = (HAL_GPIO_ReadPin(OPTIC_RX_GPIO_Port, OPTIC_RX_Pin) == GPIO_PIN_SET) ? 1u : 0u;
-      snprintf(pd0_buf, sizeof(pd0_buf), "PD0:%u", (unsigned)pd0_level);
-      lcd_print_padded_if_changed(0,28, pd0_buf, prev_line2, sizeof(prev_line2), 12, 16, pd0_level ? GREEN : WHITE, BLACK, &prev_line2_fg, &prev_line2_bg);
+      char optic_buf[16];
+      uint8_t optic_active = optic_sensor_get_state();
+      snprintf(optic_buf, sizeof(optic_buf), "OPT:%u", (unsigned)optic_active);
+      lcd_print_padded_if_changed(0,28, optic_buf, prev_line2, sizeof(prev_line2), 12, 16, optic_active ? GREEN : WHITE, BLACK, &prev_line2_fg, &prev_line2_bg);
     }
     prev_rate_calc_ms = now;
     prev_tx_bytes = vnd_get_total_tx_bytes();
@@ -7456,14 +11968,14 @@ void DrawUSBStatus(void){
     /* Индикатор прогресса адаптации/сохранения DC: нижняя линия пикселей (y=79, 0..159).
       - Пока DC "dirty" (идёт адаптация, ожидаем запись) — линия заполняется слева направо.
       - Если последняя запись DC не удалась — рисуем красным; после успешной записи — зелёным.
-      - Если адаптация заморожена (CMD_SET_DC_ADAPT freeze) или авто-заморозка по амплитуде — полоса становится синей и останавливается.
+      - Если RPI установил скорость 0 — полоса становится синей и останавливается.
       Важно: используем только 1px высоту, чтобы не мешать тексту. */
   {
     const uint16_t y = 79;
     uint16_t color = BLACK;
     uint16_t filled = 0;
 
-    uint8_t freeze = (uint8_t)((!vnd_dc_adapt_enabled || vnd_dc_auto_freeze) ? 1u : 0u);
+    uint8_t freeze = (uint8_t)((vnd_dc_speed_settle_ms == 0u) ? 1u : 0u);
 
     if(freeze){
       color = BLUE;

@@ -4,6 +4,7 @@ import usb.core, usb.util, time, argparse
 VID=0xCAFE; PID=0x4001; IF_NUM=2; EP_OUT=0x03; EP_IN=0x83
 CMD_GET_STATUS=0x30; CMD_START=0x20; CMD_STOP=0x21
 STAT_LEN_V5 = 136
+STAT_LEN_V6 = 137
 
 LAYOUT = [
   (0,4,'sig'),      # 'STAT'
@@ -36,6 +37,15 @@ FLAG2_BITS = [
 ]
 
 VND_STFLAG_OPTIC_ACTIVE = 0x0020
+VND_STFLAG_MASTER_OPTIC_ACTIVE = 0x0080
+VND_STFLAG_GROUP_OPTIC_ACTIVE = 0x0100
+VND_STFLAG_SELECTED_SLAVE_VALID = 0x0200
+VND_STFLAG_SELECTED_SLAVE_LOCAL = 0x0400
+VND_STFLAG_SELECTED_SLAVE_SENSOR = 0x0800
+VND_STFLAG_RS485_ROLE_PERSISTED = 0x1000
+VND_STFLAG_RS485_ID_CONFLICT = 0x2000
+VND_STFLAG_MULTIPLE_MASTER = 0x4000
+VND_STFLAG_RS485_PERSISTED_MASTER = 0x8000
 
 def find_dev():
     d=usb.core.find(idVendor=VID,idProduct=PID)
@@ -75,7 +85,7 @@ def read_pkt(dev, timeout=300):
 def ctrl_get_status(dev, timeout=300):
     # Vendor IN (device->host). В прошивке GET_STATUS по EP0 разрешён всегда.
     try:
-        data = dev.ctrl_transfer(0xC0, CMD_GET_STATUS, 0, 0, STAT_LEN_V5, timeout=timeout)
+        data = dev.ctrl_transfer(0xC0, CMD_GET_STATUS, 0, 0, STAT_LEN_V6, timeout=timeout)
         return bytes(data)
     except usb.core.USBError as e:
         if getattr(e,'errno',None) in (110,10060):
@@ -111,14 +121,69 @@ def parse_status(buf: bytes):
     out['optic_active_packed'] = bool(rs3 & 0x01)
     out['tx_enable_packed'] = bool(rs3 & 0x02)
     out['optic_active_flag'] = bool(out.get('flags_runtime', 0) & VND_STFLAG_OPTIC_ACTIVE)
-    if len(buf) >= STAT_LEN_V5 and out.get('version', 0) >= 5:
+    out['master_optic_flag'] = bool(out.get('flags_runtime', 0) & VND_STFLAG_MASTER_OPTIC_ACTIVE)
+    out['group_optic_flag'] = bool(out.get('flags_runtime', 0) & VND_STFLAG_GROUP_OPTIC_ACTIVE)
+    out['selected_slave_valid'] = bool(out.get('flags_runtime', 0) & VND_STFLAG_SELECTED_SLAVE_VALID)
+    out['selected_slave_local'] = bool(out.get('flags_runtime', 0) & VND_STFLAG_SELECTED_SLAVE_LOCAL)
+    out['selected_slave_sensor_active'] = bool(out.get('flags_runtime', 0) & VND_STFLAG_SELECTED_SLAVE_SENSOR)
+    out['rs485_role_persisted'] = bool(out.get('flags_runtime', 0) & VND_STFLAG_RS485_ROLE_PERSISTED)
+    out['rs485_id_conflict'] = bool(out.get('flags_runtime', 0) & VND_STFLAG_RS485_ID_CONFLICT)
+    out['multiple_master'] = bool(out.get('flags_runtime', 0) & VND_STFLAG_MULTIPLE_MASTER)
+    out['rs485_persisted_role'] = (
+        'MASTER' if (out.get('flags_runtime', 0) & VND_STFLAG_RS485_PERSISTED_MASTER)
+        else ('SLAVE' if out['rs485_role_persisted'] else None)
+    )
+    if len(buf) >= STAT_LEN_V5:
         out['optic_hold_ds'] = int.from_bytes(buf[96:98], 'little')
         out['led_pattern'] = buf[98]
         out['sync_local_status'] = buf[99]
         out['sync_seen_mask'] = int.from_bytes(buf[100:104], 'little')
         out['sync_node_count'] = buf[104]
-        out['sync_status_bytes'] = list(buf[105:136])
+        out['sync_status_bytes'] = list(buf[105:137])
     return out
+
+def decode_sync_nodes(st):
+    local_status = st.get('sync_local_status')
+    seen_mask = st.get('sync_seen_mask', 0)
+    status_bytes = st.get('sync_status_bytes') or []
+    if local_status is None:
+        return [], None
+
+    local_id = local_status & 0x1F
+    direct_ids = st.get('version', 0) >= 6
+    nodes = []
+    for idx, status in enumerate(status_bytes):
+        node_id = idx if direct_ids else idx + 1
+        if not (seen_mask & (1 << idx)):
+            continue
+        nodes.append({
+            'id': node_id,
+            'status': status,
+            'optic': bool(status & 0x20),
+            'det1': bool(status & 0x40),
+            'det2': bool(status & 0x80),
+            'is_local': node_id == local_id,
+        })
+    return nodes, local_id
+
+def format_sync_nodes(st):
+    nodes, local_id = decode_sync_nodes(st)
+    if local_id is None:
+        return ''
+    remote = [n for n in nodes if not n['is_local']]
+    local_optic = 1 if (st.get('sync_local_status', 0) & 0x20) else 0
+    remote_txt = ','.join(
+        f"{n['id']}:0x{n['status']:02X}/optic={1 if n['optic'] else 0}"
+        for n in remote
+    ) or '-'
+    remote_optic_any = 1 if any(n['optic'] for n in remote) else 0
+    master_optic = 1 if st.get('master_optic_flag', False) else 0
+    return (
+        f' sync_local_id={local_id} sync_local_optic={local_optic}'
+        f' master_optic={master_optic}'
+        f' remote_status={remote_txt} remote_optic_any={remote_optic_any}'
+        f' group_optic={1 if st.get("group_optic_flag", False) else 0}'
+    )
 
 def main():
     ap=argparse.ArgumentParser()
@@ -173,6 +238,7 @@ def main():
                     f'optic_hold_ds={st.get("optic_hold_ds", st["optic_hold_seconds"]*10)} '
                     f'led_pattern={st.get("led_pattern", "-")} '
                     f'sync_count={st.get("sync_node_count", "-")} sync_mask=0x{st.get("sync_seen_mask", 0):08X}'
+                    f'{format_sync_nodes(st)}'
                 )
         time.sleep(args.interval)
 

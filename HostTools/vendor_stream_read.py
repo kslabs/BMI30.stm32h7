@@ -46,6 +46,7 @@ MAGIC = 0xA55A
 STAT_LEN_V1 = 64
 STAT_LEN_V4 = 96
 STAT_LEN_V5 = 136
+STAT_LEN_V6 = 137
 
 
 def find_device(vid, pid):
@@ -170,7 +171,7 @@ def parse_stat(buf: bytes):
         st['sync_local_status'] = buf[99]
         st['sync_seen_mask'] = int.from_bytes(buf[100:104], 'little')
         st['sync_node_count'] = buf[104]
-        st['sync_status_bytes'] = list(buf[105:136])
+        st['sync_status_bytes'] = list(buf[105:137])
     return st
 
 
@@ -180,9 +181,10 @@ def sync_remote_summary(st: dict) -> str:
     local_status = st.get('sync_local_status', 0)
     local_id = local_status & 0x1F
     seen_mask = st.get('sync_seen_mask', 0)
+    direct_ids = st.get('ver', 0) >= 6
     remote = []
     for idx, status in enumerate(st.get('sync_status_bytes', [])):
-        node_id = idx + 1
+        node_id = idx if direct_ids else idx + 1
         if not (seen_mask & (1 << idx)):
             continue
         if node_id == local_id:
@@ -205,6 +207,8 @@ def stat_expected_len(acc: bytes) -> int:
     if len(acc) < 5 or not acc.startswith(b'STAT'):
         return STAT_LEN_V1
     ver = acc[4]
+    if ver >= 6:
+        return STAT_LEN_V6
     if ver >= 5:
         return STAT_LEN_V5
     return STAT_LEN_V4 if ver >= 2 else STAT_LEN_V1
@@ -493,7 +497,7 @@ def main():
                 try:
                     if args.ctrl_status:
                         # bmRequestType: 0xC0 (device-to-host, vendor, device)
-                        raw = dev.ctrl_transfer(0xC0, VND_CMD_GET_STATUS, 0, 0, STAT_LEN_V5, timeout=300)
+                        raw = dev.ctrl_transfer(0xC0, VND_CMD_GET_STATUS, 0, 0, STAT_LEN_V6, timeout=300)
                         buf = bytes(raw)
                         st = parse_stat(buf)
                         if st and status_verbose:

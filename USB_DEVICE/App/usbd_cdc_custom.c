@@ -21,6 +21,13 @@
 #include <string.h>
 #include "stm32h7xx_hal.h"  // для SCB_CleanDCache_by_Addr (H7, D-Cache)
 
+#ifndef USBD_VND_COM_LOG_ENABLE
+#define USBD_VND_COM_LOG_ENABLE 0
+#endif
+#if !USBD_VND_COM_LOG_ENABLE
+#define printf(...) ((void)0)
+#endif
+
 #ifndef USBD_CDC_USERDATA_INDEX
 #define USBD_CDC_USERDATA_INDEX 0
 #endif
@@ -534,6 +541,27 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
       VND_LOGF("[SETUP:VND] -> DCCF %uB", (unsigned)l);
       USBD_CtlSendData(pdev, buf, l);
       return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) && req->bRequest == VND_CMD_GET_RS485_IDENT ) {
+      uint8_t buf[VND_RS485_IDENT_MAX];
+      uint8_t node_id = (uint8_t)(req->wValue & 0xFFU);
+      uint16_t max_len = (req->wLength != 0U && req->wLength < (uint16_t)sizeof(buf))
+                       ? req->wLength
+                       : (uint16_t)sizeof(buf);
+      uint16_t l = vnd_build_rs485_ident(node_id, buf, max_len);
+      if(!l){ USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL; }
+      VND_LOGF("[SETUP:VND] -> RID1 node=%u %uB", (unsigned)node_id, (unsigned)l);
+      USBD_CtlSendData(pdev, buf, l);
+      return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) && req->bRequest == VND_CMD_GET_RS485_SENSOR ) {
+      uint8_t buf[VND_RS485_SENSOR_MAX];
+      uint8_t device_id = (uint8_t)(req->wValue & 0xFFU);
+      uint16_t max_len = (req->wLength != 0U && req->wLength < (uint16_t)sizeof(buf))
+                       ? req->wLength
+                       : (uint16_t)sizeof(buf);
+      uint16_t l = vnd_build_rs485_sensor(device_id, buf, max_len);
+      if(!l){ USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL; }
+      USBD_CtlSendData(pdev, buf, l);
+      return (uint8_t)USBD_OK;
     } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 && req->bRequest == 0x7Eu ) {
       /* SOFT_RESET: мгновенно подтверждаем статусом и выполняем ресет в фоне */
       g_req_soft_reset = 1; USBD_CtlSendStatus(pdev); return (uint8_t)USBD_OK;
@@ -548,14 +576,29 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
       USBD_CtlSendStatus(pdev);
       return (uint8_t)USBD_OK;
     } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 &&
+                req->bRequest == VND_CMD_REQUEST_RS485_IDENT ) {
+      uint8_t cmd = (uint8_t)req->bRequest;
+      USBD_VND_DataReceived(&cmd, 1U);
+      USBD_CtlSendStatus(pdev);
+      return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 &&
                 (req->bRequest == VND_CMD_SET_ASYNC_MODE || req->bRequest == VND_CMD_SET_CHMODE ||
                  req->bRequest == VND_CMD_SET_FULL_MODE  || req->bRequest == VND_CMD_SET_PROFILE ||
                  req->bRequest == VND_CMD_SET_TX_ENABLE || req->bRequest == VND_CMD_SET_OPTIC_POWER ||
-                 req->bRequest == VND_CMD_SET_LED_PATTERN || req->bRequest == VND_CMD_SET_DET_ADC) ) {
+                 req->bRequest == VND_CMD_SET_LED_PATTERN || req->bRequest == VND_CMD_SET_DET_ADC ||
+                 req->bRequest == VND_CMD_SET_SYNC_MODE || req->bRequest == VND_CMD_SET_RS485_ID ||
+                 req->bRequest == VND_CMD_SET_LCD_ROLE_OVERLAY) ) {
       /* Альтернативный путь: принять параметр через wValue (без data stage) */
       uint8_t tmp[2];
       tmp[0] = (uint8_t)req->bRequest;
       tmp[1] = (uint8_t)(req->wValue & 0xFFU);
+      if ((req->bRequest == VND_CMD_SET_SYNC_MODE) &&
+          ((tmp[1] == VND_SYNC_MODE_MASTER) ||
+           (tmp[1] == VND_SYNC_MODE_SLAVE))) {
+        /* Timestamped network roles cannot fit in the no-data-stage shortcut. */
+        USBD_CtlError(pdev, req);
+        return (uint8_t)USBD_FAIL;
+      }
       USBD_VND_DataReceived(tmp, 2U);
       USBD_CtlSendStatus(pdev);
       return (uint8_t)USBD_OK;
@@ -584,7 +627,10 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
                  req->bRequest == VND_CMD_SET_FULL_MODE  || req->bRequest == VND_CMD_SET_PROFILE ||
                  req->bRequest == VND_CMD_SET_TX_ENABLE || req->bRequest == VND_CMD_SET_OPTIC_POWER ||
                  req->bRequest == VND_CMD_SET_OPTIC_HOLD || req->bRequest == VND_CMD_SET_LED_PATTERN ||
-                 req->bRequest == VND_CMD_SET_DET_ADC || req->bRequest == VND_CMD_SET_DC_CONFIG) ) {
+                 req->bRequest == VND_CMD_SET_DET_ADC || req->bRequest == VND_CMD_SET_DC_SPEED ||
+                 req->bRequest == VND_CMD_SET_RS485_IP || req->bRequest == VND_CMD_SET_SYNC_MODE ||
+                 req->bRequest == VND_CMD_SET_RS485_ID || req->bRequest == VND_CMD_SET_RPI_INFO ||
+                 req->bRequest == VND_CMD_SET_LCD_ROLE_OVERLAY) ) {
       /* Принимаем небольшие конфиги по control OUT с телом данных, доставляем в Vendor как будто по Bulk OUT */
       hcdc->CmdOpCode = req->bRequest;
       hcdc->CmdLength = (uint8_t)req->wLength;
@@ -780,7 +826,12 @@ static uint8_t USBD_CDCVND_EP0_RxReady(USBD_HandleTypeDef *pdev)
         op == VND_CMD_SET_OPTIC_HOLD ||
         op == VND_CMD_SET_LED_PATTERN ||
         op == VND_CMD_SET_DET_ADC ||
-        op == VND_CMD_SET_DC_CONFIG) {
+        op == VND_CMD_SET_DC_SPEED ||
+        op == VND_CMD_SET_RS485_IP ||
+        op == VND_CMD_SET_RS485_ID ||
+        op == VND_CMD_SET_RPI_INFO ||
+        op == VND_CMD_SET_SYNC_MODE ||
+        op == VND_CMD_SET_LCD_ROLE_OVERLAY) {
       uint32_t tot = (uint32_t)len + 1U;
       if (tot > sizeof(vnd_rx_buf)) tot = sizeof(vnd_rx_buf); /* страхуемся от выхода за границы */
       vnd_rx_buf[0] = op;

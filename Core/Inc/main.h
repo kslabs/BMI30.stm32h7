@@ -160,6 +160,7 @@ int32_t tim15_get_default_target_phase_ticks(void);
 void rs485_sync_on_buffer_complete(uint8_t parity);
 uint32_t rs485_get_master_claim_delay_ms(void);
 uint8_t optic_sensor_get_state(void);
+uint8_t optic_any_sensor_active(void);
 uint8_t optic_sensor_set_hold_seconds(uint8_t seconds);
 uint8_t optic_sensor_get_hold_seconds(void);
 uint16_t optic_sensor_set_hold_deciseconds(uint16_t deciseconds);
@@ -176,7 +177,102 @@ uint8_t rs485_status_get_snapshot(uint8_t *local_status,
                                   uint32_t *seen_mask,
                                   uint8_t *status_bytes,
                                   uint8_t max_status_bytes);
+uint8_t rs485_status_master_optic_active(void);
+uint8_t rs485_status_get_master_snapshot(uint8_t *master_status,
+                                         uint16_t *age_ms,
+                                         uint8_t *flags);
 void rs485_set_local_node_id_from_host(uint8_t node_id);
+uint8_t rs485_role_get_local_persisted_mode(uint8_t *mode);
+uint32_t rs485_node_get_conflict_mask(void);
+uint8_t rs485_node_local_id_conflict(void);
+uint8_t rs485_multiple_master_detected(void);
+
+/* Persistent RS485 role selection. MASTER and the designated sensor SLAVE are
+ * identified by MCU UID, so every board stores the same network-wide state. */
+#define RS485_ROLE_PERSIST_MASTER_VALID 0x01u
+#define RS485_ROLE_PERSIST_NODE_VALID   0x02u
+#define RS485_ROLE_PERSIST_SLAVE_EPOCH  0x04u
+#define RS485_ROLE_PERSIST_SLAVE_VALID  0x08u
+#define RS485_ROLE_PERSIST_SLAVE_UID64  0x10u
+#define RS485_ROLE_PERSIST_LOCAL_SLAVE  0x20u
+
+typedef struct {
+  uint8_t flags;
+  uint8_t node_id;
+  uint8_t slave_id_high_water;
+  uint8_t reserved;
+  uint32_t master_assigned_unix_s;
+  uint16_t master_assigned_millis;
+  uint16_t reserved2;
+  uint8_t master_uid[12];
+  uint32_t slave_assigned_unix_s;
+  uint16_t slave_assigned_millis;
+  uint8_t selected_slave_node_id;
+  uint8_t reserved3;
+  uint8_t slave_uid[12];
+} rs485_role_persist_state_t;
+
+void rs485_role_persist_export(rs485_role_persist_state_t *out);
+void rs485_role_persist_import(const rs485_role_persist_state_t *state);
+uint8_t rs485_role_assign_master_from_host(uint64_t assigned_unix_ms);
+uint8_t rs485_role_assign_slave_from_host(uint64_t assigned_unix_ms);
+
+#define RS485_SELECTED_SLAVE_FLAG_VALID 0x01u
+#define RS485_SELECTED_SLAVE_FLAG_LOCAL 0x02u
+#define RS485_SELECTED_SLAVE_FLAG_FRESH 0x04u
+typedef struct {
+  uint8_t flags;
+  uint8_t node_id;
+  uint8_t sensor_status; /* bit5 optic, bit6 DetADC1, bit7 DetADC2 */
+  uint16_t age_ms;
+} rs485_selected_slave_snapshot_t;
+
+void rs485_role_get_selected_slave_snapshot(rs485_selected_slave_snapshot_t *out);
+typedef struct {
+  uint8_t node_id;
+  uint16_t flags;
+  char short_id[10]; /* 9 uppercase hex digits + NUL */
+  uint16_t rpi_number;
+  uint8_t ip4[4];    /* network order: a.b.c.d */
+  uint32_t seen_page_mask;
+  uint32_t last_ms;
+} rs485_identity_snapshot_t;
+
+#define RS485_IDENTITY_FLAG_SHORT_VALID 0x0001u
+#define RS485_IDENTITY_FLAG_IP_VALID    0x0002u
+#define RS485_IDENTITY_FLAG_COMPLETE    0x0004u
+#define RS485_IDENTITY_FLAG_LOCAL       0x0008u
+#define RS485_IDENTITY_FLAG_RECENT      0x0010u
+#define RS485_IDENTITY_FLAG_SCAN_ACTIVE 0x0020u
+#define RS485_IDENTITY_FLAG_SELECTED_SLAVE 0x0040u
+#define RS485_IDENTITY_FLAG_MASTER      0x0080u
+#define RS485_IDENTITY_FLAG_NODE_CONFLICT 0x0100u
+#define RS485_IDENTITY_FLAG_RPI_NUMBER_VALID 0x0200u
+#define RS485_IDENTITY_FLAG_DEVICE_ID_ASSIGNED 0x0400u
+
+void rs485_identity_set_local_ip4(const uint8_t ip4[4]);
+void rs485_identity_set_local_rpi_info(uint16_t rpi_number,
+                                       const uint8_t ip4[4]);
+void rs485_identity_request_scan(void);
+uint8_t rs485_identity_get_snapshot(uint8_t node_id, rs485_identity_snapshot_t *out);
+
+#define RS485_SENSOR_FLAG_VALID   0x0001u
+#define RS485_SENSOR_FLAG_LOCAL   0x0002u
+#define RS485_SENSOR_FLAG_RECENT  0x0004u
+#define RS485_SENSOR_FLAG_MASTER  0x0008u
+typedef struct {
+  uint8_t device_id;
+  uint8_t last_changed_index;
+  uint16_t flags;
+  uint16_t sensor_bits;
+  uint16_t reserved;
+  uint32_t last_change_ms;
+} rs485_sensor_snapshot_t;
+
+uint8_t rs485_status_set_controlled_sensor(uint8_t sensor_index,
+                                           uint8_t active);
+uint8_t rs485_sensor_get_snapshot(uint8_t device_id,
+                                  rs485_sensor_snapshot_t *out);
 uint8_t rs485_sync_has_active_peer(void);
 uint8_t rs485_sync_phase_locked(void);
 
@@ -213,6 +309,7 @@ int     adc_stream_set_profile(uint8_t prof_id); // 0 при успехе
 uint16_t adc_stream_get_active_samples(void);    // N текущего профиля
 uint16_t adc_stream_get_buf_rate(void);          // f_buf
 uint32_t adc_stream_get_fs(void);                // Fs
+void tim15_sync_apply_nominal_arr(uint32_t nominal_arr);
 
 // Совместимость со старым кодом (использующим FRAME_SAMPLES)
 #define ADC_BUFFER_SIZE FRAME_SAMPLES_DEFAULT

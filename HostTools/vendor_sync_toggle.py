@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Toggle SYNC mode via Vendor OUT EP (0x03).
+"""Set timestamped network MASTER/selected SLAVE via Vendor OUT EP (0x03).
 Usage:
-  python HostTools/vendor_sync_toggle.py --start --seq master:5 slave:10 master:5 --stop
+  python HostTools/vendor_sync_toggle.py --start --seq master:5 slave:10 --stop
+
+AUTO only releases the local forced flag; it does not erase persisted
+network-wide MASTER or selected-SLAVE assignments.
 """
 import argparse
+import struct
 import time
 import usb.core
 import usb.util
@@ -18,6 +22,7 @@ MODE_MAP = {
     "master": 0,
     "slave": 1,
     "off": 2,
+    "auto": 0xFF,
 }
 
 
@@ -69,7 +74,12 @@ def main():
     ap.add_argument("--start", action="store_true")
     ap.add_argument("--stop", action="store_true")
     ap.add_argument("--seq", type=str, default="master:5 slave:10")
+    ap.add_argument("--node-id", type=int, default=0,
+                    help="Deprecated compatibility option; selected SLAVE id is assigned by MASTER")
     args = ap.parse_args()
+    node_id = args.node_id
+    if node_id < 0 or node_id > 31:
+        raise SystemExit("--node-id must be 0..31")
 
     dev = find_dev(args.vid, args.pid)
     if not dev:
@@ -84,8 +94,14 @@ def main():
 
     seq = parse_seq(args.seq)
     for mode_val, mode_name, sec in seq:
-        print(f"[CMD] SET_SYNC_MODE {mode_name} for {sec}s", flush=True)
-        send_cmd(dev, CMD_SET_SYNC_MODE, bytes([mode_val]))
+        payload = bytes([mode_val])
+        assigned_unix_ms = None
+        if mode_name in ("master", "slave"):
+            assigned_unix_ms = time.time_ns() // 1_000_000
+            payload += struct.pack("<Q", assigned_unix_ms)
+        stamp_text = f" unix_ms={assigned_unix_ms}" if assigned_unix_ms is not None else ""
+        print(f"[CMD] SET_SYNC_MODE {mode_name}{stamp_text} for {sec}s", flush=True)
+        send_cmd(dev, CMD_SET_SYNC_MODE, payload)
         time.sleep(sec)
 
     if args.stop:

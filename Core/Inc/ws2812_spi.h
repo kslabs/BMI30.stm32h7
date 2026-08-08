@@ -53,11 +53,17 @@ void ws2812_spi_fill_rgb(uint8_t r, uint8_t g, uint8_t b);
 void ws2812_spi_set_rgb(uint16_t index, uint8_t r, uint8_t g, uint8_t b);
 uint8_t ws2812_spi_show(void);
 uint8_t ws2812_spi_is_busy(void);
+uint32_t ws2812_spi_get_frame_count(void);
+uint32_t ws2812_spi_get_recovery_count(void);
+uint32_t ws2812_spi_get_phase_late_skip_count(void);
+uint32_t ws2812_spi_get_phase_start_delay_max_us(void);
+uint32_t ws2812_spi_get_wire_time_us(void);
 void ws2812_spi_set_pattern(ws2812_pattern_t pattern);
 ws2812_pattern_t ws2812_spi_get_pattern(void);
 void ws2812_spi_trigger_event(ws2812_event_t event, uint16_t duration_ms);
 void ws2812_spi_service(uint32_t now_ms);
-void ws2812_spi_on_adc_buffer_complete(void);
+void ws2812_spi_prepare_phase_frame(void);
+void ws2812_spi_on_phase_start(uint32_t phase_start_cycles);
 void ws2812_spi_dma_irq_trace(void);
 void ws2812_spi_spi_irq_trace(void);
 
