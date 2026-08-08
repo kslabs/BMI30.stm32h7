@@ -1005,7 +1005,11 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-    HAL_NVIC_SetPriority(USART2_IRQn, 6, 0);
+    /* USART2 RXNE is the phase timestamp for the RS-485 sync byte. A low
+       priority lets unrelated TIM/EXTI/USB work delay the timestamp by tens
+       of ADC samples even though the wire edge itself is stable. Keep ADC
+       DMA/TIM2 above it, but let sync reception preempt non-sampling work. */
+    HAL_NVIC_SetPriority(USART2_IRQn, 2, 1);
     HAL_NVIC_EnableIRQ(USART2_IRQn);
   }
 

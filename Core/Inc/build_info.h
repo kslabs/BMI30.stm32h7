@@ -8,9 +8,9 @@ extern "C" {
 // Семантическая версия прошивки
 #define FW_VERSION_MAJOR 1
 #define FW_VERSION_MINOR 2
-#define FW_VERSION_PATCH 16  // Debounced phase relation and resilient master-status cache
+#define FW_VERSION_PATCH 33  // Restored stable phase loop after rejected experiments
 
-#define FW_VERSION_STR  "1.2.16"
+#define FW_VERSION_STR  "1.2.33"
 
 // Опционально: можно переопределить через ключ компиляции -DGIT_HASH="..."
 #ifndef GIT_HASH

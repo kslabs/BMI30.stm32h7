@@ -174,6 +174,7 @@ static volatile uint32_t sync_phase_fast_edges = 0u;
 static volatile uint32_t sync_phase_fast_pulses = 0u;
 static volatile uint32_t sync_phase_fast_skip_busy = 0u;
 static volatile uint32_t sync_phase_fast_skip_spacing = 0u;
+static volatile uint32_t sync_phase_filter_outlier_count = 0u;
 static volatile uint32_t sync_phase_fast_last_spacing = 0u;
 static volatile uint32_t sync_phase_fast_last_buf = 0xFFFFFFFFu;
 static volatile uint8_t rs485_freq_trim_enabled = RS485_FREQ_TRIM_ENABLE_DEFAULT;
@@ -644,7 +645,7 @@ static volatile uint8_t rs485_status_master_no_reply_slot = 0u;
 #define RS485_SYNC_RELATION_IN_PHASE  1u
 #define RS485_SYNC_RELATION_ANTI_PHASE 2u
 #define RS485_SYNC_RELATION_CONFIRM_SCORE 5
-#define RS485_SYNC_ANTI_PHASE_CONFIRM_PACKETS 200u
+#define RS485_SYNC_ANTI_PHASE_CONFIRM_PACKETS 64u
 #define RS485_SYNC_ANTI_PHASE_MASTER_FRESH_MS RS485_STATUS_PEER_HOLD_MS
 #define RS485_SYNC_RESTART_MIN_MS 250u
 #define RS485_SYNC_EARLY_REJECT_NUM 3u
@@ -1364,6 +1365,8 @@ static void uart1_raw_print_sync_state(void)
   uart1_raw_write_u32_dec(sync_phase_fast_skip_busy);
   uart1_raw_write_str("/");
   uart1_raw_write_u32_dec(sync_phase_fast_skip_spacing);
+  uart1_raw_write_str(" phase_filter_drop=");
+  uart1_raw_write_u32_dec(sync_phase_filter_outlier_count);
   uart1_raw_write_str(" phase_restart=");
   uart1_raw_write_u32_dec(rs485_sync_restart_count);
   uart1_raw_write_str(" rs485_rx=");
@@ -2308,8 +2311,8 @@ static void rs485_sync_on_packet_received(uint8_t edge_kind)
        after the master's edge, so equal kinds mean anti-phase and different
        kinds mean in-phase. Near the circular buffer boundary an otherwise
        healthy PLL can briefly see the master's edge just before the local
-       edge. Do not publish that short crossing as ANTI_PHASE: the existing
-       200 clean-packet recovery qualifier is also the public-state debounce. */
+       edge. Do not publish that short crossing as ANTI_PHASE: the configured
+       clean-packet recovery qualifier is also the public-state debounce. */
     if (rs485_sync_relation_score <= -RS485_SYNC_RELATION_CONFIRM_SCORE) {
       rs485_sync_phase_relation = RS485_SYNC_RELATION_IN_PHASE;
     } else if ((rs485_sync_phase_relation != RS485_SYNC_RELATION_IN_PHASE) &&
@@ -6673,20 +6676,21 @@ static volatile uint8_t g_tune_led_freq_active = 0u;
 #define TIM15_SYNC_PULSE_MID_ERROR        1500
 #define TIM15_SYNC_PULSE_FAR_ERROR        4000
 #define TIM15_SYNC_FILTER_DIVISOR         4
+#define TIM15_SYNC_FILTER_OUTLIER_BITS    4u
 #define TIM15_SYNC_DEADBAND_NUMERATOR     3u
 #define TIM15_SYNC_DEADBAND_DENOMINATOR   4u
 #define TIM15_SYNC_PULSE_MAX_BITS_NUM     1u
 #define TIM15_SYNC_PULSE_MAX_BITS_DEN     1u
 #define TIM15_SYNC_QUIET_ENTER_BITS       2u
-#define TIM15_SYNC_QUIET_EXIT_BITS        32u
+#define TIM15_SYNC_QUIET_EXIT_BITS        128u
 #define TIM15_SYNC_QUIET_ENTER_PACKETS    1u
 #define TIM15_SYNC_QUIET_FILTER_DIVISOR   8u
-#define TIM15_SYNC_QUIET_MAX_OFFSET       8
+#define TIM15_SYNC_QUIET_MAX_OFFSET       48
 #define TIM15_SYNC_QUIET_SPACING_BUFFERS  2u
 #define TIM15_SYNC_NEAR_RAW_BITS          2u
 #define TIM15_SYNC_NEAR_RAW_MAX_OFFSET    1
 #define TIM15_SYNC_NEAR_RAW_SPACING       16u
-#define TIM15_SYNC_NEAR_RAW_ACQUIRE_MAX_OFFSET 8
+#define TIM15_SYNC_NEAR_RAW_ACQUIRE_MAX_OFFSET 48
 #define TIM15_SYNC_NEAR_RAW_ACQUIRE_SPACING    2u
 #define TIM15_SYNC_SLOW_SPACING_BUFFERS   128u
 #define TIM15_SYNC_PHASE_PULSE_ENABLE     1u
@@ -7458,11 +7462,25 @@ static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samp
     int32_t innovation = rs485_sync_wrap_phase_ticks(phase_error - filtered_phase_error, control_period_ticks);
     int32_t step_limit = (int32_t)bit_ticks;
     int32_t filter_step = 0;
+    uint32_t outlier_limit = bit_ticks * TIM15_SYNC_FILTER_OUTLIER_BITS;
 
     if (step_limit < 1) {
       step_limit = 1;
     }
-    innovation = tim15_sync_clamp_i32(innovation, step_limit);
+    if ((sync_phase_quiet_mode != 0u) &&
+        (outlier_limit != 0u) &&
+        ((uint32_t)arr_auto_abs_i32(innovation) > outlier_limit)) {
+      /* Auxiliary RS-485 traffic can postpone a sync byte by one or more
+         complete UART characters. That is a transport timestamp outlier, not
+         an ADC frequency step. Keep it visible in raw phase diagnostics but
+         do not let it pull the post-capture control estimate. */
+      innovation = 0;
+      if (sync_phase_filter_outlier_count < 0xFFFFFFFFu) {
+        sync_phase_filter_outlier_count++;
+      }
+    } else {
+      innovation = tim15_sync_clamp_i32(innovation, step_limit);
+    }
     {
       uint32_t filter_divisor = (sync_phase_quiet_mode != 0u)
                                 ? TIM15_SYNC_QUIET_FILTER_DIVISOR
@@ -7530,9 +7548,17 @@ static void sync_phase_handle_irq_fast(uint16_t sample_idx, uint16_t active_samp
       sync_phase_quiet_enter_count = 0u;
     }
   }
-  control_phase_error = ((sync_phase_quiet_mode != 0u) || (near_raw_mode != 0u))
-                        ? phase_error
-                        : filtered_phase_error;
+  /* Once capture has entered quiet mode, do not chase an individual UART
+     timestamp outlier. At 240 kbit/s one queued byte is already about ten ADC
+     samples; using raw phase here turned that transport delay into real ADC
+     phase motion. The bounded-IIR estimate still follows sustained drift, but
+     a single late sync can move it by at most 1/8 UART bit. During acquisition
+     (quiet mode not reached yet) the raw near-target value keeps lock-in fast. */
+  control_phase_error = (sync_phase_quiet_mode != 0u)
+                        ? filtered_phase_error
+                        : (near_raw_mode != 0u)
+                          ? phase_error
+                          : filtered_phase_error;
   control_abs_phase = (uint32_t)arr_auto_abs_i32(control_phase_error);
   phase_locked_now = (uint8_t)(control_abs_phase <= tim15_sync_get_deadband_ticks());
 #if TIM15_SYNC_PHASE_PULSE_ENABLE
@@ -7703,9 +7729,8 @@ static void arr_auto_tune_service(void)
 static void phase_micro_adjust_service(void)
 {
   extern volatile uint8_t vnd_sync_mode_public;
-  extern volatile uint32_t adc_stream_total_buffer_count;
   uint32_t now_ms = HAL_GetTick();
-  static uint32_t last_phase_slew_buffer = 0xFFFFFFFFu;
+  static uint32_t last_phase_flip_ms = 0u;
   static uint32_t last_sync_restart_ms = 0u;
 
   tim15_request_hold_offset(0);
@@ -7750,72 +7775,32 @@ static void phase_micro_adjust_service(void)
     }
 
     if ((RS485_SYNC_ANTI_PHASE_RECOVERY_ENABLE != 0u) &&
-        (rs485_phase_slew_active == 0u) &&
-        (rs485_anti_phase_recovery_request != 0u)) {
-      uint32_t half_period_ticks = sync_tim5_period_ticks;
-
-      if (half_period_ticks == 0u) {
-        uint32_t samples = adc_stream_get_active_samples();
-        half_period_ticks = samples * (TIM15->ARR + 1u);
+        (rs485_anti_phase_recovery_request != 0u) &&
+        ((now_ms - last_phase_flip_ms) >= 250u)) {
+      /* Buffer boundaries are already phase-locked here; only the alternating
+         marker polarity is wrong.  Stretching TIM15 by a whole buffer makes
+         acquisition wander for seconds and can return the classifier to the
+         same logical half-cycle.  Flip the logical/physical marker once while
+         still in acquisition, then leave ADC timing continuous. */
+      adc_stream_invert_phase_polarity();
+      last_phase_flip_ms = now_ms;
+      if (rs485_phase_polarity_flip_count < 0xFFFFFFFFu) {
+        rs485_phase_polarity_flip_count++;
       }
-      if (half_period_ticks != 0u) {
-        /* Correct polarity without an asynchronous GPIO toggle. A complete
-           extra half-period of accumulated timer delay changes marker parity
-           while returning the buffer boundary to the same phase position. */
-        rs485_phase_slew_remaining_ticks = half_period_ticks;
-        rs485_phase_slew_active = 1u;
-        last_phase_slew_buffer = 0xFFFFFFFFu;
-        rs485_anti_phase_recovery_request = 0u;
-        sync_phase_fast_last_buf = 0xFFFFFFFFu;
-        sync_phase_filter_reset_request = 1u;
-        rs485_freq_trim_reset(0u);
-      }
-    }
-
-    if ((RS485_SYNC_ANTI_PHASE_RECOVERY_ENABLE != 0u) &&
-        (rs485_phase_slew_active != 0u) &&
-        (last_phase_slew_buffer != adc_stream_total_buffer_count) &&
-        (tim15_arr_pulse_stage == 0u)) {
-      uint32_t step_ticks = (uint32_t)((g_tim15_slave_arr_step_ticks < 0)
-                                      ? -g_tim15_slave_arr_step_ticks
-                                      : g_tim15_slave_arr_step_ticks);
-      uint32_t pulse_ticks = 0u;
-
-      if (step_ticks == 0u) {
-        step_ticks = 1u;
-      }
-      pulse_ticks = (uint32_t)TIM15_SYNC_PULSE_MAX_OFFSET *
-                    (uint32_t)TIM15_SYNC_PULSE_HOLD_UPDATES *
-                    step_ticks;
-
-      /* Never invert the physical TX marker while it is running: the immediate
-         GPIO toggle creates one short/long half-cycle and is visible as a
-         magnetic-field interruption. Accumulate exactly one complete
-         half-period using bounded +ARR pulses. The temporary relation change
-         at the buffer boundary must not stop this operation early. */
-      if (tim15_schedule_arr_pulse(TIM15_SYNC_PULSE_MAX_OFFSET) != 0u) {
-        last_phase_slew_buffer = adc_stream_total_buffer_count;
-        if (rs485_phase_slew_pulse_count < 0xFFFFFFFFu) {
-          rs485_phase_slew_pulse_count++;
-        }
-        if (rs485_phase_slew_remaining_ticks <= pulse_ticks) {
-          rs485_phase_slew_remaining_ticks = 0u;
-          rs485_phase_slew_active = 0u;
-          rs485_sync_relation_score = 0;
-          rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
-          rs485_sync_locked = 0u;
-          rs485_sync_led_active = 0u;
-          rs485_anti_phase_recovery_active = 0u;
-          rs485_anti_phase_recovery_packets = 0u;
-          rs485_anti_phase_recovery_request = 0u;
-          rs485_phase_guard_recovery_packets = 0u;
-          sync_phase_fast_last_buf = 0xFFFFFFFFu;
-          sync_phase_filter_reset_request = 1u;
-          rs485_freq_trim_reset(0u);
-        } else {
-          rs485_phase_slew_remaining_ticks -= pulse_ticks;
-        }
-      }
+      rs485_phase_slew_active = 0u;
+      rs485_phase_slew_remaining_ticks = 0u;
+      rs485_sync_relation_score = 0;
+      rs485_sync_phase_relation = RS485_SYNC_RELATION_UNKNOWN;
+      rs485_sync_locked = 0u;
+      rs485_sync_led_active = 0u;
+      rs485_anti_phase_recovery_active = 0u;
+      rs485_anti_phase_recovery_packets = 0u;
+      rs485_anti_phase_recovery_request = 0u;
+      rs485_sync_restart_request = 0u;
+      rs485_phase_guard_recovery_packets = 0u;
+      sync_phase_fast_last_buf = 0xFFFFFFFFu;
+      sync_phase_filter_reset_request = 1u;
+      rs485_freq_trim_reset(0u);
     }
 
     extern uint8_t vnd_is_streaming(void);

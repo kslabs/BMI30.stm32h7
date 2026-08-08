@@ -181,11 +181,15 @@ def main() -> int:
                 reasons.append(f"rel={row['rel']}")
             if row["raw"] == 1 and row["bufs"] != 1:
                 reasons.append(f"bufs={row['bufs']}")
-            if row["flip"] != 0:
-                reasons.append(f"flip={row['flip']}")
+            if (previous is not None and
+                    row["flip"] != previous["flip"]):
+                reasons.append(
+                    f"flip={previous['flip']}->{row['flip']}")
                 hard_failure = True
-            if row["restart"] != 0:
-                reasons.append(f"restart={row['restart']}")
+            if (previous is not None and
+                    row["restart"] != previous["restart"]):
+                reasons.append(
+                    f"restart={previous['restart']}->{row['restart']}")
                 hard_failure = True
             if reasons:
                 state.anomalies += 1
@@ -200,7 +204,6 @@ def main() -> int:
                       f"rel={row['rel']} flip={row['flip']} "
                       f"slew={row['slew']} active={row['slew_active']} "
                       f"restart={row['restart']}", flush=True)
-
         elapsed = time.monotonic() - started
         if time.monotonic() >= next_progress:
             print(f"[{now_text()}] PROGRESS {elapsed:.0f}s "
