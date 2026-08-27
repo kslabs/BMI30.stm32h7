@@ -10,14 +10,14 @@ extern "C" {
 #define VND_CMD_GET_STATUS      0x30u
 #define VND_CMD_SET_TX_ENABLE   0x33u /* 1 byte: enable complementary TX200 waveform on PA2/PC7 and PA1 */
 #define VND_CMD_SET_OPTIC_POWER 0x34u /* 1 байт: 0..255, мощность оптического TX */
-#define VND_CMD_LED_EVENT       0x35u /* payload: u8 event, u16 duration_ms */
+#define VND_CMD_LED_EVENT       0x35u /* payload: u8 pattern_id (0..15), u16 duration_ms */
 #define VND_CMD_HOST_RX_ACK     0x36u /* payload: u32 total host-received A/B frames */
 #define VND_CMD_HOST_RX_CLEAR   0x37u /* payload: none, clear host receive heartbeat */
 #define VND_CMD_GET_LCD_STATUS  0x38u /* получить состояние LCD sync-индикатора (M/S/O, число, цвет) */
 #define VND_CMD_SET_OPTIC_HOLD  0x39u /* payload: u16 deciseconds; legacy u8 seconds also accepted */
 #define VND_CMD_SET_DC_SPEED    0x1Fu /* payload: u32 settle_ms; 0=learning off */
 #define VND_CMD_GET_DC_CONFIG   0x3Au /* current scalar DC speed/status ('DCCF', 40 bytes) */
-#define VND_CMD_SET_LED_PATTERN 0x3Bu /* payload: u8 ws2812_pattern_t for the 20 dynamic LEDs */
+#define VND_CMD_SET_LED_PATTERN 0x3Bu /* payload: u8 selected pattern; does not illuminate by itself */
 #define VND_CMD_SET_DET_ADC     0x3Cu /* payload: u8 bit0=DetADC1, bit1=DetADC2 */
 #define VND_CMD_SET_RS485_ID    0x3Du /* local USB only: u8 stable device_id 0..31 */
 #define VND_CMD_SET_RS485_IP    0x3Eu /* payload: u8 ip[4] in network order, a.b.c.d */
@@ -26,6 +26,7 @@ extern "C" {
 #define VND_CMD_SET_LCD_ROLE_OVERLAY 0x41u /* payload: u8 enable, optional u8 period_s, u8 duration_s */
 #define VND_CMD_SET_RPI_INFO    0x42u /* payload: u16 RPI number LE + IPv4[4] */
 #define VND_CMD_GET_RS485_SENSOR 0x43u /* EP0 IN wValue=0..31 device, 0xFF=local: SNS1 */
+#define VND_CMD_SET_OPTIC_REACTION_SOURCE 0x44u /* payload: u8 source_id 0..31, 0xFF=disabled */
 
 /* Асинхронные service-события по Vendor IN 0x83: сигнатура 'EVT1'. */
 #define VND_EVT_TYPE_FW_INFO     0x00u /* payload: firmware version/build + STM32 UID96 v1 */
@@ -359,6 +360,21 @@ uint32_t vnd_get_last_error(void);
 uint32_t vnd_get_stream_tx_cplt_count(void);
 uint32_t vnd_get_stream_recovery_count(void);
 uint32_t vnd_get_stream_force_idle_count(void);
+typedef struct {
+    uint32_t age_ms;
+    uint32_t hw_diepctl;
+    uint16_t tx_len;
+    uint8_t reason;
+    uint8_t ll_busy;
+    uint8_t ep_busy;
+    uint8_t inflight;
+    uint8_t sending_channel;
+    uint8_t pending_b;
+    uint8_t meta_depth;
+    uint8_t stream_mode;
+    uint8_t dropped;
+} vnd_usb_recovery_diag_t;
+void vnd_get_stream_recovery_diag(vnd_usb_recovery_diag_t *out);
 void vnd_log_usb_close_snapshot(const char *reason);
 /* Получить частоту буферов профиля (Fs блоков/с): прокси к adc_stream */
 uint16_t adc_stream_get_buf_rate(void);

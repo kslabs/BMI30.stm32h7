@@ -170,6 +170,8 @@ uint8_t optic_tx_get_power(void);
 void optic_tx_refresh_enable(void);
 uint8_t dynamic_led_set_pattern(uint8_t pattern_id);
 uint8_t dynamic_led_get_pattern(void);
+void dynamic_led_note_usb_exchange(void);
+uint8_t dynamic_led_is_startup_demo_active(void);
 uint8_t rs485_status_set_det_adc_bits(uint8_t bits);
 uint8_t rs485_status_get_det_adc_bits(void);
 uint8_t rs485_status_get_snapshot(uint8_t *local_status,

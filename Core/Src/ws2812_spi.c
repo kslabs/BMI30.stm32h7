@@ -5,6 +5,9 @@
 
 extern SPI_HandleTypeDef hspi3;
 
+typedef char ws2812_pattern_count_must_be_16[
+    (WS2812_PATTERN_COUNT == 16) ? 1 : -1];
+
 #ifndef WS2812_SPI_USE_DMA
 #define WS2812_SPI_USE_DMA 1
 #endif
@@ -47,13 +50,10 @@ enum {
       WS2812_SAFE_WINDOW_US - WS2812_TX_WIRE_US - WS2812_START_GUARD_US,
   WS2812_FRAME_RATE_HZ = 400u,
   WS2812_IDLE_STEP_FRAMES = 20u,
-  WS2812_STREAM_STEP_FRAMES = 10u,
-  WS2812_SYNC_STEP_FRAMES = 20u,
-  WS2812_UART_STEP_FRAMES = 8u,
-  WS2812_TUNE_STEP_FRAMES = 20u,
-  WS2812_ALERT_STEP_FRAMES = 20u,
-  WS2812_DRIP_STEP_FRAMES = 20u,
   WS2812_TEST_STEP_FRAMES = 200u,
+  WS2812_CHASE_STEP_FRAMES = 20u,
+  WS2812_CHASE_FAST_STEP_FRAMES = 14u,
+  WS2812_UA_DEMO_STEP_FRAMES = 24u,
   WS2812_STATUS_BLINK_HALF_FRAMES = (WS2812_FRAME_RATE_HZ * 3u) / 4u,
   WS2812_DMA_TIMEOUT_MS = 100u,
   WS2812_SPI_CODE_0 = 0x8u, /* 1000 */
@@ -63,21 +63,6 @@ enum {
 typedef char ws2812_frame_must_fit_first_third[
     (WS2812_TX_WIRE_US + WS2812_START_GUARD_US <
      WS2812_FIRST_THIRD_US) ? 1 : -1];
-
-typedef struct {
-  uint8_t onboard_r;
-  uint8_t onboard_g;
-  uint8_t onboard_b;
-  uint8_t strip_r;
-  uint8_t strip_g;
-  uint8_t strip_b;
-  uint16_t hold_ms;
-} ws2812_frame_def_t;
-
-typedef struct {
-  const ws2812_frame_def_t *frames;
-  uint8_t frame_count;
-} ws2812_pattern_def_t;
 
 static uint8_t s_pixels[WS2812_LED_COUNT][3];
 static uint8_t s_tx_buf[WS2812_TX_BUF_SIZE]
@@ -105,99 +90,12 @@ static uint16_t s_rendered_anim_step = 0xFFFFu;
 static uint32_t s_rendered_status_key = 0xFFFFFFFFu;
 /* Updated in main-loop service and read by the ADC-completion LED preparation
    path. Do not scan the 32-node RS485 table from the phase-critical ISR. */
-static volatile uint8_t s_group_optic_active_cached = 0u;
+static volatile uint8_t s_optic_reaction_source_id =
+    WS2812_OPTIC_REACTION_SOURCE_DISABLED;
+static volatile uint8_t s_optic_reaction_active_cached = 0u;
+static volatile uint8_t s_optic_reaction_remote_cached = 0u;
 
 static void ws2812_pin_gpio_low_mode(void);
-
-static const ws2812_frame_def_t s_pattern_off[] = {
-  { 0u, 0u, 0u, 0u, 0u, 0u, 200u }
-};
-
-static const ws2812_frame_def_t s_pattern_idle_breathe[] = {
-  { 0u, 2u, 0u, 0u, 2u, 1u, 90u },
-  { 0u, 3u, 0u, 0u, 4u, 1u, 90u },
-  { 0u, 5u, 0u, 0u, 7u, 2u, 90u },
-  { 0u, 7u, 0u, 0u, 10u, 3u, 90u },
-  { 0u, 9u, 0u, 0u, 13u, 4u, 90u },
-  { 0u, 12u, 0u, 0u, 18u, 5u, 90u },
-  { 0u, 16u, 0u, 0u, 24u, 7u, 90u },
-  { 0u, 12u, 0u, 0u, 18u, 5u, 90u },
-  { 0u, 9u, 0u, 0u, 13u, 4u, 90u },
-  { 0u, 7u, 0u, 0u, 10u, 3u, 90u },
-  { 0u, 5u, 0u, 0u, 7u, 2u, 90u },
-  { 0u, 3u, 0u, 0u, 4u, 1u, 90u }
-};
-
-static const ws2812_frame_def_t s_pattern_streaming[] = {
-  { 0u, 12u, 0u, 0u, 28u, 0u, 120u },
-  { 0u, 18u, 0u, 0u, 10u, 0u, 120u }
-};
-
-static const ws2812_frame_def_t s_pattern_sync_pulse[] = {
-  { 0u, 0u, 0u, 0u, 0u, 0u, 70u },
-  { 0u, 0u, 10u, 0u, 0u, 28u, 70u },
-  { 0u, 0u, 4u, 0u, 0u, 10u, 70u },
-  { 0u, 0u, 0u, 0u, 0u, 0u, 140u }
-};
-
-static const ws2812_frame_def_t s_pattern_uart_rx[] = {
-  { 18u, 18u, 18u, 0u, 0u, 0u, 50u },
-  { 0u, 0u, 0u, 6u, 6u, 6u, 50u }
-};
-
-static const ws2812_frame_def_t s_pattern_tune[] = {
-  { 20u, 8u, 0u, 20u, 8u, 0u, 100u },
-  { 10u, 4u, 0u, 6u, 2u, 0u, 100u }
-};
-
-static const ws2812_frame_def_t s_pattern_recovery[] = {
-  { 20u, 0u, 0u, 32u, 0u, 0u, 160u },
-  { 0u, 0u, 0u, 0u, 0u, 0u, 160u }
-};
-
-static const ws2812_frame_def_t s_pattern_hard_reset[] = {
-  { 16u, 0u, 16u, 32u, 0u, 24u, 100u },
-  { 0u, 0u, 0u, 0u, 0u, 0u, 80u }
-};
-
-static const ws2812_frame_def_t s_pattern_test_scope_rgb[] = {
-  { 32u, 0u, 0u, 32u, 0u, 0u, 1200u },
-  { 0u, 32u, 0u, 0u, 32u, 0u, 1200u },
-  { 0u, 0u, 32u, 0u, 0u, 32u, 1200u }
-};
-
-static const ws2812_frame_def_t s_pattern_test_blue[] = {
-  { 0u, 0u, 8u, 0u, 0u, 24u, 20u }
-};
-
-static const ws2812_frame_def_t s_pattern_test_color_cycle[] = {
-  { 0u, 0u, 0u, 0u, 0u, 0u, 1200u },
-  { 64u, 0u, 0u, 255u, 0u, 0u, 1200u },
-  { 0u, 0u, 0u, 0u, 0u, 0u, 1200u },
-  { 0u, 64u, 0u, 0u, 255u, 0u, 1200u },
-  { 0u, 0u, 0u, 0u, 0u, 0u, 1200u },
-  { 0u, 0u, 64u, 0u, 0u, 255u, 1200u }
-};
-
-static const ws2812_pattern_def_t s_pattern_defs[WS2812_PATTERN_COUNT] = {
-  { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
-  { s_pattern_idle_breathe, (uint8_t)(sizeof(s_pattern_idle_breathe) / sizeof(s_pattern_idle_breathe[0])) },
-  { s_pattern_streaming, (uint8_t)(sizeof(s_pattern_streaming) / sizeof(s_pattern_streaming[0])) },
-  { s_pattern_sync_pulse, (uint8_t)(sizeof(s_pattern_sync_pulse) / sizeof(s_pattern_sync_pulse[0])) },
-  { s_pattern_uart_rx, (uint8_t)(sizeof(s_pattern_uart_rx) / sizeof(s_pattern_uart_rx[0])) },
-  { s_pattern_tune, (uint8_t)(sizeof(s_pattern_tune) / sizeof(s_pattern_tune[0])) },
-  { s_pattern_recovery, (uint8_t)(sizeof(s_pattern_recovery) / sizeof(s_pattern_recovery[0])) },
-  { s_pattern_hard_reset, (uint8_t)(sizeof(s_pattern_hard_reset) / sizeof(s_pattern_hard_reset[0])) },
-  { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
-  { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
-  { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
-  { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
-  { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
-  { s_pattern_off, (uint8_t)(sizeof(s_pattern_off) / sizeof(s_pattern_off[0])) },
-  { s_pattern_test_scope_rgb, (uint8_t)(sizeof(s_pattern_test_scope_rgb) / sizeof(s_pattern_test_scope_rgb[0])) },
-  { s_pattern_test_blue, (uint8_t)(sizeof(s_pattern_test_blue) / sizeof(s_pattern_test_blue[0])) },
-  { s_pattern_test_color_cycle, (uint8_t)(sizeof(s_pattern_test_color_cycle) / sizeof(s_pattern_test_color_cycle[0])) }
-};
 
 static uint32_t ws2812_irq_save(void)
 {
@@ -501,17 +399,6 @@ static void ws2812_pixels_set_onboard_rgb(uint8_t r, uint8_t g, uint8_t b)
   s_pixels[0][2] = b;
 }
 
-static void ws2812_pixels_fill_strip_rgb(uint8_t r, uint8_t g, uint8_t b)
-{
-  uint32_t led = 0u;
-
-  for (led = WS2812_ONBOARD_LED_COUNT; led < WS2812_LED_COUNT; ++led) {
-    s_pixels[led][0] = r;
-    s_pixels[led][1] = g;
-    s_pixels[led][2] = b;
-  }
-}
-
 static void ws2812_pixels_set_strip_led_rgb(uint16_t strip_index, uint8_t r, uint8_t g, uint8_t b)
 {
   uint16_t led_index = (uint16_t)(WS2812_ONBOARD_LED_COUNT + strip_index);
@@ -528,152 +415,228 @@ static void ws2812_pixels_set_strip_led_rgb(uint16_t strip_index, uint8_t r, uin
 static uint16_t ws2812_pattern_step_frames(ws2812_pattern_t pattern)
 {
   switch (pattern) {
-    case WS2812_PATTERN_STREAMING:
-      return WS2812_STREAM_STEP_FRAMES;
-    case WS2812_PATTERN_SYNC_PULSE:
-      return WS2812_SYNC_STEP_FRAMES;
-    case WS2812_PATTERN_UART_RX:
-      return WS2812_UART_STEP_FRAMES;
-    case WS2812_PATTERN_TUNE:
-      return WS2812_TUNE_STEP_FRAMES;
-    case WS2812_PATTERN_RECOVERY:
-    case WS2812_PATTERN_HARD_RESET:
-      return WS2812_ALERT_STEP_FRAMES;
-    case WS2812_PATTERN_EVENT_B_UP:
-    case WS2812_PATTERN_EVENT_A_DOWN:
-    case WS2812_PATTERN_EVENT_BOTH_ALT:
-    case WS2812_PATTERN_EVENT_SPLIT_IN:
-    case WS2812_PATTERN_EVENT_SPLIT_OUT:
-      return 40u;
-    case WS2812_PATTERN_TEST_DRIP:
-      return WS2812_DRIP_STEP_FRAMES;
-    case WS2812_PATTERN_IDLE_BREATHE:
+    case WS2812_PATTERN_UP_RED_2:
+    case WS2812_PATTERN_UP_YELLOW_2:
+    case WS2812_PATTERN_DOWN_RED_2:
+    case WS2812_PATTERN_DOWN_YELLOW_2:
+    case WS2812_PATTERN_IN_RED_2:
+    case WS2812_PATTERN_IN_YELLOW_2:
+      return WS2812_CHASE_FAST_STEP_FRAMES;
+
+    case WS2812_PATTERN_UP_RED_1:
+    case WS2812_PATTERN_UP_YELLOW_1:
+    case WS2812_PATTERN_DOWN_RED_1:
+    case WS2812_PATTERN_DOWN_YELLOW_1:
+    case WS2812_PATTERN_IN_RED_1:
+    case WS2812_PATTERN_IN_YELLOW_1:
+    case WS2812_PATTERN_OUT_RED:
+    case WS2812_PATTERN_OUT_YELLOW:
+      return WS2812_CHASE_STEP_FRAMES;
+
+    case WS2812_PATTERN_UA_DEMO:
+      return WS2812_UA_DEMO_STEP_FRAMES;
+
     case WS2812_PATTERN_OFF:
-    case WS2812_PATTERN_TEST_SCOPE_RGB:
-    case WS2812_PATTERN_TEST_BLUE:
-    case WS2812_PATTERN_TEST_COLOR_CYCLE:
       return WS2812_TEST_STEP_FRAMES;
+
     default:
       return WS2812_IDLE_STEP_FRAMES;
   }
 }
 
-static void ws2812_render_strip_comet(uint16_t head, uint8_t r, uint8_t g, uint8_t b)
+static uint8_t ws2812_scale_component(uint8_t value, uint8_t level)
 {
-  if (WS2812_STRIP_LED_COUNT == 0u) {
+  return (uint8_t)((((uint16_t)value * (uint16_t)level) + 127u) / 255u);
+}
+
+static void ws2812_pixels_blend_strip_led_rgb(uint16_t strip_index,
+                                               uint8_t r,
+                                               uint8_t g,
+                                               uint8_t b)
+{
+  uint16_t led_index = (uint16_t)(WS2812_ONBOARD_LED_COUNT + strip_index);
+
+  if (led_index >= WS2812_LED_COUNT) {
     return;
   }
 
-  ws2812_pixels_set_strip_led_rgb((uint16_t)(head % WS2812_STRIP_LED_COUNT), r, g, b);
-  ws2812_pixels_set_strip_led_rgb((uint16_t)((head + WS2812_STRIP_LED_COUNT - 1u) % WS2812_STRIP_LED_COUNT),
-                                  (uint8_t)(r / 3u), (uint8_t)(g / 3u), (uint8_t)(b / 3u));
-  ws2812_pixels_set_strip_led_rgb((uint16_t)((head + WS2812_STRIP_LED_COUNT - 2u) % WS2812_STRIP_LED_COUNT),
-                                  (uint8_t)(r / 8u), (uint8_t)(g / 8u), (uint8_t)(b / 8u));
+  if (r > s_pixels[led_index][0]) {
+    s_pixels[led_index][0] = r;
+  }
+  if (g > s_pixels[led_index][1]) {
+    s_pixels[led_index][1] = g;
+  }
+  if (b > s_pixels[led_index][2]) {
+    s_pixels[led_index][2] = b;
+  }
 }
 
-static void ws2812_render_strip_moving_blocks(uint16_t anim_step, uint8_t towards_high)
+static void ws2812_render_linear_comet(int32_t head,
+                                        int8_t direction,
+                                        uint8_t r,
+                                        uint8_t g,
+                                        uint8_t b,
+                                        uint8_t wrap)
 {
-  uint16_t pos = 0u;
-  uint16_t phase_offset = (uint16_t)(anim_step % 8u);
+  static const uint8_t tail_level[] = { 255u, 126u, 54u, 18u };
+  int32_t count = (int32_t)WS2812_STRIP_LED_COUNT;
+  uint32_t tail;
+
+  if (count <= 0) {
+    return;
+  }
+
+  for (tail = 0u; tail < (sizeof(tail_level) / sizeof(tail_level[0])); ++tail) {
+    int32_t pos = head - ((int32_t)direction * (int32_t)tail);
+
+    if (wrap != 0u) {
+      while (pos < 0) {
+        pos += count;
+      }
+      pos %= count;
+    } else if ((pos < 0) || (pos >= count)) {
+      continue;
+    }
+
+    ws2812_pixels_blend_strip_led_rgb((uint16_t)pos,
+        ws2812_scale_component(r, tail_level[tail]),
+        ws2812_scale_component(g, tail_level[tail]),
+        ws2812_scale_component(b, tail_level[tail]));
+  }
+}
+
+static void ws2812_render_directional_comet(uint16_t anim_step,
+                                             uint8_t towards_high,
+                                             uint8_t r,
+                                             uint8_t g,
+                                             uint8_t b)
+{
+  int32_t count = (int32_t)WS2812_STRIP_LED_COUNT;
+  int32_t head;
+
+  if (count <= 0) {
+    return;
+  }
+
+  head = (int32_t)(anim_step % (uint16_t)count);
+  if (towards_high == 0u) {
+    head = count - 1 - head;
+  }
+  ws2812_render_linear_comet(head,
+      (towards_high != 0u) ? 1 : -1, r, g, b, 1u);
+}
+
+static void ws2812_render_directional_pulses(uint16_t anim_step,
+                                              uint8_t towards_high,
+                                              uint8_t r,
+                                              uint8_t g,
+                                              uint8_t b)
+{
+  static const uint8_t pulse_level[] = { 255u, 150u, 58u };
+  const uint16_t period = 7u;
+  uint16_t shift = (uint16_t)(anim_step % period);
+  uint16_t pos;
 
   for (pos = 0u; pos < WS2812_STRIP_LED_COUNT; ++pos) {
-    uint16_t phase = towards_high != 0u
-      ? (uint16_t)((pos + 8u - phase_offset) % 8u)
-      : (uint16_t)((pos + phase_offset) % 8u);
+    uint16_t phase = (towards_high != 0u)
+      ? (uint16_t)((pos + period - shift) % period)
+      : (uint16_t)((pos + shift) % period);
 
-    if (phase < 4u) {
-      ws2812_pixels_set_strip_led_rgb(pos, 255u, 0u, 0u);
+    if (phase < (sizeof(pulse_level) / sizeof(pulse_level[0]))) {
+      ws2812_pixels_set_strip_led_rgb(pos,
+          ws2812_scale_component(r, pulse_level[phase]),
+          ws2812_scale_component(g, pulse_level[phase]),
+          ws2812_scale_component(b, pulse_level[phase]));
     }
   }
 }
 
-static void ws2812_render_strip_moving_blocks_alternating(uint16_t anim_step)
+static void ws2812_render_split_comets(uint16_t anim_step,
+                                        uint8_t towards_center,
+                                        uint8_t r,
+                                        uint8_t g,
+                                        uint8_t b)
 {
-  uint16_t cycle_step = (uint16_t)(anim_step % 16u);
-  uint8_t towards_high = (cycle_step >= 8u) ? 1u : 0u;
-  uint16_t local_step = (uint16_t)(cycle_step % 8u);
+  int32_t count = (int32_t)WS2812_STRIP_LED_COUNT;
+  int32_t half = count / 2;
+  uint16_t cycle_len;
+  int32_t distance;
 
-  ws2812_render_strip_moving_blocks(local_step, towards_high);
-}
-
-static void ws2812_render_strip_split_moving_blocks(uint16_t anim_step,
-                                                    uint8_t upper_towards_high,
-                                                    uint8_t lower_towards_high)
-{
-  const uint16_t half_len = (uint16_t)(WS2812_STRIP_LED_COUNT / 2u);
-  const uint16_t block_len = 4u;
-  uint16_t travel = 0u;
-  uint16_t step = 0u;
-  uint16_t lower_start = 0u;
-  uint16_t upper_start = 0u;
-  uint16_t i = 0u;
-
-  if (half_len < block_len) {
-    ws2812_pixels_fill_strip_rgb(255u, 0u, 0u);
+  if (half <= 0) {
     return;
   }
 
-  travel = (uint16_t)(half_len - block_len + 1u);
-  if (travel == 0u) {
+  cycle_len = (uint16_t)(half + 3);
+  distance = (int32_t)(anim_step % cycle_len);
+  if (distance >= half) {
     return;
   }
 
-  step = (uint16_t)(anim_step % travel);
-  lower_start = (lower_towards_high != 0u) ? step : (uint16_t)(travel - 1u - step);
-  upper_start = (upper_towards_high != 0u)
-    ? (uint16_t)(half_len + step)
-    : (uint16_t)(half_len + (travel - 1u - step));
-
-  for (i = 0u; i < block_len; ++i) {
-    ws2812_pixels_set_strip_led_rgb((uint16_t)(lower_start + i), 255u, 0u, 0u);
-    ws2812_pixels_set_strip_led_rgb((uint16_t)(upper_start + i), 255u, 0u, 0u);
+  if (towards_center != 0u) {
+    ws2812_render_linear_comet(distance, 1, r, g, b, 0u);
+    ws2812_render_linear_comet(count - 1 - distance, -1, r, g, b, 0u);
+  } else {
+    ws2812_render_linear_comet(half - 1 - distance, -1, r, g, b, 0u);
+    ws2812_render_linear_comet(half + distance, 1, r, g, b, 0u);
   }
 }
 
-static uint8_t ws2812_drip_tail_visible(uint16_t anim_step)
+static void ws2812_render_split_pulses(uint16_t anim_step,
+                                        uint8_t towards_center,
+                                        uint8_t r,
+                                        uint8_t g,
+                                        uint8_t b)
 {
-  uint32_t value = (((uint32_t)anim_step + 1u) * 1103515245u) + 12345u;
-  return (uint8_t)((value >> 30) & 0x1u);
+  static const uint8_t pulse_level[] = { 255u, 142u, 44u };
+  const uint16_t period = 6u;
+  uint16_t half = (uint16_t)(WS2812_STRIP_LED_COUNT / 2u);
+  uint16_t shift = (uint16_t)(anim_step % period);
+  uint16_t pos;
+
+  for (pos = 0u; pos < WS2812_STRIP_LED_COUNT; ++pos) {
+    uint8_t lower_half = (uint8_t)(pos < half);
+    uint16_t local = (lower_half != 0u) ? pos : (uint16_t)(pos - half);
+    uint8_t towards_high = (uint8_t)(((lower_half != 0u) ==
+                                      (towards_center != 0u)) ? 1u : 0u);
+    uint16_t phase = (towards_high != 0u)
+      ? (uint16_t)((local + period - shift) % period)
+      : (uint16_t)((local + shift) % period);
+
+    if (phase < (sizeof(pulse_level) / sizeof(pulse_level[0]))) {
+      ws2812_pixels_set_strip_led_rgb(pos,
+          ws2812_scale_component(r, pulse_level[phase]),
+          ws2812_scale_component(g, pulse_level[phase]),
+          ws2812_scale_component(b, pulse_level[phase]));
+    }
+  }
 }
 
-static void ws2812_render_strip_drip(uint16_t anim_step)
+static void ws2812_render_ukraine_demo(uint16_t anim_step)
 {
-  static const uint8_t drip_rgb[4][3] = {
-    { 8u, 46u, 72u },
-    { 4u, 28u, 42u },
-    { 2u, 14u, 22u },
-    { 1u, 6u, 10u }
-  };
-  const uint16_t tail_len = 4u;
-  const uint16_t gap_len = 5u;
-  const uint16_t cycle_len = (uint16_t)(WS2812_STRIP_LED_COUNT + tail_len + gap_len);
-  uint16_t head = 0u;
-  uint16_t tail_idx = 0u;
+  const uint16_t half = (uint16_t)(WS2812_STRIP_LED_COUNT / 2u);
+  const uint16_t wave_period = 24u;
+  uint16_t pos;
 
-  if ((WS2812_STRIP_LED_COUNT == 0u) || (cycle_len == 0u)) {
-    return;
-  }
+  for (pos = 0u; pos < WS2812_STRIP_LED_COUNT; ++pos) {
+    uint16_t phase = (uint16_t)((anim_step + (pos * 2u)) % wave_period);
+    uint16_t triangle = (phase <= (wave_period / 2u))
+      ? phase
+      : (uint16_t)(wave_period - phase);
+    uint8_t level = (uint8_t)(96u + (triangle * 12u));
 
-  head = (uint16_t)(anim_step % cycle_len);
-  for (tail_idx = 0u; tail_idx < tail_len; ++tail_idx) {
-    uint16_t pos = 0u;
-
-    if ((tail_idx == (tail_len - 1u)) && (ws2812_drip_tail_visible(anim_step) == 0u)) {
-      continue;
+    if (pos < half) {
+      /* Lower half: rich yellow with a travelling fabric-like highlight. */
+      ws2812_pixels_set_strip_led_rgb(pos,
+          ws2812_scale_component(255u, level),
+          ws2812_scale_component(156u, level),
+          0u);
+    } else {
+      /* Upper half: saturated blue; the same wave visually joins the flag. */
+      ws2812_pixels_set_strip_led_rgb(pos,
+          0u,
+          ws2812_scale_component(72u, level),
+          ws2812_scale_component(255u, level));
     }
-    if (head < tail_idx) {
-      continue;
-    }
-
-    pos = (uint16_t)(head - tail_idx);
-    if (pos >= WS2812_STRIP_LED_COUNT) {
-      continue;
-    }
-
-    ws2812_pixels_set_strip_led_rgb(pos,
-                                    drip_rgb[tail_idx][0],
-                                    drip_rgb[tail_idx][1],
-                                    drip_rgb[tail_idx][2]);
   }
 }
 
@@ -718,10 +681,14 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
   uint8_t master_sync_active;
   uint8_t local_optic_active =
       (uint8_t)((optic_sensor_get_state() != 0u) ? 1u : 0u);
-  uint8_t group_optic_active =
-      s_group_optic_active_cached;
-  uint8_t optic_active;
-  uint8_t master_optic_active = rs485_status_master_optic_active();
+  uint8_t selected_optic_active = s_optic_reaction_active_cached;
+  uint8_t optic_remote = s_optic_reaction_remote_cached;
+  uint8_t remote_optic_active =
+      (uint8_t)(((selected_optic_active != 0u) && (optic_remote != 0u)) ? 1u : 0u);
+  uint8_t optic_active =
+      (uint8_t)(((local_optic_active != 0u) || (remote_optic_active != 0u)) ? 1u : 0u);
+  uint8_t optic_source_enabled =
+      (uint8_t)((s_optic_reaction_source_id <= 31u) ? 1u : 0u);
   uint8_t tx_enabled = (uint8_t)((vnd_is_tx_enabled() != 0u) ? 1u : 0u);
   uint8_t alarm_gate_on = 1u;
   uint8_t smooth_level = 255u;
@@ -733,13 +700,6 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
   display_slave_mode = (uint8_t)((sync_snapshot.raw_mode == VND_SYNC_MODE_SLAVE) ? 1u : 0u);
   master_sync_active = (uint8_t)(((sync_snapshot.raw_mode == VND_SYNC_MODE_MASTER) &&
                                   (sync_snapshot.sync_signal_alive != 0u)) ? 1u : 0u);
-  /* A MASTER drives host-selected effects from any fresh group sensor, so its
-     system LED must show the same green hit for local and remote sources. Keep
-     the SLAVE color scheme unchanged: local yellow, remote MASTER magenta. */
-  optic_active = (display_slave_mode != 0u)
-      ? local_optic_active
-      : group_optic_active;
-
   if ((alarm_active != 0u) &&
       (((s_pattern_frame_counter / blink_half_frames) & 1u) != 0u)) {
     alarm_gate_on = 0u;
@@ -761,10 +721,10 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
     smooth_level = (uint8_t)(((ramp * ramp * (765u - (2u * ramp))) + 32512u) / 65025u);
   }
 
-  /* The selected optical hit is time-critical and must change the status color
-     immediately. It has priority over the persistent error indication, while
-     the independent TX breathing animation remains active. */
-  if (optic_active != 0u) {
+  /* Preserve the original local receiver indication independently of the RSP
+     remote-source selection. A local hit has priority; 0x44 only replaces the
+     old hard-coded MASTER neighbour with an explicitly selected remote ID. */
+  if (local_optic_active != 0u) {
     if (display_slave_mode != 0u) {
       red = WS2812_STATUS_YELLOW_R;
       green = WS2812_STATUS_YELLOW_G;
@@ -774,6 +734,10 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
       green = WS2812_STATUS_GREEN_G;
       blue = WS2812_STATUS_GREEN_B;
     }
+  } else if (remote_optic_active != 0u) {
+    red = WS2812_STATUS_MAGENTA_R;
+    green = WS2812_STATUS_MAGENTA_G;
+    blue = WS2812_STATUS_MAGENTA_B;
   } else if (alarm_active != 0u) {
     if (alarm_gate_on != 0u) {
       red = WS2812_STATUS_ALARM_R;
@@ -788,15 +752,9 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
       green = WS2812_STATUS_LIGHT_BLUE_G;
       blue = WS2812_STATUS_LIGHT_BLUE_B;
     } else if (display_slave_mode != 0u) {
-      if (master_optic_active != 0u) {
-        red = WS2812_STATUS_MAGENTA_R;
-        green = WS2812_STATUS_MAGENTA_G;
-        blue = WS2812_STATUS_MAGENTA_B;
-      } else {
-        red = WS2812_STATUS_WHITE_R;
-        green = WS2812_STATUS_WHITE_G;
-        blue = WS2812_STATUS_WHITE_B;
-      }
+      red = WS2812_STATUS_WHITE_R;
+      green = WS2812_STATUS_WHITE_G;
+      blue = WS2812_STATUS_WHITE_B;
     } else {
       if (master_sync_active != 0u) {
         red = WS2812_STATUS_BLUE_R;
@@ -837,7 +795,8 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
          ((uint32_t)tx_enabled << 3) |
          ((uint32_t)alarm_gate_on << 4) |
          ((uint32_t)master_sync_active << 5) |
-         ((uint32_t)master_optic_active << 6) |
+         ((uint32_t)optic_remote << 6) |
+         ((uint32_t)optic_source_enabled << 7) |
          ((uint32_t)red << 8) |
          ((uint32_t)green << 16) |
          ((uint32_t)blue << 24);
@@ -867,8 +826,14 @@ static void ws2812_apply_onboard_status_overlay(void)
 
 static void ws2812_render_pattern(ws2812_pattern_t pattern, uint16_t anim_step)
 {
-  uint16_t pos = 0u;
-  uint16_t phase = 0u;
+  enum {
+    EFFECT_RED_R = 255u,
+    EFFECT_RED_G = 0u,
+    EFFECT_RED_B = 0u,
+    EFFECT_YELLOW_R = 255u,
+    EFFECT_YELLOW_G = 120u,
+    EFFECT_YELLOW_B = 0u
+  };
 
   ws2812_pixels_clear_all();
 
@@ -876,125 +841,78 @@ static void ws2812_render_pattern(ws2812_pattern_t pattern, uint16_t anim_step)
     case WS2812_PATTERN_OFF:
       break;
 
-    case WS2812_PATTERN_IDLE_BREATHE:
-      if (WS2812_STRIP_LED_COUNT != 0u) {
-        pos = (uint16_t)(anim_step % WS2812_STRIP_LED_COUNT);
-        ws2812_render_strip_comet(pos, 0u, 20u, 8u);
-      }
+    case WS2812_PATTERN_UP_RED_1:
+      ws2812_render_directional_comet(anim_step, 1u,
+          EFFECT_RED_R, EFFECT_RED_G, EFFECT_RED_B);
       break;
 
-    case WS2812_PATTERN_STREAMING:
-      if (WS2812_STRIP_LED_COUNT != 0u) {
-        pos = (uint16_t)(anim_step % WS2812_STRIP_LED_COUNT);
-        ws2812_render_strip_comet(pos, 0u, 48u, 0u);
-        ws2812_render_strip_comet((uint16_t)((pos + (WS2812_STRIP_LED_COUNT / 2u)) % WS2812_STRIP_LED_COUNT), 0u, 12u, 0u);
-      }
+    case WS2812_PATTERN_UP_RED_2:
+      ws2812_render_directional_pulses(anim_step, 1u,
+          EFFECT_RED_R, EFFECT_RED_G, EFFECT_RED_B);
       break;
 
-    case WS2812_PATTERN_SYNC_PULSE:
-      phase = (uint16_t)(anim_step % 6u);
-      if (WS2812_STRIP_LED_COUNT != 0u) {
-        uint16_t center = (uint16_t)(WS2812_STRIP_LED_COUNT / 2u);
-        if (phase == 0u) {
-          ws2812_pixels_fill_strip_rgb(0u, 0u, 4u);
-        } else {
-          uint16_t radius = (uint16_t)(phase - 1u);
-          if (center > radius) {
-            ws2812_pixels_set_strip_led_rgb((uint16_t)(center - 1u - radius), 0u, 0u, 32u);
-          }
-          ws2812_pixels_set_strip_led_rgb((uint16_t)((center + radius) % WS2812_STRIP_LED_COUNT), 0u, 0u, 32u);
-        }
-      }
+    case WS2812_PATTERN_UP_YELLOW_1:
+      ws2812_render_directional_comet(anim_step, 1u,
+          EFFECT_YELLOW_R, EFFECT_YELLOW_G, EFFECT_YELLOW_B);
       break;
 
-    case WS2812_PATTERN_UART_RX:
-      if ((anim_step & 1u) == 0u) {
-        ws2812_pixels_fill_strip_rgb(8u, 8u, 8u);
-      }
+    case WS2812_PATTERN_UP_YELLOW_2:
+      ws2812_render_directional_pulses(anim_step, 1u,
+          EFFECT_YELLOW_R, EFFECT_YELLOW_G, EFFECT_YELLOW_B);
       break;
 
-    case WS2812_PATTERN_TUNE:
-      if (WS2812_STRIP_LED_COUNT != 0u) {
-        pos = (uint16_t)(anim_step % WS2812_STRIP_LED_COUNT);
-        ws2812_render_strip_comet(pos, 28u, 10u, 0u);
-      }
+    case WS2812_PATTERN_DOWN_RED_1:
+      ws2812_render_directional_comet(anim_step, 0u,
+          EFFECT_RED_R, EFFECT_RED_G, EFFECT_RED_B);
       break;
 
-    case WS2812_PATTERN_RECOVERY:
-      if ((anim_step & 1u) == 0u) {
-        ws2812_pixels_fill_strip_rgb(28u, 0u, 0u);
-      }
+    case WS2812_PATTERN_DOWN_RED_2:
+      ws2812_render_directional_pulses(anim_step, 0u,
+          EFFECT_RED_R, EFFECT_RED_G, EFFECT_RED_B);
       break;
 
-    case WS2812_PATTERN_HARD_RESET:
-      if ((anim_step & 1u) == 0u) {
-        ws2812_pixels_fill_strip_rgb(28u, 0u, 20u);
-      }
+    case WS2812_PATTERN_DOWN_YELLOW_1:
+      ws2812_render_directional_comet(anim_step, 0u,
+          EFFECT_YELLOW_R, EFFECT_YELLOW_G, EFFECT_YELLOW_B);
       break;
 
-    case WS2812_PATTERN_EVENT_B_UP:
-      ws2812_render_strip_moving_blocks(anim_step, 1u);
+    case WS2812_PATTERN_DOWN_YELLOW_2:
+      ws2812_render_directional_pulses(anim_step, 0u,
+          EFFECT_YELLOW_R, EFFECT_YELLOW_G, EFFECT_YELLOW_B);
       break;
 
-    case WS2812_PATTERN_EVENT_A_DOWN:
-      ws2812_render_strip_moving_blocks(anim_step, 0u);
+    case WS2812_PATTERN_IN_RED_1:
+      ws2812_render_split_comets(anim_step, 1u,
+          EFFECT_RED_R, EFFECT_RED_G, EFFECT_RED_B);
       break;
 
-    case WS2812_PATTERN_EVENT_BOTH_ALT:
-      ws2812_render_strip_moving_blocks_alternating(anim_step);
+    case WS2812_PATTERN_IN_RED_2:
+      ws2812_render_split_pulses(anim_step, 1u,
+          EFFECT_RED_R, EFFECT_RED_G, EFFECT_RED_B);
       break;
 
-    case WS2812_PATTERN_EVENT_SPLIT_IN:
-      ws2812_render_strip_split_moving_blocks(anim_step, 0u, 1u);
+    case WS2812_PATTERN_IN_YELLOW_1:
+      ws2812_render_split_comets(anim_step, 1u,
+          EFFECT_YELLOW_R, EFFECT_YELLOW_G, EFFECT_YELLOW_B);
       break;
 
-    case WS2812_PATTERN_EVENT_SPLIT_OUT:
-      ws2812_render_strip_split_moving_blocks(anim_step, 1u, 0u);
+    case WS2812_PATTERN_IN_YELLOW_2:
+      ws2812_render_split_pulses(anim_step, 1u,
+          EFFECT_YELLOW_R, EFFECT_YELLOW_G, EFFECT_YELLOW_B);
       break;
 
-    case WS2812_PATTERN_TEST_DRIP:
-      ws2812_render_strip_drip(anim_step);
+    case WS2812_PATTERN_OUT_RED:
+      ws2812_render_split_comets(anim_step, 0u,
+          EFFECT_RED_R, EFFECT_RED_G, EFFECT_RED_B);
       break;
 
-    case WS2812_PATTERN_TEST_SCOPE_RGB:
-      phase = (uint16_t)(anim_step % 3u);
-      if (phase == 0u) {
-        ws2812_pixels_set_onboard_rgb(40u, 0u, 0u);
-        ws2812_pixels_fill_strip_rgb(40u, 0u, 0u);
-      } else if (phase == 1u) {
-        ws2812_pixels_set_onboard_rgb(0u, 40u, 0u);
-        ws2812_pixels_fill_strip_rgb(0u, 40u, 0u);
-      } else {
-        ws2812_pixels_set_onboard_rgb(0u, 0u, 40u);
-        ws2812_pixels_fill_strip_rgb(0u, 0u, 40u);
-      }
+    case WS2812_PATTERN_OUT_YELLOW:
+      ws2812_render_split_comets(anim_step, 0u,
+          EFFECT_YELLOW_R, EFFECT_YELLOW_G, EFFECT_YELLOW_B);
       break;
 
-    case WS2812_PATTERN_TEST_BLUE:
-      for (pos = 0u; pos < WS2812_STRIP_LED_COUNT; ++pos) {
-        uint8_t first_half = (uint8_t)(pos < (WS2812_STRIP_LED_COUNT / 2u));
-        uint8_t phase = (uint8_t)(anim_step & 1u);
-
-        if ((first_half ^ phase) != 0u) {
-          ws2812_pixels_set_strip_led_rgb(pos, 64u, 0u, 0u);
-        } else {
-          ws2812_pixels_set_strip_led_rgb(pos, 0u, 0u, 64u);
-        }
-      }
-      break;
-
-    case WS2812_PATTERN_TEST_COLOR_CYCLE:
-      phase = (uint16_t)(anim_step % 3u);
-      if (phase == 0u) {
-        ws2812_pixels_set_onboard_rgb(32u, 0u, 0u);
-        ws2812_pixels_fill_strip_rgb(64u, 0u, 0u);
-      } else if (phase == 1u) {
-        ws2812_pixels_set_onboard_rgb(0u, 32u, 0u);
-        ws2812_pixels_fill_strip_rgb(0u, 64u, 0u);
-      } else {
-        ws2812_pixels_set_onboard_rgb(0u, 0u, 32u);
-        ws2812_pixels_fill_strip_rgb(0u, 0u, 64u);
-      }
+    case WS2812_PATTERN_UA_DEMO:
+      ws2812_render_ukraine_demo(anim_step);
       break;
 
     default:
@@ -1085,7 +1003,9 @@ void ws2812_spi_init(void)
   s_rendered_pattern = WS2812_PATTERN_COUNT;
   s_rendered_anim_step = 0xFFFFu;
   s_rendered_status_key = 0xFFFFFFFFu;
-  s_group_optic_active_cached = 0u;
+  s_optic_reaction_source_id = WS2812_OPTIC_REACTION_SOURCE_DISABLED;
+  s_optic_reaction_active_cached = 0u;
+  s_optic_reaction_remote_cached = 0u;
 }
 
 void ws2812_spi_clear(void)
@@ -1179,38 +1099,16 @@ ws2812_pattern_t ws2812_spi_get_pattern(void)
   return s_requested_pattern;
 }
 
-void ws2812_spi_trigger_event(ws2812_event_t event, uint16_t duration_ms)
+ws2812_pattern_t ws2812_spi_get_active_pattern(void)
 {
-  ws2812_pattern_t pattern = WS2812_PATTERN_OFF;
+  return s_active_pattern;
+}
 
-  switch (event) {
-    case WS2812_EVENT_CHANNEL_B:
-      pattern = WS2812_PATTERN_EVENT_B_UP;
-      break;
-
-    case WS2812_EVENT_CHANNEL_A:
-      pattern = WS2812_PATTERN_EVENT_A_DOWN;
-      break;
-
-    case WS2812_EVENT_CHANNEL_BOTH:
-      pattern = WS2812_PATTERN_EVENT_BOTH_ALT;
-      break;
-
-    case WS2812_EVENT_SPLIT_IN:
-      pattern = WS2812_PATTERN_EVENT_SPLIT_IN;
-      break;
-
-    case WS2812_EVENT_SPLIT_OUT:
-      pattern = WS2812_PATTERN_EVENT_SPLIT_OUT;
-      break;
-
-    case WS2812_EVENT_NONE:
-    default:
-      pattern = WS2812_PATTERN_OFF;
-      break;
-  }
-
-  if ((pattern == WS2812_PATTERN_OFF) || (duration_ms == 0u)) {
+void ws2812_spi_trigger_pattern(ws2812_pattern_t pattern, uint16_t duration_ms)
+{
+  if (((uint32_t)pattern >= (uint32_t)WS2812_PATTERN_COUNT) ||
+      (pattern == WS2812_PATTERN_OFF) ||
+      (duration_ms == 0u)) {
     s_override_pattern = WS2812_PATTERN_OFF;
     s_override_until_ms = 0u;
     s_pattern_force_send = 1u;
@@ -1226,15 +1124,119 @@ void ws2812_spi_trigger_event(ws2812_event_t event, uint16_t duration_ms)
   s_pattern_force_send = 1u;
 }
 
+void ws2812_spi_trigger_event(ws2812_event_t event, uint16_t duration_ms)
+{
+  ws2812_pattern_t pattern = WS2812_PATTERN_OFF;
+
+  switch (event) {
+    case WS2812_EVENT_CHANNEL_B:
+      pattern = WS2812_PATTERN_UP_RED_1;
+      break;
+
+    case WS2812_EVENT_CHANNEL_A:
+      pattern = WS2812_PATTERN_DOWN_RED_1;
+      break;
+
+    case WS2812_EVENT_CHANNEL_BOTH:
+      pattern = WS2812_PATTERN_IN_RED_1;
+      break;
+
+    case WS2812_EVENT_SPLIT_IN:
+      pattern = WS2812_PATTERN_IN_RED_1;
+      break;
+
+    case WS2812_EVENT_SPLIT_OUT:
+      pattern = WS2812_PATTERN_OUT_RED;
+      break;
+
+    case WS2812_EVENT_NONE:
+    default:
+      pattern = WS2812_PATTERN_OFF;
+      break;
+  }
+
+  ws2812_spi_trigger_pattern(pattern, duration_ms);
+}
+
+uint8_t ws2812_spi_set_optic_reaction_source(uint8_t source_id)
+{
+  if (source_id > 31u) {
+    source_id = WS2812_OPTIC_REACTION_SOURCE_DISABLED;
+  }
+
+  s_optic_reaction_source_id = source_id;
+  s_optic_reaction_active_cached = 0u;
+  s_optic_reaction_remote_cached = 0u;
+  s_pattern_force_send = 1u;
+  return source_id;
+}
+
+uint8_t ws2812_spi_get_optic_reaction_source(void)
+{
+  return s_optic_reaction_source_id;
+}
+
+uint8_t ws2812_spi_get_optic_reaction_active(void)
+{
+  return s_optic_reaction_active_cached;
+}
+
+uint8_t ws2812_spi_get_optic_reaction_remote(void)
+{
+  return s_optic_reaction_remote_cached;
+}
+
+static void ws2812_refresh_optic_reaction_cache(void)
+{
+  enum { WS2812_OPTIC_STATUS_BIT = 0x20u };
+  uint8_t source_id = s_optic_reaction_source_id;
+  uint8_t status_bytes[32] = {0u};
+  uint32_t seen_mask = 0u;
+  vnd_lcd_sync_snapshot_t sync_snapshot;
+  uint8_t source_active = 0u;
+  uint8_t source_remote = 0u;
+
+  if (source_id > 31u) {
+    s_optic_reaction_active_cached = 0u;
+    s_optic_reaction_remote_cached = 0u;
+    return;
+  }
+
+  memset(&sync_snapshot, 0, sizeof(sync_snapshot));
+  vnd_get_lcd_sync_snapshot(&sync_snapshot);
+
+  if ((sync_snapshot.node_id_assigned != 0u) &&
+      (source_id == sync_snapshot.node_id)) {
+    source_active = (uint8_t)((optic_sensor_get_state() != 0u) ? 1u : 0u);
+  } else {
+    source_remote = 1u;
+    (void)rs485_status_get_snapshot(NULL,
+                                    NULL,
+                                    &seen_mask,
+                                    status_bytes,
+                                    (uint8_t)sizeof(status_bytes));
+    if ((seen_mask & (1u << source_id)) != 0u) {
+      /* A missing/stale peer is not an optical LOW update. Keep the last
+         accepted state across SYNC loss and change it only when a fresh status
+         byte for the configured source ID is actually present. */
+      source_active = (uint8_t)(
+          ((status_bytes[source_id] & WS2812_OPTIC_STATUS_BIT) != 0u) ? 1u : 0u);
+    } else {
+      source_active = s_optic_reaction_active_cached;
+    }
+  }
+
+  s_optic_reaction_active_cached = source_active;
+  s_optic_reaction_remote_cached = source_remote;
+}
+
 void ws2812_spi_service(uint32_t now_ms)
 {
   ws2812_pattern_t effective_pattern = s_requested_pattern;
-  uint8_t group_optic_active =
-      (uint8_t)((optic_any_sensor_active() != 0u) ? 1u : 0u);
   uint32_t status_key = 0u;
 
   ws2812_recover_stalled_transfer(now_ms);
-  s_group_optic_active_cached = group_optic_active;
+  ws2812_refresh_optic_reaction_cache();
 
   if ((s_override_pattern != WS2812_PATTERN_OFF) &&
       ((int32_t)(s_override_until_ms - now_ms) > 0)) {
@@ -1243,10 +1245,6 @@ void ws2812_spi_service(uint32_t now_ms)
     s_override_pattern = WS2812_PATTERN_OFF;
     s_override_until_ms = 0u;
     s_pattern_force_send = 1u;
-  }
-
-  if (group_optic_active == 0u) {
-    effective_pattern = WS2812_PATTERN_OFF;
   }
 
   if (effective_pattern != s_active_pattern) {

@@ -77,7 +77,7 @@ extern TIM_HandleTypeDef htim5;
 #endif
 
 #ifndef VND_LED_EVENTS_ENABLE
-#define VND_LED_EVENTS_ENABLE 0
+#define VND_LED_EVENTS_ENABLE 1
 #endif
 
 #ifndef VND_SYNC_DIAG_ENABLE
@@ -161,6 +161,9 @@ extern volatile uint8_t need_usb_status_refresh;
 #endif
 #ifndef VND_CMD_SET_LED_PATTERN
 #define VND_CMD_SET_LED_PATTERN 0x3Bu /* payload: u8 ws2812_pattern_t */
+#endif
+#ifndef VND_CMD_SET_OPTIC_REACTION_SOURCE
+#define VND_CMD_SET_OPTIC_REACTION_SOURCE 0x44u /* payload: u8 source_id 0..31, 0xFF=disabled */
 #endif
 #ifndef VND_CMD_SET_DET_ADC
 #define VND_CMD_SET_DET_ADC     0x3Cu /* payload: u8 bit0=DetADC1, bit1=DetADC2 */
@@ -259,10 +262,12 @@ extern volatile uint8_t need_usb_status_refresh;
 #define VND_USB_IN_ACTIVE_HARD_STALL_MS 1200u
 #endif
 #ifndef VND_USB_IN_ABORT_ACTIVE_STREAM
-/* A healthy frame completes far sooner than the hard-stall timeout. Once that
-   timeout expires there is no useful pending read left to preserve: recover the
-   endpoint locally instead of leaving the sensor in a permanent USB busy state. */
-#define VND_USB_IN_ABORT_ACTIVE_STREAM 1u
+/* An enabled Bulk IN endpoint is owned by the USB core and may legitimately
+   wait for host IN tokens for an arbitrary time. Aborting it tears down the
+   host's pending bulk read and creates the stream gap that the watchdog is
+   meant to avoid. Stale software-busy state is still recovered below once the
+   hardware endpoint is no longer enabled. */
+#define VND_USB_IN_ABORT_ACTIVE_STREAM 0u
 #endif
 #ifndef VND_USB_IN_ACTIVE_HOLD_LOG_MS
 #define VND_USB_IN_ACTIVE_HOLD_LOG_MS 1000u
@@ -524,6 +529,7 @@ static volatile uint32_t dbg_tx_force_idle_last_ms = 0;
 static volatile uint32_t dbg_tx_drop_recovery_count = 0;
 static volatile uint32_t dbg_tx_drop_recovery_last_ms = 0;
 static volatile uint32_t dbg_tx_drop_recovery_request_count = 0;
+static vnd_usb_recovery_diag_t dbg_tx_drop_recovery_diag = {0};
 static volatile uint32_t dbg_tx_active_hold_count = 0;
 static volatile uint32_t dbg_tx_active_hold_last_ms = 0;
 static volatile uint8_t  vnd_tx_drop_recovery_request = 0;
@@ -3374,8 +3380,11 @@ static inline void vnd_rollback_tx_start(void)
     vnd_clear_inflight_meta();
 }
 
-/* Унифицированная фиксация метаданных после успешного запуска передачи */
-static inline void vnd_tx_meta_after(uint8_t *buf, uint16_t len){
+/* Metadata must be visible before USBD_LL_Transmit can complete. Short service
+   packets may raise DataIn before the transmit call returns; pushing metadata
+   afterwards leaves an orphan entry and makes the watchdog report a false
+   recovery. On a synchronous submit failure the caller rolls this entry back. */
+static inline void vnd_tx_meta_before(uint8_t *buf, uint16_t len){
     uint8_t is_frame = 0, flags = 0; uint32_t seq_field = 0;
     if(len >= VND_FRAME_HDR_SIZE){
         const vnd_frame_hdr_t *h = (const vnd_frame_hdr_t*)buf;
@@ -3384,6 +3393,13 @@ static inline void vnd_tx_meta_after(uint8_t *buf, uint16_t len){
     /* Сохраняем последнюю отправку для fallback-классификации */
     last_tx_is_frame = is_frame; last_tx_flags = flags; last_tx_seq = seq_field;
     vnd_tx_meta_push(is_frame, flags, seq_field);
+}
+
+static inline void vnd_tx_meta_rollback_last(void)
+{
+    if(vnd_tx_meta_head == vnd_tx_meta_tail) return;
+    vnd_tx_meta_head = (uint8_t)((vnd_tx_meta_head + VND_TX_META_FIFO - 1u) % VND_TX_META_FIFO);
+    if(meta_push_total != 0u) meta_push_total--;
 }
 /* Нейтрализовать «застрявшую» запись в meta-FIFO (например, после ForceTxIdle),
    чтобы последующий TxCplt не принял её за реальный кадр и не исказил порядок. */
@@ -3440,6 +3456,12 @@ static uint8_t vnd_usb_in_active_abort_allowed(uint8_t ll_busy, uint32_t age_ms)
 #if VND_USB_IN_ABORT_ACTIVE_STREAM
     return (age_ms >= (uint32_t)VND_USB_IN_ACTIVE_HARD_STALL_MS) ? 1u : 0u;
 #else
+    /* Never repair application state while the USB class still owns a Bulk IN
+       transfer. Sampling DIEPCTL.EPENA here is not a safe completion test: the
+       bit clears before the pending DataIn interrupt has necessarily run, so a
+       main-loop sample can race a perfectly healthy completion and drop that
+       frame. A real disconnect/SetInterface path resets the class explicitly;
+       watchdog recovery below remains available once low-level busy is clear. */
     (void)age_ms;
     return 0u;
 #endif
@@ -3540,6 +3562,18 @@ static uint8_t vnd_drop_current_stream_unit(uint8_t slot, uint8_t flags)
     return 0u;
 }
 
+static uint8_t vnd_usb_in_recovery_reason_code(const char *reason)
+{
+    if(reason == NULL) return 0u;
+    if(strcmp(reason, "status") == 0) return 1u;
+    if(strcmp(reason, "busy") == 0) return 2u;
+    if(strcmp(reason, "no_progress") == 0) return 3u;
+    if(strcmp(reason, "latest_inflight") == 0) return 4u;
+    if(strcmp(reason, "lossless_a_wd") == 0) return 5u;
+    if(strcmp(reason, "lossless_b_wd") == 0) return 6u;
+    return 15u;
+}
+
 static void vnd_usb_in_drop_recover(const char *reason, uint32_t now_ms, uint32_t age_ms)
 {
     extern uint8_t USBD_VND_TxIsBusy(void);
@@ -3567,9 +3601,14 @@ static void vnd_usb_in_drop_recover(const char *reason, uint32_t now_ms, uint32_
     }
 
     uint8_t recoverable_before = vnd_usb_in_has_recoverable_state();
-    uint8_t need_force_idle = (ll_busy_before || ep_before || inflight_before || meta_before != 0u) ? 1u : 0u;
+    uint8_t stale_app_before = (ep_before || inflight_before || meta_before != 0u ||
+                                ch_before != 0xFFu || pend_before) ? 1u : 0u;
+    /* ForceTxIdle aborts and flushes the hardware endpoint. Application-only
+       bookkeeping must never be used as a reason to touch an already idle LL
+       endpoint; doing so can race the next healthy transfer. */
+    uint8_t need_force_idle = ll_busy_before ? 1u : 0u;
 
-    if(!need_force_idle && !recoverable_before){
+    if(!need_force_idle && !stale_app_before && !recoverable_before){
         vnd_tx_drop_recovery_request = 0u;
         return;
     }
@@ -3594,7 +3633,22 @@ static void vnd_usb_in_drop_recover(const char *reason, uint32_t now_ms, uint32_
     dbg_tx_drop_recovery_count++;
     dbg_tx_drop_recovery_last_ms = now_ms;
 
+    USBD_VND_InHwState hw_before;
+    USBD_VND_GetInHwState(&hw_before);
     uint8_t dropped = vnd_drop_current_stream_unit(slot, flags_before);
+
+    dbg_tx_drop_recovery_diag.age_ms = age_ms;
+    dbg_tx_drop_recovery_diag.hw_diepctl = hw_before.diepctl;
+    dbg_tx_drop_recovery_diag.tx_len = stuck_len;
+    dbg_tx_drop_recovery_diag.reason = vnd_usb_in_recovery_reason_code(reason);
+    dbg_tx_drop_recovery_diag.ll_busy = ll_busy_before;
+    dbg_tx_drop_recovery_diag.ep_busy = ep_before;
+    dbg_tx_drop_recovery_diag.inflight = inflight_before;
+    dbg_tx_drop_recovery_diag.sending_channel = ch_before;
+    dbg_tx_drop_recovery_diag.pending_b = pend_before;
+    dbg_tx_drop_recovery_diag.meta_depth = meta_before;
+    dbg_tx_drop_recovery_diag.stream_mode = vnd_stream_mode;
+    dbg_tx_drop_recovery_diag.dropped = dropped;
 
     vnd_tx_meta_head = vnd_tx_meta_tail = 0u;
     vnd_clear_inflight_meta();
@@ -3658,6 +3712,12 @@ static void vnd_usb_in_request_drop_recovery_from_status(uint32_t now_ms)
        vnd_usb_in_has_recoverable_state() &&
        vnd_tick_age_ms(now_ms, vnd_last_frame_txcplt_ms, &age_ms) &&
        age_ms > VND_USB_IN_NO_PROGRESS_MS){
+        if(!busyish){
+            /* READY/pending data is not a failed USB transfer. Let the stream
+               task submit it; never convert scheduler latency into a drop. */
+            vnd_tx_kick = 1u;
+            return;
+        }
         if(!vnd_usb_in_active_abort_allowed(ll_busy, age_ms)){
             vnd_usb_in_note_active_hold("status_no_progress", now_ms, age_ms);
             return;
@@ -3694,6 +3754,13 @@ static void vnd_usb_in_drop_recovery_poll(uint32_t now_ms)
     uint32_t age_ms = 0u;
 
     if(vnd_tx_drop_recovery_request){
+        /* A queued READY frame or pending B is work to schedule, not a stuck
+           transfer. Only stale in-flight bookkeeping may enter recovery. */
+        if(!busyish){
+            vnd_tx_drop_recovery_request = 0u;
+            vnd_tx_kick = 1u;
+            return;
+        }
         if(vnd_last_tx_start_ms != 0u){
             (void)vnd_tick_age_ms(now_ms, vnd_last_tx_start_ms, &age_ms);
         } else if(vnd_last_frame_txcplt_ms != 0u){
@@ -3725,6 +3792,12 @@ static void vnd_usb_in_drop_recovery_poll(uint32_t now_ms)
        vnd_usb_in_has_recoverable_state() &&
        vnd_tick_age_ms(now_ms, vnd_last_frame_txcplt_ms, &age_ms) &&
        age_ms > VND_USB_IN_NO_PROGRESS_MS){
+        if(!busyish){
+            /* Nothing is in flight. Keep the prepared pair and ask the normal
+               scheduler to submit it instead of manufacturing a sequence gap. */
+            vnd_tx_kick = 1u;
+            return;
+        }
         if(!vnd_usb_in_active_abort_allowed(ll_busy, age_ms)){
             vnd_usb_in_note_active_hold("no_progress", now_ms, age_ms);
             return;
@@ -4128,23 +4201,11 @@ static void vnd_sensor_event_poll(uint32_t now_ms, uint8_t force)
 
 static uint8_t vnd_optic_rpi_report_allowed(void)
 {
-    vnd_lcd_sync_snapshot_t lcd;
-
-    memset(&lcd, 0, sizeof(lcd));
-    vnd_get_lcd_sync_snapshot(&lcd);
-
-    /* OFF is an intentional standalone mode, not a synchronization failure.
-       In synchronized MASTER/SLAVE operation, never expose an active optical
-       sensor to RPI until the local synchronization state is trustworthy. */
-    if(lcd.raw_mode == VND_SYNC_MODE_OFF){
-        return 1u;
-    }
-    if((rs485_node_local_id_conflict() != 0u) ||
-       (rs485_multiple_master_detected() != 0u)){
-        return 0u;
-    }
-    return (uint8_t)(((lcd.sync_signal_alive != 0u) &&
-                      (lcd.sync_ok_visual != 0u)) ? 1u : 0u);
+    /* Optical input is a physical sensor state, not a synchronization-quality
+       estimate. Never turn a stable PD0 HIGH into a synthetic LOW when visual
+       SYNC lock, role diagnostics, or topology flags fluctuate. Conflicted or
+       stale remote IDs are already suppressed by rs485_status_get_snapshot(). */
+    return 1u;
 }
 
 static void vnd_optic_rpi_sanitize_queued_event(uint8_t *packet,
@@ -4538,14 +4599,15 @@ static void vnd_try_send_pending_event_from_task(void)
     dbg_event_tx_attempt++;
     vnd_event_inflight_type = event_type;
     vnd_event_inflight_len = (uint8_t)l;
+    vnd_tx_meta_before(vnd_event_tx_buf, l);
     if(USBD_VND_Transmit(&hUsbDeviceHS, vnd_event_tx_buf, l) == USBD_OK){
-        vnd_tx_meta_after(vnd_event_tx_buf, l);
         vnd_event_tail = (uint8_t)((vnd_event_tail + 1u) % VND_EVENT_QUEUE_LEN);
         if(vnd_event_count != 0u) vnd_event_count--;
         dbg_event_tx_ok++;
         dbg_event_last_tx_type = event_type;
         vnd_event_next_tx_ms = 0u;
     } else {
+        vnd_tx_meta_rollback_last();
         dbg_event_tx_fail++;
         vnd_event_next_tx_ms = now_ms + 20u;
         vnd_event_inflight_type = 0xFFu;
@@ -4570,12 +4632,13 @@ static void vnd_try_send_pending_status_from_task(void)
     vnd_status_permit_once = 1;
     vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = l; vnd_last_tx_start_ms = HAL_GetTick();
     vnd_mark_service_inflight();
+    vnd_tx_meta_before((uint8_t*)status_buf, l);
     if(USBD_VND_Transmit(&hUsbDeviceHS, (uint8_t*)status_buf, l) == USBD_OK){
-        vnd_tx_meta_after((uint8_t*)status_buf, l);
         VND_LOG("STAT_TX pending(task) len=%u depth=%u", l, (unsigned)vnd_tx_meta_depth());
         if(stop_request){ stop_stat_inflight = 1; }
         pending_status = 0;
     } else {
+        vnd_tx_meta_rollback_last();
         VND_LOG("STAT_TX pending(task) busy/fail");
         vnd_status_permit_once = 0;
         vnd_rollback_tx_start();
@@ -6107,8 +6170,10 @@ static USBD_StatusTypeDef __attribute__((unused)) vnd_transmit_frame(uint8_t *bu
     /* Зафиксируем точный тип текущего кадра в полёте */
     if(len >= VND_FRAME_HDR_SIZE){ const vnd_frame_hdr_t *hh = (const vnd_frame_hdr_t*)buf; if(hh->magic==0xA55A){ inflight_is_frame = 1; inflight_flags = hh->flags; inflight_seq = hh->seq; } else { inflight_is_frame = 0; inflight_flags = 0; inflight_seq = 0; } } else { inflight_is_frame = 0; inflight_flags = 0; inflight_seq = 0; }
     (void)flags; (void)seq_field; /* для сборок с отключёнными логами */
+    vnd_tx_meta_before(buf, len);
     USBD_StatusTypeDef rc = USBD_VND_Transmit(&hUsbDeviceHS, buf, len);
     if(rc != USBD_OK){
+        vnd_tx_meta_rollback_last();
         dbg_resend_blocked++;
         if(rc != USBD_BUSY){
             vnd_error_counter++;
@@ -6125,8 +6190,6 @@ static USBD_StatusTypeDef __attribute__((unused)) vnd_transmit_frame(uint8_t *bu
         vnd_tx_kick = 1;
     }
     else {
-        /* Фиксируем метаданные ТОЛЬКО после успешного запуска передачи, иначе не сместим FIFO зря */
-        vnd_tx_meta_after(buf, len);
         if(is_frame){
             const vnd_frame_hdr_t *lh = (const vnd_frame_hdr_t*)buf;
             (void)lh;
@@ -6315,10 +6378,10 @@ static void __attribute__((unused)) vnd_emergency_keepalive(uint32_t now_ms)
     h->magic = 0xA55A; h->ver = 0x01; h->flags = 0x80; h->seq = 0; h->timestamp = HAL_GetTick(); h->total_samples = 8;
     for(uint16_t i=0;i<8;i++){ tbuf[32+2*i]=(uint8_t)i; tbuf[32+2*i+1]=(uint8_t)(i>>8); }
     vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = sizeof(tbuf); vnd_last_tx_start_ms = HAL_GetTick();
+    vnd_tx_meta_before(tbuf, (uint16_t)sizeof(tbuf));
     if(USBD_VND_Transmit(&hUsbDeviceHS, tbuf, sizeof(tbuf)) == USBD_OK){
-        vnd_tx_meta_after(tbuf, (uint16_t)sizeof(tbuf));
         test_in_flight = 1; VND_LOG("EMERG_TEST_TX (no TXCPLT yet) depth=%u", (unsigned)vnd_tx_meta_depth());
-    } else { vnd_tx_ready = 1; vnd_ep_busy = 0; VND_LOG("EMERG_TEST_BUSY"); }
+    } else { vnd_tx_meta_rollback_last(); vnd_tx_ready = 1; vnd_ep_busy = 0; VND_LOG("EMERG_TEST_BUSY"); }
 }
 
 /* Отправка единственного тестового кадра (строго из таска) */
@@ -6344,13 +6407,14 @@ static void vnd_try_send_test_from_task(void)
     h->magic = 0xA55A; h->ver = 0x01; h->flags = 0x80; h->seq = 0; h->timestamp = HAL_GetTick(); h->total_samples = 8;
     for(uint16_t i=0;i<8;i++){ tbuf[32+2*i]=(uint8_t)i; tbuf[32+2*i+1]=(uint8_t)(i>>8); }
     vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = sizeof(tbuf); vnd_last_tx_start_ms = HAL_GetTick();
+    vnd_tx_meta_before(tbuf, (uint16_t)sizeof(tbuf));
     if(USBD_VND_Transmit(&hUsbDeviceHS, tbuf, sizeof(tbuf)) == USBD_OK){
-        vnd_tx_meta_after(tbuf, (uint16_t)sizeof(tbuf));
         test_in_flight = 1;
         VND_LOG("TEST_TX from task depth=%u", (unsigned)vnd_tx_meta_depth());
         /* Не пытаемся сразу слать рабочий кадр — ждём завершение TEST,
            чтобы не попасть на BUSY/ZLP гонки. Далее обычная логика отправит A/B. */
     } else {
+        vnd_tx_meta_rollback_last();
         VND_LOG("TEST_TX busy/fail");
         vnd_tx_ready = 1; vnd_ep_busy = 0;
     }
@@ -6368,13 +6432,13 @@ void __attribute__((unused)) vnd_diag_send64_once(void)
     memcpy(diag, "STAT", 4); /* чтобы на хосте легко найти */
     diag[4] = 0x42;           /* тестовая версия */
     vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = sizeof(diag); vnd_last_tx_start_ms = HAL_GetTick();
+    vnd_tx_meta_before(diag, (uint16_t)sizeof(diag));
     USBD_StatusTypeDef rc = USBD_VND_Transmit(&hUsbDeviceHS, diag, (uint16_t)sizeof(diag));
     if(rc == USBD_OK){
-        /* Чтобы USBD_VND_TxCplt() не получил пустую мету — положим служебную запись */
-        vnd_tx_meta_after(diag, (uint16_t)sizeof(diag)); /* is_frame=0 */
         sent = 1;
         VND_LOG("DIAG64 rc=OK");
     } else {
+        vnd_tx_meta_rollback_last();
         VND_LOG("DIAG64 rc=%d", rc);
         vnd_tx_ready = 1; vnd_ep_busy = 0; /* откатим флаги при неудаче */
     }
@@ -7500,6 +7564,7 @@ void USBD_VND_TxCplt(void)
 void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
 {
     if(!len) return;
+    dynamic_led_note_usb_exchange();
     uint8_t cmd = data[0];
     static uint32_t rcv_count = 0;
     rcv_count++;
@@ -7829,17 +7894,18 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             }
             if(!vnd_ep_busy)
             {
-                vnd_status_permit_once = 1;
-                uint16_t l = vnd_build_status((uint8_t*)status_buf, sizeof(status_buf));
-                if(l)
-                {
-                    vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = l; vnd_last_tx_start_ms = HAL_GetTick();
-                    vnd_mark_service_inflight();
-                    if(USBD_VND_Transmit(&hUsbDeviceHS, (uint8_t*)status_buf, l) == USBD_OK){
-                        vnd_tx_meta_after((uint8_t*)status_buf, l);
-                        VND_LOG("STAT_TX req len=%u", l);
-                    } else {
-                        VND_LOG("STAT_BUSY_FAIL");
+                    vnd_status_permit_once = 1;
+                    uint16_t l = vnd_build_status((uint8_t*)status_buf, sizeof(status_buf));
+                    if(l)
+                    {
+                        vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = l; vnd_last_tx_start_ms = HAL_GetTick();
+                        vnd_mark_service_inflight();
+                        vnd_tx_meta_before((uint8_t*)status_buf, l);
+                        if(USBD_VND_Transmit(&hUsbDeviceHS, (uint8_t*)status_buf, l) == USBD_OK){
+                            VND_LOG("STAT_TX req len=%u", l);
+                        } else {
+                            vnd_tx_meta_rollback_last();
+                            VND_LOG("STAT_BUSY_FAIL");
                         vnd_status_permit_once = 0;
                         vnd_rollback_tx_start();
                     }
@@ -7931,6 +7997,17 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
         }
         break;
 
+        case VND_CMD_SET_OPTIC_REACTION_SOURCE:
+        {
+            if(len >= 2){
+                uint8_t applied =
+                    ws2812_spi_set_optic_reaction_source(data[1]);
+                cdc_logf("EVT OPTIC_REACTION_SOURCE=%u",
+                         (unsigned)applied);
+            }
+        }
+        break;
+
         case VND_CMD_SET_DET_ADC:
         {
             if(len >= 2){
@@ -7993,10 +8070,11 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     vnd_last_tx_len = l;
                     vnd_last_tx_start_ms = HAL_GetTick();
                     vnd_mark_service_inflight();
+                    vnd_tx_meta_before((uint8_t*)status_buf, l);
                     if (USBD_VND_Transmit(&hUsbDeviceHS, (uint8_t*)status_buf, l) == USBD_OK) {
-                        vnd_tx_meta_after((uint8_t*)status_buf, l);
                         VND_LOG("RID1_TX req len=%u", l);
                     } else {
+                        vnd_tx_meta_rollback_last();
                         VND_LOG("RID1_BUSY_FAIL");
                         vnd_rollback_tx_start();
                     }
@@ -8009,28 +8087,18 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
 #if VND_LED_EVENTS_ENABLE
         {
             if (len >= 4) {
-                uint8_t event = data[1];
+                uint8_t pattern_id = data[1];
                 uint16_t duration_ms = (uint16_t)(data[2] | (data[3] << 8));
-                ws2812_event_t led_event = WS2812_EVENT_NONE;
-
-                if (event == VND_LED_EVENT_CHANNEL_B) {
-                    led_event = WS2812_EVENT_CHANNEL_B;
-                } else if (event == VND_LED_EVENT_CHANNEL_A) {
-                    led_event = WS2812_EVENT_CHANNEL_A;
-                } else if (event == VND_LED_EVENT_BOTH) {
-                    led_event = WS2812_EVENT_CHANNEL_BOTH;
-                } else if (event == VND_LED_EVENT_SPLIT_IN) {
-                    led_event = WS2812_EVENT_SPLIT_IN;
-                } else if (event == VND_LED_EVENT_SPLIT_OUT) {
-                    led_event = WS2812_EVENT_SPLIT_OUT;
-                }
 
                 if (duration_ms == 0u) {
                     duration_ms = 1600u;
                 }
 
-                ws2812_spi_trigger_event(led_event, duration_ms);
-                cdc_logf("EVT LED_EVENT event=%u dur=%u", (unsigned)event, (unsigned)duration_ms);
+                if (pattern_id >= (uint8_t)WS2812_PATTERN_COUNT) {
+                    pattern_id = (uint8_t)WS2812_PATTERN_OFF;
+                }
+                ws2812_spi_trigger_pattern((ws2812_pattern_t)pattern_id, duration_ms);
+                cdc_logf("EVT LED_EVENT pattern=%u dur=%u", (unsigned)pattern_id, (unsigned)duration_ms);
             }
         }
 #endif
@@ -8141,9 +8209,10 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                 if(l && !vnd_ep_busy && !vnd_inflight){
                     vnd_tx_ready = 0; vnd_ep_busy = 1; vnd_last_tx_len = l; vnd_last_tx_start_ms = HAL_GetTick();
                     vnd_mark_service_inflight();
+                    vnd_tx_meta_before(cfg, l);
                     if(USBD_VND_Transmit(&hUsbDeviceHS, cfg, l) == USBD_OK){
-                        vnd_tx_meta_after(cfg, l);
                     } else {
+                        vnd_tx_meta_rollback_last();
                         vnd_rollback_tx_start();
                     }
                 }
@@ -8477,6 +8546,12 @@ uint32_t vnd_get_stream_recovery_count(void)
 uint32_t vnd_get_stream_force_idle_count(void)
 {
     return dbg_tx_force_idle_count;
+}
+
+void vnd_get_stream_recovery_diag(vnd_usb_recovery_diag_t *out)
+{
+    if(out == NULL) return;
+    *out = dbg_tx_drop_recovery_diag;
 }
 
 /* Общее число переданных байт (все передачи) */

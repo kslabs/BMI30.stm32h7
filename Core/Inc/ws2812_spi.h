@@ -17,24 +17,25 @@ extern "C" {
 
 #define WS2812_LED_COUNT (WS2812_ONBOARD_LED_COUNT + WS2812_STRIP_LED_COUNT)
 
+#define WS2812_OPTIC_REACTION_SOURCE_DISABLED 0xFFu
+
 typedef enum {
   WS2812_PATTERN_OFF = 0,
-  WS2812_PATTERN_IDLE_BREATHE,
-  WS2812_PATTERN_STREAMING,
-  WS2812_PATTERN_SYNC_PULSE,
-  WS2812_PATTERN_UART_RX,
-  WS2812_PATTERN_TUNE,
-  WS2812_PATTERN_RECOVERY,
-  WS2812_PATTERN_HARD_RESET,
-  WS2812_PATTERN_EVENT_B_UP,
-  WS2812_PATTERN_EVENT_A_DOWN,
-  WS2812_PATTERN_EVENT_BOTH_ALT,
-  WS2812_PATTERN_EVENT_SPLIT_IN,
-  WS2812_PATTERN_EVENT_SPLIT_OUT,
-  WS2812_PATTERN_TEST_DRIP,
-  WS2812_PATTERN_TEST_SCOPE_RGB,
-  WS2812_PATTERN_TEST_BLUE,
-  WS2812_PATTERN_TEST_COLOR_CYCLE,
+  WS2812_PATTERN_UP_RED_1,
+  WS2812_PATTERN_UP_RED_2,
+  WS2812_PATTERN_UP_YELLOW_1,
+  WS2812_PATTERN_UP_YELLOW_2,
+  WS2812_PATTERN_DOWN_RED_1,
+  WS2812_PATTERN_DOWN_RED_2,
+  WS2812_PATTERN_DOWN_YELLOW_1,
+  WS2812_PATTERN_DOWN_YELLOW_2,
+  WS2812_PATTERN_IN_RED_1,
+  WS2812_PATTERN_IN_RED_2,
+  WS2812_PATTERN_IN_YELLOW_1,
+  WS2812_PATTERN_IN_YELLOW_2,
+  WS2812_PATTERN_OUT_RED,
+  WS2812_PATTERN_OUT_YELLOW,
+  WS2812_PATTERN_UA_DEMO,
   WS2812_PATTERN_COUNT
 } ws2812_pattern_t;
 
@@ -60,7 +61,13 @@ uint32_t ws2812_spi_get_phase_start_delay_max_us(void);
 uint32_t ws2812_spi_get_wire_time_us(void);
 void ws2812_spi_set_pattern(ws2812_pattern_t pattern);
 ws2812_pattern_t ws2812_spi_get_pattern(void);
+ws2812_pattern_t ws2812_spi_get_active_pattern(void);
+void ws2812_spi_trigger_pattern(ws2812_pattern_t pattern, uint16_t duration_ms);
 void ws2812_spi_trigger_event(ws2812_event_t event, uint16_t duration_ms);
+uint8_t ws2812_spi_set_optic_reaction_source(uint8_t source_id);
+uint8_t ws2812_spi_get_optic_reaction_source(void);
+uint8_t ws2812_spi_get_optic_reaction_active(void);
+uint8_t ws2812_spi_get_optic_reaction_remote(void);
 void ws2812_spi_service(uint32_t now_ms);
 void ws2812_spi_prepare_phase_frame(void);
 void ws2812_spi_on_phase_start(uint32_t phase_start_cycles);

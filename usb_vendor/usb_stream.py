@@ -50,6 +50,7 @@ CMD_SET_OPTIC_HOLD = 0x39
 CMD_GET_LCD_STATUS = 0x38
 CMD_GET_DC_CONFIG = 0x3A
 CMD_SET_LED_PATTERN = 0x3B
+CMD_SET_OPTIC_REACTION_SOURCE = 0x44
 CMD_SET_ALT = 0x31
 CMD_HOST_RX_ACK = 0x36
 CMD_HOST_RX_CLEAR = 0x37
@@ -79,6 +80,7 @@ _CMD_NAMES = {
     CMD_SET_OPTIC_HOLD: "SET_OPTIC_HOLD",
     CMD_GET_DC_CONFIG: "GET_DC_CONFIG",
     CMD_SET_LED_PATTERN: "SET_LED_PATTERN",
+    CMD_SET_OPTIC_REACTION_SOURCE: "SET_OPTIC_REACTION_SOURCE",
     CMD_HOST_RX_ACK: "HOST_RX_ACK",
     CMD_HOST_RX_CLEAR: "HOST_RX_CLEAR",
     CMD_SOFT_RESET: "SOFT_RESET",
@@ -397,6 +399,16 @@ class USBStream:
 
     def set_led_pattern(self, pattern_id: int):
         self.send_cmd(CMD_SET_LED_PATTERN, bytes([int(pattern_id) & 0xFF]))
+
+    def set_optic_reaction_source(self, source_id=None):
+        """Select an additional remote optic source; local indication always remains."""
+        if source_id is None:
+            value = 0xFF
+        else:
+            value = int(source_id)
+            if value < 0 or value > 31:
+                raise ValueError(f"optic reaction source must be 0..31 or None, got {value}")
+        self.send_cmd(CMD_SET_OPTIC_REACTION_SOURCE, bytes([value]))
 
     def set_dc_adapt(self, enabled: bool):
         """Quick DC learning toggle via CMD_SET_DC_ADAPT (0x1B).

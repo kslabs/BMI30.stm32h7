@@ -587,7 +587,8 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
                  req->bRequest == VND_CMD_SET_TX_ENABLE || req->bRequest == VND_CMD_SET_OPTIC_POWER ||
                  req->bRequest == VND_CMD_SET_LED_PATTERN || req->bRequest == VND_CMD_SET_DET_ADC ||
                  req->bRequest == VND_CMD_SET_SYNC_MODE || req->bRequest == VND_CMD_SET_RS485_ID ||
-                 req->bRequest == VND_CMD_SET_LCD_ROLE_OVERLAY) ) {
+                 req->bRequest == VND_CMD_SET_LCD_ROLE_OVERLAY ||
+                 req->bRequest == VND_CMD_SET_OPTIC_REACTION_SOURCE) ) {
       /* Альтернативный путь: принять параметр через wValue (без data stage) */
       uint8_t tmp[2];
       tmp[0] = (uint8_t)req->bRequest;
@@ -630,7 +631,8 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
                  req->bRequest == VND_CMD_SET_DET_ADC || req->bRequest == VND_CMD_SET_DC_SPEED ||
                  req->bRequest == VND_CMD_SET_RS485_IP || req->bRequest == VND_CMD_SET_SYNC_MODE ||
                  req->bRequest == VND_CMD_SET_RS485_ID || req->bRequest == VND_CMD_SET_RPI_INFO ||
-                 req->bRequest == VND_CMD_SET_LCD_ROLE_OVERLAY) ) {
+                 req->bRequest == VND_CMD_SET_LCD_ROLE_OVERLAY ||
+                 req->bRequest == VND_CMD_SET_OPTIC_REACTION_SOURCE) ) {
       /* Принимаем небольшие конфиги по control OUT с телом данных, доставляем в Vendor как будто по Bulk OUT */
       hcdc->CmdOpCode = req->bRequest;
       hcdc->CmdLength = (uint8_t)req->wLength;
@@ -831,7 +833,8 @@ static uint8_t USBD_CDCVND_EP0_RxReady(USBD_HandleTypeDef *pdev)
         op == VND_CMD_SET_RS485_ID ||
         op == VND_CMD_SET_RPI_INFO ||
         op == VND_CMD_SET_SYNC_MODE ||
-        op == VND_CMD_SET_LCD_ROLE_OVERLAY) {
+        op == VND_CMD_SET_LCD_ROLE_OVERLAY ||
+        op == VND_CMD_SET_OPTIC_REACTION_SOURCE) {
       uint32_t tot = (uint32_t)len + 1U;
       if (tot > sizeof(vnd_rx_buf)) tot = sizeof(vnd_rx_buf); /* страхуемся от выхода за границы */
       vnd_rx_buf[0] = op;

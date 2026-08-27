@@ -26,12 +26,12 @@
 | 0x32 | TOGGLE_TIM2CH3_INV | нет | Инверсия TIM2 CH3 |
 | 0x33 | SET_TX_ENABLE | u8 0/1 | Host-request для 200 Hz marker/TX; при stream=1 состояние применяется непрерывно |
 | 0x34 | SET_OPTIC_POWER | u8 0..255 | Настройка оптики |
-| 0x35 | LED_EVENT | u8 event, u16 ms | Временный LED event |
+| 0x35 | LED_EVENT | u8 pattern_id, u16 ms | Явный временный запуск паттерна; затем OFF |
 | 0x36 | HOST_RX_ACK | u32 total_frames | Heartbeat от хоста |
 | 0x37 | HOST_RX_CLEAR | нет | Сброс только heartbeat; TX request не меняется |
 | 0x39 | SET_OPTIC_HOLD | u16 ds (legacy u8 s) | Время удержания opt active |
 | 0x3A | GET_DC_CONFIG | нет | DCCF через IN |
-| 0x3B | SET_LED_PATTERN | u8 pattern | Базовый LED pattern |
+| 0x3B | SET_LED_PATTERN | u8 pattern | Сохранить выбранный ID без включения ленты |
 | 0x3C | SET_DET_ADC | u8 bits bit0=DetADC1 bit1=DetADC2 | Локальные DetADC-биты RS485 status |
 | 0x3D | SET_RS485_ID | u8 node_id | Постоянный локальный ID 0..31, независимый от роли |
 | 0x3E | SET_RS485_IP | u8 ip[4] a.b.c.d | Локальный IPv4 для RS485 identity |
@@ -40,6 +40,7 @@
 | 0x41 | SET_LCD_ROLE_OVERLAY | u8 enable, опц. u8 period_s,duration_s | Большой LCD `Mxx`/`Sxx`, 3..5 s |
 | 0x42 | SET_RPI_INFO | u16 rpi_number LE + IPv4[4] | Фоновые данные локального RPI |
 | 0x43 | GET_RS485_SENSOR | нет в bulk; используйте EP0 | SNS1 |
+| 0x44 | SET_OPTIC_REACTION_SOURCE | u8 source_id: 0..31 или 0xFF | Дополнительный удалённый источник системного WS2812; 0xFF=удалённая реакция выключена |
 
 ## 2) Vendor EP0 Control
 
@@ -62,10 +63,10 @@
 | 0x20 | START_STREAM | нет |
 | 0x21 | STOP_STREAM | нет |
 | 0x3F | REQUEST_RS485_IDENT | нет |
-| 0x13,0x14,0x18,0x19,0x1D,0x33,0x34,0x3B,0x3C,0x3D,0x41 | через wValue | u8; `0x1D MASTER/SLAVE` здесь запрещены (STALL) |
+| 0x13,0x14,0x18,0x19,0x1D,0x33,0x34,0x3B,0x3C,0x3D,0x41,0x44 | через wValue | u8; `0x1D MASTER/SLAVE` здесь запрещены (STALL) |
 | 0x17 | через wValue | u16 |
 | 0x39 | через wValue | u16 hold_ds |
-| 0x13,0x14,0x18,0x19,0x1D,0x33,0x34,0x39,0x3B,0x3C,0x1F,0x3D,0x3E,0x41,0x42 | data stage | как в payload команды |
+| 0x13,0x14,0x18,0x19,0x1D,0x33,0x34,0x39,0x3B,0x3C,0x1F,0x3D,0x3E,0x41,0x42,0x44 | data stage | как в payload команды |
 
 ## 3) Форматы данных
 
@@ -80,22 +81,35 @@
 RS485 optic/LED:
 - `optic_active = PD0 || hold_after_last_high`: `PD0=1` немедленно включает и
   повторно запускает `optic_hold_ds`; `PD0=0` таймер не запускает и не продлевает.
-- Один удержанный `optic_active` используется системным LED, USB, RS485 и картой группы.
+- Один удержанный `optic_active` каждого устройства используется USB, RS485 и картой группы.
 - Master передает свой `optic_active` в `master_status0 bit5`; bits0..4 этого байта остаются selector slave-слота.
 - Host на slave читает master optic напрямую из `STAT v5`: `flags_runtime & 0x0080`.
-- Slave добавляет свежий master status в `sync_status_bytes[master_device_id]` и использует
-  `master_status0 bit5` для onboard/system address WS2812. Master меняется с синего на
-  зеленый при локальном или свежем групповом `optic_active`; slave при своем локальном
-  `optic_active=1` меняется с белого на желтый,
-  а при master `optic_active=1` без локального срабатывания — с белого на
-  магента/фиолетовый. Optic меняет только цвет; при включенном TX независимый
-  TX-breathe продолжает модулировать яркость.
+- Системный WS2812 всегда сохраняет индикацию собственного фотоприёмника локальным
+  цветом (slave жёлтый, master зелёный). Команда `0x44 SET_OPTIC_REACTION_SOURCE`
+  выбирает только дополнительный соседний device ID: он отображается
+  магента/фиолетовым, когда локальный датчик не активен. `0xFF` отключает только
+  удалённую реакцию. Роль master не имеет специального значения. Optic меняет
+  только цвет; при включенном TX независимый TX-breathe продолжает модулировать яркость.
 - Изменение controlled sensor немедленно ставит `EVT1 type=0x14 SENSOR_MAP`
   (прямая карта ID 0..31) и совместимый 136-байтовый `STAT v5` (ID 1..31).
+- Optic-биты не gated по `sync_ok_visual`/`sync_locked`: постоянный физический
+  `PD0=1` всегда передаётся RSP как `optic_active=1`. SYNC-ошибки сообщаются
+  отдельными флагами и не должны вызывать мигание оптического индикатора.
+- При исчезновении выбранного ID из `seen_mask` RSP сохраняет последнее optic-
+  состояние: отсутствие свежего status byte не равно `optic=0`. Изменение
+  принимается только из нового статуса присутствующего ID.
+- `sync_ok_visual` является устойчивым флагом после гистерезиса LCD. Строгий
+  мгновенный `phase_locked` предназначен для диагностики и не управляет UI.
 - TX200 — persistent host-request: `physical_tx = tx_request AND streaming`. `STOP_STREAM` гасит физические выходы, не стирая request; START восстанавливает их. Краткие пропуски SOF/`HOST_RX_ACK` TX не дёргают.
 - ADC/DMA работает непрерывно и не ждёт RPI/USB. При заполнении rolling FIFO удаляется самая старая непрочитанная пара и увеличивается `adc_drop`; `START_STREAM`/`STOP_STREAM`, USB reconnect и назначение роли ADC не останавливают.
 - Оптический 38 kHz carrier не gated по приемнику: `SET_OPTIC_POWER=255` задает максимум для проверки фотоприемника.
-- Внешняя WS2812-лента optic-gated: `SET_LED_PATTERN`/`LED_EVENT` сохраняют желаемое состояние, но физический вывод разрешен только при локальном или свежем принятом по RS485 `optic_active`; когда все optic bits = 0/устарели, внешняя лента = OFF.
+- Внешняя WS2812-лента M10 не запускается ни локальным, ни соседним `optic_active`: Raspberry применяет правила `Led/adrLed/sound`, а STM32 включает её только по явному `LED_EVENT`. `SET_LED_PATTERN` сам не светит.
+- RSP обязан при каждом подключении и изменении настроек отправить на целевую плату
+  `SET_OPTIC_REACTION_SOURCE`: выбранный соседний ID при разрешённой удалённой
+  реакции или `0xFF`, если она отключена. Локальная жёлтая/зелёная индикация при
+  этом остаётся. При срабатывании того же ID и разрешённом
+  `adrLed` RSP отдельно отправляет `LED_EVENT`; поэтому системный LED и внешняя лента
+  показывают одно настроенное событие, но только внешняя лента рисует направленный паттерн.
 - Без USB Vendor bench-контроль выполняется COM-командами UART: `TX200 1`, `TX200 0`, `OPTP 255`, `OPTH 0..600`, `OPTIC`. `OPTIC` печатает `tx200`, `tx_req`, `tx_cmd_count`, `tx_cmd_val`, `rx`, `activity_hold`, `pd0`, `local_status`, `master_status`, `master_flags`, `ws_busy/ws_frames/ws_recoveries`, `usb_frame_age_ms/usb_txcplt/usb_recovery/usb_force_idle/usb_error` и ADC-поля `adc_wr/adc_rd/adc_drop/adc_pause/adc_pub_age_ms/adc_restart/adc_restart_reason/adc_restart_ndtr/adc_restart_age_ms/adc_tc_rearm_fail`; `pd0` — сырой вход, `rx`, `activity_hold` и bit5 (`0x20`) — единый удержанный `optic_active`.
 
 RS485 role assignment:

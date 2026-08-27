@@ -50,6 +50,12 @@
 #define MAIN_WS2812_STATUS_ENABLE 1
 #endif
 
+/* PC13 pattern cycling is a bench-only aid. It must never generate local
+   addressable-LED events in a production unit. */
+#ifndef MAIN_WS2812_TEST_BUTTON_ENABLE
+#define MAIN_WS2812_TEST_BUTTON_ENABLE 0
+#endif
+
 /* Глобальные хэндлы периферии (стандарт для CubeMX, ранее отсутствовали в файле) */
 ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
@@ -1445,6 +1451,7 @@ static void uart1_raw_print_optic_state(void)
 {
   adc_stream_debug_t adc_dbg;
   vnd_change_event_diag_t usb_event_diag;
+  vnd_usb_recovery_diag_t usb_recovery_diag;
   uint8_t local_status = 0u;
   uint8_t active_status_count = 0u;
   uint8_t master_status = 0u;
@@ -1478,8 +1485,10 @@ static void uart1_raw_print_optic_state(void)
 
   memset(&adc_dbg, 0, sizeof(adc_dbg));
   memset(&usb_event_diag, 0, sizeof(usb_event_diag));
+  memset(&usb_recovery_diag, 0, sizeof(usb_recovery_diag));
   adc_stream_get_debug(&adc_dbg);
   vnd_get_change_event_diag(&usb_event_diag);
+  vnd_get_stream_recovery_diag(&usb_recovery_diag);
   if (adc_dbg.last_publish_ms != 0u) {
     adc_publish_age_ms = now_ms - adc_dbg.last_publish_ms;
   }
@@ -1603,6 +1612,30 @@ static void uart1_raw_print_optic_state(void)
   uart1_raw_write_u32_dec(vnd_get_stream_recovery_count());
   uart1_raw_write_str(" usb_force_idle=");
   uart1_raw_write_u32_dec(vnd_get_stream_force_idle_count());
+  uart1_raw_write_str(" usb_rec_reason=");
+  uart1_raw_write_u32_dec((uint32_t)usb_recovery_diag.reason);
+  uart1_raw_write_str(" usb_rec_age_ms=");
+  uart1_raw_write_u32_dec(usb_recovery_diag.age_ms);
+  uart1_raw_write_str(" usb_rec_ll=");
+  uart1_raw_write_u32_dec((uint32_t)usb_recovery_diag.ll_busy);
+  uart1_raw_write_str(" usb_rec_ep=");
+  uart1_raw_write_u32_dec((uint32_t)usb_recovery_diag.ep_busy);
+  uart1_raw_write_str(" usb_rec_infl=");
+  uart1_raw_write_u32_dec((uint32_t)usb_recovery_diag.inflight);
+  uart1_raw_write_str(" usb_rec_ch=");
+  uart1_raw_write_u32_dec((uint32_t)usb_recovery_diag.sending_channel);
+  uart1_raw_write_str(" usb_rec_pb=");
+  uart1_raw_write_u32_dec((uint32_t)usb_recovery_diag.pending_b);
+  uart1_raw_write_str(" usb_rec_meta=");
+  uart1_raw_write_u32_dec((uint32_t)usb_recovery_diag.meta_depth);
+  uart1_raw_write_str(" usb_rec_mode=");
+  uart1_raw_write_u32_dec((uint32_t)usb_recovery_diag.stream_mode);
+  uart1_raw_write_str(" usb_rec_drop=");
+  uart1_raw_write_u32_dec((uint32_t)usb_recovery_diag.dropped);
+  uart1_raw_write_str(" usb_rec_len=");
+  uart1_raw_write_u32_dec((uint32_t)usb_recovery_diag.tx_len);
+  uart1_raw_write_str(" usb_rec_hwctl=0x");
+  uart1_raw_write_u32_hex(usb_recovery_diag.hw_diepctl);
   uart1_raw_write_str(" usb_error=");
   uart1_raw_write_u32_dec(vnd_get_last_error());
   uart1_raw_write_str(" power=");
@@ -1629,6 +1662,18 @@ static void uart1_raw_print_optic_state(void)
   uart1_raw_write_u8_hex(local_status);
   uart1_raw_write_str(" local_optic_bit=");
   uart1_raw_write_u32_dec((uint32_t)(((local_status & RS485_STATUS_OPTIC_BIT) != 0u) ? 1u : 0u));
+  uart1_raw_write_str(" optic_src=");
+  uart1_raw_write_u32_dec((uint32_t)ws2812_spi_get_optic_reaction_source());
+  uart1_raw_write_str(" optic_src_active=");
+  uart1_raw_write_u32_dec((uint32_t)ws2812_spi_get_optic_reaction_active());
+  uart1_raw_write_str(" optic_src_remote=");
+  uart1_raw_write_u32_dec((uint32_t)ws2812_spi_get_optic_reaction_remote());
+  uart1_raw_write_str(" led_pattern=");
+  uart1_raw_write_u32_dec((uint32_t)dynamic_led_get_pattern());
+  uart1_raw_write_str(" led_active=");
+  uart1_raw_write_u32_dec((uint32_t)ws2812_spi_get_active_pattern());
+  uart1_raw_write_str(" led_startup=");
+  uart1_raw_write_u32_dec((uint32_t)dynamic_led_is_startup_demo_active());
   uart1_raw_write_str(" master_status=0x");
   uart1_raw_write_u8_hex(master_status);
   uart1_raw_write_str(" master_age_ms=");
@@ -1713,7 +1758,10 @@ static volatile uint32_t uart1_led_off_tick = 0u;
 static uint8_t uart1_rx_byte = 0u;
 static volatile uint32_t uart1_rx_count = 0u;
 static volatile uint32_t uart1_last_rx_ms = 0u;
-static volatile ws2812_pattern_t g_ws2812_test_pattern = WS2812_PATTERN_OFF;
+/* Show the Ukrainian-flag demo immediately after STM32 startup. The first
+   valid USB Vendor command hands control to the Raspberry. */
+static volatile ws2812_pattern_t g_ws2812_test_pattern = WS2812_PATTERN_UA_DEMO;
+static volatile uint8_t g_ws2812_startup_demo_active = 1u;
 #define UART1_RX_RING_SZ 128
 static uint8_t uart1_rx_ring[UART1_RX_RING_SZ];
 static volatile uint16_t uart1_rx_ring_wr = 0u;
@@ -1743,6 +1791,10 @@ uint8_t dynamic_led_set_pattern(uint8_t pattern_id)
     pattern = WS2812_PATTERN_OFF;
   }
 
+  /* 0x3B transfers the selected pattern ID. Selection alone is not an output
+     event: Raspberry applies its Led/adrLed/sound rules and uses 0x35 only
+     when addressable indication is actually allowed. */
+  g_ws2812_startup_demo_active = 0u;
   g_ws2812_test_pattern = pattern;
   return (uint8_t)g_ws2812_test_pattern;
 #else
@@ -1755,6 +1807,21 @@ uint8_t dynamic_led_set_pattern(uint8_t pattern_id)
 uint8_t dynamic_led_get_pattern(void)
 {
   return (uint8_t)g_ws2812_test_pattern;
+}
+
+void dynamic_led_note_usb_exchange(void)
+{
+  if (g_ws2812_startup_demo_active != 0u) {
+    g_ws2812_startup_demo_active = 0u;
+    if (g_ws2812_test_pattern == WS2812_PATTERN_UA_DEMO) {
+      g_ws2812_test_pattern = WS2812_PATTERN_OFF;
+    }
+  }
+}
+
+uint8_t dynamic_led_is_startup_demo_active(void)
+{
+  return g_ws2812_startup_demo_active;
 }
 
 uint8_t optic_sensor_get_state(void)
@@ -2145,24 +2212,36 @@ static const char *ws2812_test_pattern_name(ws2812_pattern_t pattern)
   switch (pattern) {
     case WS2812_PATTERN_OFF:
       return "OFF";
-    case WS2812_PATTERN_TEST_DRIP:
-      return "DRIP";
-    case WS2812_PATTERN_EVENT_B_UP:
-      return "RED_UP";
-    case WS2812_PATTERN_EVENT_A_DOWN:
-      return "RED_DOWN";
-    case WS2812_PATTERN_EVENT_BOTH_ALT:
-      return "RED_DOWN_UP_ALT";
-    case WS2812_PATTERN_EVENT_SPLIT_IN:
-      return "RED_SPLIT_IN";
-    case WS2812_PATTERN_EVENT_SPLIT_OUT:
-      return "RED_SPLIT_OUT";
-    case WS2812_PATTERN_TEST_SCOPE_RGB:
-      return "RGB_SCOPE";
-    case WS2812_PATTERN_TEST_BLUE:
-      return "RED_BLUE_SPLIT";
-    case WS2812_PATTERN_TEST_COLOR_CYCLE:
-      return "COLOR_CYCLE";
+    case WS2812_PATTERN_UP_RED_1:
+      return "UP_RED_1";
+    case WS2812_PATTERN_UP_RED_2:
+      return "UP_RED_2";
+    case WS2812_PATTERN_UP_YELLOW_1:
+      return "UP_YELLOW_1";
+    case WS2812_PATTERN_UP_YELLOW_2:
+      return "UP_YELLOW_2";
+    case WS2812_PATTERN_DOWN_RED_1:
+      return "DOWN_RED_1";
+    case WS2812_PATTERN_DOWN_RED_2:
+      return "DOWN_RED_2";
+    case WS2812_PATTERN_DOWN_YELLOW_1:
+      return "DOWN_YELLOW_1";
+    case WS2812_PATTERN_DOWN_YELLOW_2:
+      return "DOWN_YELLOW_2";
+    case WS2812_PATTERN_IN_RED_1:
+      return "IN_RED_1";
+    case WS2812_PATTERN_IN_RED_2:
+      return "IN_RED_2";
+    case WS2812_PATTERN_IN_YELLOW_1:
+      return "IN_YELLOW_1";
+    case WS2812_PATTERN_IN_YELLOW_2:
+      return "IN_YELLOW_2";
+    case WS2812_PATTERN_OUT_RED:
+      return "OUT_RED";
+    case WS2812_PATTERN_OUT_YELLOW:
+      return "OUT_YELLOW";
+    case WS2812_PATTERN_UA_DEMO:
+      return "UA_DEMO";
     default:
       return "UNKNOWN";
   }
@@ -2171,21 +2250,27 @@ static const char *ws2812_test_pattern_name(ws2812_pattern_t pattern)
 
 static void ws2812_test_button_service(uint32_t now_ms)
 {
-#if !MAIN_WS2812_STATUS_ENABLE
+#if !MAIN_WS2812_STATUS_ENABLE || !MAIN_WS2812_TEST_BUTTON_ENABLE
   (void)now_ms;
   return;
 #else
   static const ws2812_pattern_t test_patterns[] = {
     WS2812_PATTERN_OFF,
-    WS2812_PATTERN_TEST_DRIP,
-    WS2812_PATTERN_EVENT_B_UP,
-    WS2812_PATTERN_EVENT_A_DOWN,
-    WS2812_PATTERN_EVENT_BOTH_ALT,
-    WS2812_PATTERN_EVENT_SPLIT_IN,
-    WS2812_PATTERN_EVENT_SPLIT_OUT,
-    WS2812_PATTERN_TEST_SCOPE_RGB,
-    WS2812_PATTERN_TEST_BLUE,
-    WS2812_PATTERN_TEST_COLOR_CYCLE
+    WS2812_PATTERN_UP_RED_1,
+    WS2812_PATTERN_UP_RED_2,
+    WS2812_PATTERN_UP_YELLOW_1,
+    WS2812_PATTERN_UP_YELLOW_2,
+    WS2812_PATTERN_DOWN_RED_1,
+    WS2812_PATTERN_DOWN_RED_2,
+    WS2812_PATTERN_DOWN_YELLOW_1,
+    WS2812_PATTERN_DOWN_YELLOW_2,
+    WS2812_PATTERN_IN_RED_1,
+    WS2812_PATTERN_IN_RED_2,
+    WS2812_PATTERN_IN_YELLOW_1,
+    WS2812_PATTERN_IN_YELLOW_2,
+    WS2812_PATTERN_OUT_RED,
+    WS2812_PATTERN_OUT_YELLOW,
+    WS2812_PATTERN_UA_DEMO
   };
   static uint8_t raw_state = 0u;
   static uint8_t stable_state = 0u;
@@ -7984,17 +8069,22 @@ static void ws2812_status_service(uint32_t now_ms)
   (void)now_ms;
   return;
 #else
-  ws2812_pattern_t pattern = g_ws2812_test_pattern;
+  /* Outside the one-shot startup demo, the persistent base is always OFF.
+     Host pattern selections (0x3B) become visible only through an explicit
+     timed LED_EVENT (0x35). */
+  ws2812_pattern_t pattern = (g_ws2812_startup_demo_active != 0u)
+      ? WS2812_PATTERN_UA_DEMO
+      : WS2812_PATTERN_OFF;
 
 #if WS2812_SPI_SCOPE_TEST_MODE
   (void)now_ms;
-  pattern = WS2812_PATTERN_TEST_SCOPE_RGB;
+  pattern = WS2812_PATTERN_UP_RED_1;
 #elif WS2812_BLUE_TEST_MODE
   (void)now_ms;
-  pattern = WS2812_PATTERN_TEST_BLUE;
+  pattern = WS2812_PATTERN_UA_DEMO;
 #elif WS2812_COLOR_CYCLE_TEST_MODE
   (void)now_ms;
-  pattern = WS2812_PATTERN_TEST_COLOR_CYCLE;
+  pattern = WS2812_PATTERN_UA_DEMO;
 #endif
   ws2812_spi_set_pattern(pattern);
 #endif
@@ -9411,6 +9501,8 @@ main_loop_second_half:
           printf("TX200 0|1    - set 200Hz marker TX request; OPTIC shows tx_req/tx200\r\n");
           printf("OPTP 0..255  - set 38kHz optic TX power over UART\r\n");
           printf("OPTH 0..600  - set optic hold time in deciseconds\r\n");
+          printf("OPTSRC 0..31|255 - system LED optic source ID; 255 disables\r\n");
+          printf("LEDEVT 0..15 - bench: show pattern for 1600ms (0 cancels)\r\n");
           printf("ROLE MASTER  - rejected; MASTER requires host Unix timestamp\r\n");
           printf("ROLE SLAVE   - force slave role (host-forced)\r\n");
           printf("ROLE AUTO    - release host-forced, return to auto\r\n");
@@ -9518,6 +9610,30 @@ main_loop_second_half:
             (void)optic_sensor_set_hold_deciseconds((uint16_t)hold_ds);
             uart1_raw_write_str("\r\nOPTH OK\r\n");
             uart1_raw_print_optic_state();
+          }
+        } else if(strncmp(uart1_cmd_buf, "OPTSRC", 6) == 0){
+          char *arg = uart1_cmd_buf + 6;
+          long source_id = 0;
+          while(*arg == ' ') arg++;
+          if(*arg == 0){
+            uart1_raw_print_optic_state();
+          } else if(uart1_parse_long_arg(arg, 0, 255, &source_id) == 0u ||
+                    ((source_id > 31) && (source_id != 255))) {
+            uart1_raw_write_str("\r\nOPTSRC usage: OPTSRC 0..31 | OPTSRC 255\r\n");
+          } else {
+            (void)ws2812_spi_set_optic_reaction_source((uint8_t)source_id);
+            uart1_raw_write_str("\r\nOPTSRC OK\r\n");
+            uart1_raw_print_optic_state();
+          }
+        } else if(strncmp(uart1_cmd_buf, "LEDEVT", 6) == 0){
+          char *arg = uart1_cmd_buf + 6;
+          long pattern_id = 0;
+          while(*arg == ' ') arg++;
+          if(uart1_parse_long_arg(arg, 0, (long)WS2812_PATTERN_COUNT - 1, &pattern_id) == 0u) {
+            uart1_raw_write_str("\r\nLEDEVT usage: LEDEVT 0..15\r\n");
+          } else {
+            ws2812_spi_trigger_pattern((ws2812_pattern_t)pattern_id, 1600u);
+            uart1_raw_write_str("\r\nLEDEVT OK\r\n");
           }
         } else if(strncmp(uart1_cmd_buf, "VND", 3) == 0){
           printf("\r\n=== VENDOR STREAM DIAG (UART1) ===\r\n");
@@ -11564,6 +11680,7 @@ void vnd_get_lcd_sync_snapshot(vnd_lcd_sync_snapshot_t *out)
   uint8_t display_value = 0u;
   uint8_t sync_signal_alive = 0u;
   uint8_t sync_ok_visual = 0u;
+  uint8_t sync_ok_sample = 0u;
   uint16_t color = RED;
   char display_char = 'M';
 
@@ -11621,14 +11738,14 @@ void vnd_get_lcd_sync_snapshot(vnd_lcd_sync_snapshot_t *out)
   }
 
   if (sync_signal_alive) {
-    sync_ok_visual = vnd_sync_ok_public;
+    sync_ok_sample = vnd_sync_ok_public;
     if (display_mode == VND_SYNC_MODE_SLAVE) {
-      sync_ok_visual = (rs485_sync_phase_relation == RS485_SYNC_RELATION_IN_PHASE) ? 1u : 0u;
+      sync_ok_sample = (rs485_sync_phase_relation == RS485_SYNC_RELATION_IN_PHASE) ? 1u : 0u;
     }
     if ((display_mode == VND_SYNC_MODE_MASTER) && (rs485_slave_count_estimate != 0u)) {
-      sync_ok_visual = 1u;
+      sync_ok_sample = 1u;
     }
-    if (sync_ok_visual != 0u) {
+    if (sync_ok_sample != 0u) {
       sync_color_fall_count = 0u;
       if (sync_color_rise_count < 8u) {
         sync_color_rise_count++;
@@ -11654,6 +11771,11 @@ void vnd_get_lcd_sync_snapshot(vnd_lcd_sync_snapshot_t *out)
     color = RED;
     sync_color_locked = 0u;
   }
+  /* RSP receives the same debounced visual state that drives the LCD color.
+     The instantaneous phase sample remains available in detailed diagnostics
+     and must not make the public SYNC indicator blink. */
+  sync_ok_visual = (uint8_t)(((sync_signal_alive != 0u) &&
+                              (sync_color_locked != 0u)) ? 1u : 0u);
 
   memset(&cached, 0, sizeof(cached));
   cached.raw_mode = vnd_sync_mode_public;
