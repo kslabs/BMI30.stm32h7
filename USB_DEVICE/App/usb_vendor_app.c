@@ -165,6 +165,12 @@ extern volatile uint8_t need_usb_status_refresh;
 #ifndef VND_CMD_SET_OPTIC_REACTION_SOURCE
 #define VND_CMD_SET_OPTIC_REACTION_SOURCE 0x44u /* payload: u8 source_id 0..31, 0xFF=disabled */
 #endif
+#ifndef VND_CMD_SET_WIRE_MODE
+#define VND_CMD_SET_WIRE_MODE 0x45u /* payload: v1, mode, lease_ms LE, transport_epoch LE */
+#endif
+#ifndef VND_CMD_GET_SYNC_DIAG
+#define VND_CMD_GET_SYNC_DIAG 0x46u /* EP0 IN: SYN1 */
+#endif
 #ifndef VND_CMD_SET_DET_ADC
 #define VND_CMD_SET_DET_ADC     0x3Cu /* payload: u8 bit0=DetADC1, bit1=DetADC2 */
 #endif
@@ -5190,6 +5196,85 @@ uint16_t vnd_build_rs485_sensor(uint8_t device_id,
     return (uint16_t)sizeof(st);
 }
 
+uint16_t vnd_build_sync_diag(uint8_t *dst, uint16_t max_len)
+{
+    rs485_sync_diag_snapshot_t source;
+    vnd_sync_diag_v1_t diag;
+
+    if((dst == NULL) || (max_len < (uint16_t)sizeof(diag))) {
+        return 0u;
+    }
+
+    memset(&source, 0, sizeof(source));
+    memset(&diag, 0, sizeof(diag));
+    rs485_sync_get_diag_snapshot(&source);
+
+    memcpy(diag.sig, "SYN1", 4u);
+    diag.version = 1u;
+    diag.wire_mode = source.wire_mode;
+    diag.sync_role = source.sync_role;
+    diag.phase_relation = source.phase_relation;
+    diag.node_id = source.node_id;
+    diag.node_count = source.node_count;
+    diag.boot_id = source.boot_id;
+    diag.transport_epoch = source.transport_epoch;
+    diag.lease_remaining_ms = source.lease_remaining_ms;
+    diag.sync_age_ms = source.sync_age_ms;
+    diag.sync_edge_count = source.sync_edge_count;
+    diag.buffer_count = source.buffer_count;
+    diag.active_samples = source.active_samples;
+    diag.buffer_rate_hz = source.buffer_rate_hz;
+    diag.phase_error_ticks = source.phase_error_ticks;
+    diag.control_error_ticks = source.control_error_ticks;
+    diag.sync_period_ticks = source.sync_period_ticks;
+    diag.tim5_tick_hz = source.tim5_tick_hz;
+    diag.uart_error_count = source.uart_error_count;
+    diag.sync_rejected_early_count = source.sync_rejected_early_count;
+    diag.sync_tx_deferred_count = source.sync_tx_deferred_count;
+    diag.sync_tx_coalesced_count = source.sync_tx_coalesced_count;
+    diag.sync_tx_delay_max_ticks = source.sync_tx_delay_max_ticks;
+    diag.wire_fallback_count = source.wire_fallback_count;
+    diag.last_fallback_reason = source.last_fallback_reason;
+    diag.regular_reply_divisor = source.regular_reply_divisor;
+
+    if(source.lease_remaining_ms != 0u) {
+        diag.flags |= VND_SYNC_DIAG_FLAG_LEASE_ACTIVE;
+    }
+    if(source.signal_alive != 0u) {
+        diag.flags |= VND_SYNC_DIAG_FLAG_SIGNAL_ALIVE;
+    }
+    if(source.phase_locked != 0u) {
+        diag.flags |= VND_SYNC_DIAG_FLAG_PHASE_LOCKED;
+    }
+    if(source.phase_relation == 1u) {
+        diag.flags |= VND_SYNC_DIAG_FLAG_IN_PHASE;
+    }
+    if(source.node_id_assigned != 0u) {
+        diag.flags |= VND_SYNC_DIAG_FLAG_NODE_ASSIGNED;
+    }
+    if(rs485_node_local_id_conflict() != 0u) {
+        diag.flags |= VND_SYNC_DIAG_FLAG_ID_CONFLICT;
+    }
+    if(rs485_multiple_master_detected() != 0u) {
+        diag.flags |= VND_SYNC_DIAG_FLAG_MULTIPLE_MASTER;
+    }
+    if(streaming != 0u) {
+        diag.flags |= VND_SYNC_DIAG_FLAG_STREAMING;
+    }
+    if(source.sync_tx_pending != 0u) {
+        diag.flags |= VND_SYNC_DIAG_FLAG_SYNC_TX_PENDING;
+    }
+    if(source.wire_mode != RS485_WIRE_MODE_FULL) {
+        diag.flags |= VND_SYNC_DIAG_FLAG_REDUCED_WIRE;
+    }
+    if(source.wire_transition_pending != 0u) {
+        diag.flags |= VND_SYNC_DIAG_FLAG_WIRE_TRANSITION;
+    }
+
+    memcpy(dst, &diag, sizeof(diag));
+    return (uint16_t)sizeof(diag);
+}
+
 uint8_t vnd_is_streaming(void){ return streaming; }
 uint8_t vnd_is_tx_enabled(void){ return vnd_tx_enable; }
 uint8_t vnd_is_tx_requested_enabled(void){ return vnd_tx_requested_enable; }
@@ -7760,6 +7845,9 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             cmd_stop_count++;
             cmd_start_count = 0;  /* Сброс счётчика START по команде STOP */
             vnd_update_cmd_indicator();
+            /* No local USB stream means the Raspberry IP data path cannot be
+               healthy. Restore the full wired fallback immediately. */
+            rs485_wire_mode_force_full(RS485_WIRE_FALLBACK_USB_STOP);
             
             /* В полном режиме: STOP с ACK-STAT между парами; в DIAG — немедленная остановка без STAT по bulk */
             if(diag_mode_active){
@@ -7938,6 +8026,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             vnd_last_host_rx_ack_ms = 0;
             vnd_host_rx_last_counter = 0;
             vnd_host_rx_counter_valid = 0;
+            rs485_wire_mode_force_full(RS485_WIRE_FALLBACK_HOST_CLEAR);
             /* Heartbeat reset must not alter TX; reapply the unchanged host request. */
             (void)vnd_tx_refresh_effective(HAL_GetTick(), "host_clear");
         }
@@ -8004,6 +8093,40 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     ws2812_spi_set_optic_reaction_source(data[1]);
                 cdc_logf("EVT OPTIC_REACTION_SOURCE=%u",
                          (unsigned)applied);
+            }
+        }
+        break;
+
+        case VND_CMD_SET_WIRE_MODE:
+        {
+            if((len == 9u) && (data[1] == 1u)) {
+                uint8_t requested_mode = data[2];
+                uint16_t lease_ms = (uint16_t)data[3] |
+                                    ((uint16_t)data[4] << 8);
+                uint32_t transport_epoch = (uint32_t)data[5] |
+                                           ((uint32_t)data[6] << 8) |
+                                           ((uint32_t)data[7] << 16) |
+                                           ((uint32_t)data[8] << 24);
+                uint8_t applied = rs485_wire_mode_apply(requested_mode,
+                                                        lease_ms,
+                                                        transport_epoch);
+                if(applied != 0xFFu) {
+                    /* Lease renewals must not inject STAT/EVT1 packets into
+                       the ADC stream. GET_SYNC_DIAG is the authoritative
+                       readback and reports the live remaining lease. */
+                    cdc_logf("EVT WIRE_MODE=%u lease_ms=%u epoch=%lu",
+                             (unsigned)applied,
+                             (unsigned)lease_ms,
+                             (unsigned long)transport_epoch);
+                } else {
+                    cdc_logf("EVT WIRE_MODE_REJECT mode=%u lease_ms=%u",
+                             (unsigned)requested_mode,
+                             (unsigned)lease_ms);
+                }
+            } else {
+                cdc_logf("EVT WIRE_MODE_REJECT len=%lu version=%u",
+                         (unsigned long)len,
+                         (unsigned)((len >= 2u) ? data[1] : 0u));
             }
         }
         break;

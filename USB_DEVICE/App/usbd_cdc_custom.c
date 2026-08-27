@@ -488,6 +488,7 @@ static uint8_t USBD_CDCVND_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 static uint8_t USBD_CDCVND_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 {
   UNUSED(cfgidx);
+  rs485_wire_mode_force_full(RS485_WIRE_FALLBACK_USB_DISCONNECT);
   (void)USBD_LL_CloseEP(pdev, CDC_IN_EP);  pdev->ep_in[CDC_IN_EP & 0xFU].is_used = 0U;
   (void)USBD_LL_CloseEP(pdev, CDC_OUT_EP); pdev->ep_out[CDC_OUT_EP & 0xFU].is_used = 0U;
   (void)USBD_LL_CloseEP(pdev, CDC_CMD_EP); pdev->ep_in[CDC_CMD_EP & 0xFU].is_used = 0U; pdev->ep_in[CDC_CMD_EP & 0xFU].bInterval = 0U;
@@ -562,6 +563,15 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
       if(!l){ USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL; }
       USBD_CtlSendData(pdev, buf, l);
       return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) && req->bRequest == VND_CMD_GET_SYNC_DIAG ) {
+      uint8_t buf[VND_SYNC_DIAG_MAX];
+      uint16_t max_len = (req->wLength != 0U && req->wLength < (uint16_t)sizeof(buf))
+                       ? req->wLength
+                       : (uint16_t)sizeof(buf);
+      uint16_t l = vnd_build_sync_diag(buf, max_len);
+      if(!l){ USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL; }
+      USBD_CtlSendData(pdev, buf, l);
+      return (uint8_t)USBD_OK;
     } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 && req->bRequest == 0x7Eu ) {
       /* SOFT_RESET: мгновенно подтверждаем статусом и выполняем ресет в фоне */
       g_req_soft_reset = 1; USBD_CtlSendStatus(pdev); return (uint8_t)USBD_OK;
@@ -632,7 +642,8 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
                  req->bRequest == VND_CMD_SET_RS485_IP || req->bRequest == VND_CMD_SET_SYNC_MODE ||
                  req->bRequest == VND_CMD_SET_RS485_ID || req->bRequest == VND_CMD_SET_RPI_INFO ||
                  req->bRequest == VND_CMD_SET_LCD_ROLE_OVERLAY ||
-                 req->bRequest == VND_CMD_SET_OPTIC_REACTION_SOURCE) ) {
+                 req->bRequest == VND_CMD_SET_OPTIC_REACTION_SOURCE ||
+                 req->bRequest == VND_CMD_SET_WIRE_MODE) ) {
       /* Принимаем небольшие конфиги по control OUT с телом данных, доставляем в Vendor как будто по Bulk OUT */
       hcdc->CmdOpCode = req->bRequest;
       hcdc->CmdLength = (uint8_t)req->wLength;
@@ -681,6 +692,7 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
               /* Остановить пайплайн приложения и закрыть EP */
               printf("[USB_IF2] SET_INTERFACE alt=0 (CLOSE)\r\n");
               vnd_log_usb_close_snapshot("set_interface_alt0");
+              rs485_wire_mode_force_full(RS485_WIRE_FALLBACK_USB_DISCONNECT);
               vnd_pipeline_stop_reset(0);
               (void)USBD_LL_CloseEP(pdev, VND_IN_EP);  pdev->ep_in[VND_IN_EP & 0x0FU].is_used = 0U;
               (void)USBD_LL_CloseEP(pdev, VND_OUT_EP); pdev->ep_out[VND_OUT_EP & 0x0FU].is_used = 0U;
@@ -834,7 +846,8 @@ static uint8_t USBD_CDCVND_EP0_RxReady(USBD_HandleTypeDef *pdev)
         op == VND_CMD_SET_RPI_INFO ||
         op == VND_CMD_SET_SYNC_MODE ||
         op == VND_CMD_SET_LCD_ROLE_OVERLAY ||
-        op == VND_CMD_SET_OPTIC_REACTION_SOURCE) {
+        op == VND_CMD_SET_OPTIC_REACTION_SOURCE ||
+        op == VND_CMD_SET_WIRE_MODE) {
       uint32_t tot = (uint32_t)len + 1U;
       if (tot > sizeof(vnd_rx_buf)) tot = sizeof(vnd_rx_buf); /* страхуемся от выхода за границы */
       vnd_rx_buf[0] = op;

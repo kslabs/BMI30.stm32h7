@@ -51,6 +51,8 @@ CMD_GET_LCD_STATUS = 0x38
 CMD_GET_DC_CONFIG = 0x3A
 CMD_SET_LED_PATTERN = 0x3B
 CMD_SET_OPTIC_REACTION_SOURCE = 0x44
+CMD_SET_WIRE_MODE = 0x45
+CMD_GET_SYNC_DIAG = 0x46
 CMD_SET_ALT = 0x31
 CMD_HOST_RX_ACK = 0x36
 CMD_HOST_RX_CLEAR = 0x37
@@ -81,6 +83,8 @@ _CMD_NAMES = {
     CMD_GET_DC_CONFIG: "GET_DC_CONFIG",
     CMD_SET_LED_PATTERN: "SET_LED_PATTERN",
     CMD_SET_OPTIC_REACTION_SOURCE: "SET_OPTIC_REACTION_SOURCE",
+    CMD_SET_WIRE_MODE: "SET_WIRE_MODE",
+    CMD_GET_SYNC_DIAG: "GET_SYNC_DIAG",
     CMD_HOST_RX_ACK: "HOST_RX_ACK",
     CMD_HOST_RX_CLEAR: "HOST_RX_CLEAR",
     CMD_SOFT_RESET: "SOFT_RESET",
@@ -110,6 +114,30 @@ DC_MODE_FREEZE = 0
 DC_MODE_WORK = 1
 DC_MODE_DETECT = 2
 DC_MODE_BOOT_FAST = 3
+
+WIRE_MODE_FULL = 0
+WIRE_MODE_SYNC_PRIORITY = 1
+WIRE_MODE_SYNC_ONLY = 2
+
+WIRE_FALLBACK_NONE = 0
+WIRE_FALLBACK_LEASE_EXPIRED = 1
+WIRE_FALLBACK_USB_STOP = 2
+WIRE_FALLBACK_HOST_CLEAR = 3
+WIRE_FALLBACK_USB_DISCONNECT = 4
+
+SYNC_DIAG_FLAG_LEASE_ACTIVE = 0x0001
+SYNC_DIAG_FLAG_SIGNAL_ALIVE = 0x0002
+SYNC_DIAG_FLAG_PHASE_LOCKED = 0x0004
+SYNC_DIAG_FLAG_IN_PHASE = 0x0008
+SYNC_DIAG_FLAG_NODE_ASSIGNED = 0x0010
+SYNC_DIAG_FLAG_ID_CONFLICT = 0x0020
+SYNC_DIAG_FLAG_MULTIPLE_MASTER = 0x0040
+SYNC_DIAG_FLAG_STREAMING = 0x0080
+SYNC_DIAG_FLAG_SYNC_TX_PENDING = 0x0100
+SYNC_DIAG_FLAG_REDUCED_WIRE = 0x0200
+SYNC_DIAG_FLAG_WIRE_TRANSITION = 0x0400
+
+_SYNC_DIAG_STRUCT = struct.Struct("<4sBBBBHBBIIIIIIHHiiIIIIIIIIBBH")
 
 # EP0 status request (vendor IN, recipient interface)
 _BM_STATUS_IN = usb.util.build_request_type(
@@ -142,6 +170,49 @@ class DCConfig:
     mode_enter_ms: int
     fast_until_ms: int
     adapt_updates: int
+
+
+@dataclass(frozen=True)
+class SyncDiag:
+    version: int
+    wire_mode: int
+    sync_role: int
+    phase_relation: int
+    flags: int
+    node_id: int
+    node_count: int
+    boot_id: int
+    transport_epoch: int
+    lease_remaining_ms: int
+    sync_age_ms: int
+    sync_edge_count: int
+    buffer_count: int
+    active_samples: int
+    buffer_rate_hz: int
+    phase_error_ticks: int
+    control_error_ticks: int
+    sync_period_ticks: int
+    tim5_tick_hz: int
+    uart_error_count: int
+    sync_rejected_early_count: int
+    sync_tx_deferred_count: int
+    sync_tx_coalesced_count: int
+    sync_tx_delay_max_ticks: int
+    wire_fallback_count: int
+    last_fallback_reason: int
+    regular_reply_divisor: int
+
+    @property
+    def phase_error_us(self) -> Optional[float]:
+        if self.tim5_tick_hz <= 0:
+            return None
+        return (float(self.phase_error_ticks) * 1_000_000.0) / float(self.tim5_tick_hz)
+
+    @property
+    def sync_tx_delay_max_us(self) -> Optional[float]:
+        if self.tim5_tick_hz <= 0:
+            return None
+        return (float(self.sync_tx_delay_max_ticks) * 1_000_000.0) / float(self.tim5_tick_hz)
 
 
 def _parse_frame(buf: bytes) -> Optional[Frame]:
@@ -225,6 +296,46 @@ def _parse_dc_config(buf: bytes) -> Optional[DCConfig]:
         mode_enter_ms=int(mode_enter_ms),
         fast_until_ms=int(fast_until_ms),
         adapt_updates=int(adapt_updates),
+    )
+
+
+def _parse_sync_diag(buf: bytes) -> Optional[SyncDiag]:
+    if len(buf) < _SYNC_DIAG_STRUCT.size:
+        return None
+    try:
+        fields = _SYNC_DIAG_STRUCT.unpack_from(buf, 0)
+    except Exception:
+        return None
+    if fields[0] != b"SYN1" or int(fields[1]) != 1:
+        return None
+    return SyncDiag(
+        version=int(fields[1]),
+        wire_mode=int(fields[2]),
+        sync_role=int(fields[3]),
+        phase_relation=int(fields[4]),
+        flags=int(fields[5]),
+        node_id=int(fields[6]),
+        node_count=int(fields[7]),
+        boot_id=int(fields[8]),
+        transport_epoch=int(fields[9]),
+        lease_remaining_ms=int(fields[10]),
+        sync_age_ms=int(fields[11]),
+        sync_edge_count=int(fields[12]),
+        buffer_count=int(fields[13]),
+        active_samples=int(fields[14]),
+        buffer_rate_hz=int(fields[15]),
+        phase_error_ticks=int(fields[16]),
+        control_error_ticks=int(fields[17]),
+        sync_period_ticks=int(fields[18]),
+        tim5_tick_hz=int(fields[19]),
+        uart_error_count=int(fields[20]),
+        sync_rejected_early_count=int(fields[21]),
+        sync_tx_deferred_count=int(fields[22]),
+        sync_tx_coalesced_count=int(fields[23]),
+        sync_tx_delay_max_ticks=int(fields[24]),
+        wire_fallback_count=int(fields[25]),
+        last_fallback_reason=int(fields[26]),
+        regular_reply_divisor=int(fields[27]),
     )
 
 
@@ -331,6 +442,12 @@ class USBStream:
         global running
         running = False
         try:
+            # Reduced RS-485 modes are temporary. Restore the standalone-safe
+            # data plane before releasing the Raspberry USB interface.
+            self.set_wire_mode(WIRE_MODE_FULL, lease_ms=0, transport_epoch=0)
+        except Exception:
+            pass
+        try:
             usb.util.release_interface(self.dev, self.interface)
         except Exception:
             pass
@@ -409,6 +526,29 @@ class USBStream:
             if value < 0 or value > 31:
                 raise ValueError(f"optic reaction source must be 0..31 or None, got {value}")
         self.send_cmd(CMD_SET_OPTIC_REACTION_SOURCE, bytes([value]))
+
+    def set_wire_mode(self, mode: int, lease_ms: int, transport_epoch: int):
+        """Set a temporary RS-485 traffic policy.
+
+        Reduced modes require a 250..60000 ms lease. The Raspberry service
+        must renew the same transport epoch well before expiry.
+        """
+        mode_i = int(mode)
+        lease_i = int(lease_ms)
+        if mode_i not in (WIRE_MODE_FULL, WIRE_MODE_SYNC_PRIORITY, WIRE_MODE_SYNC_ONLY):
+            raise ValueError(f"wire mode must be 0..2, got {mode_i}")
+        if mode_i == WIRE_MODE_FULL:
+            lease_i = 0
+        elif lease_i < 250 or lease_i > 60_000:
+            raise ValueError(f"reduced wire mode lease must be 250..60000 ms, got {lease_i}")
+        payload = struct.pack(
+            "<BBHI",
+            1,
+            mode_i,
+            lease_i,
+            int(transport_epoch) & 0xFFFFFFFF,
+        )
+        self.send_cmd(CMD_SET_WIRE_MODE, payload)
 
     def set_dc_adapt(self, enabled: bool):
         """Quick DC learning toggle via CMD_SET_DC_ADAPT (0x1B).
@@ -510,6 +650,27 @@ class USBStream:
                 last_err = e
                 continue
         raise RuntimeError(f"GET_DC_CONFIG EP0 failed: {last_err}")
+
+    def get_sync_diag(self, timeout_ms: int = 500) -> SyncDiag:
+        """Read the versioned SYN1 sync/wire diagnostic snapshot over EP0."""
+        last_err = None
+        for idx in (self.interface, 0):
+            try:
+                data = self.dev.ctrl_transfer(
+                    _BM_STATUS_IN,
+                    CMD_GET_SYNC_DIAG,
+                    0,
+                    int(idx),
+                    _SYNC_DIAG_STRUCT.size,
+                    timeout=int(timeout_ms),
+                )  # type: ignore[attr-defined]
+                diag = _parse_sync_diag(bytes(data))
+                if diag is not None:
+                    return diag
+            except Exception as e:
+                last_err = e
+                continue
+        raise RuntimeError(f"GET_SYNC_DIAG EP0 failed: {last_err}")
 
     def get_port_path_info(self) -> dict:
         # Best-effort. On Windows this may be empty/unsupported.

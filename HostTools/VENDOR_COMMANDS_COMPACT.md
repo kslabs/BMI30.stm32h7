@@ -41,6 +41,7 @@
 | 0x42 | SET_RPI_INFO | u16 rpi_number LE + IPv4[4] | Фоновые данные локального RPI |
 | 0x43 | GET_RS485_SENSOR | нет в bulk; используйте EP0 | SNS1 |
 | 0x44 | SET_OPTIC_REACTION_SOURCE | u8 source_id: 0..31 или 0xFF | Дополнительный удалённый источник системного WS2812; 0xFF=удалённая реакция выключена |
+| 0x45 | SET_WIRE_MODE | `u8 version=1, u8 mode, u16 lease_ms, u32 transport_epoch` | `0=FULL`, `1=SYNC_PRIORITY`, `2=SYNC_ONLY`; сокращённые режимы только с lease 250…60000 мс |
 
 ## 2) Vendor EP0 Control
 
@@ -53,6 +54,7 @@
 | 0x3A | GET_DC_CONFIG | DCCF (40 bytes) |
 | 0x40 | GET_RS485_IDENT | RID1 (32 bytes), wValue: 0..31=device_id, 0xFF=local |
 | 0x43 | GET_RS485_SENSOR | SNS1 (16 bytes), wValue: 0..31=device_id, 0xFF=local |
+| 0x46 | GET_SYNC_DIAG | SYN1 (84 bytes), актуальный wire mode/lease/sync phase/counters |
 
 ### OUT (host -> device)
 
@@ -66,7 +68,7 @@
 | 0x13,0x14,0x18,0x19,0x1D,0x33,0x34,0x3B,0x3C,0x3D,0x41,0x44 | через wValue | u8; `0x1D MASTER/SLAVE` здесь запрещены (STALL) |
 | 0x17 | через wValue | u16 |
 | 0x39 | через wValue | u16 hold_ds |
-| 0x13,0x14,0x18,0x19,0x1D,0x33,0x34,0x39,0x3B,0x3C,0x1F,0x3D,0x3E,0x41,0x42,0x44 | data stage | как в payload команды |
+| 0x13,0x14,0x18,0x19,0x1D,0x33,0x34,0x39,0x3B,0x3C,0x1F,0x3D,0x3E,0x41,0x42,0x44,0x45 | data stage | как в payload команды |
 
 ## 3) Форматы данных
 
@@ -77,6 +79,19 @@
 | DC config | DCCF | 40 bytes | GET_DC_CONFIG (bulk/EP0) |
 | RS485 identity | RID1 | 32 bytes | GET_RS485_IDENT (EP0) |
 | RS485 sensors | SNS1 | 16 bytes | GET_RS485_SENSOR (EP0) |
+| Sync/wire diagnostics | SYN1 | 84 bytes | GET_SYNC_DIAG (EP0) |
+
+RS485 wire modes (firmware 1.2.45):
+
+- сырые ADC-семплы по RS-485 не идут; они остаются в USB/IP data plane;
+- `FULL` — sync + status/identity/sensor/role, безопасный default;
+- `SYNC_PRIORITY` — sensor events немедленные, обычные slave replies 1 из 4;
+- `SYNC_ONLY` — только `0x25/0xA5` sync byte, все прочие новые RS-485 передачи
+  подавлены; уже начатый кадр безопасно заканчивается до readback перехода;
+- Raspberry должна обновлять lease только при здоровом IP transport. Lease
+  expiry, USB STOP/CLEAR/disconnect автоматически восстанавливают FULL;
+- стенд: `python HostTools/vendor_wire_mode.py status` и
+  `python HostTools/vendor_wire_mode.py sync-only --keepalive`.
 
 RS485 optic/LED:
 - `optic_active = PD0 || hold_after_last_high`: `PD0=1` немедленно включает и

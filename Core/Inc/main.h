@@ -278,6 +278,58 @@ uint8_t rs485_sensor_get_snapshot(uint8_t device_id,
 uint8_t rs485_sync_has_active_peer(void);
 uint8_t rs485_sync_phase_locked(void);
 
+/* Fail-safe RS-485 traffic policy for a Raspberry Pi Ethernet/Wi-Fi data
+ * link. Hardware measurement sync always remains on RS-485. Any reduced
+ * traffic mode is temporary and returns to FULL when its lease expires. */
+#define RS485_WIRE_MODE_FULL          0u
+#define RS485_WIRE_MODE_SYNC_PRIORITY 1u
+#define RS485_WIRE_MODE_SYNC_ONLY     2u
+
+#define RS485_WIRE_FALLBACK_NONE          0u
+#define RS485_WIRE_FALLBACK_LEASE_EXPIRED 1u
+#define RS485_WIRE_FALLBACK_USB_STOP      2u
+#define RS485_WIRE_FALLBACK_HOST_CLEAR    3u
+#define RS485_WIRE_FALLBACK_USB_DISCONNECT 4u
+
+typedef struct {
+  uint8_t wire_mode;
+  uint8_t sync_role;
+  uint8_t phase_relation;
+  uint8_t node_id;
+  uint8_t node_id_assigned;
+  uint8_t node_count;
+  uint8_t sync_tx_pending;
+  uint8_t regular_reply_divisor;
+  uint32_t boot_id;
+  uint32_t transport_epoch;
+  uint32_t lease_remaining_ms;
+  uint32_t sync_age_ms;
+  uint32_t sync_edge_count;
+  uint32_t buffer_count;
+  uint16_t active_samples;
+  uint16_t buffer_rate_hz;
+  int32_t phase_error_ticks;
+  int32_t control_error_ticks;
+  uint32_t sync_period_ticks;
+  uint32_t tim5_tick_hz;
+  uint32_t uart_error_count;
+  uint32_t sync_rejected_early_count;
+  uint32_t sync_tx_deferred_count;
+  uint32_t sync_tx_coalesced_count;
+  uint32_t sync_tx_delay_max_ticks;
+  uint32_t wire_fallback_count;
+  uint8_t last_fallback_reason;
+  uint8_t signal_alive;
+  uint8_t phase_locked;
+  uint8_t wire_transition_pending;
+} rs485_sync_diag_snapshot_t;
+
+uint8_t rs485_wire_mode_apply(uint8_t mode,
+                              uint16_t lease_ms,
+                              uint32_t transport_epoch);
+void rs485_wire_mode_force_full(uint8_t reason);
+void rs485_sync_get_diag_snapshot(rs485_sync_diag_snapshot_t *out);
+
 // --- Профили потоков ADC (буфер/частота) ---
 // Профиль B (default): f_buf=300 Гц, N=912 (Fs=273600 Гц)
 // Профиль C (high):    f_buf=300 Гц, N=944 (Fs=283200 Гц)

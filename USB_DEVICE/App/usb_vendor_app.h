@@ -27,6 +27,8 @@ extern "C" {
 #define VND_CMD_SET_RPI_INFO    0x42u /* payload: u16 RPI number LE + IPv4[4] */
 #define VND_CMD_GET_RS485_SENSOR 0x43u /* EP0 IN wValue=0..31 device, 0xFF=local: SNS1 */
 #define VND_CMD_SET_OPTIC_REACTION_SOURCE 0x44u /* payload: u8 source_id 0..31, 0xFF=disabled */
+#define VND_CMD_SET_WIRE_MODE    0x45u /* payload: version=1, mode, u16 lease_ms, u32 transport_epoch */
+#define VND_CMD_GET_SYNC_DIAG    0x46u /* EP0 IN: SYN1 sync/wire/lease diagnostics */
 
 /* Асинхронные service-события по Vendor IN 0x83: сигнатура 'EVT1'. */
 #define VND_EVT_TYPE_FW_INFO     0x00u /* payload: firmware version/build + STM32 UID96 v1 */
@@ -115,6 +117,9 @@ extern "C" {
 #endif
 #ifndef VND_RS485_SENSOR_MAX
 #define VND_RS485_SENSOR_MAX 16u
+#endif
+#ifndef VND_SYNC_DIAG_MAX
+#define VND_SYNC_DIAG_MAX 84u
 #endif
 /* Дефолт: 300 семплов на канал в полном режиме */
 #ifndef VND_FULL_DEFAULT_SAMPLES
@@ -224,6 +229,50 @@ typedef struct {
     uint32_t last_change_ms;
 } vnd_rs485_sensor_v1_t;
 
+#define VND_SYNC_DIAG_FLAG_LEASE_ACTIVE    0x0001u
+#define VND_SYNC_DIAG_FLAG_SIGNAL_ALIVE    0x0002u
+#define VND_SYNC_DIAG_FLAG_PHASE_LOCKED    0x0004u
+#define VND_SYNC_DIAG_FLAG_IN_PHASE        0x0008u
+#define VND_SYNC_DIAG_FLAG_NODE_ASSIGNED   0x0010u
+#define VND_SYNC_DIAG_FLAG_ID_CONFLICT     0x0020u
+#define VND_SYNC_DIAG_FLAG_MULTIPLE_MASTER 0x0040u
+#define VND_SYNC_DIAG_FLAG_STREAMING       0x0080u
+#define VND_SYNC_DIAG_FLAG_SYNC_TX_PENDING 0x0100u
+#define VND_SYNC_DIAG_FLAG_REDUCED_WIRE    0x0200u
+#define VND_SYNC_DIAG_FLAG_WIRE_TRANSITION 0x0400u
+
+typedef struct {
+    char     sig[4];
+    uint8_t  version;
+    uint8_t  wire_mode;
+    uint8_t  sync_role;
+    uint8_t  phase_relation;
+    uint16_t flags;
+    uint8_t  node_id;
+    uint8_t  node_count;
+    uint32_t boot_id;
+    uint32_t transport_epoch;
+    uint32_t lease_remaining_ms;
+    uint32_t sync_age_ms;
+    uint32_t sync_edge_count;
+    uint32_t buffer_count;
+    uint16_t active_samples;
+    uint16_t buffer_rate_hz;
+    int32_t  phase_error_ticks;
+    int32_t  control_error_ticks;
+    uint32_t sync_period_ticks;
+    uint32_t tim5_tick_hz;
+    uint32_t uart_error_count;
+    uint32_t sync_rejected_early_count;
+    uint32_t sync_tx_deferred_count;
+    uint32_t sync_tx_coalesced_count;
+    uint32_t sync_tx_delay_max_ticks;
+    uint32_t wire_fallback_count;
+    uint8_t  last_fallback_reason;
+    uint8_t  regular_reply_divisor;
+    uint16_t reserved;
+} vnd_sync_diag_v1_t;
+
 typedef struct {
     char     sig[4];            /* 'STAT' */
     uint8_t  version;           /* 1 */
@@ -305,6 +354,7 @@ _Static_assert(sizeof(vnd_lcd_status_v1_t) == 24, "vnd_lcd_status_v1_t must be 2
 _Static_assert(sizeof(vnd_dc_config_v2_t) == 40, "vnd_dc_config_v2_t must be 40 bytes");
 _Static_assert(sizeof(vnd_rs485_ident_v1_t) == 32, "vnd_rs485_ident_v1_t must be 32 bytes");
 _Static_assert(sizeof(vnd_rs485_sensor_v1_t) == 16, "vnd_rs485_sensor_v1_t must be 16 bytes");
+_Static_assert(sizeof(vnd_sync_diag_v1_t) == 84, "vnd_sync_diag_v1_t must be 84 bytes");
 _Static_assert(sizeof(vnd_status_v1_t) == 137, "vnd_status_v1_t must be 137 bytes (v6)");
 
 /* Публичные переменные */
@@ -336,6 +386,7 @@ uint16_t vnd_build_rs485_ident(uint8_t node_id, uint8_t *dst, uint16_t max_len);
 uint16_t vnd_build_rs485_sensor(uint8_t device_id,
                                 uint8_t *dst,
                                 uint16_t max_len);
+uint16_t vnd_build_sync_diag(uint8_t *dst, uint16_t max_len);
 void vnd_get_lcd_sync_snapshot(vnd_lcd_sync_snapshot_t *out);
 void vnd_lcd_role_overlay_configure(uint8_t enabled, uint8_t period_s, uint8_t duration_s);
 

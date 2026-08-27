@@ -50,6 +50,26 @@ python3 HostTools/list_usb_interfaces.py
 # Должно показать IF#2 с endpoint'ами 0x03 (OUT) и 0x83 (IN)
 ```
 
+### Проверка sync/wire режима firmware 1.2.45
+
+Сырые ADC по RS485 не передаются; data plane для них остаётся USB → Raspberry →
+Ethernet/Wi-Fi. После того как сетевой получатель подтвердил mirror-поток и его
+непрерывность, firmware может временно сократить только служебный RS485-обмен:
+
+```bash
+# Выполнять при остановленном основном BMI30 core: USB должен иметь одного владельца.
+python3 HostTools/vendor_wire_mode.py status
+python3 HostTools/vendor_wire_mode.py priority --lease-ms 3000 --keepalive
+python3 HostTools/vendor_wire_mode.py sync-only --lease-ms 3000 --keepalive
+python3 HostTools/vendor_wire_mode.py full
+```
+
+В рабочем сервисе используйте методы `USBStream.set_wire_mode()` и
+`USBStream.get_sync_diag()` внутри существующего USB owner. Обновляйте lease
+только при двустороннем IP heartbeat и подтверждённой непрерывности кадров.
+Любая ошибка должна сначала вернуть `FULL`; дополнительно STM32 сама возвращает
+его по expiry, STOP/CLEAR, USB disconnect или закрытию Vendor interface.
+
 ## 4) Быстрый старт: чтение потока (Full mode, 200 Гц)
 
 Режим full mode (реальные ADC кадры, last-buffer-wins уже включён в прошивке). Скрипт читает A/B‑пары, проверяет строгий порядок, STAT только между парами, в конце печатает FPS.

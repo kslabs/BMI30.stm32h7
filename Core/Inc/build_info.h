@@ -8,9 +8,9 @@ extern "C" {
 // Семантическая версия прошивки
 #define FW_VERSION_MAJOR 1
 #define FW_VERSION_MINOR 2
-#define FW_VERSION_PATCH 44  // Preserve local yellow optic indication with remote ID selection
+#define FW_VERSION_PATCH 45  // Lease-protected RS485 sync priority/sync-only modes
 
-#define FW_VERSION_STR  "1.2.44"
+#define FW_VERSION_STR  "1.2.45"
 
 // Опционально: можно переопределить через ключ компиляции -DGIT_HASH="..."
 #ifndef GIT_HASH

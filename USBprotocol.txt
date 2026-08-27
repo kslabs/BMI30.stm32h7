@@ -89,9 +89,48 @@ Payload: массив `total_samples` значений по 2 байта (LE). (
 |0x42  | CMD_SET_RPI_INFO | Сообщить локальные номер RPI и IPv4 | `u16 rpi_number LE + ip[4]` | нет
 |0x43  | CMD_GET_RS485_SENSOR | Получить 16 срочных sensor bits узла | EP0 IN: `wValue=0..31`, `0xFF` local | `SNS1` (16 байт)
 |0x44  | CMD_SET_OPTIC_REACTION_SOURCE | Выбрать дополнительный удалённый ID для системного WS2812 | 1 байт: `0..31` или `0xFF=remote disabled` | нет
+|0x45  | CMD_SET_WIRE_MODE | Временная политика RS485 для Raspberry IP data plane | `version=1, mode, u16 lease_ms LE, u32 transport_epoch LE` | readback через EP0 0x46
+|0x46  | CMD_GET_SYNC_DIAG | Получить sync/wire/lease диагностику | EP0 IN, `wLength=84` | `SYN1` (84 байта)
 
 `*` Статус после SET_* может быть отложен или не возвращаться — зависит от реализации.
 Гарантированно возвращается после STOP и GET_STATUS.
+
+### 3.0.1. RS485 wire mode и `SYN1` (0x45/0x46)
+
+Сырые ADC-семплы по RS485 не передаются. `0x45` управляет только оставшимися
+status/identity/sensor/role пакетами; физический sync всегда остаётся на проводе.
+
+- mode 0 `FULL`: прежний обмен, boot/default и fail-safe;
+- mode 1 `SYNC_PRIORITY`: sensor events без задержки, обычный slave reply 1 из 4;
+- mode 2 `SYNC_ONLY`: только sync marker `0x25/0xA5`, без новых status/identity/sensor/role передач;
+- для mode 1/2 `lease_ms=250..60000`; Raspberry обновляет тот же
+  `transport_epoch` только при здоровом IP-канале;
+- expiry, STOP, HOST_RX_CLEAR, USB disconnect или Vendor alt0 возвращают FULL;
+- повторное продление lease не создаёт bulk `STAT/EVT1` и не разрывает ADC-пару.
+
+`SYN1` — packed little-endian:
+
+| Offset | Type | Поле |
+|---:|---|---|
+| 0 | char[4] | `SYN1` |
+| 4 | u8 | version=1 |
+| 5..7 | u8×3 | wire_mode, sync_role, phase_relation |
+| 8 | u16 | flags |
+| 10..11 | u8×2 | node_id, node_count |
+| 12..35 | u32×6 | boot_id, transport_epoch, lease_remaining_ms, sync_age_ms, sync_edge_count, buffer_count |
+| 36..39 | u16×2 | active_samples, buffer_rate_hz |
+| 40..47 | i32×2 | phase_error_ticks, control_error_ticks |
+| 48..79 | u32×8 | sync_period_ticks, tim5_tick_hz, uart_error_count, rejected_early, tx_deferred, tx_coalesced, tx_delay_max_ticks, wire_fallback_count |
+| 80..83 | u8,u8,u16 | last_fallback_reason, regular_reply_divisor, reserved |
+
+Flags: `0x0001 lease`, `0x0002 signal_alive`, `0x0004 phase_locked`,
+`0x0008 in_phase`, `0x0010 node_assigned`, `0x0020 ID conflict`,
+`0x0040 multiple master`, `0x0080 streaming`, `0x0100 sync pending`,
+`0x0200 reduced wire`, `0x0400 safe transition pending`.
+
+Fallback reason: 0 none, 1 lease expired, 2 USB STOP, 3 HOST_RX_CLEAR,
+4 USB disconnect/alt0. Значения phase переводятся в секунды делением на
+`tim5_tick_hz`; network arrival time для этого не используется.
 
 ## 3.1. Команда GET_TEMP (0x31) - Получение температуры
 
@@ -616,6 +655,7 @@ struct DcConfigStatusV2 {
 Обновления документа фиксировать с версионным блоком CHANGELOG ниже.
 
 ### CHANGELOG
+v1.46 — Firmware 1.2.45 добавляет lease-защищённые `FULL/SYNC_PRIORITY/SYNC_ONLY`, строгий sync-only без status/identity/sensor/role, безопасный возврат FULL по expiry/USB STOP/CLEAR/disconnect, отдельный mailbox sync-границы и EP0 `SYN1` с фазовыми/очередными/fallback метриками. Сырые ADC по RS485 не передаются; USB/IP остаётся data plane.
 v1.45 — Firmware 1.2.44 восстанавливает прежнюю независимую индикацию собственного фотоприёмника системным WS2812: slave показывает локальное срабатывание жёлтым, master зелёным, и оно имеет приоритет. Команда `0x44` теперь заменяет только жёсткую привязку соседней реакции к master на выбранный удалённый ID; `0xFF` отключает удалённую реакцию, но не локальную индикацию.
 v1.44 — Firmware 1.2.43 передаёт RSP `sync_ok_visual` после того же гистерезиса, который управляет цветом LCD, а не мгновенную фазовую оценку. Краткие выбросы `phase_locked` больше не создают мигание SYNC в RSP. Для назначенного `0x44 source_id` системный WS2812 сохраняет последнее принятое optic-состояние при исчезновении ID/потере SYNC и меняет его только после нового свежего status byte этого ID.
 v1.43 — Firmware 1.2.42 больше не обнуляет `optic_active` в `STAT`/`EVT1 SENSOR_MAP`/`OPTIC_STATE` при кратковременном изменении `sync_ok_visual`, конфликте роли или потере визуального lock. Физически постоянный `PD0=1` теперь всегда передаётся RSP как `1`; качество SYNC остаётся отдельным набором флагов и не может создавать мигание оптической индикации.

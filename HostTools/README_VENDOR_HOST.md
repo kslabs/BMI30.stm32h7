@@ -72,6 +72,7 @@
 - 0x42 SET_RPI_INFO
 - 0x43 GET_RS485_SENSOR
 - 0x44 SET_OPTIC_REACTION_SOURCE
+- 0x45 SET_WIRE_MODE
 
 ### 2.2 EP0 Control (vendor requests)
 
@@ -81,6 +82,7 @@ Vendor IN (чтение):
 - 0x3A GET_DC_CONFIG
 - 0x40 GET_RS485_IDENT
 - 0x43 GET_RS485_SENSOR
+- 0x46 GET_SYNC_DIAG (`SYN1`, 84 bytes)
 
 Vendor OUT без data stage:
 - 0x7E SOFT_RESET
@@ -95,7 +97,7 @@ Vendor OUT с параметром в wValue (без data stage):
 - 0x39 (u16 hold_ds в wValue)
 
 Vendor OUT с data stage:
-- 0x13, 0x14, 0x18, 0x19, 0x1D, 0x33, 0x34, 0x39, 0x3B, 0x3C, 0x1F, 0x3D, 0x3E, 0x41, 0x42, 0x44
+- 0x13, 0x14, 0x18, 0x19, 0x1D, 0x33, 0x34, 0x39, 0x3B, 0x3C, 0x1F, 0x3D, 0x3E, 0x41, 0x42, 0x44, 0x45
 
 ### 2.3 CDC протокол (отдельный диагностический канал)
 
@@ -104,6 +106,29 @@ Vendor OUT с data stage:
 - 0x32 CMD_GET_VERSION
 
 Это не команды Vendor bulk протокола IF#2.
+
+### 2.4 Временное сокращение RS485 для Raspberry IP-канала
+
+Firmware 1.2.45 по умолчанию работает в `FULL`. Сырые ADC по RS485 не идут и
+переносятся USB reader/core в IP data plane без изменений RS485. Команда `0x45`
+может временно оставить priority status (`mode=1`) или только sync (`mode=2`).
+Оба режима требуют lease 250…60000 ms и readback `SYN1` через EP0 `0x46`.
+
+Production-код вызывает `USBStream.set_wire_mode()` и `get_sync_diag()` из уже
+существующего владельца USB. Не открывать STM32 вторым процессом. Стендовая
+утилита, когда основной core остановлен:
+
+```bash
+python3 HostTools/vendor_wire_mode.py status
+python3 HostTools/vendor_wire_mode.py priority --lease-ms 3000 --keepalive
+python3 HostTools/vendor_wire_mode.py sync-only --lease-ms 3000 --keepalive
+python3 HostTools/vendor_wire_mode.py full
+```
+
+Сокращённый режим разрешается только после mirror/probation и подтверждения
+координатором непрерывности IP-кадров. Lease renew не создаёт bulk status. При
+Ctrl-C утилита возвращает FULL; firmware также делает это по expiry, USB
+STOP/CLEAR/disconnect или закрытию IF#2.
 
 ## 3. Форматы получаемых данных
 

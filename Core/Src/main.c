@@ -366,6 +366,30 @@ static volatile uint8_t rs485_tx_queue[RS485_TX_QUEUE_CAPACITY] = {0};
 static volatile uint8_t rs485_tx_queue_head = 0u;
 static volatile uint8_t rs485_tx_queue_tail = 0u;
 static volatile uint8_t rs485_tx_queue_count = 0u;
+/* A sync byte must not be dropped merely because background identity/role
+   traffic filled the byte queue. Keep the newest boundary in a dedicated
+   one-entry mailbox; an older delayed boundary is no longer useful. */
+static volatile uint8_t rs485_sync_tx_pending = 0u;
+static volatile uint8_t rs485_sync_tx_pending_byte = 0x25u; /* RS485_SYNC7_BASE */
+static volatile uint32_t rs485_sync_tx_deferred_count = 0u;
+static volatile uint32_t rs485_sync_tx_coalesced_count = 0u;
+static volatile uint32_t rs485_sync_tx_delay_last_ticks = 0u;
+static volatile uint32_t rs485_sync_tx_delay_max_ticks = 0u;
+static volatile uint8_t rs485_tx_byte_is_sync_boundary = 0u;
+
+/* Raspberry-controlled traffic reduction is deliberately volatile. FULL is
+   the boot/default state, and every reduced mode requires a short lease. */
+#define RS485_WIRE_LEASE_MIN_MS 250u
+#define RS485_WIRE_LEASE_MAX_MS 60000u
+#define RS485_WIRE_PRIORITY_REPLY_DIV 4u
+static volatile uint8_t rs485_wire_mode = RS485_WIRE_MODE_FULL;
+static volatile uint8_t rs485_wire_transition_pending = 0u;
+static volatile uint8_t rs485_wire_transition_mode = RS485_WIRE_MODE_FULL;
+static volatile uint32_t rs485_wire_lease_deadline_ms = 0u;
+static volatile uint32_t rs485_wire_transport_epoch = 0u;
+static volatile uint32_t rs485_wire_fallback_count = 0u;
+static volatile uint8_t rs485_wire_last_fallback_reason = RS485_WIRE_FALLBACK_NONE;
+static uint32_t rs485_wire_boot_id = 0u;
 static volatile uint8_t rs485_discovery_next_id = 1u;
 static volatile uint8_t rs485_discovery_wait_id = 0u;
 static volatile uint8_t rs485_discovery_response_seen = 0u;
@@ -721,6 +745,239 @@ static uint32_t rs485_sync_get_uart_bit_ticks(void)
   return (packet_ticks + 5u) / 10u;
 }
 
+static uint8_t rs485_wire_regular_reply_divisor(void)
+{
+  uint8_t mode = rs485_wire_mode;
+
+  if (mode == RS485_WIRE_MODE_SYNC_ONLY) {
+    return 0u;
+  }
+  if (mode == RS485_WIRE_MODE_SYNC_PRIORITY) {
+    return RS485_WIRE_PRIORITY_REPLY_DIV;
+  }
+  return 1u;
+}
+
+static uint32_t rs485_wire_lease_remaining_ms(uint32_t now_ms)
+{
+  uint32_t deadline = rs485_wire_lease_deadline_ms;
+  int32_t remaining;
+
+  if ((rs485_wire_mode == RS485_WIRE_MODE_FULL) || (deadline == 0u)) {
+    return 0u;
+  }
+  remaining = (int32_t)(deadline - now_ms);
+  return (remaining > 0) ? (uint32_t)remaining : 0u;
+}
+
+uint8_t rs485_wire_mode_apply(uint8_t mode,
+                              uint16_t lease_ms,
+                              uint32_t transport_epoch)
+{
+  uint32_t now_ms = HAL_GetTick();
+  uint32_t primask;
+  uint8_t changed;
+  uint8_t defer_strict;
+
+  if (mode > RS485_WIRE_MODE_SYNC_ONLY) {
+    return 0xFFu;
+  }
+  if ((mode != RS485_WIRE_MODE_FULL) &&
+      ((lease_ms < RS485_WIRE_LEASE_MIN_MS) ||
+       (lease_ms > RS485_WIRE_LEASE_MAX_MS))) {
+    return 0xFFu;
+  }
+
+  primask = __get_PRIMASK();
+  __disable_irq();
+  changed = (uint8_t)(((rs485_wire_mode != mode) ||
+                       (rs485_wire_transport_epoch != transport_epoch)) ? 1u : 0u);
+  defer_strict = (uint8_t)(((mode == RS485_WIRE_MODE_SYNC_ONLY) &&
+                            (rs485_wire_mode != RS485_WIRE_MODE_SYNC_ONLY) &&
+                            ((rs485_tx_busy != 0u) ||
+                             (rs485_tx_queue_count != 0u) ||
+                             (rs485_sync_tx_pending != 0u) ||
+                             (rs485_master_status_tx_pending != 0u) ||
+                             (rs485_status_tx_pending != 0u) ||
+                             (rs485_status_window_after_tx != 0u))) ? 1u : 0u);
+  rs485_wire_transport_epoch = transport_epoch;
+  rs485_wire_lease_deadline_ms = (mode == RS485_WIRE_MODE_FULL)
+      ? 0u
+      : (now_ms + (uint32_t)lease_ms);
+  rs485_status_slave_reply_div_counter = 0u;
+  if (defer_strict != 0u) {
+    /* Finish the already-started status/role frame before claiming strict
+       SYNC_ONLY. Truncating it would leave peers inside a framed parser and
+       could make the following sync byte look like payload. */
+    rs485_wire_transition_mode = mode;
+    rs485_wire_transition_pending = 1u;
+  } else {
+    rs485_wire_mode = mode;
+    rs485_wire_transition_mode = mode;
+    rs485_wire_transition_pending = 0u;
+  }
+  if ((mode == RS485_WIRE_MODE_SYNC_ONLY) && (defer_strict == 0u)) {
+    /* Do not start any new non-sync word after the strict mode is accepted.
+       A byte/frame already in flight is allowed to finish so peer parsers are
+       never left permanently inside a truncated role frame. */
+    rs485_master_status_tx_pending = 0u;
+    rs485_status_tx_pending = 0u;
+  }
+  if (primask == 0u) {
+    __enable_irq();
+  }
+  if (changed != 0u) {
+    need_usb_status_refresh = 1u;
+  }
+  return mode;
+}
+
+void rs485_wire_mode_force_full(uint8_t reason)
+{
+  uint32_t primask = __get_PRIMASK();
+  uint8_t was_reduced;
+
+  __disable_irq();
+  was_reduced = (uint8_t)(((rs485_wire_mode != RS485_WIRE_MODE_FULL) ||
+                           (rs485_wire_transition_pending != 0u)) ? 1u : 0u);
+  rs485_wire_mode = RS485_WIRE_MODE_FULL;
+  rs485_wire_transition_mode = RS485_WIRE_MODE_FULL;
+  rs485_wire_transition_pending = 0u;
+  rs485_wire_lease_deadline_ms = 0u;
+  rs485_status_slave_reply_div_counter = 0u;
+  if ((was_reduced != 0u) && (reason != RS485_WIRE_FALLBACK_NONE)) {
+    if (rs485_wire_fallback_count < 0xFFFFFFFFu) {
+      rs485_wire_fallback_count++;
+    }
+    rs485_wire_last_fallback_reason = reason;
+  }
+  if (primask == 0u) {
+    __enable_irq();
+  }
+  if (was_reduced != 0u) {
+    need_usb_status_refresh = 1u;
+  }
+}
+
+static void rs485_wire_mode_service(uint32_t now_ms)
+{
+  uint32_t deadline = rs485_wire_lease_deadline_ms;
+
+  if (((rs485_wire_mode != RS485_WIRE_MODE_FULL) ||
+       (rs485_wire_transition_pending != 0u)) &&
+      (deadline != 0u) &&
+      ((int32_t)(now_ms - deadline) >= 0)) {
+    rs485_wire_mode_force_full(RS485_WIRE_FALLBACK_LEASE_EXPIRED);
+    return;
+  }
+
+  if (rs485_wire_transition_pending != 0u) {
+    uint32_t primask = __get_PRIMASK();
+    uint8_t applied = 0u;
+
+    __disable_irq();
+    if ((rs485_tx_busy == 0u) &&
+        (rs485_tx_queue_count == 0u) &&
+        (rs485_sync_tx_pending == 0u) &&
+        (rs485_master_status_tx_pending == 0u) &&
+        (rs485_status_tx_pending == 0u) &&
+        (rs485_status_window_after_tx == 0u)) {
+      rs485_wire_mode = rs485_wire_transition_mode;
+      rs485_wire_transition_pending = 0u;
+      rs485_master_status_tx_pending = 0u;
+      rs485_status_tx_pending = 0u;
+      applied = 1u;
+    }
+    if (primask == 0u) {
+      __enable_irq();
+    }
+    if (applied != 0u) {
+      need_usb_status_refresh = 1u;
+    }
+  }
+}
+
+static uint32_t rs485_wire_get_boot_id(void)
+{
+  if (rs485_wire_boot_id == 0u) {
+    uint32_t mix = rs485_local_uid_words[0] ^
+                   (rs485_local_uid_words[1] << 7) ^
+                   (rs485_local_uid_words[1] >> 25) ^
+                   (rs485_local_uid_words[2] << 13) ^
+                   (rs485_local_uid_words[2] >> 19) ^
+                   DWT->CYCCNT ^
+                   (HAL_GetTick() * 0x9E3779B1u) ^
+                   0x42524F49u;
+    rs485_wire_boot_id = (mix != 0u) ? mix : 1u;
+  }
+  return rs485_wire_boot_id;
+}
+
+void rs485_sync_get_diag_snapshot(rs485_sync_diag_snapshot_t *out)
+{
+  extern volatile uint8_t vnd_sync_mode_public;
+  extern volatile uint32_t adc_stream_total_buffer_count;
+  uint32_t now_ms;
+  uint32_t primask;
+  uint8_t node_count = 0u;
+
+  if (out == NULL) {
+    return;
+  }
+
+  memset(out, 0, sizeof(*out));
+  now_ms = HAL_GetTick();
+  (void)rs485_status_get_snapshot(NULL,
+                                  &node_count,
+                                  NULL,
+                                  NULL,
+                                  32u);
+
+  primask = __get_PRIMASK();
+  __disable_irq();
+  out->wire_mode = rs485_wire_mode;
+  out->sync_role = vnd_sync_mode_public;
+  out->phase_relation = rs485_sync_phase_relation;
+  out->node_id = rs485_local_node_id;
+  out->node_id_assigned = rs485_local_node_id_assigned;
+  out->node_count = node_count;
+  out->sync_tx_pending = rs485_sync_tx_pending;
+  out->regular_reply_divisor = rs485_wire_regular_reply_divisor();
+  out->transport_epoch = rs485_wire_transport_epoch;
+  out->lease_remaining_ms = rs485_wire_lease_remaining_ms(now_ms);
+  out->sync_age_ms = (sync_last_edge_ms != 0u)
+      ? (now_ms - sync_last_edge_ms)
+      : 0xFFFFFFFFu;
+  out->sync_edge_count = sync_edge_count;
+  out->buffer_count = adc_stream_total_buffer_count;
+  out->active_samples = adc_stream_get_active_samples();
+  out->buffer_rate_hz = adc_stream_get_buf_rate();
+  out->phase_error_ticks = sync_phase_last_error_ticks;
+  out->control_error_ticks = sync_phase_last_control_error_ticks;
+  out->sync_period_ticks = sync_tim5_period_ticks;
+  out->tim5_tick_hz = rs485_sync_get_tim5_tick_hz();
+  out->uart_error_count = rs485_uart_error_count;
+  out->sync_rejected_early_count = rs485_sync_rejected_early_count;
+  out->sync_tx_deferred_count = rs485_sync_tx_deferred_count;
+  out->sync_tx_coalesced_count = rs485_sync_tx_coalesced_count;
+  out->sync_tx_delay_max_ticks = rs485_sync_tx_delay_max_ticks;
+  out->wire_fallback_count = rs485_wire_fallback_count;
+  out->last_fallback_reason = rs485_wire_last_fallback_reason;
+  out->wire_transition_pending = rs485_wire_transition_pending;
+  if (primask == 0u) {
+    __enable_irq();
+  }
+
+  out->boot_id = rs485_wire_get_boot_id();
+  if (out->sync_role == VND_SYNC_MODE_MASTER) {
+    out->signal_alive = rs485_sync_has_active_peer();
+  } else if (out->sync_role == VND_SYNC_MODE_SLAVE) {
+    out->signal_alive = (uint8_t)(((out->sync_age_ms != 0xFFFFFFFFu) &&
+                                   (out->sync_age_ms <= RS485_SYNC_PRESENT_MS)) ? 1u : 0u);
+  }
+  out->phase_locked = rs485_sync_phase_locked();
+}
+
 static int32_t rs485_sync_wrap_phase_ticks(int32_t phase_ticks, uint32_t period_ticks)
 {
   int32_t period = (int32_t)period_ticks;
@@ -913,9 +1170,11 @@ static void rs485_tx_queue_push(uint8_t value);
 static void rs485_tx_queue_push_front(uint8_t value);
 static uint8_t rs485_tx_queue_pop(uint8_t *value);
 static void rs485_tx_kick(void);
-static void rs485_sync_start_tx_byte(uint8_t value);
+static void rs485_sync_start_tx_byte(uint8_t value, uint8_t sync_boundary);
 static void rs485_sync_start_tx_status_word(uint8_t first, uint8_t second);
 static void rs485_sync_service_tx(void);
+static void rs485_wire_mode_service(uint32_t now_ms);
+static uint8_t rs485_wire_regular_reply_divisor(void);
 
 /* Охраняемая флаг-структура для need_recovery с сигнатурами по краям. */
 typedef struct {
@@ -3933,6 +4192,13 @@ static void rs485_identity_service(uint32_t now_ms)
     return;
   }
 
+  /* Keep an explicit host-requested scan available, but do not inject the
+     periodic identity catalogue while a leased hybrid mode is reducing
+     background traffic for a Raspberry data-link experiment. */
+  if (rs485_wire_mode != RS485_WIRE_MODE_FULL) {
+    return;
+  }
+
   if (((rs485_identity_scan_last_start_ms == 0u) &&
        (now_ms >= RS485_IDENT_AUTO_SCAN_BOOT_MS)) ||
       ((rs485_identity_scan_last_complete_ms != 0u) &&
@@ -4844,6 +5110,7 @@ static void rs485_status_begin_window(void)
   uint8_t should_reply = 0u;
   uint8_t sensor_event_reply = 0u;
   uint8_t local_selected = 0u;
+  uint8_t regular_reply_divisor = rs485_wire_regular_reply_divisor();
   uint8_t first = 0u;
   uint8_t second = 0u;
   uint8_t sensor_index = 0u;
@@ -4865,7 +5132,8 @@ static void rs485_status_begin_window(void)
   }
 
   if ((vnd_sync_mode_public == VND_SYNC_MODE_SLAVE) &&
-      (RS485_STATUS_SLAVE_REPLY_ENABLE != 0u)) {
+      (RS485_STATUS_SLAVE_REPLY_ENABLE != 0u) &&
+      (rs485_wire_mode != RS485_WIRE_MODE_SYNC_ONLY)) {
     if ((rs485_local_node_id_assigned != 0u) &&
         (rs485_status_master_no_reply_slot == 0u) &&
         ((rs485_status_master_selector == rs485_local_node_id) ||
@@ -4878,16 +5146,17 @@ static void rs485_status_begin_window(void)
                                     &sensor_active) != 0u)) {
       sensor_event_reply = 1u;
       should_reply = 1u;
-    } else if (local_selected != 0u) {
+    } else if ((local_selected != 0u) &&
+               (regular_reply_divisor != 0u)) {
       should_reply = 1u;
     }
   }
 
   if (should_reply != 0u) {
     if ((sensor_event_reply == 0u) &&
-        (RS485_STATUS_SLAVE_REPLY_DIV > 1u)) {
+        (regular_reply_divisor > 1u)) {
       rs485_status_slave_reply_div_counter++;
-      if (rs485_status_slave_reply_div_counter < RS485_STATUS_SLAVE_REPLY_DIV) {
+      if (rs485_status_slave_reply_div_counter < regular_reply_divisor) {
         rs485_status_finalize_window();
         return;
       }
@@ -5156,7 +5425,9 @@ static void rs485_master_status_service(uint32_t now_ms)
   if ((int32_t)(now_ms - rs485_master_status_tx_due_ms) < 0) {
     return;
   }
-  if ((rs485_tx_busy != 0u) || (rs485_tx_queue_count != 0u)) {
+  if ((rs485_tx_busy != 0u) ||
+      (rs485_sync_tx_pending != 0u) ||
+      (rs485_tx_queue_count != 0u)) {
     return;
   }
 
@@ -6530,7 +6801,8 @@ static void rs485_tx_queue_push(uint8_t value)
   rs485_tx_queue_count++;
 }
 
-/* Вставка в голову очереди — байт уйдёт первым (высший приоритет, для sync-байта) */
+/* Вставка в голову фоновой очереди. Sync-границы используют отдельный mailbox,
+   поэтому переполненная служебная очередь не может их вытеснить. */
 static void rs485_tx_queue_push_front(uint8_t value)
 {
   if (rs485_tx_queue_count >= RS485_TX_QUEUE_CAPACITY) {
@@ -6554,13 +6826,22 @@ static uint8_t rs485_tx_queue_pop(uint8_t *value)
   return 1u;
 }
 
-static void rs485_sync_start_tx_byte(uint8_t value)
+static void rs485_sync_start_tx_byte(uint8_t value, uint8_t sync_boundary)
 {
   if (rs485_tx_busy) {
     return;
   }
 
+  if (sync_boundary != 0u) {
+    uint32_t delay_ticks = htim5.Instance->CNT;
+    rs485_sync_tx_delay_last_ticks = delay_ticks;
+    if (delay_ticks > rs485_sync_tx_delay_max_ticks) {
+      rs485_sync_tx_delay_max_ticks = delay_ticks;
+    }
+  }
+
   rs485_tx_byte = value;
+  rs485_tx_byte_is_sync_boundary = (sync_boundary != 0u) ? 1u : 0u;
   rs485_tx_busy = 1u;
   rs485_tx_start_ms = HAL_GetTick();
   HAL_GPIO_WritePin(RS485_RDE_GPIO_Port, RS485_RDE_Pin, GPIO_PIN_SET);
@@ -6578,7 +6859,7 @@ static void rs485_sync_start_tx_status_word(uint8_t first, uint8_t second)
   }
 
   rs485_tx_queue_push_front(second);
-  rs485_sync_start_tx_byte(first);
+  rs485_sync_start_tx_byte(first, 0u);
 }
 
 static void rs485_tx_kick(void)
@@ -6588,11 +6869,20 @@ static void rs485_tx_kick(void)
   if (rs485_tx_busy) {
     return;
   }
+  /* Keep the two-byte status word contiguous. After it is complete, the
+     newest deferred sync preempts every background queue byte. */
+  if ((rs485_status_window_after_tx == 0u) &&
+      (rs485_sync_tx_pending != 0u)) {
+    value = rs485_sync_tx_pending_byte;
+    rs485_sync_tx_pending = 0u;
+    rs485_sync_start_tx_byte(value, 1u);
+    return;
+  }
   if (!rs485_tx_queue_pop(&value)) {
     return;
   }
 
-  rs485_sync_start_tx_byte(value);
+  rs485_sync_start_tx_byte(value, 0u);
 }
 
 static void rs485_discovery_on_request(uint8_t value)
@@ -6601,6 +6891,9 @@ static void rs485_discovery_on_request(uint8_t value)
   uint8_t request_id = (uint8_t)(value & RS485_DISCOVERY_ID_MASK);
 
   if (vnd_sync_mode_public != VND_SYNC_MODE_SLAVE) {
+    return;
+  }
+  if (rs485_wire_mode == RS485_WIRE_MODE_SYNC_ONLY) {
     return;
   }
   if (request_id == 0u) {
@@ -8341,54 +8634,72 @@ void rs485_sync_on_buffer_complete(uint8_t parity)
   htim5.Instance->CNT = 0u;
   rs485_status_current_window_phase = (uint8_t)(parity % RS485_STATUS_SLOT_STRIDE);
   sync_byte = (uint8_t)(RS485_SYNC7_BASE | (parity ? RS485_SYNC_EDGE_BIT : 0u));
-  if ((rs485_local_node_id_assigned != 0u) &&
-      (rs485_sensor_event_prepare(&sensor_index, &sensor_active) != 0u)) {
-    status_first = rs485_status_build_public_local_byte();
-    status_second = (uint8_t)(RS485_STATUS_SENSOR_EVENT_VALUE |
-                              ((sensor_index & 0x0Fu) << 1) |
-                              (sensor_active & 0x01u));
-    status_no_response = 1u;
-    rs485_sensor_event_commit_tx();
-  } else if ((rs485_identity_scan_active != 0u) &&
-      (rs485_identity_scan_page < RS485_IDENT_PAGE_COUNT) &&
-      (rs485_identity_self_tx_state != RS485_IDENT_SELF_STATE_NONE)) {
-    status_first = rs485_status_build_master_identity_first_byte();
-    status_no_response = 1u;
-    rs485_identity_current_req_active = 0u;
-    rs485_identity_current_req_page = 0u;
-    rs485_identity_current_req_selector = 0u;
-    if (rs485_identity_self_tx_state == RS485_IDENT_SELF_STATE_PAGE) {
-      status_second = (uint8_t)(RS485_STATUS_MASTER_SELF_PAGE_VALUE |
-                                (rs485_identity_scan_page & RS485_STATUS_ID_MASK));
-      rs485_identity_self_tx_state = RS485_IDENT_SELF_STATE_DATA;
-    } else {
-      status_second = (uint8_t)(RS485_STATUS_MASTER_SELF_DATA_VALUE |
-                                rs485_identity_get_local_nibble(rs485_identity_scan_page));
-      rs485_identity_self_tx_state = RS485_IDENT_SELF_STATE_NONE;
-    }
+  if (rs485_wire_mode == RS485_WIRE_MODE_SYNC_ONLY) {
+    /* Strict mode means exactly one boundary byte on RS-485. Status,
+       identity and sensor state belong to the Raspberry/IP data plane. */
+    rs485_master_status_tx_pending = 0u;
+    rs485_master_status_tx_no_response = 1u;
   } else {
-    status_first = rs485_status_build_local_byte();
-    status_second = rs485_status_build_local_second_byte(rs485_status_master_selector);
+    if ((rs485_local_node_id_assigned != 0u) &&
+        (rs485_sensor_event_prepare(&sensor_index, &sensor_active) != 0u)) {
+      status_first = rs485_status_build_public_local_byte();
+      status_second = (uint8_t)(RS485_STATUS_SENSOR_EVENT_VALUE |
+                                ((sensor_index & 0x0Fu) << 1) |
+                                (sensor_active & 0x01u));
+      status_no_response = 1u;
+      rs485_sensor_event_commit_tx();
+    } else if ((rs485_identity_scan_active != 0u) &&
+        (rs485_identity_scan_page < RS485_IDENT_PAGE_COUNT) &&
+        (rs485_identity_self_tx_state != RS485_IDENT_SELF_STATE_NONE)) {
+      status_first = rs485_status_build_master_identity_first_byte();
+      status_no_response = 1u;
+      rs485_identity_current_req_active = 0u;
+      rs485_identity_current_req_page = 0u;
+      rs485_identity_current_req_selector = 0u;
+      if (rs485_identity_self_tx_state == RS485_IDENT_SELF_STATE_PAGE) {
+        status_second = (uint8_t)(RS485_STATUS_MASTER_SELF_PAGE_VALUE |
+                                  (rs485_identity_scan_page & RS485_STATUS_ID_MASK));
+        rs485_identity_self_tx_state = RS485_IDENT_SELF_STATE_DATA;
+      } else {
+        status_second = (uint8_t)(RS485_STATUS_MASTER_SELF_DATA_VALUE |
+                                  rs485_identity_get_local_nibble(rs485_identity_scan_page));
+        rs485_identity_self_tx_state = RS485_IDENT_SELF_STATE_NONE;
+      }
+    } else {
+      status_first = rs485_status_build_local_byte();
+      status_second = rs485_status_build_local_second_byte(rs485_status_master_selector);
+    }
+    rs485_status_master_first = status_first;
+    rs485_status_master_second = status_second;
+    if (status_no_response == 0u) {
+      rs485_status_master_selector =
+          rs485_status_id_from_wire(
+              (uint8_t)(status_first & RS485_STATUS_ID_MASK));
+    }
+    rs485_master_status_tx_first = status_first;
+    rs485_master_status_tx_second = status_second;
+    rs485_master_status_tx_no_response = status_no_response;
+    rs485_master_status_tx_due_ms = HAL_GetTick() + RS485_STATUS_MASTER_WORD_DELAY_MS;
+    rs485_master_status_tx_pending = 1u;
   }
-  rs485_status_master_first = status_first;
-  rs485_status_master_second = status_second;
-  if (status_no_response == 0u) {
-    rs485_status_master_selector =
-        rs485_status_id_from_wire(
-            (uint8_t)(status_first & RS485_STATUS_ID_MASK));
-  }
-  rs485_master_status_tx_first = status_first;
-  rs485_master_status_tx_second = status_second;
-  rs485_master_status_tx_no_response = status_no_response;
-  rs485_master_status_tx_due_ms = HAL_GetTick() + RS485_STATUS_MASTER_WORD_DELAY_MS;
-  rs485_master_status_tx_pending = 1u;
   /* sync должен уходить максимально близко к событию DMA завершения буфера.
      status[2] уходит следом с короткой задержкой: RXNE ISR slave успевает
      обработать sync-событие и не теряет master_status в ORE/legacy path. */
-  if ((rs485_tx_busy == 0u) && (rs485_tx_queue_count == 0u)) {
-    rs485_sync_start_tx_byte(sync_byte);
+  if ((rs485_tx_busy == 0u) &&
+      (rs485_tx_queue_count == 0u) &&
+      (rs485_sync_tx_pending == 0u)) {
+    rs485_sync_start_tx_byte(sync_byte, 1u);
   } else {
-    rs485_tx_queue_push_front(sync_byte);
+    if (rs485_sync_tx_pending != 0u) {
+      if (rs485_sync_tx_coalesced_count < 0xFFFFFFFFu) {
+        rs485_sync_tx_coalesced_count++;
+      }
+    }
+    if (rs485_sync_tx_deferred_count < 0xFFFFFFFFu) {
+      rs485_sync_tx_deferred_count++;
+    }
+    rs485_sync_tx_pending_byte = sync_byte;
+    rs485_sync_tx_pending = 1u;
     rs485_tx_kick();
   }
 }
@@ -9248,6 +9559,10 @@ main_loop_second_half:
   // vnd_diag_send64_once();
   // PROG('v');
 
+  /* Lease expiry is a safety function, not part of the optional USB/RS485
+     diagnostics below. Keep it alive in minimal/isolation builds too. */
+  rs485_wire_mode_service(now);
+
   /* Запуск vendor stream task: обслуживает START/STOP, ADC restart, фоновые задачи и USB TX. */
 #if !SAFE_MINIMAL
   {
@@ -9264,12 +9579,15 @@ main_loop_second_half:
   /* Периодический SYNC-лог отключён: COM оставляем под compact phase-monitor. */
   rs485_role_rx_service();
   rs485_sync_assigned_role_service(now);
-  rs485_role_claim_service(now);
-  rs485_role_slave_claim_service(now);
-  rs485_role_enumeration_service(now);
-  rs485_node_claim_service(now);
-  rs485_identity_service(now);
-  rs485_uid_service(now);
+  if ((rs485_wire_mode != RS485_WIRE_MODE_SYNC_ONLY) &&
+      (rs485_wire_transition_pending == 0u)) {
+    rs485_role_claim_service(now);
+    rs485_role_slave_claim_service(now);
+    rs485_role_enumeration_service(now);
+    rs485_node_claim_service(now);
+    rs485_identity_service(now);
+    rs485_uid_service(now);
+  }
   rs485_role_persist_service(now);
   /* UID discovery remains available for numbering/identity, never for roles. */
   /* Периодический ROLE-лог отключён: в COM оставляем только компактный phase-monitor. */
@@ -11298,15 +11616,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
   if (huart->Instance == USART2) {
-    uint8_t completed_byte = rs485_tx_byte;
+    uint8_t completed_sync_boundary = rs485_tx_byte_is_sync_boundary;
     rs485_tx_packets++;
     rs485_tx_busy = 0u;
-    if (rs485_is_sync_byte(completed_byte) == 0u) {
+    rs485_tx_byte_is_sync_boundary = 0u;
+    if (completed_sync_boundary == 0u) {
       rs485_status_local_tx_complete_count++;
     }
     if ((rs485_master_status_tx_pending != 0u) &&
-        (rs485_is_sync_byte(completed_byte) != 0u) &&
-        (rs485_tx_queue_count == 0u)) {
+        (completed_sync_boundary != 0u)) {
       rs485_status_wait_bit_times(RS485_STATUS_MASTER_WORD_DELAY_BITS);
       rs485_master_status_tx_pending = 0u;
       rs485_status_window_after_tx = RS485_STATUS_WORD_BYTES;
