@@ -140,6 +140,19 @@ extern volatile uint32_t systick_heartbeat;
 #define OPTIC_TX_Pin GPIO_PIN_10
 #define OPTIC_TX_GPIO_Port GPIOA
 
+/* Independent host-controlled relay; active HIGH, disabled after reset. */
+#define RELAY_Pin GPIO_PIN_1
+#define RELAY_GPIO_Port GPIOC
+#define RELAY_MAX_DURATION_MS 0x7FFFFFFFu
+typedef struct {
+  uint8_t enabled, active, pin, mode; /* 0=idle, 1=timed, 2=held test */
+  uint32_t remaining_ms; /* 0xFFFFFFFF for held test */
+} relay_snapshot_t;
+void relay_set_enabled(uint8_t enabled);
+void relay_trigger(uint32_t duration_ms);
+void relay_set_test(uint8_t active);
+void relay_get_snapshot(relay_snapshot_t *out);
+
 #define RS485_SYNC_BYTE 0xA5u
 
 // MCP4261 через аппаратный SPI1: PB3/PB4/PB5 (SCK/MISO/MOSI, AF5) + PA15 (NSS, GPIO)

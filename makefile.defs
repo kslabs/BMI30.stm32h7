@@ -13,3 +13,7 @@ build-autogen:
 # Make sure autogen runs before the main build
 main-build: build-autogen
 all: build-autogen
+
+# Also works before CubeIDE regenerates Core/Src/subdir.mk for this new file.
+USER_OBJS += $(filter-out $(OBJS),Core/Src/rx_phase_detector.o)
+-include Core/Src/rx_phase_detector.d

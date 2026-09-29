@@ -144,9 +144,22 @@ void adc_stream_get_debug(adc_stream_debug_t *out);
 // Получить parity (чётность) буфера по seq (0=even, 1=odd) для 400Hz режима
 uint8_t adc_get_buffer_parity(uint32_t seq);
 
-// Логическая фаза TX200: PA2/PC7 повторяют её, PA1 выводит инверсию при разрешённом TX.
+// Общая логическая фаза RS485/ADC. TX1=PA1 (active-low), TX2=PA2 (active-high)
+// имеют независимую полярность; PC7 сохраняет прежний маркер с gating по TX enable.
 uint8_t adc_stream_get_marker_level(void);
 void adc_stream_refresh_marker_output(void);
+
+/* Independent physical TX phase; channel=1/2, phase=0 (in phase) or 1
+   (antiphase). Returns 1 on acceptance, 0 for invalid arguments.
+   The request is latched at the next marker boundary, never by refresh.
+   RAM only; STOP/START and ADC recovery preserve the settings. */
+uint8_t adc_stream_set_tx_phase(uint8_t channel, uint8_t phase);
+void adc_stream_get_tx_phase_masks(uint8_t *requested, uint8_t *applied);
+
+/* Optional RX polarity diagnostic. Foreground only; never consumes the ADC
+   FIFO or changes TX/sync state. RXP1 is a stable 112-byte cached snapshot. */
+void adc_rx_phase_service(void);
+uint16_t adc_rx_phase_get_status(uint8_t *dst, uint16_t max_len);
 
 // Одноразово инвертировать локальную полярность фазы (PA3/паритет) без изменения DMA/USB логики
 void adc_stream_invert_phase_polarity(void);

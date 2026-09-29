@@ -1,0 +1,960 @@
+{
+  "bundle": "2026-09-29-1720",
+  "release": "2026-09-29-171920",
+  "created_at": "2026-09-29T15:19:20Z",
+  "archive_sha256": "c6a7339d1f172f456a1bf54c710eb01dc5113b9b3c2729d41bf54a098994f9f6",
+  "code_hashes": {
+    "host/BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a",
+    "host/BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+    "host/BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+    "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+    "host/usb_vendor/relay_control.py": "8b5fd98bf4d021d8c8b44b6559b945ffa3521e2663393244467a5e07bbcb068a",
+    "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+  },
+  "all_five_installations_match": true,
+  "emmc_boot_tested": false,
+  "python": {
+    "version": "3.11.2 (main, May 12 2026, 05:17:27) [GCC 12.2.0]",
+    "executable_sha256": "304aa87a76ebb13fd22d253ac157f14980ff2cdb23e6274f3b045571405e07dc",
+    "packages_count": 140,
+    "all_five_equal": true,
+    "packages": [
+      [
+        "Babel",
+        "2.10.3"
+      ],
+      [
+        "Brotli",
+        "1.0.9"
+      ],
+      [
+        "Flask",
+        "2.2.2"
+      ],
+      [
+        "Jinja2",
+        "3.1.2"
+      ],
+      [
+        "Markdown",
+        "3.4.1"
+      ],
+      [
+        "MarkupSafe",
+        "2.1.2"
+      ],
+      [
+        "Pillow",
+        "9.4.0"
+      ],
+      [
+        "PyAudio",
+        "0.2.13"
+      ],
+      [
+        "PyGObject",
+        "3.42.2"
+      ],
+      [
+        "PyJWT",
+        "2.6.0"
+      ],
+      [
+        "PyOpenGL",
+        "3.1.6"
+      ],
+      [
+        "PyQt5",
+        "5.15.9"
+      ],
+      [
+        "PyQt5-sip",
+        "12.11.1"
+      ],
+      [
+        "PyQt6",
+        "6.4.2"
+      ],
+      [
+        "PyQt6-sip",
+        "13.4.1"
+      ],
+      [
+        "PyYAML",
+        "6.0"
+      ],
+      [
+        "Pygments",
+        "2.14.0"
+      ],
+      [
+        "RPi.GPIO",
+        "0.7.1a4"
+      ],
+      [
+        "RTIMULib",
+        "7.2.1"
+      ],
+      [
+        "Werkzeug",
+        "2.2.2"
+      ],
+      [
+        "appdirs",
+        "1.4.4"
+      ],
+      [
+        "argcomplete",
+        "2.0.0"
+      ],
+      [
+        "asgiref",
+        "3.6.0"
+      ],
+      [
+        "attrs",
+        "22.2.0"
+      ],
+      [
+        "av",
+        "12.3.0"
+      ],
+      [
+        "beautifulsoup4",
+        "4.11.2"
+      ],
+      [
+        "beniget",
+        "0.4.1"
+      ],
+      [
+        "blinker",
+        "1.5"
+      ],
+      [
+        "certifi",
+        "2022.9.24"
+      ],
+      [
+        "chardet",
+        "5.1.0"
+      ],
+      [
+        "charset-normalizer",
+        "3.0.1"
+      ],
+      [
+        "click",
+        "8.1.3"
+      ],
+      [
+        "colorama",
+        "0.4.6"
+      ],
+      [
+        "colorzero",
+        "2.0"
+      ],
+      [
+        "contourpy",
+        "1.0.7"
+      ],
+      [
+        "cryptography",
+        "38.0.4"
+      ],
+      [
+        "cupshelpers",
+        "1.0"
+      ],
+      [
+        "cycler",
+        "0.11.0"
+      ],
+      [
+        "dbus-python",
+        "1.3.2"
+      ],
+      [
+        "decorator",
+        "5.1.1"
+      ],
+      [
+        "distro",
+        "1.8.0"
+      ],
+      [
+        "distro-info",
+        "1.5+deb12u1"
+      ],
+      [
+        "fonttools",
+        "4.38.0"
+      ],
+      [
+        "fs",
+        "2.4.16"
+      ],
+      [
+        "gast",
+        "0.5.2"
+      ],
+      [
+        "ghp-import",
+        "2.1.0"
+      ],
+      [
+        "gpiozero",
+        "2.0.1"
+      ],
+      [
+        "html5lib",
+        "1.1"
+      ],
+      [
+        "idna",
+        "3.3"
+      ],
+      [
+        "importlib-metadata",
+        "4.12.0"
+      ],
+      [
+        "iniconfig",
+        "1.1.1"
+      ],
+      [
+        "itsdangerous",
+        "2.1.2"
+      ],
+      [
+        "joblib",
+        "1.2.0"
+      ],
+      [
+        "jsonpointer",
+        "2.3"
+      ],
+      [
+        "jsonschema",
+        "4.10.3"
+      ],
+      [
+        "kiwisolver",
+        "0.0.0"
+      ],
+      [
+        "lgpio",
+        "0.2.2.0"
+      ],
+      [
+        "libarchive-c",
+        "2.9"
+      ],
+      [
+        "libevdev",
+        "0.5"
+      ],
+      [
+        "livereload",
+        "2.6.3"
+      ],
+      [
+        "llvmlite",
+        "0.39.1"
+      ],
+      [
+        "lunr",
+        "0.6.2"
+      ],
+      [
+        "lxml",
+        "4.9.2"
+      ],
+      [
+        "lz4",
+        "4.0.2+dfsg"
+      ],
+      [
+        "matplotlib",
+        "3.6.3"
+      ],
+      [
+        "mergedeep",
+        "1.3.4"
+      ],
+      [
+        "meson",
+        "1.5.1"
+      ],
+      [
+        "mkdocs",
+        "1.4.2"
+      ],
+      [
+        "more-itertools",
+        "8.10.0"
+      ],
+      [
+        "mpmath",
+        "0.0.0"
+      ],
+      [
+        "nltk",
+        "3.8"
+      ],
+      [
+        "numba",
+        "0.56.4"
+      ],
+      [
+        "numpy",
+        "1.24.2"
+      ],
+      [
+        "oauthlib",
+        "3.2.2"
+      ],
+      [
+        "olefile",
+        "0.46"
+      ],
+      [
+        "packaging",
+        "23.0"
+      ],
+      [
+        "pgzero",
+        "1.2"
+      ],
+      [
+        "picamera2",
+        "0.3.31"
+      ],
+      [
+        "pidng",
+        "4.0.9"
+      ],
+      [
+        "piexif",
+        "1.1.3"
+      ],
+      [
+        "pigpio",
+        "1.78"
+      ],
+      [
+        "pip",
+        "23.0.1"
+      ],
+      [
+        "pipx",
+        "1.1.0"
+      ],
+      [
+        "pluggy",
+        "1.0.0+repack"
+      ],
+      [
+        "ply",
+        "3.11"
+      ],
+      [
+        "psutil",
+        "5.9.4"
+      ],
+      [
+        "py",
+        "1.11.0"
+      ],
+      [
+        "pyOpenSSL",
+        "23.0.0"
+      ],
+      [
+        "pycairo",
+        "1.20.1"
+      ],
+      [
+        "pycryptodomex",
+        "3.11.0"
+      ],
+      [
+        "pycups",
+        "2.0.1"
+      ],
+      [
+        "pygame",
+        "2.1.2"
+      ],
+      [
+        "pyinotify",
+        "0.9.6"
+      ],
+      [
+        "pyparsing",
+        "3.0.9"
+      ],
+      [
+        "pyqtgraph",
+        "0.13.1"
+      ],
+      [
+        "pyrsistent",
+        "0.18.1"
+      ],
+      [
+        "pyserial",
+        "3.5"
+      ],
+      [
+        "pysmbc",
+        "1.0.23"
+      ],
+      [
+        "pytest",
+        "7.2.1"
+      ],
+      [
+        "python-apt",
+        "2.6.0"
+      ],
+      [
+        "python-dateutil",
+        "2.8.2"
+      ],
+      [
+        "python-dotenv",
+        "0.21.0"
+      ],
+      [
+        "python-prctl",
+        "1.8.1"
+      ],
+      [
+        "pythran",
+        "0.11.0"
+      ],
+      [
+        "pytz",
+        "2022.7.1"
+      ],
+      [
+        "pyudev",
+        "0.24.0"
+      ],
+      [
+        "pyusb",
+        "1.2.1.post2"
+      ],
+      [
+        "pyyaml_env_tag",
+        "0.1"
+      ],
+      [
+        "regex",
+        "2022.10.31"
+      ],
+      [
+        "requests",
+        "2.28.1"
+      ],
+      [
+        "requests-oauthlib",
+        "1.3.0"
+      ],
+      [
+        "responses",
+        "0.18.0"
+      ],
+      [
+        "rfc3987",
+        "1.3.8"
+      ],
+      [
+        "scipy",
+        "1.10.1"
+      ],
+      [
+        "sense-hat",
+        "2.6.0"
+      ],
+      [
+        "setuptools",
+        "66.1.1"
+      ],
+      [
+        "simplejpeg",
+        "1.8.1"
+      ],
+      [
+        "simplejson",
+        "3.18.3"
+      ],
+      [
+        "six",
+        "1.16.0"
+      ],
+      [
+        "smbus2",
+        "0.4.2"
+      ],
+      [
+        "soupsieve",
+        "2.3.2"
+      ],
+      [
+        "spidev",
+        "3.5"
+      ],
+      [
+        "ssh-import-id",
+        "5.10"
+      ],
+      [
+        "sympy",
+        "1.11.1"
+      ],
+      [
+        "toml",
+        "0.10.2"
+      ],
+      [
+        "tornado",
+        "6.2"
+      ],
+      [
+        "tqdm",
+        "4.64.1"
+      ],
+      [
+        "twython",
+        "3.8.2"
+      ],
+      [
+        "typing_extensions",
+        "4.4.0"
+      ],
+      [
+        "ufoLib2",
+        "0.14.0"
+      ],
+      [
+        "unattended-upgrades",
+        "0.1"
+      ],
+      [
+        "uritemplate",
+        "4.1.1"
+      ],
+      [
+        "urllib3",
+        "1.26.12"
+      ],
+      [
+        "userpath",
+        "1.8.0"
+      ],
+      [
+        "videodev2",
+        "0.0.4"
+      ],
+      [
+        "watchdog",
+        "2.2.1"
+      ],
+      [
+        "webcolors",
+        "1.11.1"
+      ],
+      [
+        "webencodings",
+        "0.5.1"
+      ],
+      [
+        "wheel",
+        "0.38.4"
+      ],
+      [
+        "zipp",
+        "1.0.0"
+      ]
+    ]
+  },
+  "boards": {
+    "S13": {
+      "settings_changed_keys": {
+        "bmi30_config.json": [],
+        "bmi30_sel.json": []
+      },
+      "test_on": {
+        "time": "2026-09-29T15:27:58.995868+00:00",
+        "status": {
+          "enabled": true,
+          "active": true,
+          "pc1": 1,
+          "mode": 2,
+          "test_enabled": true,
+          "remaining_ms": 4294967295,
+          "available": true,
+          "duration_ms": 1000,
+          "saved_enabled": true,
+          "age_s": 0.8133351529831998,
+          "usb_serial": "334535653032",
+          "sequence": 448
+        }
+      },
+      "test_off": {
+        "time": "2026-09-29T15:28:47.988618+00:00",
+        "status": {
+          "enabled": true,
+          "active": false,
+          "pc1": 0,
+          "mode": 0,
+          "test_enabled": false,
+          "remaining_ms": 0,
+          "available": true,
+          "duration_ms": 1000,
+          "saved_enabled": true,
+          "age_s": 0.5939065489801578,
+          "usb_serial": "334535653032",
+          "sequence": 496
+        }
+      },
+      "restored_permission": false,
+      "restored_duration_ms": 1000
+    },
+    "S11": {
+      "settings_changed_keys": {
+        "bmi30_config.json": [],
+        "bmi30_sel.json": [
+          "ts"
+        ]
+      },
+      "test_on": {
+        "time": "2026-09-29T15:28:01.223187+00:00",
+        "status": {
+          "enabled": true,
+          "active": true,
+          "pc1": 1,
+          "mode": 2,
+          "test_enabled": true,
+          "remaining_ms": 4294967295,
+          "available": true,
+          "duration_ms": 1000,
+          "saved_enabled": true,
+          "age_s": 0.9243752480251715,
+          "usb_serial": "3344357A3032",
+          "sequence": 412
+        }
+      },
+      "test_off": {
+        "time": "2026-09-29T15:28:46.359550+00:00",
+        "status": {
+          "enabled": true,
+          "active": false,
+          "pc1": 0,
+          "mode": 0,
+          "test_enabled": false,
+          "remaining_ms": 0,
+          "available": true,
+          "duration_ms": 1000,
+          "saved_enabled": true,
+          "age_s": 0.9423657610313967,
+          "usb_serial": "3344357A3032",
+          "sequence": 456
+        }
+      },
+      "restored_permission": false,
+      "restored_duration_ms": 1000
+    },
+    "S12": {
+      "settings_changed_keys": {
+        "bmi30_config.json": [],
+        "bmi30_sel.json": [
+          "ts"
+        ]
+      },
+      "test_on": {
+        "time": "2026-09-29T15:28:00.572424+00:00",
+        "status": {
+          "enabled": true,
+          "active": true,
+          "pc1": 1,
+          "mode": 2,
+          "test_enabled": true,
+          "remaining_ms": 4294967295,
+          "available": true,
+          "duration_ms": 1000,
+          "saved_enabled": true,
+          "age_s": 0.010933613986708224,
+          "usb_serial": "334235603032",
+          "sequence": 399
+        }
+      },
+      "test_off": {
+        "time": "2026-09-29T15:28:49.723919+00:00",
+        "status": {
+          "enabled": true,
+          "active": false,
+          "pc1": 0,
+          "mode": 0,
+          "test_enabled": false,
+          "remaining_ms": 0,
+          "available": true,
+          "duration_ms": 1000,
+          "saved_enabled": true,
+          "age_s": 0.2081832910189405,
+          "usb_serial": "334235603032",
+          "sequence": 447
+        }
+      },
+      "restored_permission": false,
+      "restored_duration_ms": 1000
+    },
+    "M1": {
+      "settings_changed_keys": {
+        "bmi30_config.json": [],
+        "bmi30_sel.json": []
+      },
+      "test_on": {
+        "time": "2026-09-29T15:27:59.551261+00:00",
+        "status": {
+          "enabled": true,
+          "active": true,
+          "pc1": 1,
+          "mode": 2,
+          "test_enabled": true,
+          "remaining_ms": 4294967295,
+          "available": true,
+          "duration_ms": 1000,
+          "saved_enabled": true,
+          "age_s": 0.42507818999001756,
+          "usb_serial": "334035753032",
+          "sequence": 372
+        }
+      },
+      "test_off": {
+        "time": "2026-09-29T15:28:47.616750+00:00",
+        "status": {
+          "enabled": true,
+          "active": false,
+          "pc1": 0,
+          "mode": 0,
+          "test_enabled": false,
+          "remaining_ms": 0,
+          "available": true,
+          "duration_ms": 1000,
+          "saved_enabled": true,
+          "age_s": 1.064397699024994,
+          "usb_serial": "334035753032",
+          "sequence": 418
+        }
+      },
+      "restored_permission": false,
+      "restored_duration_ms": 1000
+    }
+  },
+  "transport": {
+    "COM27": {
+      "duration_s": 130.113,
+      "peak_phase_us": 2.6145454545454547,
+      "adc_hz": 400.2905167047106,
+      "usb_completions_hz": 347.421087823661,
+      "counter_deltas": {
+        "observed_count": 52083,
+        "unlocked_count": 0,
+        "phase_flip": 0,
+        "phase_restart": 0,
+        "uart_errors": 0,
+        "sync_errors": 0,
+        "filter_drop": 0,
+        "adc_publish_count": 52083,
+        "adc_gap_over10ms": 0,
+        "adc_fault_count": 0,
+        "usb_tx_cplt": 45204,
+        "usb_recovery": 0,
+        "adc_overflow_drop": 52083
+      },
+      "rx": {
+        "readings": 14,
+        "channels": [
+          {
+            "channel": "A",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              180
+            ],
+            "changes": 0,
+            "minimum_quality": 98,
+            "maximum_age_ms": 0
+          },
+          {
+            "channel": "B",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              180
+            ],
+            "changes": 0,
+            "minimum_quality": 72,
+            "maximum_age_ms": 0
+          }
+        ],
+        "failures": []
+      },
+      "rx_in_acceptance": true
+    },
+    "COM28": {
+      "duration_s": 130.053,
+      "peak_phase_us": 2.309090909090909,
+      "adc_hz": 400.29065073470036,
+      "usb_completions_hz": 308.8817635886907,
+      "counter_deltas": {
+        "observed_count": 52059,
+        "unlocked_count": 0,
+        "phase_flip": 0,
+        "phase_restart": 0,
+        "uart_errors": 2,
+        "sync_errors": 0,
+        "filter_drop": 0,
+        "adc_publish_count": 52059,
+        "adc_gap_over10ms": 0,
+        "adc_fault_count": 0,
+        "usb_tx_cplt": 40171,
+        "usb_recovery": 0,
+        "adc_overflow_drop": 52059
+      },
+      "rx": {
+        "readings": 14,
+        "channels": [
+          {
+            "channel": "A",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              0
+            ],
+            "changes": 0,
+            "minimum_quality": 79,
+            "maximum_age_ms": 0
+          },
+          {
+            "channel": "B",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              0
+            ],
+            "changes": 0,
+            "minimum_quality": 87,
+            "maximum_age_ms": 0
+          }
+        ],
+        "failures": []
+      },
+      "rx_in_acceptance": true
+    },
+    "COM11": {
+      "duration_s": 130.108,
+      "peak_phase_us": 2.2763636363636364,
+      "adc_hz": 400.29052786915486,
+      "usb_completions_hz": 310.74184523626525,
+      "counter_deltas": {
+        "observed_count": 52081,
+        "unlocked_count": 0,
+        "phase_flip": 0,
+        "phase_restart": 0,
+        "uart_errors": 4,
+        "sync_errors": 0,
+        "filter_drop": 0,
+        "adc_publish_count": 52081,
+        "adc_gap_over10ms": 0,
+        "adc_fault_count": 0,
+        "usb_tx_cplt": 40430,
+        "usb_recovery": 0,
+        "adc_overflow_drop": 52081
+      },
+      "rx": {
+        "readings": 14,
+        "channels": [
+          {
+            "channel": "A",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              180
+            ],
+            "changes": 0,
+            "minimum_quality": 95,
+            "maximum_age_ms": 0
+          },
+          {
+            "channel": "B",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              180
+            ],
+            "changes": 0,
+            "minimum_quality": 98,
+            "maximum_age_ms": 0
+          }
+        ],
+        "failures": []
+      },
+      "rx_in_acceptance": false
+    },
+    "COM32": {
+      "duration_s": 130.177,
+      "peak_phase_us": 0.0,
+      "adc_hz": 400.29344661499334,
+      "usb_completions_hz": 306.6133034253362,
+      "counter_deltas": {
+        "observed_count": 0,
+        "unlocked_count": 0,
+        "phase_flip": 0,
+        "phase_restart": 0,
+        "uart_errors": 4,
+        "sync_errors": 0,
+        "filter_drop": 0,
+        "adc_publish_count": 52109,
+        "adc_gap_over10ms": 0,
+        "adc_fault_count": 0,
+        "usb_tx_cplt": 39914,
+        "usb_recovery": 0,
+        "adc_overflow_drop": 52109
+      },
+      "rx": {
+        "readings": 14,
+        "channels": [
+          {
+            "channel": "A",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              0
+            ],
+            "changes": 0,
+            "minimum_quality": 97,
+            "maximum_age_ms": 0
+          },
+          {
+            "channel": "B",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              0
+            ],
+            "changes": 0,
+            "minimum_quality": 80,
+            "maximum_age_ms": 0
+          }
+        ],
+        "failures": []
+      },
+      "rx_in_acceptance": true
+    }
+  }
+}

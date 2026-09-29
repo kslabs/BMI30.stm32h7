@@ -1,0 +1,5 @@
+# Preserve the exact tested release artifacts, including their line endings.
+*.bin -text
+*.elf -text
+*.map -text -diff
+build_autogen.h -text whitespace=cr-at-eol

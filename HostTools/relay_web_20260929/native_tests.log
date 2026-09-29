@@ -1,0 +1,25 @@
+test_disabled_led_and_muted_sound_do_not_block_relay (test_engine_relay.EngineRelayTests.test_disabled_led_and_muted_sound_do_not_block_relay) ... ok
+test_one_shot_without_hold_is_captured (test_engine_relay.EngineRelayTests.test_one_shot_without_hold_is_captured) ... ok
+test_raw_detection_longer_than_minimum_stays_on (test_engine_relay.EngineRelayTests.test_raw_detection_longer_than_minimum_stays_on) ... ok
+test_scope_mode_does_not_energize_relay (test_engine_relay.EngineRelayTests.test_scope_mode_does_not_energize_relay) ... ok
+test_selected_optic_gate_blocks_both_paths (test_engine_relay.EngineRelayTests.test_selected_optic_gate_blocks_both_paths) ... ok
+test_sound_hold_does_not_extend_relay_minimum (test_engine_relay.EngineRelayTests.test_sound_hold_does_not_extend_relay_minimum) ... ok
+test_busy_usb_lock_skips_diagnostic_work (test_relay_control.RelayTests.test_busy_usb_lock_skips_diagnostic_work) ... ok
+test_detection_outlasts_minimum_independent_of_leds (test_relay_control.RelayTests.test_detection_outlasts_minimum_independent_of_leds) ... ok
+test_disable_cancels_test (test_relay_control.RelayTests.test_disable_cancels_test) ... ok
+test_disabled_test_rejected (test_relay_control.RelayTests.test_disabled_test_rejected) ... ok
+test_gpio_status_and_protocol_validation (test_relay_control.RelayTests.test_gpio_status_and_protocol_validation) ... ok
+test_invalid_duration_does_not_write (test_relay_control.RelayTests.test_invalid_duration_does_not_write) ... ok
+test_minimum_on_time (test_relay_control.RelayTests.test_minimum_on_time) ... ok
+test_permission_does_not_activate (test_relay_control.RelayTests.test_permission_does_not_activate) ... ok
+test_persistence_never_stores_test (test_relay_control.RelayTests.test_persistence_never_stores_test) ... ok
+test_reconnect_restores_permission_but_not_test (test_relay_control.RelayTests.test_reconnect_restores_permission_but_not_test) ... ok
+test_recovery_stops_held_test (test_relay_control.RelayTests.test_recovery_stops_held_test) ... ok
+test_save_does_not_hold_usb_lock (test_relay_control.RelayTests.test_save_does_not_hold_usb_lock) ... ok
+test_short_pulse_captured_between_worker_ticks (test_relay_control.RelayTests.test_short_pulse_captured_between_worker_ticks) ... ok
+test_test_held_until_stop_beyond_minimum (test_relay_control.RelayTests.test_test_held_until_stop_beyond_minimum) ... ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 1.044s
+
+OK

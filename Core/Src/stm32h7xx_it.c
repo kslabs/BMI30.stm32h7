@@ -254,7 +254,7 @@ void USART1_IRQHandler(void)
 /**
   * @brief This function handles USART2 global interrupt.
   */
-void USART2_IRQHandler(void)
+__attribute__((optimize("O2"))) void USART2_IRQHandler(void)
 {
   uint32_t isr = huart2.Instance->ISR;
 
@@ -277,12 +277,27 @@ void USART2_IRQHandler(void)
 /**
   * @brief This function handles DMA1 stream0 global interrupt.
   */
-void DMA1_Stream0_IRQHandler(void)
+extern volatile uint32_t g_rs485_irq_timing[8];
+
+static inline __attribute__((always_inline)) void rs485_note_adc_irq_end(uint32_t started)
 {
+  uint32_t ended = DWT->CYCCNT;
+  uint32_t elapsed = ended - started;
+  g_rs485_irq_timing[0] = started;
+  g_rs485_irq_timing[1] = ended;
+  g_rs485_irq_timing[2] = elapsed;
+  if (elapsed > g_rs485_irq_timing[3]) g_rs485_irq_timing[3] = elapsed;
+  g_rs485_irq_timing[4] = USART2->ISR;
+}
+
+__attribute__((optimize("O2"))) void DMA1_Stream0_IRQHandler(void)
+{
+  uint32_t started = DWT->CYCCNT;
   /* USER CODE BEGIN DMA1_Stream0_IRQn 0 */
   /* minimized: no UART in IRQ */
   /* USER CODE END DMA1_Stream0_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_adc1);
+  rs485_note_adc_irq_end(started);
   /* USER CODE BEGIN DMA1_Stream0_IRQn 1 */
 
   /* USER CODE END DMA1_Stream0_IRQn 1 */
@@ -291,12 +306,14 @@ void DMA1_Stream0_IRQHandler(void)
 /**
   * @brief This function handles DMA1 stream1 global interrupt.
   */
-void DMA1_Stream1_IRQHandler(void)
+__attribute__((optimize("O2"))) void DMA1_Stream1_IRQHandler(void)
 {
+  uint32_t started = DWT->CYCCNT;
   /* USER CODE BEGIN DMA1_Stream1_IRQn 0 */
   /* minimized: no UART in IRQ */
   /* USER CODE END DMA1_Stream1_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_adc2);
+  rs485_note_adc_irq_end(started);
   /* USER CODE BEGIN DMA1_Stream1_IRQn 1 */
 
   /* USER CODE END DMA1_Stream1_IRQn 1 */
@@ -381,12 +398,18 @@ void TIM6_DAC_IRQHandler(void)
 /**
   * @brief This function handles TIM15 global interrupt.
   */
-void TIM15_IRQHandler(void)
+__attribute__((optimize("O2"))) void TIM15_IRQHandler(void)
 {
+  uint32_t started = DWT->CYCCNT;
   /* USER CODE BEGIN TIM15_IRQn 0 */
 
   /* USER CODE END TIM15_IRQn 0 */
   HAL_TIM_IRQHandler(&htim15);
+  uint32_t ended = DWT->CYCCNT;
+  uint32_t elapsed = ended - started;
+  g_rs485_irq_timing[5] = ended;
+  g_rs485_irq_timing[6] = elapsed;
+  if (elapsed > g_rs485_irq_timing[7]) g_rs485_irq_timing[7] = elapsed;
   /* USER CODE BEGIN TIM15_IRQn 1 */
 
   /* USER CODE END TIM15_IRQn 1 */

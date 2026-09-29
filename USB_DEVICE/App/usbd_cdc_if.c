@@ -401,6 +401,8 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
       case 0x41u: // VND_CMD_SET_LCD_ROLE_OVERLAY
       case 0x44u: // VND_CMD_SET_OPTIC_REACTION_SOURCE
       case 0x45u: // VND_CMD_SET_WIRE_MODE
+      case VND_CMD_SET_TX1_PHASE:
+      case VND_CMD_SET_TX2_PHASE:
         USBD_VND_DataReceived(Buf, *Len);
         vendor_forwarded = 1;
         break;

@@ -432,6 +432,9 @@ volatile uint8_t  vnd_lcd_role_overlay_duration_s = 4u;
 volatile uint8_t  vnd_lcd_role_overlay_color_id = VND_LCD_SYNC_COLOR_WHITE;
 volatile uint16_t vnd_lcd_role_overlay_rgb565 = 0xFFFFu;
 volatile uint32_t vnd_lcd_role_overlay_config_seq = 0u;
+volatile vnd_optic_source_diag_t vnd_optic_source_diag = {
+    .cmd_value = 0xFFFFFFFFu, .applied = 0xFFFFFFFFu
+};
 
 static uint8_t vnd_lcd_role_overlay_clamp_s(uint8_t value_s)
 {
@@ -2225,7 +2228,8 @@ static inline void vnd_dwt_init_once(void)
     if(inited) return;
     inited = 1;
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-    DWT->CYCCNT = 0;
+    /* Shared monotonic timebase for RS485/ADC markers and DSP profiling.
+       Starting the first averaged output must not reset phase timestamps. */
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 }
 
@@ -5275,6 +5279,54 @@ uint16_t vnd_build_sync_diag(uint8_t *dst, uint16_t max_len)
     return (uint16_t)sizeof(diag);
 }
 
+uint16_t vnd_build_tx_phase(uint8_t *dst, uint16_t max_len)
+{
+    if(dst == NULL || max_len < VND_TX_PHASE_STATUS_SIZE) return 0u;
+    memset(dst, 0, VND_TX_PHASE_STATUS_SIZE);
+    memcpy(dst, "TXP1", 4u);
+    dst[4] = 1u;
+
+    /* Snapshot requested/applied phases and pins at the same boundary. */
+    uint8_t requested, applied;
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    adc_stream_get_tx_phase_masks(&requested, &applied);
+    dst[5] = requested & 1u;
+    dst[6] = (requested >> 1) & 1u;
+    dst[7] = applied & 1u;
+    dst[8] = (applied >> 1) & 1u;
+    dst[9] = (uint8_t)((vnd_tx_requested_enable ? 1u : 0u) |
+                       (vnd_tx_enable ? 2u : 0u) |
+                       (streaming ? 4u : 0u) |
+                       (requested != applied ? 8u : 0u));
+    dst[10] = adc_stream_get_marker_level();
+    uint32_t pa_levels = GPIOA->IDR;
+    dst[11] = (pa_levels & GPIO_PIN_1) ? 1u : 0u;
+    dst[12] = (pa_levels & GPIO_PIN_2) ? 1u : 0u;
+    dst[13] = (GPIOC->IDR & GPIO_PIN_7) ? 1u : 0u;
+    __set_PRIMASK(primask);
+    return VND_TX_PHASE_STATUS_SIZE;
+}
+
+uint16_t vnd_build_relay_status(uint8_t *dst, uint16_t max_len)
+{
+    if(dst == NULL || max_len < VND_RELAY_STATUS_SIZE) return 0u;
+    relay_snapshot_t state;
+    relay_get_snapshot(&state);
+    memset(dst, 0, VND_RELAY_STATUS_SIZE);
+    memcpy(dst, "RLY1", 4u);
+    dst[4] = 1u;
+    dst[5] = state.enabled;
+    dst[6] = state.active;
+    dst[7] = state.pin;
+    dst[8] = state.mode;
+    for (uint8_t i = 0u; i < 4u; ++i) {
+        dst[12u + i] = (uint8_t)(state.remaining_ms >> (8u * i));
+        dst[16u + i] = (uint8_t)(RELAY_MAX_DURATION_MS >> (8u * i));
+    }
+    return VND_RELAY_STATUS_SIZE;
+}
+
 uint8_t vnd_is_streaming(void){ return streaming; }
 uint8_t vnd_is_tx_enabled(void){ return vnd_tx_enable; }
 uint8_t vnd_is_tx_requested_enabled(void){ return vnd_tx_requested_enable; }
@@ -5292,8 +5344,7 @@ uint8_t vnd_set_tx_enabled(uint8_t enable)
 
 static void vnd_apply_tx_enable_outputs(void)
 {
-    /* Apply all TX200 pins from one phase source. Do not drive PA1 separately:
-       it is the complement of PA2/PC7 and a separate write creates a false edge. */
+    /* Reapply common enable with the already latched per-channel phases. */
     adc_stream_refresh_marker_output();
 }
 
@@ -7649,6 +7700,7 @@ void USBD_VND_TxCplt(void)
 void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
 {
     if(!len) return;
+    vnd_optic_source_diag.rx_total++;
     dynamic_led_note_usb_exchange();
     uint8_t cmd = data[0];
     static uint32_t rcv_count = 0;
@@ -8055,6 +8107,31 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
         }
         break;
 
+        case VND_CMD_SET_RELAY_ENABLE:
+            if(len == 2u && data[1] <= 1u) relay_set_enabled(data[1]);
+            break;
+        case VND_CMD_SET_RELAY_TEST:
+            if(len == 2u && data[1] <= 1u) relay_set_test(data[1]);
+            break;
+        case VND_CMD_RELAY_EVENT:
+            if(len == 5u) {
+                relay_trigger((uint32_t)data[1] | ((uint32_t)data[2] << 8) |
+                    ((uint32_t)data[3] << 16) | ((uint32_t)data[4] << 24));
+            }
+            break;
+
+        case VND_CMD_SET_TX1_PHASE:
+        case VND_CMD_SET_TX2_PHASE:
+        {
+            /* Absolute, idempotent settings. Only the selected physical TX
+               changes on the next marker boundary; no sync/ADC reconfigure. */
+            if(len == 2u) {
+                (void)adc_stream_set_tx_phase(
+                    (cmd == VND_CMD_SET_TX1_PHASE) ? 1u : 2u, data[1]);
+            }
+        }
+        break;
+
         case VND_CMD_SET_OPTIC_POWER:
         {
             if(len >= 2){
@@ -8088,9 +8165,14 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
 
         case VND_CMD_SET_OPTIC_REACTION_SOURCE:
         {
+            vnd_optic_source_diag.cmd_count++;
+            vnd_optic_source_diag.cmd_len = len;
+            vnd_optic_source_diag.cmd_value = (len >= 2u) ? data[1] : 0xFFFFFFFFu;
+            vnd_optic_source_diag.cmd_ms = HAL_GetTick();
             if(len >= 2){
                 uint8_t applied =
                     ws2812_spi_set_optic_reaction_source(data[1]);
+                vnd_optic_source_diag.applied = applied;
                 cdc_logf("EVT OPTIC_REACTION_SOURCE=%u",
                          (unsigned)applied);
             }

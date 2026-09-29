@@ -1,0 +1,1439 @@
+{
+  "duration_requested_s": 120.0,
+  "rx_devices": [
+    "COM27",
+    "COM28",
+    "COM32"
+  ],
+  "devices": {
+    "COM27": {
+      "sync": {
+        "readings": 14,
+        "failures": {},
+        "incomplete": {},
+        "warnings": {},
+        "ranges": {
+          "phase_raw": {
+            "min": -198,
+            "max": 131
+          },
+          "phase_ctrl": {
+            "min": -198,
+            "max": 131
+          },
+          "raw_peak_ticks": {
+            "min": 451,
+            "max": 719
+          },
+          "ctrl_peak_ticks": {
+            "min": 451,
+            "max": 719
+          },
+          "period": {
+            "min": 686792,
+            "max": 689712
+          },
+          "usb_frame_age_ms": {
+            "min": 1,
+            "max": 4
+          },
+          "adc_publish_age_ms": {
+            "min": 1,
+            "max": 3
+          },
+          "phase_raw_us": {
+            "min": -0.72,
+            "max": 0.4763636363636364
+          },
+          "phase_ctrl_us": {
+            "min": -0.72,
+            "max": 0.4763636363636364
+          },
+          "raw_peak_us": {
+            "min": 1.64,
+            "max": 2.6145454545454547
+          },
+          "ctrl_peak_us": {
+            "min": 1.64,
+            "max": 2.6145454545454547
+          },
+          "adc_publish_age_ms_effective": {
+            "min": 1,
+            "max": 3
+          },
+          "usb_frame_age_ms_effective": {
+            "min": 1,
+            "max": 4
+          }
+        },
+        "counter_deltas": {
+          "observed_count": 52083,
+          "unlocked_count": 0,
+          "phase_flip": 0,
+          "phase_restart": 0,
+          "uart_errors": 0,
+          "sync_errors": 0,
+          "filter_drop": 0,
+          "adc_publish_count": 52083,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 0,
+          "usb_tx_cplt": 45204,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 52083
+        },
+        "values_seen": {
+          "role": [
+            1
+          ],
+          "node": [
+            13
+          ],
+          "node_count": [
+            4
+          ],
+          "mask": [
+            14338
+          ],
+          "tick_hz": [
+            275000000
+          ],
+          "lock_bound_ticks": [
+            859
+          ]
+        },
+        "rates": {
+          "adc_publish_per_second": {
+            "min": 400.25984409354385,
+            "max": 400.33666699673233,
+            "mean": 400.2905167047106,
+            "intervals": 13
+          },
+          "phase_observed_per_second": {
+            "min": 400.25984409354385,
+            "max": 400.33666699673233,
+            "mean": 400.2905167047106,
+            "intervals": 13
+          },
+          "usb_completions_per_second": {
+            "min": 334.67134972403414,
+            "max": 352.19434169749076,
+            "mean": 347.421087823661,
+            "intervals": 13
+          }
+        },
+        "intervals": [
+          {
+            "index": 1,
+            "start_uptime_ms": 8574336,
+            "end_uptime_ms": 8584342,
+            "seconds": 10.006,
+            "adc_publish_per_second": 400.25984409354385,
+            "phase_observed_per_second": 400.25984409354385,
+            "usb_completions_per_second": 351.18928642814313,
+            "failures": []
+          },
+          {
+            "index": 2,
+            "start_uptime_ms": 8584342,
+            "end_uptime_ms": 8594405,
+            "seconds": 10.063,
+            "adc_publish_per_second": 400.27824704362513,
+            "phase_observed_per_second": 400.27824704362513,
+            "usb_completions_per_second": 343.237603100467,
+            "failures": []
+          },
+          {
+            "index": 3,
+            "start_uptime_ms": 8594405,
+            "end_uptime_ms": 8604342,
+            "seconds": 9.937,
+            "adc_publish_per_second": 400.32202878132233,
+            "phase_observed_per_second": 400.32202878132233,
+            "usb_completions_per_second": 346.48284190399517,
+            "failures": []
+          },
+          {
+            "index": 4,
+            "start_uptime_ms": 8604342,
+            "end_uptime_ms": 8614345,
+            "seconds": 10.003,
+            "adc_publish_per_second": 400.27991602519245,
+            "phase_observed_per_second": 400.27991602519245,
+            "usb_completions_per_second": 352.19434169749076,
+            "failures": []
+          },
+          {
+            "index": 5,
+            "start_uptime_ms": 8614345,
+            "end_uptime_ms": 8624343,
+            "seconds": 9.998,
+            "adc_publish_per_second": 400.28005601120225,
+            "phase_observed_per_second": 400.28005601120225,
+            "usb_completions_per_second": 351.47029405881176,
+            "failures": []
+          },
+          {
+            "index": 6,
+            "start_uptime_ms": 8624343,
+            "end_uptime_ms": 8634308,
+            "seconds": 9.965,
+            "adc_publish_per_second": 400.3010536879077,
+            "phase_observed_per_second": 400.3010536879077,
+            "usb_completions_per_second": 334.67134972403414,
+            "failures": []
+          },
+          {
+            "index": 7,
+            "start_uptime_ms": 8634308,
+            "end_uptime_ms": 8644308,
+            "seconds": 10.0,
+            "adc_publish_per_second": 400.3,
+            "phase_observed_per_second": 400.3,
+            "usb_completions_per_second": 351.1,
+            "failures": []
+          },
+          {
+            "index": 8,
+            "start_uptime_ms": 8644308,
+            "end_uptime_ms": 8654346,
+            "seconds": 10.038,
+            "adc_publish_per_second": 400.278940027894,
+            "phase_observed_per_second": 400.278940027894,
+            "usb_completions_per_second": 347.7784419207013,
+            "failures": []
+          },
+          {
+            "index": 9,
+            "start_uptime_ms": 8654346,
+            "end_uptime_ms": 8664348,
+            "seconds": 10.002,
+            "adc_publish_per_second": 400.3199360127974,
+            "phase_observed_per_second": 400.3199360127974,
+            "usb_completions_per_second": 352.02959408118375,
+            "failures": []
+          },
+          {
+            "index": 10,
+            "start_uptime_ms": 8664348,
+            "end_uptime_ms": 8674411,
+            "seconds": 10.063,
+            "adc_publish_per_second": 400.27824704362513,
+            "phase_observed_per_second": 400.27824704362513,
+            "usb_completions_per_second": 340.6538805525191,
+            "failures": []
+          },
+          {
+            "index": 11,
+            "start_uptime_ms": 8674411,
+            "end_uptime_ms": 8684414,
+            "seconds": 10.003,
+            "adc_publish_per_second": 400.27991602519245,
+            "phase_observed_per_second": 400.27991602519245,
+            "usb_completions_per_second": 349.59512146356093,
+            "failures": []
+          },
+          {
+            "index": 12,
+            "start_uptime_ms": 8684414,
+            "end_uptime_ms": 8694350,
+            "seconds": 9.936,
+            "adc_publish_per_second": 400.26167471819645,
+            "phase_observed_per_second": 400.26167471819645,
+            "usb_completions_per_second": 345.00805152979063,
+            "failures": []
+          },
+          {
+            "index": 13,
+            "start_uptime_ms": 8694350,
+            "end_uptime_ms": 8704449,
+            "seconds": 10.099,
+            "adc_publish_per_second": 400.33666699673233,
+            "phase_observed_per_second": 400.33666699673233,
+            "usb_completions_per_second": 351.0248539459352,
+            "failures": []
+          }
+        ],
+        "future_timestamp_artifacts": {},
+        "first": {
+          "seq_begin": 165096,
+          "magic": 1381184568,
+          "uptime_ms": 8574336,
+          "role": 1,
+          "node": 13,
+          "node_count": 4,
+          "mask": 14338,
+          "phase_relation": 1,
+          "sync_alive": 1,
+          "observed_count": 3792,
+          "unlocked_count": 0,
+          "ctrl_peak_ticks": 451,
+          "raw_peak_ticks": 451,
+          "phase_raw": 131,
+          "phase_ctrl": 131,
+          "phase_flip": 1,
+          "phase_restart": 0,
+          "uart_errors": 216,
+          "sync_errors": 3,
+          "filter_drop": 16,
+          "adc_publish_count": 3431829,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 2,
+          "usb_tx_cplt": 2946314,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 3431799,
+          "tick_hz": 275000000,
+          "lock_bound_ticks": 859,
+          "period": 687074,
+          "usb_frame_age_ms": 3,
+          "adc_publish_age_ms": 2,
+          "seq_end": 165096
+        },
+        "last": {
+          "seq_begin": 167602,
+          "magic": 1381184568,
+          "uptime_ms": 8704449,
+          "role": 1,
+          "node": 13,
+          "node_count": 4,
+          "mask": 14338,
+          "phase_relation": 1,
+          "sync_alive": 1,
+          "observed_count": 55875,
+          "unlocked_count": 0,
+          "ctrl_peak_ticks": 719,
+          "raw_peak_ticks": 719,
+          "phase_raw": -137,
+          "phase_ctrl": -137,
+          "phase_flip": 1,
+          "phase_restart": 0,
+          "uart_errors": 216,
+          "sync_errors": 3,
+          "filter_drop": 16,
+          "adc_publish_count": 3483912,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 2,
+          "usb_tx_cplt": 2991518,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 3483882,
+          "tick_hz": 275000000,
+          "lock_bound_ticks": 859,
+          "period": 686890,
+          "usb_frame_age_ms": 2,
+          "adc_publish_age_ms": 2,
+          "seq_end": 167602
+        },
+        "covered_seconds": 130.113,
+        "criteria": {
+          "require_clean_sync_rx": false,
+          "require_usb_active": true,
+          "require_raw_phase": true,
+          "min_adc_hz": 390,
+          "min_usb_hz": 1,
+          "max_adc_age_ms": 10,
+          "max_usb_age_ms": 1000
+        }
+      },
+      "rx": {
+        "readings": 14,
+        "channels": [
+          {
+            "channel": "A",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              180
+            ],
+            "changes": 0,
+            "minimum_quality": 98,
+            "maximum_age_ms": 0
+          },
+          {
+            "channel": "B",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              180
+            ],
+            "changes": 0,
+            "minimum_quality": 72,
+            "maximum_age_ms": 0
+          }
+        ],
+        "failures": []
+      },
+      "rx_in_acceptance": true
+    },
+    "COM28": {
+      "sync": {
+        "readings": 14,
+        "failures": {},
+        "incomplete": {},
+        "warnings": {},
+        "ranges": {
+          "phase_raw": {
+            "min": -189,
+            "max": 101
+          },
+          "phase_ctrl": {
+            "min": -189,
+            "max": 101
+          },
+          "raw_peak_ticks": {
+            "min": 538,
+            "max": 635
+          },
+          "ctrl_peak_ticks": {
+            "min": 538,
+            "max": 635
+          },
+          "period": {
+            "min": 684242,
+            "max": 687132
+          },
+          "usb_frame_age_ms": {
+            "min": 0,
+            "max": 270
+          },
+          "adc_publish_age_ms": {
+            "min": 0,
+            "max": 3
+          },
+          "phase_raw_us": {
+            "min": -0.6872727272727273,
+            "max": 0.36727272727272725
+          },
+          "phase_ctrl_us": {
+            "min": -0.6872727272727273,
+            "max": 0.36727272727272725
+          },
+          "raw_peak_us": {
+            "min": 1.9563636363636363,
+            "max": 2.309090909090909
+          },
+          "ctrl_peak_us": {
+            "min": 1.9563636363636363,
+            "max": 2.309090909090909
+          },
+          "adc_publish_age_ms_effective": {
+            "min": 0,
+            "max": 3
+          },
+          "usb_frame_age_ms_effective": {
+            "min": 0,
+            "max": 270
+          }
+        },
+        "counter_deltas": {
+          "observed_count": 52059,
+          "unlocked_count": 0,
+          "phase_flip": 0,
+          "phase_restart": 0,
+          "uart_errors": 2,
+          "sync_errors": 0,
+          "filter_drop": 0,
+          "adc_publish_count": 52059,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 0,
+          "usb_tx_cplt": 40171,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 52059
+        },
+        "values_seen": {
+          "role": [
+            1
+          ],
+          "node": [
+            11
+          ],
+          "node_count": [
+            4
+          ],
+          "mask": [
+            14338
+          ],
+          "tick_hz": [
+            275000000
+          ],
+          "lock_bound_ticks": [
+            859
+          ]
+        },
+        "rates": {
+          "adc_publish_per_second": {
+            "min": 400.2191890006974,
+            "max": 400.3623188405797,
+            "mean": 400.29065073470036,
+            "intervals": 13
+          },
+          "phase_observed_per_second": {
+            "min": 400.2191890006974,
+            "max": 400.3623188405797,
+            "mean": 400.29065073470036,
+            "intervals": 13
+          },
+          "usb_completions_per_second": {
+            "min": 301.6693163751987,
+            "max": 312.5062481255623,
+            "mean": 308.8817635886907,
+            "intervals": 13
+          }
+        },
+        "intervals": [
+          {
+            "index": 1,
+            "start_uptime_ms": 8553830,
+            "end_uptime_ms": 8563933,
+            "seconds": 10.103,
+            "adc_publish_per_second": 400.27714540235576,
+            "phase_observed_per_second": 400.27714540235576,
+            "usb_completions_per_second": 309.31406512916953,
+            "failures": []
+          },
+          {
+            "index": 2,
+            "start_uptime_ms": 8563933,
+            "end_uptime_ms": 8573869,
+            "seconds": 9.936,
+            "adc_publish_per_second": 400.3623188405797,
+            "phase_observed_per_second": 400.3623188405797,
+            "usb_completions_per_second": 307.0652173913044,
+            "failures": []
+          },
+          {
+            "index": 3,
+            "start_uptime_ms": 8573869,
+            "end_uptime_ms": 8583771,
+            "seconds": 9.902,
+            "adc_publish_per_second": 400.22217733791155,
+            "phase_observed_per_second": 400.22217733791155,
+            "usb_completions_per_second": 311.85619066855185,
+            "failures": []
+          },
+          {
+            "index": 4,
+            "start_uptime_ms": 8583771,
+            "end_uptime_ms": 8593774,
+            "seconds": 10.003,
+            "adc_publish_per_second": 400.27991602519245,
+            "phase_observed_per_second": 400.27991602519245,
+            "usb_completions_per_second": 312.5062481255623,
+            "failures": []
+          },
+          {
+            "index": 5,
+            "start_uptime_ms": 8593774,
+            "end_uptime_ms": 8603838,
+            "seconds": 10.064,
+            "adc_publish_per_second": 400.3378378378378,
+            "phase_observed_per_second": 400.3378378378378,
+            "usb_completions_per_second": 301.6693163751987,
+            "failures": []
+          },
+          {
+            "index": 6,
+            "start_uptime_ms": 8603838,
+            "end_uptime_ms": 8613840,
+            "seconds": 10.002,
+            "adc_publish_per_second": 400.3199360127974,
+            "phase_observed_per_second": 400.3199360127974,
+            "usb_completions_per_second": 311.63767246550685,
+            "failures": []
+          },
+          {
+            "index": 7,
+            "start_uptime_ms": 8613840,
+            "end_uptime_ms": 8623877,
+            "seconds": 10.037,
+            "adc_publish_per_second": 400.2191890006974,
+            "phase_observed_per_second": 400.2191890006974,
+            "usb_completions_per_second": 308.15980870778117,
+            "failures": []
+          },
+          {
+            "index": 8,
+            "start_uptime_ms": 8623877,
+            "end_uptime_ms": 8633879,
+            "seconds": 10.002,
+            "adc_publish_per_second": 400.3199360127974,
+            "phase_observed_per_second": 400.3199360127974,
+            "usb_completions_per_second": 309.1381723655269,
+            "failures": []
+          },
+          {
+            "index": 9,
+            "start_uptime_ms": 8633879,
+            "end_uptime_ms": 8643782,
+            "seconds": 9.903,
+            "adc_publish_per_second": 400.2827426032515,
+            "phase_observed_per_second": 400.2827426032515,
+            "usb_completions_per_second": 311.1178430778552,
+            "failures": []
+          },
+          {
+            "index": 10,
+            "start_uptime_ms": 8643782,
+            "end_uptime_ms": 8653845,
+            "seconds": 10.063,
+            "adc_publish_per_second": 400.27824704362513,
+            "phase_observed_per_second": 400.27824704362513,
+            "usb_completions_per_second": 302.6930338865149,
+            "failures": []
+          },
+          {
+            "index": 11,
+            "start_uptime_ms": 8653845,
+            "end_uptime_ms": 8663845,
+            "seconds": 10.0,
+            "adc_publish_per_second": 400.3,
+            "phase_observed_per_second": 400.3,
+            "usb_completions_per_second": 311.6,
+            "failures": []
+          },
+          {
+            "index": 12,
+            "start_uptime_ms": 8663845,
+            "end_uptime_ms": 8673781,
+            "seconds": 9.936,
+            "adc_publish_per_second": 400.26167471819645,
+            "phase_observed_per_second": 400.26167471819645,
+            "usb_completions_per_second": 306.9645732689211,
+            "failures": []
+          },
+          {
+            "index": 13,
+            "start_uptime_ms": 8673781,
+            "end_uptime_ms": 8683883,
+            "seconds": 10.102,
+            "adc_publish_per_second": 400.31676895664225,
+            "phase_observed_per_second": 400.31676895664225,
+            "usb_completions_per_second": 311.81944169471393,
+            "failures": []
+          }
+        ],
+        "future_timestamp_artifacts": {},
+        "first": {
+          "seq_begin": 164680,
+          "magic": 1381184568,
+          "uptime_ms": 8553830,
+          "role": 1,
+          "node": 11,
+          "node_count": 4,
+          "mask": 14338,
+          "phase_relation": 1,
+          "sync_alive": 1,
+          "observed_count": 2835,
+          "unlocked_count": 0,
+          "ctrl_peak_ticks": 538,
+          "raw_peak_ticks": 538,
+          "phase_raw": -71,
+          "phase_ctrl": -71,
+          "phase_flip": 0,
+          "phase_restart": 0,
+          "uart_errors": 114,
+          "sync_errors": 0,
+          "filter_drop": 16,
+          "adc_publish_count": 3423635,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 2,
+          "usb_tx_cplt": 2626663,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 3423605,
+          "tick_hz": 275000000,
+          "lock_bound_ticks": 859,
+          "period": 686860,
+          "usb_frame_age_ms": 267,
+          "adc_publish_age_ms": 2,
+          "seq_end": 164680
+        },
+        "last": {
+          "seq_begin": 167190,
+          "magic": 1381184568,
+          "uptime_ms": 8683883,
+          "role": 1,
+          "node": 11,
+          "node_count": 4,
+          "mask": 14338,
+          "phase_relation": 1,
+          "sync_alive": 1,
+          "observed_count": 54894,
+          "unlocked_count": 0,
+          "ctrl_peak_ticks": 635,
+          "raw_peak_ticks": 635,
+          "phase_raw": 101,
+          "phase_ctrl": 101,
+          "phase_flip": 0,
+          "phase_restart": 0,
+          "uart_errors": 116,
+          "sync_errors": 0,
+          "filter_drop": 16,
+          "adc_publish_count": 3475694,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 2,
+          "usb_tx_cplt": 2666834,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 3475664,
+          "tick_hz": 275000000,
+          "lock_bound_ticks": 859,
+          "period": 687014,
+          "usb_frame_age_ms": 1,
+          "adc_publish_age_ms": 2,
+          "seq_end": 167190
+        },
+        "covered_seconds": 130.053,
+        "criteria": {
+          "require_clean_sync_rx": false,
+          "require_usb_active": true,
+          "require_raw_phase": true,
+          "min_adc_hz": 390,
+          "min_usb_hz": 1,
+          "max_adc_age_ms": 10,
+          "max_usb_age_ms": 1000
+        }
+      },
+      "rx": {
+        "readings": 14,
+        "channels": [
+          {
+            "channel": "A",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              0
+            ],
+            "changes": 0,
+            "minimum_quality": 79,
+            "maximum_age_ms": 0
+          },
+          {
+            "channel": "B",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              0
+            ],
+            "changes": 0,
+            "minimum_quality": 87,
+            "maximum_age_ms": 0
+          }
+        ],
+        "failures": []
+      },
+      "rx_in_acceptance": true
+    },
+    "COM11": {
+      "sync": {
+        "readings": 14,
+        "failures": {},
+        "incomplete": {},
+        "warnings": {},
+        "ranges": {
+          "phase_raw": {
+            "min": -193,
+            "max": 263
+          },
+          "phase_ctrl": {
+            "min": -193,
+            "max": 263
+          },
+          "raw_peak_ticks": {
+            "min": 442,
+            "max": 626
+          },
+          "ctrl_peak_ticks": {
+            "min": 442,
+            "max": 626
+          },
+          "period": {
+            "min": 686860,
+            "max": 687148
+          },
+          "usb_frame_age_ms": {
+            "min": 1,
+            "max": 3
+          },
+          "adc_publish_age_ms": {
+            "min": 2,
+            "max": 3
+          },
+          "phase_raw_us": {
+            "min": -0.7018181818181818,
+            "max": 0.9563636363636364
+          },
+          "phase_ctrl_us": {
+            "min": -0.7018181818181818,
+            "max": 0.9563636363636364
+          },
+          "raw_peak_us": {
+            "min": 1.6072727272727272,
+            "max": 2.2763636363636364
+          },
+          "ctrl_peak_us": {
+            "min": 1.6072727272727272,
+            "max": 2.2763636363636364
+          },
+          "adc_publish_age_ms_effective": {
+            "min": 2,
+            "max": 3
+          },
+          "usb_frame_age_ms_effective": {
+            "min": 1,
+            "max": 3
+          }
+        },
+        "counter_deltas": {
+          "observed_count": 52081,
+          "unlocked_count": 0,
+          "phase_flip": 0,
+          "phase_restart": 0,
+          "uart_errors": 4,
+          "sync_errors": 0,
+          "filter_drop": 0,
+          "adc_publish_count": 52081,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 0,
+          "usb_tx_cplt": 40430,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 52081
+        },
+        "values_seen": {
+          "role": [
+            1
+          ],
+          "node": [
+            12
+          ],
+          "node_count": [
+            4
+          ],
+          "mask": [
+            14338
+          ],
+          "tick_hz": [
+            275000000
+          ],
+          "lock_bound_ticks": [
+            859
+          ]
+        },
+        "rates": {
+          "adc_publish_per_second": {
+            "min": 400.2574002574002,
+            "max": 400.32202878132233,
+            "mean": 400.29052786915486,
+            "intervals": 13
+          },
+          "phase_observed_per_second": {
+            "min": 400.2574002574002,
+            "max": 400.32202878132233,
+            "mean": 400.29052786915486,
+            "intervals": 13
+          },
+          "usb_completions_per_second": {
+            "min": 305.83157683428686,
+            "max": 317.5294466990003,
+            "mean": 310.74184523626525,
+            "intervals": 13
+          }
+        },
+        "intervals": [
+          {
+            "index": 1,
+            "start_uptime_ms": 8532856,
+            "end_uptime_ms": 8542959,
+            "seconds": 10.103,
+            "adc_publish_per_second": 400.27714540235576,
+            "phase_observed_per_second": 400.27714540235576,
+            "usb_completions_per_second": 317.5294466990003,
+            "failures": []
+          },
+          {
+            "index": 2,
+            "start_uptime_ms": 8542959,
+            "end_uptime_ms": 8552919,
+            "seconds": 9.96,
+            "adc_publish_per_second": 400.3012048192771,
+            "phase_observed_per_second": 400.3012048192771,
+            "usb_completions_per_second": 308.3333333333333,
+            "failures": []
+          },
+          {
+            "index": 3,
+            "start_uptime_ms": 8552919,
+            "end_uptime_ms": 8562922,
+            "seconds": 10.003,
+            "adc_publish_per_second": 400.27991602519245,
+            "phase_observed_per_second": 400.27991602519245,
+            "usb_completions_per_second": 315.10546835949214,
+            "failures": []
+          },
+          {
+            "index": 4,
+            "start_uptime_ms": 8562922,
+            "end_uptime_ms": 8572857,
+            "seconds": 9.935,
+            "adc_publish_per_second": 400.3019627579265,
+            "phase_observed_per_second": 400.3019627579265,
+            "usb_completions_per_second": 311.42425767488675,
+            "failures": []
+          },
+          {
+            "index": 5,
+            "start_uptime_ms": 8572857,
+            "end_uptime_ms": 8582959,
+            "seconds": 10.102,
+            "adc_publish_per_second": 400.31676895664225,
+            "phase_observed_per_second": 400.31676895664225,
+            "usb_completions_per_second": 311.81944169471393,
+            "failures": []
+          },
+          {
+            "index": 6,
+            "start_uptime_ms": 8582959,
+            "end_uptime_ms": 8592922,
+            "seconds": 9.963,
+            "adc_publish_per_second": 400.2810398474355,
+            "phase_observed_per_second": 400.2810398474355,
+            "usb_completions_per_second": 306.9356619492121,
+            "failures": []
+          },
+          {
+            "index": 7,
+            "start_uptime_ms": 8592922,
+            "end_uptime_ms": 8602925,
+            "seconds": 10.003,
+            "adc_publish_per_second": 400.27991602519245,
+            "phase_observed_per_second": 400.27991602519245,
+            "usb_completions_per_second": 314.30570828751377,
+            "failures": []
+          },
+          {
+            "index": 8,
+            "start_uptime_ms": 8602925,
+            "end_uptime_ms": 8612962,
+            "seconds": 10.037,
+            "adc_publish_per_second": 400.3188203646508,
+            "phase_observed_per_second": 400.3188203646508,
+            "usb_completions_per_second": 307.96054597987444,
+            "failures": []
+          },
+          {
+            "index": 9,
+            "start_uptime_ms": 8612962,
+            "end_uptime_ms": 8622863,
+            "seconds": 9.901,
+            "adc_publish_per_second": 400.26259973740025,
+            "phase_observed_per_second": 400.26259973740025,
+            "usb_completions_per_second": 307.94869205130794,
+            "failures": []
+          },
+          {
+            "index": 10,
+            "start_uptime_ms": 8622863,
+            "end_uptime_ms": 8632963,
+            "seconds": 10.1,
+            "adc_publish_per_second": 400.2970297029703,
+            "phase_observed_per_second": 400.2970297029703,
+            "usb_completions_per_second": 312.3762376237624,
+            "failures": []
+          },
+          {
+            "index": 11,
+            "start_uptime_ms": 8632963,
+            "end_uptime_ms": 8642926,
+            "seconds": 9.963,
+            "adc_publish_per_second": 400.2810398474355,
+            "phase_observed_per_second": 400.2810398474355,
+            "usb_completions_per_second": 305.83157683428686,
+            "failures": []
+          },
+          {
+            "index": 12,
+            "start_uptime_ms": 8642926,
+            "end_uptime_ms": 8652863,
+            "seconds": 9.937,
+            "adc_publish_per_second": 400.32202878132233,
+            "phase_observed_per_second": 400.32202878132233,
+            "usb_completions_per_second": 307.03431619200967,
+            "failures": []
+          },
+          {
+            "index": 13,
+            "start_uptime_ms": 8652863,
+            "end_uptime_ms": 8662964,
+            "seconds": 10.101,
+            "adc_publish_per_second": 400.2574002574002,
+            "phase_observed_per_second": 400.2574002574002,
+            "usb_completions_per_second": 312.84031284031283,
+            "failures": []
+          }
+        ],
+        "future_timestamp_artifacts": {},
+        "first": {
+          "seq_begin": 164284,
+          "magic": 1381184568,
+          "uptime_ms": 8532856,
+          "role": 1,
+          "node": 12,
+          "node_count": 4,
+          "mask": 14338,
+          "phase_relation": 1,
+          "sync_alive": 1,
+          "observed_count": 1677,
+          "unlocked_count": 0,
+          "ctrl_peak_ticks": 442,
+          "raw_peak_ticks": 442,
+          "phase_raw": 181,
+          "phase_ctrl": 181,
+          "phase_flip": 1,
+          "phase_restart": 0,
+          "uart_errors": 101,
+          "sync_errors": 0,
+          "filter_drop": 17,
+          "adc_publish_count": 3415245,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 2,
+          "usb_tx_cplt": 2774944,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 3415215,
+          "tick_hz": 275000000,
+          "lock_bound_ticks": 859,
+          "period": 687132,
+          "usb_frame_age_ms": 2,
+          "adc_publish_age_ms": 2,
+          "seq_end": 164284
+        },
+        "last": {
+          "seq_begin": 166790,
+          "magic": 1381184568,
+          "uptime_ms": 8662964,
+          "role": 1,
+          "node": 12,
+          "node_count": 4,
+          "mask": 14338,
+          "phase_relation": 1,
+          "sync_alive": 1,
+          "observed_count": 53758,
+          "unlocked_count": 0,
+          "ctrl_peak_ticks": 626,
+          "raw_peak_ticks": 626,
+          "phase_raw": -193,
+          "phase_ctrl": -193,
+          "phase_flip": 1,
+          "phase_restart": 0,
+          "uart_errors": 105,
+          "sync_errors": 0,
+          "filter_drop": 17,
+          "adc_publish_count": 3467326,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 2,
+          "usb_tx_cplt": 2815374,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 3467296,
+          "tick_hz": 275000000,
+          "lock_bound_ticks": 859,
+          "period": 686970,
+          "usb_frame_age_ms": 3,
+          "adc_publish_age_ms": 3,
+          "seq_end": 166790
+        },
+        "covered_seconds": 130.108,
+        "criteria": {
+          "require_clean_sync_rx": false,
+          "require_usb_active": true,
+          "require_raw_phase": true,
+          "min_adc_hz": 390,
+          "min_usb_hz": 1,
+          "max_adc_age_ms": 10,
+          "max_usb_age_ms": 1000
+        }
+      },
+      "rx": {
+        "readings": 14,
+        "channels": [
+          {
+            "channel": "A",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              180
+            ],
+            "changes": 0,
+            "minimum_quality": 95,
+            "maximum_age_ms": 0
+          },
+          {
+            "channel": "B",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              180
+            ],
+            "changes": 0,
+            "minimum_quality": 98,
+            "maximum_age_ms": 0
+          }
+        ],
+        "failures": []
+      },
+      "rx_in_acceptance": false
+    },
+    "COM32": {
+      "sync": {
+        "readings": 14,
+        "failures": {},
+        "incomplete": {},
+        "warnings": {},
+        "ranges": {
+          "phase_raw": {
+            "min": 0,
+            "max": 0
+          },
+          "phase_ctrl": {
+            "min": 0,
+            "max": 0
+          },
+          "raw_peak_ticks": {
+            "min": 0,
+            "max": 0
+          },
+          "ctrl_peak_ticks": {
+            "min": 0,
+            "max": 0
+          },
+          "period": {
+            "min": 686838,
+            "max": 687278
+          },
+          "usb_frame_age_ms": {
+            "min": 1,
+            "max": 5
+          },
+          "adc_publish_age_ms": {
+            "min": 0,
+            "max": 3
+          },
+          "phase_raw_us": {
+            "min": 0.0,
+            "max": 0.0
+          },
+          "phase_ctrl_us": {
+            "min": 0.0,
+            "max": 0.0
+          },
+          "raw_peak_us": {
+            "min": 0.0,
+            "max": 0.0
+          },
+          "ctrl_peak_us": {
+            "min": 0.0,
+            "max": 0.0
+          },
+          "adc_publish_age_ms_effective": {
+            "min": 0,
+            "max": 3
+          },
+          "usb_frame_age_ms_effective": {
+            "min": 1,
+            "max": 5
+          }
+        },
+        "counter_deltas": {
+          "observed_count": 0,
+          "unlocked_count": 0,
+          "phase_flip": 0,
+          "phase_restart": 0,
+          "uart_errors": 4,
+          "sync_errors": 0,
+          "filter_drop": 0,
+          "adc_publish_count": 52109,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 0,
+          "usb_tx_cplt": 39914,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 52109
+        },
+        "values_seen": {
+          "role": [
+            0
+          ],
+          "node": [
+            1
+          ],
+          "node_count": [
+            4
+          ],
+          "mask": [
+            14338
+          ],
+          "tick_hz": [
+            275000000
+          ],
+          "lock_bound_ticks": [
+            859
+          ]
+        },
+        "rates": {
+          "adc_publish_per_second": {
+            "min": 400.2199560087982,
+            "max": 400.3982080637133,
+            "mean": 400.29344661499334,
+            "intervals": 13
+          },
+          "phase_observed_per_second": {
+            "min": 0.0,
+            "max": 0.0,
+            "mean": 0.0,
+            "intervals": 13
+          },
+          "usb_completions_per_second": {
+            "min": 289.7902375981708,
+            "max": 314.008685991314,
+            "mean": 306.6133034253362,
+            "intervals": 13
+          }
+        },
+        "intervals": [
+          {
+            "index": 1,
+            "start_uptime_ms": 8595262,
+            "end_uptime_ms": 8605469,
+            "seconds": 10.207,
+            "adc_publish_per_second": 400.31351033604386,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 306.064465562849,
+            "failures": []
+          },
+          {
+            "index": 2,
+            "start_uptime_ms": 8605469,
+            "end_uptime_ms": 8615370,
+            "seconds": 9.901,
+            "adc_publish_per_second": 400.26259973740025,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 314.008685991314,
+            "failures": []
+          },
+          {
+            "index": 3,
+            "start_uptime_ms": 8615370,
+            "end_uptime_ms": 8625270,
+            "seconds": 9.9,
+            "adc_publish_per_second": 400.3030303030303,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 307.27272727272725,
+            "failures": []
+          },
+          {
+            "index": 4,
+            "start_uptime_ms": 8625270,
+            "end_uptime_ms": 8635327,
+            "seconds": 10.057,
+            "adc_publish_per_second": 400.3181863378741,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 298.6974246793278,
+            "failures": []
+          },
+          {
+            "index": 5,
+            "start_uptime_ms": 8635327,
+            "end_uptime_ms": 8645371,
+            "seconds": 10.044,
+            "adc_publish_per_second": 400.2389486260454,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 310.7327757865392,
+            "failures": []
+          },
+          {
+            "index": 6,
+            "start_uptime_ms": 8645371,
+            "end_uptime_ms": 8655373,
+            "seconds": 10.002,
+            "adc_publish_per_second": 400.3199360127974,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 308.5382923415317,
+            "failures": []
+          },
+          {
+            "index": 7,
+            "start_uptime_ms": 8655373,
+            "end_uptime_ms": 8665376,
+            "seconds": 10.003,
+            "adc_publish_per_second": 400.27991602519245,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 309.3072078376487,
+            "failures": []
+          },
+          {
+            "index": 8,
+            "start_uptime_ms": 8665376,
+            "end_uptime_ms": 8675334,
+            "seconds": 9.958,
+            "adc_publish_per_second": 400.28118096003215,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 303.9767021490259,
+            "failures": []
+          },
+          {
+            "index": 9,
+            "start_uptime_ms": 8675334,
+            "end_uptime_ms": 8685332,
+            "seconds": 9.998,
+            "adc_publish_per_second": 400.28005601120225,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 310.16203240648133,
+            "failures": []
+          },
+          {
+            "index": 10,
+            "start_uptime_ms": 8685332,
+            "end_uptime_ms": 8695377,
+            "seconds": 10.045,
+            "adc_publish_per_second": 400.3982080637133,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 305.4255848680936,
+            "failures": []
+          },
+          {
+            "index": 11,
+            "start_uptime_ms": 8695377,
+            "end_uptime_ms": 8705379,
+            "seconds": 10.002,
+            "adc_publish_per_second": 400.2199560087982,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 310.4379124175165,
+            "failures": []
+          },
+          {
+            "index": 12,
+            "start_uptime_ms": 8705379,
+            "end_uptime_ms": 8715380,
+            "seconds": 10.001,
+            "adc_publish_per_second": 400.35996400359966,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 311.76882311768827,
+            "failures": []
+          },
+          {
+            "index": 13,
+            "start_uptime_ms": 8715380,
+            "end_uptime_ms": 8725439,
+            "seconds": 10.059,
+            "adc_publish_per_second": 400.2385923053982,
+            "phase_observed_per_second": 0.0,
+            "usb_completions_per_second": 289.7902375981708,
+            "failures": []
+          }
+        ],
+        "future_timestamp_artifacts": {},
+        "first": {
+          "seq_begin": 165490,
+          "magic": 1381184568,
+          "uptime_ms": 8595262,
+          "role": 0,
+          "node": 1,
+          "node_count": 4,
+          "mask": 14338,
+          "phase_relation": 0,
+          "sync_alive": 1,
+          "observed_count": 0,
+          "unlocked_count": 0,
+          "ctrl_peak_ticks": 0,
+          "raw_peak_ticks": 0,
+          "phase_raw": 0,
+          "phase_ctrl": 0,
+          "phase_flip": 0,
+          "phase_restart": 0,
+          "uart_errors": 329,
+          "sync_errors": 0,
+          "filter_drop": 0,
+          "adc_publish_count": 3440214,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 2,
+          "usb_tx_cplt": 2615918,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 3440184,
+          "tick_hz": 275000000,
+          "lock_bound_ticks": 859,
+          "period": 686954,
+          "usb_frame_age_ms": 4,
+          "adc_publish_age_ms": 2,
+          "seq_end": 165490
+        },
+        "last": {
+          "seq_begin": 167996,
+          "magic": 1381184568,
+          "uptime_ms": 8725439,
+          "role": 0,
+          "node": 1,
+          "node_count": 4,
+          "mask": 14338,
+          "phase_relation": 0,
+          "sync_alive": 1,
+          "observed_count": 0,
+          "unlocked_count": 0,
+          "ctrl_peak_ticks": 0,
+          "raw_peak_ticks": 0,
+          "phase_raw": 0,
+          "phase_ctrl": 0,
+          "phase_flip": 0,
+          "phase_restart": 0,
+          "uart_errors": 333,
+          "sync_errors": 0,
+          "filter_drop": 0,
+          "adc_publish_count": 3492323,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 2,
+          "usb_tx_cplt": 2655832,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 3492293,
+          "tick_hz": 275000000,
+          "lock_bound_ticks": 859,
+          "period": 686882,
+          "usb_frame_age_ms": 1,
+          "adc_publish_age_ms": 2,
+          "seq_end": 167996
+        },
+        "covered_seconds": 130.177,
+        "criteria": {
+          "require_clean_sync_rx": false,
+          "require_usb_active": true,
+          "require_raw_phase": true,
+          "min_adc_hz": 390,
+          "min_usb_hz": 1,
+          "max_adc_age_ms": 10,
+          "max_usb_age_ms": 1000
+        }
+      },
+      "rx": {
+        "readings": 14,
+        "channels": [
+          {
+            "channel": "A",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              0
+            ],
+            "changes": 0,
+            "minimum_quality": 97,
+            "maximum_age_ms": 0
+          },
+          {
+            "channel": "B",
+            "valid_readings": 14,
+            "valid_fraction": 1.0,
+            "phases": [
+              0
+            ],
+            "changes": 0,
+            "minimum_quality": 80,
+            "maximum_age_ms": 0
+          }
+        ],
+        "failures": []
+      },
+      "rx_in_acceptance": true
+    }
+  },
+  "passed": true
+}

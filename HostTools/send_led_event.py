@@ -86,9 +86,9 @@ def main() -> None:
                     help="show this pattern temporarily with 0x35")
     source_group = ap.add_mutually_exclusive_group()
     source_group.add_argument("--source-id", type=int, choices=range(32), default=None,
-                              help="set an additional system-LED remote optic source ID with 0x44")
+                              help="select the sole system-LED optic source ID with 0x44")
     source_group.add_argument("--disable-source", action="store_true",
-                              help="disable remote optic reaction with 0x44/0xFF; local stays enabled")
+                              help="clear the binding with 0x44/0xFF; use the local receiver")
     ap.add_argument("--duration-ms", type=int, default=1600)
     ap.add_argument("--gap-ms", type=int, default=500)
     args = ap.parse_args()

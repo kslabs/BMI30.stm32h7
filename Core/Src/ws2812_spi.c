@@ -679,16 +679,18 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
                                     (last_error != 0u)) ? 1u : 0u);
   uint8_t display_slave_mode;
   uint8_t master_sync_active;
-  uint8_t local_optic_active =
-      (uint8_t)((optic_sensor_get_state() != 0u) ? 1u : 0u);
   uint8_t selected_optic_active = s_optic_reaction_active_cached;
   uint8_t optic_remote = s_optic_reaction_remote_cached;
-  uint8_t remote_optic_active =
-      (uint8_t)(((selected_optic_active != 0u) && (optic_remote != 0u)) ? 1u : 0u);
-  uint8_t optic_active =
-      (uint8_t)(((local_optic_active != 0u) || (remote_optic_active != 0u)) ? 1u : 0u);
   uint8_t optic_source_enabled =
       (uint8_t)((s_optic_reaction_source_id <= 31u) ? 1u : 0u);
+  uint8_t local_optic_active = optic_source_enabled
+      ? (uint8_t)((selected_optic_active != 0u) && (optic_remote == 0u))
+      : (uint8_t)(optic_sensor_get_state() != 0u);
+  uint8_t remote_optic_active =
+      (uint8_t)(((optic_source_enabled != 0u) &&
+                 (selected_optic_active != 0u) && (optic_remote != 0u)) ? 1u : 0u);
+  uint8_t optic_active =
+      (uint8_t)(((local_optic_active != 0u) || (remote_optic_active != 0u)) ? 1u : 0u);
   uint8_t tx_enabled = (uint8_t)((vnd_is_tx_enabled() != 0u) ? 1u : 0u);
   uint8_t alarm_gate_on = 1u;
   uint8_t smooth_level = 255u;
@@ -721,9 +723,10 @@ static uint32_t ws2812_get_onboard_status_rgb(uint8_t *red_out,
     smooth_level = (uint8_t)(((ramp * ramp * (765u - (2u * ramp))) + 32512u) / 65025u);
   }
 
-  /* Preserve the original local receiver indication independently of the RSP
-     remote-source selection. A local hit has priority; 0x44 only replaces the
-     old hard-coded MASTER neighbour with an explicitly selected remote ID. */
+  /* A configured source owns optical indication, even while inactive.
+     The local receiver is used only without a binding (0xFF), or when its
+     own ID is explicitly selected. Never mask a bound remote sensor with
+     local activity. Optical publication to USB/RS485 remains independent. */
   if (local_optic_active != 0u) {
     if (display_slave_mode != 0u) {
       red = WS2812_STATUS_YELLOW_R;

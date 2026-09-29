@@ -8,7 +8,7 @@ extern "C" {
 #define VND_CMD_START_STREAM    0x20u
 #define VND_CMD_STOP_STREAM     0x21u
 #define VND_CMD_GET_STATUS      0x30u
-#define VND_CMD_SET_TX_ENABLE   0x33u /* 1 byte: enable complementary TX200 waveform on PA2/PC7 and PA1 */
+#define VND_CMD_SET_TX_ENABLE   0x33u /* 1 byte: common TX200 enable; phases set independently by 0x47/0x48 */
 #define VND_CMD_SET_OPTIC_POWER 0x34u /* 1 байт: 0..255, мощность оптического TX */
 #define VND_CMD_LED_EVENT       0x35u /* payload: u8 pattern_id (0..15), u16 duration_ms */
 #define VND_CMD_HOST_RX_ACK     0x36u /* payload: u32 total host-received A/B frames */
@@ -29,6 +29,25 @@ extern "C" {
 #define VND_CMD_SET_OPTIC_REACTION_SOURCE 0x44u /* payload: u8 source_id 0..31, 0xFF=disabled */
 #define VND_CMD_SET_WIRE_MODE    0x45u /* payload: version=1, mode, u16 lease_ms, u32 transport_epoch */
 #define VND_CMD_GET_SYNC_DIAG    0x46u /* EP0 IN: SYN1 sync/wire/lease diagnostics */
+#define VND_CMD_SET_TX1_PHASE    0x47u /* u8: 0=in phase, 1=antiphase; absolute setting */
+#define VND_CMD_SET_TX2_PHASE    0x48u /* u8: 0=in phase, 1=antiphase; absolute setting */
+#define VND_CMD_GET_TX_PHASE     0x49u /* EP0 IN: TXP1, requested/applied local TX phases */
+#define VND_CMD_GET_RX_PHASE     0x4Eu /* EP0 IN: RXP1, measured per-channel RX polarity */
+#define VND_TX_PHASE_STATUS_SIZE 16u
+#define VND_CMD_SET_RELAY_ENABLE 0x4Au /* strict u8 0/1, RAM only; 0 stops immediately */
+#define VND_CMD_RELAY_EVENT      0x4Bu /* u32 duration_ms LE, 0=stop, max 0x7FFFFFFF */
+#define VND_CMD_GET_RELAY_STATUS 0x4Cu /* EP0 IN: RLY1, 20 bytes */
+#define VND_CMD_SET_RELAY_TEST   0x4Du /* strict u8 0/1: hold until stop; requires enable */
+#define VND_RELAY_STATUS_SIZE 20u
+
+/* Read-only receive audit for SET_OPTIC_REACTION_SOURCE, exposed by OPTIC.
+   UART OPTSRC is deliberately excluded from the USB command counters. */
+typedef struct {
+    uint32_t rx_total;
+    uint32_t setup_count, setup_type, setup_value, setup_index, setup_len;
+    uint32_t cmd_count, cmd_len, cmd_value, applied, cmd_ms;
+} vnd_optic_source_diag_t;
+extern volatile vnd_optic_source_diag_t vnd_optic_source_diag;
 
 /* Асинхронные service-события по Vendor IN 0x83: сигнатура 'EVT1'. */
 #define VND_EVT_TYPE_FW_INFO     0x00u /* payload: firmware version/build + STM32 UID96 v1 */
@@ -387,6 +406,8 @@ uint16_t vnd_build_rs485_sensor(uint8_t device_id,
                                 uint8_t *dst,
                                 uint16_t max_len);
 uint16_t vnd_build_sync_diag(uint8_t *dst, uint16_t max_len);
+uint16_t vnd_build_tx_phase(uint8_t *dst, uint16_t max_len);
+uint16_t vnd_build_relay_status(uint8_t *dst, uint16_t max_len);
 void vnd_get_lcd_sync_snapshot(vnd_lcd_sync_snapshot_t *out);
 void vnd_lcd_role_overlay_configure(uint8_t enabled, uint8_t period_s, uint8_t duration_s);
 

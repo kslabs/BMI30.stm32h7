@@ -1,0 +1,34 @@
+{
+  "firmware": "1.2.53",
+  "revision": "r5",
+  "flash_address": "0x08000000",
+  "build_date": "2026-09-29",
+  "build_time": "14:58:32",
+  "files": {
+    "BMI30-STM32-1.2.53-r5.bin": {
+      "bytes": 323496,
+      "sha256": "2a75876628c0b4a29bc5214933905eabb023af3bd4a1ec7cead46320e4e907fc"
+    },
+    "BMI30-STM32-1.2.53-r5.elf": {
+      "bytes": 3150720,
+      "sha256": "2b7c0007a76cd6bc2d9e59fdc9f5cd6c41a331d01634869300f893972d4e612d"
+    },
+    "BMI30-STM32-1.2.53-r5.map": {
+      "bytes": 1293205,
+      "sha256": "087c7a2db3d83c84f994ad2f8ed965a13bec0b46367dde33a04934b1c76ae897"
+    },
+    "build_autogen.h": {
+      "bytes": 205,
+      "sha256": "f34749698e7ab0a8e3d416df01a76542217004562b8a2ed21f5c8a5d853a5a57"
+    }
+  },
+  "verified_boards": [
+    "S13",
+    "S11",
+    "S12",
+    "M01"
+  ],
+  "verification": "All four application Flash readbacks match BIN byte for byte.",
+  "config_sector": "0x080E0000..0x080FFFFF is outside this image.",
+  "git_tag": "bmi30-fw-1.2.53-r5-2026-09-29"
+}

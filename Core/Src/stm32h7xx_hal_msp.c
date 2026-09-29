@@ -128,7 +128,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
   /* Use 16-bit alignment for ADC DMA transfers */
   hdma_adc1.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
   hdma_adc1.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-    hdma_adc1.Init.Mode = DMA_NORMAL;  /* NORMAL: перезапуск в TC callback для 400Hz */
+    hdma_adc1.Init.Mode = DMA_CIRCULAR;  /* Hardware DBM preserves every TIM15 trigger. */
     hdma_adc1.Init.Priority = DMA_PRIORITY_HIGH;  /* HIGH: приоритет DMA */
     hdma_adc1.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
     if (HAL_DMA_Init(&hdma_adc1) != HAL_OK)
@@ -172,7 +172,7 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
   /* Use 16-bit alignment for ADC DMA transfers */
   hdma_adc2.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
   hdma_adc2.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-    hdma_adc2.Init.Mode = DMA_NORMAL;  /* NORMAL: перезапуск в TC callback для 400Hz */
+    hdma_adc2.Init.Mode = DMA_CIRCULAR;  /* Hardware DBM preserves every TIM15 trigger. */
     hdma_adc2.Init.Priority = DMA_PRIORITY_HIGH;  /* HIGH: приоритет DMA */
     hdma_adc2.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
     if (HAL_DMA_Init(&hdma_adc2) != HAL_OK)

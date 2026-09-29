@@ -18,6 +18,8 @@
 #include "usbd_ctlreq.h"
 #include <stdio.h>
 #include "usb_vendor_app.h" // ДОБАВЛЕНО: для VND_CMD_* и vnd_build_status
+#include "adc_stream.h"
+#include "rx_phase_detector.h"
 #include <string.h>
 #include "stm32h7xx_hal.h"  // для SCB_CleanDCache_by_Addr (H7, D-Cache)
 
@@ -487,6 +489,8 @@ static uint8_t USBD_CDCVND_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 
 static uint8_t USBD_CDCVND_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 {
+  /* Drop relay permission and held tests when USB is reset/deconfigured. */
+  relay_set_enabled(0u);
   UNUSED(cfgidx);
   rs485_wire_mode_force_full(RS485_WIRE_FALLBACK_USB_DISCONNECT);
   (void)USBD_LL_CloseEP(pdev, CDC_IN_EP);  pdev->ep_in[CDC_IN_EP & 0xFU].is_used = 0U;
@@ -504,6 +508,13 @@ static uint8_t USBD_CDCVND_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 
 static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 {
+  if (req->bRequest == VND_CMD_SET_OPTIC_REACTION_SOURCE) {
+    vnd_optic_source_diag.setup_count++;
+    vnd_optic_source_diag.setup_type = req->bmRequest;
+    vnd_optic_source_diag.setup_value = req->wValue;
+    vnd_optic_source_diag.setup_index = req->wIndex;
+    vnd_optic_source_diag.setup_len = req->wLength;
+  }
   USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)pdev->pClassData;
   if (!hcdc) return (uint8_t)USBD_FAIL;
   uint16_t status_info = 0; uint16_t len;
@@ -572,6 +583,71 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
       if(!l){ USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL; }
       USBD_CtlSendData(pdev, buf, l);
       return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) && req->bRequest == VND_CMD_GET_RELAY_STATUS ) {
+      static uint8_t buf[VND_RELAY_STATUS_SIZE] __attribute__((section(".ram_d2"), aligned(32)));
+      if(req->wLength < sizeof(buf)) {
+        USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL;
+      }
+      uint16_t l = vnd_build_relay_status(buf, sizeof(buf));
+      USBD_CtlSendData(pdev, buf, l);
+      return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) == 0 &&
+                (req->bRequest == VND_CMD_SET_RELAY_ENABLE ||
+                 req->bRequest == VND_CMD_RELAY_EVENT ||
+                 req->bRequest == VND_CMD_SET_RELAY_TEST) ) {
+      uint8_t event = (req->bRequest == VND_CMD_RELAY_EVENT) ? 1u : 0u;
+      uint8_t payload_len = event ? 4u : 1u;
+      if(req->wLength == 0U && (event || req->wValue <= 1U)) {
+        uint8_t cmd[5] = {req->bRequest, (uint8_t)req->wValue,
+            (uint8_t)(req->wValue >> 8), 0u, 0u};
+        USBD_VND_DataReceived(cmd, (uint16_t)(1u + payload_len));
+        USBD_CtlSendStatus(pdev);
+        return (uint8_t)USBD_OK;
+      }
+      if(req->wLength == payload_len) {
+        hcdc->CmdOpCode = req->bRequest;
+        hcdc->CmdLength = payload_len;
+        USBD_CtlPrepareRx(pdev, (uint8_t*)hcdc->data, payload_len);
+        return (uint8_t)USBD_OK;
+      }
+      USBD_CtlError(pdev, req);
+      return (uint8_t)USBD_FAIL;
+    } else if ( (req->bmRequest & 0x80U) && req->bRequest == VND_CMD_GET_RX_PHASE ) {
+      static uint8_t buf[RX_PHASE_STATUS_SIZE] __attribute__((section(".ram_d2"), aligned(32)));
+      if(req->wLength < sizeof(buf) || req->wValue != 0u || req->wIndex != 0u) {
+        USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL;
+      }
+      uint16_t l = adc_rx_phase_get_status(buf,sizeof(buf));
+      if(!l){ USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL; }
+      USBD_CtlSendData(pdev,buf,l);
+      return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) && req->bRequest == VND_CMD_GET_TX_PHASE ) {
+      /* Persistent storage: EP0 sends asynchronously after this callback. */
+      static uint8_t buf[VND_TX_PHASE_STATUS_SIZE] __attribute__((section(".ram_d2"), aligned(32)));
+      if(req->wLength < sizeof(buf)) {
+        USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL;
+      }
+      uint16_t l = vnd_build_tx_phase(buf, sizeof(buf));
+      if(!l){ USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL; }
+      USBD_CtlSendData(pdev, buf, l);
+      return (uint8_t)USBD_OK;
+    } else if ( (req->bmRequest & 0x80U) == 0 &&
+                (req->bRequest == VND_CMD_SET_TX1_PHASE ||
+                 req->bRequest == VND_CMD_SET_TX2_PHASE) ) {
+      if(req->wLength == 0U && req->wValue <= 1U) {
+        uint8_t cmd[2] = {req->bRequest, (uint8_t)req->wValue};
+        USBD_VND_DataReceived(cmd, sizeof(cmd));
+        USBD_CtlSendStatus(pdev);
+        return (uint8_t)USBD_OK;
+      }
+      if(req->wLength == 1U) {
+        hcdc->CmdOpCode = req->bRequest;
+        hcdc->CmdLength = 1U;
+        USBD_CtlPrepareRx(pdev, (uint8_t*)hcdc->data, 1U);
+        return (uint8_t)USBD_OK;
+      }
+      USBD_CtlError(pdev, req);
+      return (uint8_t)USBD_FAIL;
     } else if ( (req->bmRequest & 0x80U) == 0 && req->wLength == 0 && req->bRequest == 0x7Eu ) {
       /* SOFT_RESET: мгновенно подтверждаем статусом и выполняем ресет в фоне */
       g_req_soft_reset = 1; USBD_CtlSendStatus(pdev); return (uint8_t)USBD_OK;
@@ -829,6 +905,33 @@ static uint8_t USBD_CDCVND_EP0_RxReady(USBD_HandleTypeDef *pdev)
   if (hcdc->CmdOpCode != 0xFFU) {
     uint8_t op = hcdc->CmdOpCode;
     uint8_t len = hcdc->CmdLength;
+    if(op == VND_CMD_SET_RELAY_ENABLE || op == VND_CMD_RELAY_EVENT ||
+       op == VND_CMD_SET_RELAY_TEST) {
+      uint8_t event = (op == VND_CMD_RELAY_EVENT) ? 1u : 0u;
+      uint8_t payload_len = event ? 4u : 1u;
+      uint8_t *payload = (uint8_t*)hcdc->data;
+      hcdc->CmdOpCode = 0xFFU;
+      if(len != payload_len || USBD_LL_GetRxDataSize(pdev, 0U) != payload_len ||
+         (event ? (payload[3] > 0x7FU) : (payload[0] > 1U))) {
+        (void)USBD_LL_StallEP(pdev, 0x80U);
+        return (uint8_t)USBD_FAIL;
+      }
+      uint8_t cmd[5] = {op, 0u, 0u, 0u, 0u};
+      memcpy(cmd + 1u, payload, payload_len);
+      USBD_VND_DataReceived(cmd, (uint16_t)(1u + payload_len));
+      return (uint8_t)USBD_OK;
+    }
+    if(op == VND_CMD_SET_TX1_PHASE || op == VND_CMD_SET_TX2_PHASE) {
+      hcdc->CmdOpCode = 0xFFU;
+      if(len != 1U || USBD_LL_GetRxDataSize(pdev, 0U) != 1U ||
+         ((uint8_t*)hcdc->data)[0] > 1U) {
+        (void)USBD_LL_StallEP(pdev, 0x80U);
+        return (uint8_t)USBD_FAIL;
+      }
+      uint8_t cmd[2] = {op, ((uint8_t*)hcdc->data)[0]};
+      USBD_VND_DataReceived(cmd, sizeof(cmd));
+      return (uint8_t)USBD_OK;
+    }
     /* Если это один из наших vendor control OUT запросов с полезной нагрузкой —
        формируем буфер [opcode | payload] и передаём в общий обработчик Vendor. */
     if (op == VND_CMD_SET_ASYNC_MODE ||

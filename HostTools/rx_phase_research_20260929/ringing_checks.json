@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "recorded_channel_stages": 104,
+  "checks": [
+    "positive amplitude scaling x0.25 and x4 preserves angle",
+    "ADC polarity inversion changes angle by 180 degrees",
+    "constant and linear background preserve angle"
+  ],
+  "scope": "algebraic checks on real captures, not calibrated phase accuracy or real-time response validation"
+}

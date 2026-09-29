@@ -1,0 +1,410 @@
+{
+  "method": "windowed complex ringing projection; not a calibrated binary classifier",
+  "sample_rate": 240174.0,
+  "window_samples": [
+    20,
+    240
+  ],
+  "channels": {
+    "COM11/A": {
+      "frequency_hz": 6200.0,
+      "stages": {
+        "baseline": {
+          "phase_deg": 134.70153584575706,
+          "complex_real": -1273480.2888564295,
+          "complex_imag": 1286817.4669665704,
+          "phase_scatter_p95_deg": 14.187057511000727,
+          "unit_vector_coherence": 0.9818991699437154,
+          "even_odd_separation_deg": -158.47097793691623,
+          "subwindow_angles_deg": [
+            138.76228220817944,
+            136.2437076154945
+          ],
+          "subwindow_disagreement_deg": 2.5185745926849563,
+          "clipped_fraction": 0.21253443526170798,
+          "change_from_baseline_deg": 0.0
+        },
+        "all_inverted": {
+          "phase_deg": 137.17866329875193,
+          "complex_real": -1316510.543889278,
+          "complex_imag": 1220013.1053639592,
+          "phase_scatter_p95_deg": 15.51398192814181,
+          "unit_vector_coherence": 0.9829112939289807,
+          "even_odd_separation_deg": -159.1910654322169,
+          "subwindow_angles_deg": [
+            142.10740429092073,
+            138.33643902145715
+          ],
+          "subwindow_disagreement_deg": 3.7709652694635736,
+          "clipped_fraction": 0.20675324675324674,
+          "change_from_baseline_deg": 2.477127452994864
+        },
+        "restored": {
+          "phase_deg": 133.98923464868878,
+          "complex_real": -1260367.7363970308,
+          "complex_imag": 1305639.8430674495,
+          "phase_scatter_p95_deg": 14.618702921580066,
+          "unit_vector_coherence": 0.980052894840551,
+          "even_odd_separation_deg": -157.6563523580751,
+          "subwindow_angles_deg": [
+            138.73928055760612,
+            135.12763634893219
+          ],
+          "subwindow_disagreement_deg": 3.611644208673937,
+          "clipped_fraction": 0.21363636363636362,
+          "change_from_baseline_deg": -0.7123011970682853
+        }
+      }
+    },
+    "COM11/B": {
+      "frequency_hz": 2540.0,
+      "stages": {
+        "baseline": {
+          "phase_deg": -36.02732994239292,
+          "complex_real": 406311.98779267864,
+          "complex_imag": -295499.1564648361,
+          "phase_scatter_p95_deg": 2.2010073322829213,
+          "unit_vector_coherence": 0.9995530171376572,
+          "even_odd_separation_deg": 176.62124501333915,
+          "subwindow_angles_deg": [
+            -41.125218290292324,
+            -52.401401723205495
+          ],
+          "subwindow_disagreement_deg": 11.276183432913172,
+          "clipped_fraction": 0.0290633608815427,
+          "change_from_baseline_deg": 0.0
+        },
+        "all_inverted": {
+          "phase_deg": -33.876524011769995,
+          "complex_real": 438850.16556959983,
+          "complex_imag": -294634.14005951537,
+          "phase_scatter_p95_deg": 1.3720599275525387,
+          "unit_vector_coherence": 0.9998180542145324,
+          "even_odd_separation_deg": 177.82628290239467,
+          "subwindow_angles_deg": [
+            -37.671753903250085,
+            -51.28948985869965
+          ],
+          "subwindow_disagreement_deg": 13.617735955449575,
+          "clipped_fraction": 0.03532467532467533,
+          "change_from_baseline_deg": 2.150805930622937
+        },
+        "restored": {
+          "phase_deg": -36.0123834214565,
+          "complex_real": 406340.23640522745,
+          "complex_imag": -295357.66513879795,
+          "phase_scatter_p95_deg": 2.2747988710562907,
+          "unit_vector_coherence": 0.9995214891271179,
+          "even_odd_separation_deg": 176.49151673487017,
+          "subwindow_angles_deg": [
+            -41.02642908806797,
+            -52.95331910443449
+          ],
+          "subwindow_disagreement_deg": 11.926890016366514,
+          "clipped_fraction": 0.031186868686868686,
+          "change_from_baseline_deg": 0.01494652093640525
+        }
+      }
+    },
+    "COM27/A": {
+      "frequency_hz": 6270.0,
+      "stages": {
+        "baseline": {
+          "phase_deg": 109.0509697127685,
+          "complex_real": -623053.8683939168,
+          "complex_imag": 1804264.142991675,
+          "phase_scatter_p95_deg": 10.721703448743781,
+          "unit_vector_coherence": 0.9847491346502514,
+          "even_odd_separation_deg": -159.70904166327452,
+          "subwindow_angles_deg": [
+            107.28592620078877,
+            109.51562996336664
+          ],
+          "subwindow_disagreement_deg": 2.2297037625778557,
+          "clipped_fraction": 0.24164222873900293,
+          "change_from_baseline_deg": 0.0
+        },
+        "all_inverted": {
+          "phase_deg": -75.12365727484185,
+          "complex_real": 490047.96070079046,
+          "complex_imag": -1844800.699270163,
+          "phase_scatter_p95_deg": 10.033534577238242,
+          "unit_vector_coherence": 0.9870764801289862,
+          "even_odd_separation_deg": 161.1853115342567,
+          "subwindow_angles_deg": [
+            -76.19073986656898,
+            -75.43053028778267
+          ],
+          "subwindow_disagreement_deg": 0.7602095787863163,
+          "clipped_fraction": 0.24714285714285714,
+          "change_from_baseline_deg": 175.82537301238966
+        },
+        "restored": {
+          "phase_deg": 108.84204666450424,
+          "complex_real": -616899.4660252492,
+          "complex_imag": 1807780.5681027714,
+          "phase_scatter_p95_deg": 10.70287513920289,
+          "unit_vector_coherence": 0.9854152222237375,
+          "even_odd_separation_deg": -159.946412749662,
+          "subwindow_angles_deg": [
+            107.03166841468985,
+            109.3085132579718
+          ],
+          "subwindow_disagreement_deg": 2.2768448432819355,
+          "clipped_fraction": 0.23863636363636365,
+          "change_from_baseline_deg": -0.20892304826426766
+        }
+      }
+    },
+    "COM27/B": {
+      "frequency_hz": 6360.0,
+      "stages": {
+        "baseline": {
+          "phase_deg": 131.9722168467253,
+          "complex_real": -1296478.136355398,
+          "complex_imag": 1441289.713939222,
+          "phase_scatter_p95_deg": 8.482453987404739,
+          "unit_vector_coherence": 0.9906727219457473,
+          "even_odd_separation_deg": -164.15460217595918,
+          "subwindow_angles_deg": [
+            132.91054347337246,
+            132.83105012516313
+          ],
+          "subwindow_disagreement_deg": 0.07949334820932563,
+          "clipped_fraction": 0.21129032258064517,
+          "change_from_baseline_deg": 0.0
+        },
+        "all_inverted": {
+          "phase_deg": 85.63881304658196,
+          "complex_real": 142916.16573173396,
+          "complex_imag": 1873956.0832814686,
+          "phase_scatter_p95_deg": 9.99121291281902,
+          "unit_vector_coherence": 0.9869754405512959,
+          "even_odd_separation_deg": -161.10988804468718,
+          "subwindow_angles_deg": [
+            108.38683668833013,
+            74.05553055700523
+          ],
+          "subwindow_disagreement_deg": 34.33130613132491,
+          "clipped_fraction": 0.21064935064935064,
+          "change_from_baseline_deg": -46.333403800143344
+        },
+        "restored": {
+          "phase_deg": 131.5378781140757,
+          "complex_real": -1286437.5490915086,
+          "complex_imag": 1452117.6055218554,
+          "phase_scatter_p95_deg": 8.468459051869623,
+          "unit_vector_coherence": 0.9913842613526386,
+          "even_odd_separation_deg": -164.60560848726405,
+          "subwindow_angles_deg": [
+            132.61745210053837,
+            132.2966725788825
+          ],
+          "subwindow_disagreement_deg": 0.3207795216558793,
+          "clipped_fraction": 0.20535714285714285,
+          "change_from_baseline_deg": -0.4343387326495929
+        }
+      }
+    },
+    "COM28/A": {
+      "frequency_hz": 6070.0,
+      "stages": {
+        "baseline": {
+          "phase_deg": 108.40638720956703,
+          "complex_real": -575656.3993623854,
+          "complex_imag": 1729843.1099311798,
+          "phase_scatter_p95_deg": 10.015103742836214,
+          "unit_vector_coherence": 0.9860486352888411,
+          "even_odd_separation_deg": -160.8417339461841,
+          "subwindow_angles_deg": [
+            109.22024685359573,
+            104.95125195905605
+          ],
+          "subwindow_disagreement_deg": 4.268994894539674,
+          "clipped_fraction": 0.23169533169533169,
+          "change_from_baseline_deg": 0.0
+        },
+        "all_inverted": {
+          "phase_deg": -77.89309519461769,
+          "complex_real": 402249.43004336016,
+          "complex_imag": -1875223.3455500002,
+          "phase_scatter_p95_deg": 5.919498195687891,
+          "unit_vector_coherence": 0.9959236832162065,
+          "even_odd_separation_deg": 169.42938388008616,
+          "subwindow_angles_deg": [
+            -68.786004072484,
+            -84.17814315234409
+          ],
+          "subwindow_disagreement_deg": 15.392139079860101,
+          "clipped_fraction": 0.24820936639118457,
+          "change_from_baseline_deg": 173.7005175958153
+        },
+        "restored": {
+          "phase_deg": 107.56736796460078,
+          "complex_real": -548457.1605466848,
+          "complex_imag": 1732378.724589043,
+          "phase_scatter_p95_deg": 10.286105452422037,
+          "unit_vector_coherence": 0.9856303817615805,
+          "even_odd_separation_deg": -160.52376457776896,
+          "subwindow_angles_deg": [
+            108.82344492318698,
+            103.71211210066139
+          ],
+          "subwindow_disagreement_deg": 5.111332822525583,
+          "clipped_fraction": 0.2275568181818182,
+          "change_from_baseline_deg": -0.8390192449662663
+        }
+      }
+    },
+    "COM28/B": {
+      "frequency_hz": 6150.0,
+      "stages": {
+        "baseline": {
+          "phase_deg": 100.68216811583451,
+          "complex_real": -302170.1149255318,
+          "complex_imag": 1601922.7349936091,
+          "phase_scatter_p95_deg": 10.41688739316034,
+          "unit_vector_coherence": 0.9861941267843957,
+          "even_odd_separation_deg": -160.9462170094788,
+          "subwindow_angles_deg": [
+            103.10410638214678,
+            94.9501847620437
+          ],
+          "subwindow_disagreement_deg": 8.153921620103063,
+          "clipped_fraction": 0.28083538083538084,
+          "change_from_baseline_deg": 0.0
+        },
+        "all_inverted": {
+          "phase_deg": -81.6655772830697,
+          "complex_real": 269352.2968391194,
+          "complex_imag": -1838609.1780817248,
+          "phase_scatter_p95_deg": 5.345876077591697,
+          "unit_vector_coherence": 0.9968529397227608,
+          "even_odd_separation_deg": 170.74160637016297,
+          "subwindow_angles_deg": [
+            -75.90404417326714,
+            -85.5251952146213
+          ],
+          "subwindow_disagreement_deg": 9.621151041354153,
+          "clipped_fraction": 0.27424242424242423,
+          "change_from_baseline_deg": 177.65225460109582
+        },
+        "restored": {
+          "phase_deg": 100.19921560521585,
+          "complex_real": -288661.9963041486,
+          "complex_imag": 1604441.9544593175,
+          "phase_scatter_p95_deg": 10.671562247618574,
+          "unit_vector_coherence": 0.9859685123057866,
+          "even_odd_separation_deg": -160.7571722238388,
+          "subwindow_angles_deg": [
+            102.89898292301798,
+            94.27599557498864
+          ],
+          "subwindow_disagreement_deg": 8.62298734802934,
+          "clipped_fraction": 0.2794034090909091,
+          "change_from_baseline_deg": -0.4829525106186452
+        }
+      }
+    },
+    "COM32/A": {
+      "frequency_hz": 6260.0,
+      "stages": {
+        "baseline": {
+          "phase_deg": 100.22882841070852,
+          "complex_real": -286240.88090956555,
+          "complex_imag": 1586280.0446800885,
+          "phase_scatter_p95_deg": 12.773332433423207,
+          "unit_vector_coherence": 0.9806784726776872,
+          "even_odd_separation_deg": -156.98625022177845,
+          "subwindow_angles_deg": [
+            104.60840177159183,
+            96.97387975177742
+          ],
+          "subwindow_disagreement_deg": 7.634522019814426,
+          "clipped_fraction": 0.20545454545454545,
+          "change_from_baseline_deg": 0.0
+        },
+        "all_inverted": {
+          "phase_deg": -89.62687586896783,
+          "complex_real": 10790.535563995785,
+          "complex_imag": -1656937.6118382134,
+          "phase_scatter_p95_deg": 9.854328757399717,
+          "unit_vector_coherence": 0.9888175931737709,
+          "even_odd_separation_deg": 162.82602447380089,
+          "subwindow_angles_deg": [
+            -76.83264368336357,
+            -99.29348944283166
+          ],
+          "subwindow_disagreement_deg": 22.4608457594681,
+          "clipped_fraction": 0.20894886363636364,
+          "change_from_baseline_deg": 170.14429572032367
+        },
+        "restored": {
+          "phase_deg": 99.78094461253816,
+          "complex_real": -274177.4522580802,
+          "complex_imag": 1590471.6736536298,
+          "phase_scatter_p95_deg": 12.546065723133864,
+          "unit_vector_coherence": 0.9798664271262296,
+          "even_odd_separation_deg": -156.93663201904906,
+          "subwindow_angles_deg": [
+            104.32305787936829,
+            96.43539694692525
+          ],
+          "subwindow_disagreement_deg": 7.887660932443055,
+          "clipped_fraction": 0.2013368983957219,
+          "change_from_baseline_deg": -0.44788379817035207
+        }
+      }
+    },
+    "COM32/B": {
+      "frequency_hz": 6120.0,
+      "stages": {
+        "baseline": {
+          "phase_deg": 100.7182950138889,
+          "complex_real": -345095.1922103712,
+          "complex_imag": 1823173.5412575023,
+          "phase_scatter_p95_deg": 10.251156340417282,
+          "unit_vector_coherence": 0.9873536237875289,
+          "even_odd_separation_deg": -161.4273788188752,
+          "subwindow_angles_deg": [
+            103.80829259427341,
+            99.00589310345902
+          ],
+          "subwindow_disagreement_deg": 4.802399490814395,
+          "clipped_fraction": 0.20945454545454545,
+          "change_from_baseline_deg": 0.0
+        },
+        "all_inverted": {
+          "phase_deg": 91.3616016780127,
+          "complex_real": -45754.30311533509,
+          "complex_imag": 1924964.53670236,
+          "phase_scatter_p95_deg": 7.765916796674891,
+          "unit_vector_coherence": 0.9919465336320515,
+          "even_odd_separation_deg": -165.43416999570255,
+          "subwindow_angles_deg": [
+            105.6755164455602,
+            85.90795678552699
+          ],
+          "subwindow_disagreement_deg": 19.767559660033214,
+          "clipped_fraction": 0.23551136363636363,
+          "change_from_baseline_deg": -9.356693335876201
+        },
+        "restored": {
+          "phase_deg": 99.76836219990534,
+          "complex_real": -314551.50319039426,
+          "complex_imag": 1827073.4578475512,
+          "phase_scatter_p95_deg": 10.343547098103997,
+          "unit_vector_coherence": 0.9865904577132539,
+          "even_odd_separation_deg": -161.2035674479586,
+          "subwindow_angles_deg": [
+            103.41753605553349,
+            97.6495271743457
+          ],
+          "subwindow_disagreement_deg": 5.768008881187768,
+          "clipped_fraction": 0.2,
+          "change_from_baseline_deg": -0.9499328139835654
+        }
+      }
+    }
+  }
+}

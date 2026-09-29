@@ -2,6 +2,18 @@
 
 Актуально для текущей прошивки.
 
+С 1.2.53: [измеренная RX-фаза A/B](RX_PHASE_HOST_INTEGRATION_RU.md).
+`0x4E GET_RX_PHASE`: EP0 IN `bmRequestType=0xC0`, `wValue=wIndex=0`,
+`wLength=112`, ответ `RXP1 v1`. Поля `phase=0/1/255` (0°/180°/нет решения)
+и `valid` независимы для двух каналов. Опрос 1 Гц, готовый кэш;
+не меняет ADC/USB/TX. `0x49` продолжает возвращать именно состояние TX.
+
+С 1.2.50: [независимое реле PC1](RELAY_CONTROL_RU.md), разрешение, длительность
+от хоста, отдельный длительный тест. LED_EVENT больше не переключает реле.
+
+С 1.2.46: [независимая фаза TX1 (PA1) / TX2 (PA2)](TX_PHASE_CONTROL_RU.md),
+команды `0x47/0x48`, чтение заданных/применённых фаз `0x49`.
+
 ## 1) Vendor Bulk OUT (IF#2, EP OUT 0x03)
 
 | Код | Команда | Payload | Типовой ответ/эффект |
@@ -42,6 +54,11 @@
 | 0x43 | GET_RS485_SENSOR | нет в bulk; используйте EP0 | SNS1 |
 | 0x44 | SET_OPTIC_REACTION_SOURCE | u8 source_id: 0..31 или 0xFF | Дополнительный удалённый источник системного WS2812; 0xFF=удалённая реакция выключена |
 | 0x45 | SET_WIRE_MODE | `u8 version=1, u8 mode, u16 lease_ms, u32 transport_epoch` | `0=FULL`, `1=SYNC_PRIORITY`, `2=SYNC_ONLY`; сокращённые режимы только с lease 250…60000 мс |
+| 0x47 | SET_TX1_PHASE | строго u8 0/1 | TX1 PA1: 0=в фазе, 1=противофаза; следующая граница маркера |
+| 0x48 | SET_TX2_PHASE | строго u8 0/1 | TX2 PA2: 0=в фазе, 1=противофаза; следующая граница маркера |
+| 0x4A | SET_RELAY_ENABLE | строго u8 0/1 | Разрешение реле; 0 немедленно выключает; после reset=0 |
+| 0x4B | RELAY_EVENT | u32 ms LE: 0..0x7FFFFFFF | Независимый таймер реле, 0=стоп, требуется разрешение |
+| 0x4D | SET_RELAY_TEST | строго u8 0/1 | Длительный тест до STOP; требуется разрешение |
 
 ## 2) Vendor EP0 Control
 
@@ -55,6 +72,8 @@
 | 0x40 | GET_RS485_IDENT | RID1 (32 bytes), wValue: 0..31=device_id, 0xFF=local |
 | 0x43 | GET_RS485_SENSOR | SNS1 (16 bytes), wValue: 0..31=device_id, 0xFF=local |
 | 0x46 | GET_SYNC_DIAG | SYN1 (84 bytes), актуальный wire mode/lease/sync phase/counters |
+| 0x49 | GET_TX_PHASE | TXP1 (16 bytes), заданные/применённые фазы TX1/TX2, flags и GPIO |
+| 0x4C | GET_RELAY_STATUS | RLY1 (20 bytes), разрешение, выход PC1, режим, оставшееся время |
 
 ### OUT (host -> device)
 
@@ -65,6 +84,9 @@
 | 0x20 | START_STREAM | нет |
 | 0x21 | STOP_STREAM | нет |
 | 0x3F | REQUEST_RS485_IDENT | нет |
+| 0x47,0x48 | SET_TX1_PHASE / SET_TX2_PHASE | wValue=0/1 без данных или data stage: ровно u8 0/1 |
+| 0x4A,0x4D | SET_RELAY_ENABLE / SET_RELAY_TEST | wValue=0/1 без данных или ровно u8 0/1 в data stage |
+| 0x4B | RELAY_EVENT | wValue=0..65535 мс без данных или ровно u32 LE 0..0x7FFFFFFF в data stage |
 | 0x13,0x14,0x18,0x19,0x1D,0x33,0x34,0x3B,0x3C,0x3D,0x41,0x44 | через wValue | u8; `0x1D MASTER/SLAVE` здесь запрещены (STALL) |
 | 0x17 | через wValue | u16 |
 | 0x39 | через wValue | u16 hold_ds |
@@ -80,6 +102,7 @@
 | RS485 identity | RID1 | 32 bytes | GET_RS485_IDENT (EP0) |
 | RS485 sensors | SNS1 | 16 bytes | GET_RS485_SENSOR (EP0) |
 | Sync/wire diagnostics | SYN1 | 84 bytes | GET_SYNC_DIAG (EP0) |
+| TX phases | TXP1 | 16 bytes | GET_TX_PHASE (EP0) |
 
 RS485 wire modes (firmware 1.2.45):
 

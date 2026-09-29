@@ -518,7 +518,7 @@ class USBStream:
         self.send_cmd(CMD_SET_LED_PATTERN, bytes([int(pattern_id) & 0xFF]))
 
     def set_optic_reaction_source(self, source_id=None):
-        """Select an additional remote optic source; local indication always remains."""
+        """Select the sole optic LED source; None restores the local receiver."""
         if source_id is None:
             value = 0xFF
         else:

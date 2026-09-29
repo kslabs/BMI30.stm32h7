@@ -1,0 +1,943 @@
+{
+  "global_run2": {
+    "stage_results": {
+      "baseline": {
+        "COM27": {
+          "frames": 31,
+          "even": 13,
+          "odd": 18,
+          "seconds": 13.799,
+          "adc_rate": 400.2463946662802,
+          "usb_rate": 343.2857453438655,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 37,
+          "even": 19,
+          "odd": 18,
+          "seconds": 20.364,
+          "adc_rate": 400.314280102141,
+          "usb_rate": 348.9000196425064,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 33,
+          "even": 17,
+          "odd": 16,
+          "seconds": 34.066,
+          "adc_rate": 400.2818059061821,
+          "usb_rate": 355.0754417894675,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 25,
+          "even": 10,
+          "odd": 15,
+          "seconds": 26.903,
+          "adc_rate": 400.2899304910233,
+          "usb_rate": 351.4849645021001,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      },
+      "all_inverted": {
+        "COM27": {
+          "frames": 35,
+          "even": 14,
+          "odd": 21,
+          "seconds": 13.435,
+          "adc_rate": 400.2977298101972,
+          "usb_rate": 350.7257164123558,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 33,
+          "even": 13,
+          "odd": 20,
+          "seconds": 20.3,
+          "adc_rate": 400.29556650246303,
+          "usb_rate": 346.94581280788174,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 35,
+          "even": 15,
+          "odd": 20,
+          "seconds": 33.702,
+          "adc_rate": 400.3026526615631,
+          "usb_rate": 357.69390540620736,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 32,
+          "even": 15,
+          "odd": 17,
+          "seconds": 26.744,
+          "adc_rate": 400.31408914148966,
+          "usb_rate": 349.498953036195,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      },
+      "restored": {
+        "COM27": {
+          "frames": 28,
+          "even": 17,
+          "odd": 11,
+          "seconds": 13.565,
+          "adc_rate": 400.2948765204571,
+          "usb_rate": 346.1850350165868,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 32,
+          "even": 17,
+          "odd": 15,
+          "seconds": 20.203,
+          "adc_rate": 400.2870860763253,
+          "usb_rate": 353.8583378706133,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 36,
+          "even": 17,
+          "odd": 19,
+          "seconds": 33.801,
+          "adc_rate": 400.2840152658205,
+          "usb_rate": 357.3562912339871,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 34,
+          "even": 18,
+          "odd": 16,
+          "seconds": 27.105,
+          "adc_rate": 400.2582549345139,
+          "usb_rate": 351.6325401217488,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      }
+    },
+    "restoration_verified": true,
+    "entire_experiment_counter_deltas": {
+      "COM27": {
+        "adc_fault_count": 0,
+        "adc_gap_over10ms": 0,
+        "usb_recovery": 0,
+        "phase_flip": 0,
+        "phase_restart": 0,
+        "unlocked_count": 0
+      },
+      "COM28": {
+        "adc_fault_count": 0,
+        "adc_gap_over10ms": 0,
+        "usb_recovery": 0,
+        "phase_flip": 0,
+        "phase_restart": 0,
+        "unlocked_count": 0
+      },
+      "COM11": {
+        "adc_fault_count": 0,
+        "adc_gap_over10ms": 0,
+        "usb_recovery": 0,
+        "phase_flip": 0,
+        "phase_restart": 0,
+        "unlocked_count": 0
+      },
+      "COM32": {
+        "adc_fault_count": 0,
+        "adc_gap_over10ms": 0,
+        "usb_recovery": 0,
+        "phase_flip": 0,
+        "phase_restart": 0,
+        "unlocked_count": 0
+      }
+    }
+  },
+  "individual_run1": {
+    "stage_results": {
+      "baseline": {
+        "COM27": {
+          "frames": 26,
+          "even": 18,
+          "odd": 8,
+          "seconds": 9.8,
+          "adc_rate": 400.3061224489796,
+          "usb_rate": 351.53061224489795,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 25,
+          "even": 11,
+          "odd": 14,
+          "seconds": 14.967,
+          "adc_rate": 400.280617358188,
+          "usb_rate": 350.771697735017,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 25,
+          "even": 14,
+          "odd": 11,
+          "seconds": 24.901,
+          "adc_rate": 400.26504959640175,
+          "usb_rate": 357.21456969599615,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 26,
+          "even": 13,
+          "odd": 13,
+          "seconds": 20.139,
+          "adc_rate": 400.3177913501167,
+          "usb_rate": 350.861512488207,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      },
+      "COM27_tx1_inverted": {
+        "COM27": {
+          "frames": 23,
+          "even": 15,
+          "odd": 8,
+          "seconds": 9.964,
+          "adc_rate": 400.2408671216379,
+          "usb_rate": 340.62625451625854,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 21,
+          "even": 15,
+          "odd": 6,
+          "seconds": 15.201,
+          "adc_rate": 400.3026116702848,
+          "usb_rate": 348.595487139004,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 24,
+          "even": 14,
+          "odd": 10,
+          "seconds": 25.104,
+          "adc_rate": 400.2947737412365,
+          "usb_rate": 357.512746972594,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 29,
+          "even": 14,
+          "odd": 15,
+          "seconds": 19.839,
+          "adc_rate": 400.2721911386663,
+          "usb_rate": 350.5721054488634,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      },
+      "COM27_tx2_inverted": {
+        "COM27": {
+          "frames": 22,
+          "even": 12,
+          "odd": 10,
+          "seconds": 11.135,
+          "adc_rate": 400.2694207453974,
+          "usb_rate": 347.8221823080377,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 17,
+          "even": 8,
+          "odd": 9,
+          "seconds": 16.097,
+          "adc_rate": 400.26091818351244,
+          "usb_rate": 350.5000931850655,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 19,
+          "even": 7,
+          "odd": 12,
+          "seconds": 25.737,
+          "adc_rate": 400.2797528849517,
+          "usb_rate": 357.85056533395505,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 30,
+          "even": 13,
+          "odd": 17,
+          "seconds": 20.962,
+          "adc_rate": 400.29577330407403,
+          "usb_rate": 348.82167732086634,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      },
+      "COM28_tx1_inverted": {
+        "COM27": {
+          "frames": 25,
+          "even": 15,
+          "odd": 10,
+          "seconds": 10.4,
+          "adc_rate": 400.28846153846155,
+          "usb_rate": 350.0961538461538,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 21,
+          "even": 15,
+          "odd": 6,
+          "seconds": 15.901,
+          "adc_rate": 400.2892899817622,
+          "usb_rate": 350.48110181749576,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 17,
+          "even": 7,
+          "odd": 10,
+          "seconds": 25.602,
+          "adc_rate": 400.28122802906023,
+          "usb_rate": 358.17514256698695,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 20,
+          "even": 10,
+          "odd": 10,
+          "seconds": 20.458,
+          "adc_rate": 400.2835076742595,
+          "usb_rate": 349.398768208036,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      },
+      "COM28_tx2_inverted": {
+        "COM27": {
+          "frames": 24,
+          "even": 11,
+          "odd": 13,
+          "seconds": 9.999,
+          "adc_rate": 400.2400240024002,
+          "usb_rate": 350.03500350035,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 21,
+          "even": 10,
+          "odd": 11,
+          "seconds": 15.201,
+          "adc_rate": 400.3026116702848,
+          "usb_rate": 349.7138346161437,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 22,
+          "even": 12,
+          "odd": 10,
+          "seconds": 25.762,
+          "adc_rate": 400.27948140672305,
+          "usb_rate": 354.94138653831226,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 26,
+          "even": 13,
+          "odd": 13,
+          "seconds": 20.144,
+          "adc_rate": 400.2680698967435,
+          "usb_rate": 350.82406671961877,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      },
+      "COM11_tx1_inverted": {
+        "COM27": {
+          "frames": 30,
+          "even": 17,
+          "odd": 13,
+          "seconds": 9.699,
+          "adc_rate": 400.35055160325805,
+          "usb_rate": 348.9019486545005,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 20,
+          "even": 11,
+          "odd": 9,
+          "seconds": 14.839,
+          "adc_rate": 400.29651593773167,
+          "usb_rate": 354.80827549026213,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 28,
+          "even": 14,
+          "odd": 14,
+          "seconds": 24.902,
+          "adc_rate": 400.2891334029395,
+          "usb_rate": 359.4490402377319,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 22,
+          "even": 10,
+          "odd": 12,
+          "seconds": 19.942,
+          "adc_rate": 400.31090161468256,
+          "usb_rate": 351.21853374786883,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      },
+      "COM11_tx2_inverted": {
+        "COM27": {
+          "frames": 22,
+          "even": 13,
+          "odd": 9,
+          "seconds": 9.733,
+          "adc_rate": 400.3904243296003,
+          "usb_rate": 344.29261276071094,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 23,
+          "even": 10,
+          "odd": 13,
+          "seconds": 14.8,
+          "adc_rate": 400.3378378378378,
+          "usb_rate": 347.7027027027027,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 23,
+          "even": 13,
+          "odd": 10,
+          "seconds": 25.002,
+          "adc_rate": 400.28797696184307,
+          "usb_rate": 359.45124390048795,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 23,
+          "even": 13,
+          "odd": 10,
+          "seconds": 19.903,
+          "adc_rate": 400.29141335477067,
+          "usb_rate": 354.46917550118076,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      },
+      "COM32_tx1_inverted": {
+        "COM27": {
+          "frames": 20,
+          "even": 11,
+          "odd": 9,
+          "seconds": 9.6,
+          "adc_rate": 400.3125,
+          "usb_rate": 348.4375,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 26,
+          "even": 14,
+          "odd": 12,
+          "seconds": 14.703,
+          "adc_rate": 400.32646398694146,
+          "usb_rate": 347.412092770183,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 21,
+          "even": 10,
+          "odd": 11,
+          "seconds": 24.898,
+          "adc_rate": 400.27311430637,
+          "usb_rate": 358.8240019278657,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 21,
+          "even": 12,
+          "odd": 9,
+          "seconds": 19.759,
+          "adc_rate": 400.32390303152994,
+          "usb_rate": 348.752467230123,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      },
+      "COM32_tx2_inverted": {
+        "COM27": {
+          "frames": 21,
+          "even": 11,
+          "odd": 10,
+          "seconds": 9.665,
+          "adc_rate": 400.3103983445422,
+          "usb_rate": 338.74806001034665,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 21,
+          "even": 12,
+          "odd": 9,
+          "seconds": 14.7,
+          "adc_rate": 400.2721088435374,
+          "usb_rate": 348.91156462585036,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 25,
+          "even": 11,
+          "odd": 14,
+          "seconds": 24.801,
+          "adc_rate": 400.2661183016814,
+          "usb_rate": 358.5339300834644,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 25,
+          "even": 8,
+          "odd": 17,
+          "seconds": 19.899,
+          "adc_rate": 400.3216242022212,
+          "usb_rate": 346.4495703301673,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      },
+      "restored": {
+        "COM27": {
+          "frames": 18,
+          "even": 11,
+          "odd": 7,
+          "seconds": 9.599,
+          "adc_rate": 400.25002604437964,
+          "usb_rate": 348.26544431711636,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM28": {
+          "frames": 30,
+          "even": 12,
+          "odd": 18,
+          "seconds": 14.738,
+          "adc_rate": 400.2578368842448,
+          "usb_rate": 355.95060388112364,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM11": {
+          "frames": 23,
+          "even": 10,
+          "odd": 13,
+          "seconds": 24.901,
+          "adc_rate": 400.26504959640175,
+          "usb_rate": 357.8571141721216,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        },
+        "COM32": {
+          "frames": 28,
+          "even": 14,
+          "odd": 14,
+          "seconds": 19.642,
+          "adc_rate": 400.3156501374606,
+          "usb_rate": 350.16800733122903,
+          "deltas": {
+            "adc_fault_count": 0,
+            "adc_gap_over10ms": 0,
+            "usb_recovery": 0,
+            "phase_flip": 0,
+            "phase_restart": 0
+          }
+        }
+      }
+    },
+    "restoration_verified": true,
+    "entire_experiment_counter_deltas": {
+      "COM27": {
+        "adc_fault_count": 0,
+        "adc_gap_over10ms": 0,
+        "usb_recovery": 0,
+        "phase_flip": 0,
+        "phase_restart": 0,
+        "unlocked_count": 0
+      },
+      "COM28": {
+        "adc_fault_count": 0,
+        "adc_gap_over10ms": 0,
+        "usb_recovery": 0,
+        "phase_flip": 0,
+        "phase_restart": 0,
+        "unlocked_count": 0
+      },
+      "COM11": {
+        "adc_fault_count": 0,
+        "adc_gap_over10ms": 0,
+        "usb_recovery": 0,
+        "phase_flip": 0,
+        "phase_restart": 0,
+        "unlocked_count": 0
+      },
+      "COM32": {
+        "adc_fault_count": 0,
+        "adc_gap_over10ms": 0,
+        "usb_recovery": 0,
+        "phase_flip": 0,
+        "phase_restart": 0,
+        "unlocked_count": 0
+      }
+    }
+  },
+  "s13_visual_test": {
+    "confirmation": {
+      "timestamp": "2026-09-29T11:44:38.727+00:00",
+      "user_confirmation": "Да, вижу переключение",
+      "phase_requested": 3,
+      "phase_applied": 3
+    },
+    "restoration": {
+      "verified": true,
+      "state": {
+        "requested": 0,
+        "applied": 0,
+        "samples": 600,
+        "adc_pointers": [
+          604113248,
+          604200288
+        ],
+        "streaming": 1,
+        "tx_requested": 1,
+        "tx_enabled": 1,
+        "diag": {
+          "seq_begin": 105262,
+          "magic": 1381184568,
+          "uptime_ms": 5468819,
+          "role": 1,
+          "node": 13,
+          "node_count": 4,
+          "mask": 14338,
+          "phase_relation": 1,
+          "sync_alive": 1,
+          "observed_count": 2126759,
+          "unlocked_count": 0,
+          "ctrl_peak_ticks": 796,
+          "raw_peak_ticks": 796,
+          "phase_raw": -5,
+          "phase_ctrl": -5,
+          "phase_flip": 2,
+          "phase_restart": 0,
+          "uart_errors": 652,
+          "sync_errors": 5,
+          "filter_drop": 32,
+          "adc_publish_count": 2188711,
+          "adc_gap_over10ms": 0,
+          "adc_fault_count": 2,
+          "usb_tx_cplt": 1895814,
+          "usb_recovery": 0,
+          "adc_overflow_drop": 2188681,
+          "tick_hz": 275000000,
+          "lock_bound_ticks": 859,
+          "period": 686772,
+          "usb_frame_age_ms": 1,
+          "adc_publish_age_ms": 3,
+          "seq_end": 105262
+        }
+      }
+    }
+  }
+}
