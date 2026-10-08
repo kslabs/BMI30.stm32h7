@@ -1,0 +1,57 @@
+{
+  "confirmed_failure": {
+    "effect": "NetworkManager did not start because its required channel-policy dependency failed",
+    "evidence": "S09-emmc-channel-policy-traceback.json",
+    "exception": "UnicodeDecodeError reading binary .nmmeta as UTF-8 profile",
+    "invalid_binary_metadata_files": 10,
+    "stage": "bmi30-channel-policy before NetworkManager"
+  },
+  "installed_root_count": 4,
+  "official_package_marker_and_source_archive_bytes_preserved": true,
+  "release": "2026-10-08-1131",
+  "roots": {
+    "S09 USB": {
+      "boot_validated": false,
+      "installed": true,
+      "observed_running": true,
+      "offline_installation": false,
+      "portable_assets_verified": 25,
+      "protected_files_verified": 109,
+      "protected_settings_credentials_permissions_preserved": true
+    },
+    "S09 eMMC": {
+      "actual_boot_attempted": true,
+      "boot_validated": false,
+      "detector": "working as reported by user",
+      "installed": true,
+      "network_boot": "failed",
+      "observed_running": false,
+      "offline_installation": true,
+      "portable_assets_verified": 25,
+      "protected_files_verified": 118,
+      "protected_settings_credentials_permissions_preserved": true
+    },
+    "S10 USB": {
+      "boot_validated": false,
+      "installed": true,
+      "observed_running": false,
+      "offline_installation": true,
+      "portable_assets_verified": 25,
+      "protected_files_verified": 110,
+      "protected_settings_credentials_permissions_preserved": true
+    },
+    "S10 eMMC": {
+      "boot_validated": false,
+      "installed": true,
+      "observed_running": true,
+      "offline_installation": false,
+      "portable_assets_verified": 25,
+      "protected_files_verified": 110,
+      "protected_settings_credentials_permissions_preserved": true
+    }
+  },
+  "schema": 1,
+  "status": "installed_four_roots_s09_emmc_network_boot_failed",
+  "successful_s09_emmc_network_boot": false,
+  "superseded_by": "2026-10-08-1211"
+}

@@ -1,0 +1,112 @@
+{
+  "arm_tests": {
+    "count": 63,
+    "passed": true,
+    "suites": [
+      "test_network",
+      "test_group",
+      "test_stability",
+      "test_communication_recovery",
+      "test_portable_identity"
+    ]
+  },
+  "backend_input_sha256": {
+    "bmi30_portable_assets.py": "cb2dfa2d0857e598975a34fa538d25005c26d73a161204c7d0d292e71c468363",
+    "bmi30_server_files.py": "9041cf13bdd158bce17cb7b4cf1587b47dc66ad4ed906da6185b8270aef951e9",
+    "bmi30_server_update.py": "96ecd91973158679e37a25a473827d97745783e15c914b7c3c7b613d21ea50cd",
+    "create_bmi30_split_bundle.sh": "bcac51ed9400c221510a1242fe7700b4c7622eda79f378a242b7a21e1967284d",
+    "hotspot_info_server.py": "f1a27b31ec210354d3683230cfb391455fc86c6649225eb54402d3f8625e81a0",
+    "switch_bmi30_split_versions.sh": "ab97c60aa6685fac5563e5de9a17f105cc1d19e7a00966b01cdd49806ba4191e"
+  },
+  "backend_tests": {
+    "backend_privacy_linux": 4,
+    "bash_syntax": [
+      "create_bmi30_split_bundle.sh",
+      "switch_bmi30_split_versions.sh"
+    ],
+    "header_javascript": 8,
+    "header_python": 6,
+    "portable_asset_install_rollback_allowlist": 7,
+    "private_config_mirrors_linux": 4,
+    "runtime_private_config_modes_linux": 6,
+    "sudo_offline_flag_linux": 2
+  },
+  "config_mode_preservation": {
+    "cases": [
+      {
+        "after": "0o600",
+        "before": "0o600",
+        "kind": "persistent-symlink"
+      },
+      {
+        "after": "0o640",
+        "before": "0o640",
+        "kind": "persistent-symlink"
+      },
+      {
+        "after": "0o600",
+        "before": "0o600",
+        "kind": "regular-runtime"
+      },
+      {
+        "after": "0o640",
+        "before": "0o640",
+        "kind": "regular-runtime"
+      },
+      {
+        "after": "0o640",
+        "before": "0o644",
+        "kind": "regular-runtime"
+      },
+      {
+        "kind": "unexpected-config-symlink",
+        "rejected": true
+      }
+    ],
+    "installed_files_changed": false,
+    "ok": true,
+    "passed": 6
+  },
+  "device_writes_by_backend_tests": false,
+  "offline_privacy": {
+    "backend_privacy_tests_passed": 4,
+    "bash_syntax": true,
+    "installed_files_changed": false,
+    "ok": true,
+    "private_mirrors": [
+      {
+        "after": "0o640",
+        "before": "absent"
+      },
+      {
+        "after": "0o600",
+        "before": "0o600"
+      },
+      {
+        "after": "0o640",
+        "before": "0o640"
+      },
+      {
+        "after": "0o640",
+        "before": "0o644"
+      }
+    ],
+    "sudo_offline_flag_checks": [
+      {
+        "action": "restore",
+        "ok": true,
+        "systemctl_called": false
+      },
+      {
+        "action": "apply",
+        "ok": true,
+        "systemctl_called": false
+      }
+    ]
+  },
+  "package_input_hashes_checked": true,
+  "portable_assets_verified": 25,
+  "release": "2026-10-08-1211",
+  "schema": 1,
+  "scope": "Prepared public portable code; runtime installation and boot validation are separate."
+}

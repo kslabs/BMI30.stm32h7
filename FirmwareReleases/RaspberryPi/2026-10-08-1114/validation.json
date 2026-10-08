@@ -1,0 +1,72 @@
+{
+  "arm_tests": {
+    "count": 55,
+    "passed": true,
+    "suites": [
+      "test_network",
+      "test_group",
+      "test_stability",
+      "test_communication_recovery",
+      "test_portable_identity"
+    ]
+  },
+  "backend_input_sha256": {
+    "bmi30_portable_assets.py": "cb2dfa2d0857e598975a34fa538d25005c26d73a161204c7d0d292e71c468363",
+    "bmi30_server_files.py": "beeceeeb8202d5ff956dae887b3e5fec7f74dcc24cace66095fe492d023c7db8",
+    "bmi30_server_update.py": "15e6b701c182fb42bc5d4d91c56232fae3d7802ff33bd55d860e000c157374a2",
+    "create_bmi30_split_bundle.sh": "bcac51ed9400c221510a1242fe7700b4c7622eda79f378a242b7a21e1967284d",
+    "hotspot_info_server.py": "f1a27b31ec210354d3683230cfb391455fc86c6649225eb54402d3f8625e81a0",
+    "switch_bmi30_split_versions.sh": "f90dd665f13ef3f742ff65083ba6afcfa4736a196e6ef6955f1c915e1b1d8159"
+  },
+  "backend_tests": {
+    "bash_syntax": [
+      "create_bmi30_split_bundle.sh",
+      "switch_bmi30_split_versions.sh"
+    ],
+    "header_javascript": 8,
+    "header_python": 6,
+    "portable_asset_install_rollback_allowlist": 7
+  },
+  "config_mode_preservation": {
+    "cases": [
+      {
+        "after": "0o600",
+        "before": "0o600",
+        "kind": "persistent-symlink"
+      },
+      {
+        "after": "0o640",
+        "before": "0o640",
+        "kind": "persistent-symlink"
+      },
+      {
+        "after": "0o600",
+        "before": "0o600",
+        "kind": "regular-runtime"
+      },
+      {
+        "after": "0o640",
+        "before": "0o640",
+        "kind": "regular-runtime"
+      },
+      {
+        "after": "0o640",
+        "before": "0o644",
+        "kind": "regular-runtime"
+      },
+      {
+        "kind": "unexpected-config-symlink",
+        "rejected": true
+      }
+    ],
+    "installed_files_changed": false,
+    "ok": true,
+    "passed": 6
+  },
+  "device_writes_by_backend_tests": false,
+  "package_input_hashes_checked": true,
+  "portable_assets_verified": 25,
+  "release": "2026-10-08-1114",
+  "schema": 1,
+  "scope": "Prepared public portable code; runtime installation and boot validation are separate."
+}

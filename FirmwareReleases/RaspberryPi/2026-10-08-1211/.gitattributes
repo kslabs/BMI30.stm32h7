@@ -1,0 +1,2 @@
+# Preserve the immutable release archive and metadata bytes.
+* -text whitespace=cr-at-eol

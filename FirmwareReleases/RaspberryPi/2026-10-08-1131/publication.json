@@ -1,0 +1,13 @@
+{
+  "latest_updated": true,
+  "marker": {
+    "ARCHIVE_NAME": "bmi30_backup_20261008_113125.tar.gz",
+    "ARCHIVE_SHA256": "02c58b4608b6af53d055c471174af9a68a2e08f4485ffc3aae954d5bc1c52e4a",
+    "ARCHIVE_SIZE": "684010",
+    "FIRMWARE_BUNDLE_ID": "2026-10-08-1131",
+    "FIRMWARE_VERSION": "2026-10-08-113125"
+  },
+  "ok": true,
+  "schema": 1,
+  "verified_download": true
+}

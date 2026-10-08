@@ -1,0 +1,92 @@
+{
+  "actual_emmc_boot_proof": [],
+  "archive_sha256": "c232edef8f6926b300570d65432367ef0c0bd447f35ac11b00e9e5e748f3215d",
+  "boot_test": "User removes USB and reboots manually; no automated boot/timer/mailbox changes.",
+  "firmware_version": "2026-10-08-120920",
+  "installed_root_count": 4,
+  "offline_boot_preflight": [
+    {
+      "boot_config_after_sha256": "f869ad9f84280c527bccf41fed40eb1878c4b7298329d754eb797a2360e54fa7",
+      "boot_config_before_sha256": "95c383a6f6898d8ceee2127775c4d85b0c8077a31a8bb9b3a4d2cf5006703adf",
+      "helper_sha256": "ab5b2fc1e035e75f7b314f8f55164b3076959dc145592a21e32c9e24cbfedcc4",
+      "metadata_files_preserved": 10,
+      "offline_boot_tested": false,
+      "offline_unmounted": true,
+      "only_boot_config_change": "[cm5] dtparam=ant2",
+      "policy_preflight": {
+        "changed_copies": 0,
+        "permissions": {
+          "ethernet": true,
+          "hotspot": true,
+          "remote": true,
+          "wifi": true
+        }
+      },
+      "protected_files_unchanged": 88,
+      "reboot_performed": false,
+      "release": "2026-10-08-1211"
+    }
+  ],
+  "physical_usb_transfer_between_boards": "not_yet_recorded",
+  "release": "2026-10-08-1211",
+  "roots": {
+    "S09 USB": {
+      "boot_tested": false,
+      "health": {
+        "boot_tested": false,
+        "core_connected": true,
+        "frames_increasing": true,
+        "observed_running": true
+      },
+      "installed": true,
+      "offline_installation": false,
+      "portable_assets_verified": 25,
+      "protected_files_verified": 109,
+      "protected_settings_credentials_permissions_preserved": true,
+      "status": "installed_running_checked"
+    },
+    "S09 eMMC": {
+      "boot_tested": false,
+      "health": {
+        "boot_tested": false,
+        "file_health": true
+      },
+      "installed": true,
+      "offline_installation": true,
+      "portable_assets_verified": 25,
+      "protected_files_verified": 118,
+      "protected_settings_credentials_permissions_preserved": true,
+      "status": "installed_offline_checked"
+    },
+    "S10 USB": {
+      "boot_tested": false,
+      "health": {
+        "boot_tested": false,
+        "file_health": true
+      },
+      "installed": true,
+      "offline_installation": true,
+      "portable_assets_verified": 25,
+      "protected_files_verified": 110,
+      "protected_settings_credentials_permissions_preserved": true,
+      "status": "installed_offline_checked"
+    },
+    "S10 eMMC": {
+      "boot_tested": false,
+      "health": {
+        "boot_tested": false,
+        "core_connected": true,
+        "frames_increasing": true,
+        "observed_running": true
+      },
+      "installed": true,
+      "offline_installation": false,
+      "portable_assets_verified": 25,
+      "protected_files_verified": 110,
+      "protected_settings_credentials_permissions_preserved": true,
+      "status": "installed_running_checked"
+    }
+  },
+  "schema": 1,
+  "status": "pending_final_verification"
+}

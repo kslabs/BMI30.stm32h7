@@ -1,0 +1,604 @@
+{
+  "files": {
+    "SHA256SUMS": {
+      "bytes": 8047,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/SHA256SUMS",
+      "sha256": "2c46c3607c6f313aa7f0e2030154d2c2705f634300b5236c090425a0009f2df9"
+    },
+    "host/bmi30_firmware_release.env": {
+      "bytes": 1460,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_firmware_release.env",
+      "sha256": "6936705818851df8711d45f03f75c0eb8f19f28b0b9884a6389aa42b2859fb0f"
+    },
+    "host/bmi30_split_active_version.env": {
+      "bytes": 1016,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_active_version.env",
+      "sha256": "9006ce5cf97733ead7b1faedd93f6412d96d8473f87ac6a27d58d55e1a41a785"
+    },
+    "manifest.env": {
+      "bytes": 1197,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/manifest.env",
+      "sha256": "92496d47827c3a75568638c58ba02e1ef535591fce94cd9c7c4212256bf03eac"
+    },
+    "metadata/portable-assets.json": {
+      "bytes": 2816,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/metadata/portable-assets.json",
+      "sha256": "a42155496cbf12047683051f3a936a600b2a33ea5cbae43249e51f6a09cf9f48"
+    },
+    "metadata/source_active_version.env": {
+      "bytes": 918,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/metadata/source_active_version.env",
+      "sha256": "d2f8d042d3bcaaaeed3a53e9260f47c5888a7f54e54ffbb49650d2e61e358a1f"
+    },
+    "project/host/BMI30.001.py.2026-10-07-0959": {
+      "bytes": 492562,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/BMI30.001.py.2026-10-07-0959",
+      "sha256": "a72be415a60bb28bc2548a95a32dd76ec2a5a3c20ad6d38b0f20c54263cd66fc"
+    },
+    "project/host/BMI30.200.py.2026-10-06-1257": {
+      "bytes": 842474,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/BMI30.200.py.2026-10-06-1257",
+      "sha256": "60d43bece67e2c2537b87882616a88e7639c84b52dc04cf5c90465b562545cc8"
+    },
+    "project/host/BMI30.GUI.001.py.2026-09-30-1650": {
+      "bytes": 621,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/BMI30.GUI.001.py.2026-09-30-1650",
+      "sha256": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1"
+    },
+    "project/host/bmi30_common_mode.py": {
+      "bytes": 14096,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/bmi30_common_mode.py",
+      "sha256": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95"
+    },
+    "project/host/bmi30_firmware_release.env": {
+      "bytes": 1460,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/bmi30_firmware_release.env",
+      "sha256": "6936705818851df8711d45f03f75c0eb8f19f28b0b9884a6389aa42b2859fb0f"
+    },
+    "project/host/bmi30_headless.py": {
+      "bytes": 12400,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/bmi30_headless.py",
+      "sha256": "93dc3c7fb2149d74f64352e85b48f30e3dc475e9bbe22fcf06c4af52a74b5a47"
+    },
+    "project/host/bmi30_runtime_support.py": {
+      "bytes": 20785,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/bmi30_runtime_support.py",
+      "sha256": "370acabec4e00bb4fc143e09ad645cb6c7f5378432ff0b1d5649b8692cc041f5"
+    },
+    "project/host/bmi30_wifi_watchdog.py": {
+      "bytes": 14185,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/bmi30_wifi_watchdog.py",
+      "sha256": "8e793d800f065c1b338e67b48a88d5bf439254c6c829605726cca824e2d56138"
+    },
+    "project/host/tag_response_filters/Barkhausen.json": {
+      "bytes": 156,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/tag_response_filters/Barkhausen.json",
+      "sha256": "e64450a7365006769a8475aaefd1b83f3f34d3c577d73ebde581ea9aafe21f0b"
+    },
+    "project/host/tag_response_filters/Casino.json": {
+      "bytes": 112,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/tag_response_filters/Casino.json",
+      "sha256": "b8853e841cb527ed96ab69794ab1c62088f42f830633b3e0b66b1c4aafb0b050"
+    },
+    "project/host/tag_response_filters/Microwire.json": {
+      "bytes": 118,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/tag_response_filters/Microwire.json",
+      "sha256": "8f580d71ca14094a34401d969497ba0905f0b12204bb88fa13c4c5528e5fbe1b"
+    },
+    "project/host/tag_response_filters/Paper.json": {
+      "bytes": 110,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/tag_response_filters/Paper.json",
+      "sha256": "409538593ffe155416ef72e05c6420af0a6fd8ef3fc57e74c7e2cfb5acd8af8c"
+    },
+    "project/host/tag_response_filters/README.md": {
+      "bytes": 1203,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/tag_response_filters/README.md",
+      "sha256": "ad811f85f8b20ec4e5f019527dccf722be7d1cace94cdad94f57a34d9864404e"
+    },
+    "project/host/usb_vendor/HOST_QUICKSTART.md": {
+      "bytes": 1092,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/HOST_QUICKSTART.md",
+      "sha256": "2d9c8bbe6fe6d0b8dadfa3ddaa0202d7dc2c7aa8984602025e595d31ee33a09e"
+    },
+    "project/host/usb_vendor/Makefile": {
+      "bytes": 356,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/Makefile",
+      "sha256": "fbe9aa83d56d5268bb59e5c98bb5e24363263d48ce2b4d3f8195dba2b9d18399"
+    },
+    "project/host/usb_vendor/PROTOCOL.md": {
+      "bytes": 13585,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/PROTOCOL.md",
+      "sha256": "bdd443a30348560333ff044bfe988750883b3f13d5f3bfa6b31bb5bbe6e3183e"
+    },
+    "project/host/usb_vendor/README.md": {
+      "bytes": 1489,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/README.md",
+      "sha256": "eca4ce45ac0a3684c1161d25e6ed898f7735f64c0b70a57e99386f382dce0e43"
+    },
+    "project/host/usb_vendor/README_VENDOR_HOST.md": {
+      "bytes": 5059,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/README_VENDOR_HOST.md",
+      "sha256": "42171c2d553a282cc33e4b35fd0cd048cb49e1f4d6c97d447def54546cc4d073"
+    },
+    "project/host/usb_vendor/__init__.py": {
+      "bytes": 28,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/__init__.py",
+      "sha256": "ae633daae9158c3ba649447148f22b2245ebe9a150a3bce5732863bdc932a91c"
+    },
+    "project/host/usb_vendor/crc16.c": {
+      "bytes": 410,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/crc16.c",
+      "sha256": "6b8eb941cb6000fec1c8c73846a5ba2cd2f3be2cd22cdaf7c7dd105a312a0a3d"
+    },
+    "project/host/usb_vendor/crc16.h": {
+      "bytes": 106,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/crc16.h",
+      "sha256": "f0c6dc79dbecf088ba6d51281e2602e5826589eff4897544241e2d7b823ce876"
+    },
+    "project/host/usb_vendor/dump_first30_200hz.py": {
+      "bytes": 4474,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/dump_first30_200hz.py",
+      "sha256": "e9048a505a2340a5cff678bbca448cb47263aad05c05a5bf4e484a3ab4a99f99"
+    },
+    "project/host/usb_vendor/dump_first30_300hz.py": {
+      "bytes": 4373,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/dump_first30_300hz.py",
+      "sha256": "04cb4a29e073201300bae14d7509cceada027fd20b32de59166ffb6950c9138c"
+    },
+    "project/host/usb_vendor/dump_first_bytes.py": {
+      "bytes": 4608,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/dump_first_bytes.py",
+      "sha256": "4b31b0d259a141cc9f8cb210e2fd7a3f66224fa7fae6688446013d688413e2dc"
+    },
+    "project/host/usb_vendor/dump_headers.py": {
+      "bytes": 2123,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/dump_headers.py",
+      "sha256": "881adb01165f3e03d525d481a548872f707a0afe4c74ba3dbb73fff98e9e9e31"
+    },
+    "project/host/usb_vendor/dump_samples.py": {
+      "bytes": 8141,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/dump_samples.py",
+      "sha256": "191637a67e8c3e77cd1ea32c2855c8a923fc314cf861584245507c9b29dddafe"
+    },
+    "project/host/usb_vendor/kick_start_via_cdc_then_dump_vendor.py": {
+      "bytes": 11333,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/kick_start_via_cdc_then_dump_vendor.py",
+      "sha256": "2af44a3b4e4676a6621d6423d48760ee54cb1b011f9d8c6e7bd9191daa6bdb25"
+    },
+    "project/host/usb_vendor/main.c": {
+      "bytes": 25750,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/main.c",
+      "sha256": "111fda38ae1de9722d0e6a6740fd00c96b7b29022af58ed2fef9113b0e75cc66"
+    },
+    "project/host/usb_vendor/measure_frame_rate.py": {
+      "bytes": 4196,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/measure_frame_rate.py",
+      "sha256": "15536bfd54abadb718be6e53b47f5b067eb9bc0b4acbcf3db8e13206ebd63b2e"
+    },
+    "project/host/usb_vendor/owner_events.py": {
+      "bytes": 2939,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/owner_events.py",
+      "sha256": "cfa578f4d75091d694c5e49ab4ba204ecb2cdb7bb88a0030262a69b8b4019bf7"
+    },
+    "project/host/usb_vendor/read_stream_cli.py": {
+      "bytes": 5919,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/read_stream_cli.py",
+      "sha256": "6538740f11488cb5644c77ec430d22a9f62f6896567b69958ce9e1f45452b0bc"
+    },
+    "project/host/usb_vendor/relay_control.py": {
+      "bytes": 11876,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/relay_control.py",
+      "sha256": "8b5fd98bf4d021d8c8b44b6559b945ffa3521e2663393244467a5e07bbcb068a"
+    },
+    "project/host/usb_vendor/ring.c": {
+      "bytes": 1174,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/ring.c",
+      "sha256": "ec5b1c73346fcb6e40b06368e071e9319de6173b982dbf9203828fcb25ba505f"
+    },
+    "project/host/usb_vendor/ring.h": {
+      "bytes": 730,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/ring.h",
+      "sha256": "65757c497d5c695367407756d44ea8644d7fc67c6f07be26c5306e21eafb7823"
+    },
+    "project/host/usb_vendor/scan_in_eps.py": {
+      "bytes": 4013,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/scan_in_eps.py",
+      "sha256": "10671f773c44f3a53719e5a1f8b1d4e65c3d6f4d225824c27d1b77507ca8e515"
+    },
+    "project/host/usb_vendor/tx_phase.py": {
+      "bytes": 6048,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/tx_phase.py",
+      "sha256": "9ad1cf6068b20e5ce0b3b8a19aed0a1f95df340b09e6b8c72112e59603c593a7"
+    },
+    "project/host/usb_vendor/usb_stream.py": {
+      "bytes": 219536,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/usb_stream.py",
+      "sha256": "27f3c6d09c23383494ba61942470ea7982d00f43ef775e4f4384d132f34c0921"
+    },
+    "project/host/usb_vendor/usb_stream_smoke.py": {
+      "bytes": 1549,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/usb_stream_smoke.py",
+      "sha256": "3e0f8820ad400b5676df332ae340fb3c0d7764c752d585e61f02507bf5b5b03b"
+    },
+    "project/host/usb_vendor/util.c": {
+      "bytes": 66,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/util.c",
+      "sha256": "ed13758c72fa95680aebf4e706971e0880193b45eac058777d7c7eaaa3c409d1"
+    },
+    "project/host/usb_vendor/util.h": {
+      "bytes": 186,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/host/usb_vendor/util.h",
+      "sha256": "2e658fbc798738f6ea400cb966b8d43a03017818a50b95ce07f003b557c36bd1"
+    },
+    "project/hotspot_info_server.py": {
+      "bytes": 769824,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/project/hotspot_info_server.py",
+      "sha256": "f1a27b31ec210354d3683230cfb391455fc86c6649225eb54402d3f8625e81a0"
+    },
+    "switch_bmi30_split_versions.sh": {
+      "bytes": 38393,
+      "origin": "final-server-package",
+      "package_member": "Documents/switch_bmi30_split_versions.sh",
+      "sha256": "ab97c60aa6685fac5563e5de9a17f105cc1d19e7a00966b01cdd49806ba4191e"
+    },
+    "system/etc/systemd/system/bmi30-channel-policy.service": {
+      "bytes": 340,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/etc/systemd/system/bmi30-channel-policy.service",
+      "sha256": "2e0edbc2522bf3ace46469e046adae200f553a6dbd9f0494e37e1e5629054dfc"
+    },
+    "system/etc/systemd/system/bmi30-communication-recovery.service": {
+      "bytes": 318,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/etc/systemd/system/bmi30-communication-recovery.service",
+      "sha256": "4ac5248d72ccb2b844e523a605c0a0cadc8c985e4645c4863b7a60f57abb4a2e"
+    },
+    "system/etc/systemd/system/bmi30-network.service": {
+      "bytes": 684,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/etc/systemd/system/bmi30-network.service",
+      "sha256": "f4409f1724f9120d269d5b98c4c9d3dbf975bae82dc4a1089b6219563fd7fa15"
+    },
+    "system/etc/systemd/system/bmi30-refresh-network-identity.service": {
+      "bytes": 330,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/etc/systemd/system/bmi30-refresh-network-identity.service",
+      "sha256": "1b06858f84e8b6256a181ac9b3d3c6b03d75c5e2e4aba9dddfe29186f2f1198f"
+    },
+    "system/etc/systemd/system/bmi30-scope-rtc.service": {
+      "bytes": 480,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/etc/systemd/system/bmi30-scope-rtc.service",
+      "sha256": "d12b7876368457d27f594ca0dcf480ce6e373493fe860aba3c1ad5793fa97d29"
+    },
+    "system/opt/bmi30-network/communication_recovery.py": {
+      "bytes": 10863,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/communication_recovery.py",
+      "sha256": "ab5b2fc1e035e75f7b314f8f55164b3076959dc145592a21e32c9e24cbfedcc4"
+    },
+    "system/opt/bmi30-network/group.py": {
+      "bytes": 27994,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/group.py",
+      "sha256": "e5157307e85991645523b43b5317e0f7af62a28b53ada8c2f34f0c0ae057f6ff"
+    },
+    "system/opt/bmi30-network/group_ui.js": {
+      "bytes": 16729,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/group_ui.js",
+      "sha256": "e17b6d1d18915f521f9a90efd922976685052f620d58d29aded518f157fd7137"
+    },
+    "system/opt/bmi30-network/live_ui.js": {
+      "bytes": 3489,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/live_ui.js",
+      "sha256": "57af688547186d1bd2512f849c85142963681a040945cdbc35417c957f67264b"
+    },
+    "system/opt/bmi30-network/network.py": {
+      "bytes": 15808,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/network.py",
+      "sha256": "8e3aad85681c022f35a81f1361956991e3fcab0f47e24eda6d0fd9f5da3dbeb4"
+    },
+    "system/opt/bmi30-network/owner_events.py": {
+      "bytes": 2939,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/owner_events.py",
+      "sha256": "cfa578f4d75091d694c5e49ab4ba204ecb2cdb7bb88a0030262a69b8b4019bf7"
+    },
+    "system/opt/bmi30-network/policy.py": {
+      "bytes": 6436,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/policy.py",
+      "sha256": "bd39c268316b1ca25b25e10e377f13a9baf8142f05c898e6ca05327c8f761ab3"
+    },
+    "system/opt/bmi30-network/portal_help.js": {
+      "bytes": 14671,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/portal_help.js",
+      "sha256": "9f3df144cbbdc0006173538a6bbe6ff329d7e4ade2e15c8389d4d2024448dfa0"
+    },
+    "system/opt/bmi30-network/portal_relay.js": {
+      "bytes": 3925,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/portal_relay.js",
+      "sha256": "20eff6f48d9b645b4ab408acbfc2947c46c144b0308314fdc160a5b712ff774e"
+    },
+    "system/opt/bmi30-network/portal_ui_version.js": {
+      "bytes": 1438,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/portal_ui_version.js",
+      "sha256": "9e156ea5b79053b46f186db2db02aad22f5830e9f7e1fae841f8f9e7ddc46735"
+    },
+    "system/opt/bmi30-network/protocol.py": {
+      "bytes": 3888,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/protocol.py",
+      "sha256": "618b06e9837fbf5403c141db53d0b71f0104988b67bcc600de93820eacdbbed3"
+    },
+    "system/opt/bmi30-network/realtime.py": {
+      "bytes": 6663,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/realtime.py",
+      "sha256": "fc33aa740077426f24cb20dd037076d58d1d494f87b97e457082cdefa078fc32"
+    },
+    "system/opt/bmi30-network/release.json": {
+      "bytes": 2376,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/release.json",
+      "sha256": "602d7f447d0f31e57818ec8b4074e4c1c56f16a0f07f9a5ad9018110e815e988"
+    },
+    "system/opt/bmi30-network/scope_codec.py": {
+      "bytes": 1970,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/scope_codec.py",
+      "sha256": "8241843ad2487e8cde4d4ab0ea12d47fa1c8556bac97f7565954028d14332769"
+    },
+    "system/opt/bmi30-network/scope_live.py": {
+      "bytes": 5709,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/scope_live.py",
+      "sha256": "7147ee6762bc929128b45ed24b4bbd6ca255326c742312eb32c52f8d9d4e11cc"
+    },
+    "system/opt/bmi30-network/scope_rtc.py": {
+      "bytes": 8798,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/scope_rtc.py",
+      "sha256": "228784e1faefa204ab01aafeacee196eef00be6907300649f4c5609aaec7cd5c"
+    },
+    "system/opt/bmi30-network/scope_rtc_proxy.py": {
+      "bytes": 2109,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/scope_rtc_proxy.py",
+      "sha256": "981d3ead4bf828e0ec240786dd6cc21609f5b274792b9d2e1f7ec9ec2a547c1f"
+    },
+    "system/opt/bmi30-network/service.py": {
+      "bytes": 23754,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/service.py",
+      "sha256": "acd335d9627c62c913f84db74cb43ab20eafff88489dd9626bfb265a559167e1"
+    },
+    "system/opt/bmi30-network/status.html": {
+      "bytes": 4028,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/opt/bmi30-network/status.html",
+      "sha256": "122889bf1e3f47952704a732537d26ef68c5938fc0cf1abd6d212b1b4fa71b3a"
+    },
+    "system/usr/local/sbin/bmi30-refresh-network-identity.sh": {
+      "bytes": 24655,
+      "origin": "final-server-package",
+      "package_member": "Documents/host/bmi30_split_bundles/2026-10-08-1211/system/usr/local/sbin/bmi30-refresh-network-identity.sh",
+      "sha256": "796e309cda3493c1107b8c5708f89bbc5515d5355715ee775f49d1ba5f6eee07"
+    },
+    "tests/NM_KEYFILE_POLICY_RU.md": {
+      "bytes": 2885,
+      "origin": "public-test-input",
+      "sha256": "099bad14de4f466fb78a8f2b20252e827a2cf23ce84611a334a6fd478a8dfdd5",
+      "source": "HostTools/bmi30_network/NM_KEYFILE_POLICY_RU.md"
+    },
+    "tests/config_mode_cases.py": {
+      "bytes": 1832,
+      "origin": "exact-public-test-SCRIPT-constant",
+      "sha256": "271b55fc09d879ae399f8a2afe034d596d5967881600f6220e311e2b04ebfa09",
+      "source": "tests/input_check_config_mode_preservation.py"
+    },
+    "tests/input_check_config_mode_preservation.py": {
+      "bytes": 2587,
+      "origin": "public-test-input",
+      "sha256": "5e6a1caee21aa2cbef54690417696253d6b5b7b5eb4b88b2a954053002c996b0",
+      "source": ".tmp/s09-portal-repair-20261008/scope/check_config_mode_preservation.py"
+    },
+    "tests/input_check_offline_privacy_patch.py": {
+      "bytes": 3488,
+      "origin": "public-test-input",
+      "sha256": "d8803a7ffc69ede9ac90c2061459a199c2e2a95b72cd06700a1a05a4578426ac",
+      "source": ".tmp/s09-portal-repair-20261008/scope/check_offline_privacy_patch.py"
+    },
+    "tests/offline_privacy_cases.py": {
+      "bytes": 2810,
+      "origin": "exact-public-test-SCRIPT-constant",
+      "sha256": "b0e7e691ea9209db9130047a03a46d8a25bc4c8fcc6040ec84066ae9124c7510",
+      "source": "tests/input_check_offline_privacy_patch.py"
+    },
+    "tests/patch_communication_recovery.py": {
+      "bytes": 4904,
+      "origin": "public-test-input",
+      "sha256": "72c50dad1d0bb056593a6eccf843a9729e23840d93020757d8e18a9d6eb1c6c6",
+      "source": "HostTools/bmi30_network/patch_communication_recovery.py"
+    },
+    "tests/test_backend_privacy.py": {
+      "bytes": 4396,
+      "origin": "public-test-input",
+      "sha256": "56e6b7327cbf029121c222c5c64a020be373accca26389941919f20d02af5998",
+      "source": ".tmp/s09-portal-repair-20261008/portable/test_backend_privacy.py"
+    },
+    "tests/test_communication_recovery.py": {
+      "bytes": 14575,
+      "origin": "public-test-input",
+      "sha256": "07d47181c71a906973b320af488ce709c216b734dcb9634ef120382b401d0b00",
+      "source": "HostTools/bmi30_network/test_communication_recovery.py"
+    },
+    "tests/test_group.py": {
+      "bytes": 8848,
+      "origin": "public-test-input",
+      "sha256": "89fc790e132b468a555a1ac38b0af3fd61f18662b84837682f6de7cd7392471d",
+      "source": "HostTools/bmi30_network/test_group.py"
+    },
+    "tests/test_network.py": {
+      "bytes": 6492,
+      "origin": "public-test-input",
+      "sha256": "3aa5d3f63e4c6d8bce6e6e62a92658792262c3a9379bcbf5800ecd16e92cc5e2",
+      "source": "HostTools/bmi30_network/test_network.py"
+    },
+    "tests/test_portable_assets.py": {
+      "bytes": 5859,
+      "origin": "public-test-input",
+      "sha256": "ab7f6df74d8e09bdc63ea31976307a1d9a85beaf342db63e31bfc5b821a6f160",
+      "source": ".tmp/s09-portal-repair-20261008/portable/test_portable_assets.py"
+    },
+    "tests/test_portable_identity.py": {
+      "bytes": 4324,
+      "origin": "public-test-input",
+      "sha256": "b4d75872e02727a1dc5fdb4f67958cbee615455754dc48d073e126554892fc11",
+      "source": ".tmp/s09-portal-repair-20261008/portable/test_portable_identity.py"
+    },
+    "tests/test_stability.py": {
+      "bytes": 4198,
+      "origin": "public-test-input",
+      "sha256": "4783e313298f221c061b3c27c8dfe257c273ebc857df87696a1b73f9bd84f549",
+      "source": "HostTools/bmi30_network/test_stability.py"
+    },
+    "tests/test_stm32_version_display.mjs": {
+      "bytes": 1925,
+      "origin": "public-test-input",
+      "sha256": "46353e9a71e07bf1111522867030ab7d613d260930389fd44d2a3bb93ac86ad9",
+      "source": ".tmp/s09-portal-repair-20261008/portable/test_stm32_version_display.mjs"
+    },
+    "tests/test_stm32_version_display.py": {
+      "bytes": 2779,
+      "origin": "public-test-input",
+      "sha256": "b039a3332525ff446d83d77362fb6fd7c0621fe09abddb2dede7f30d6c9889c2",
+      "source": ".tmp/s09-portal-repair-20261008/portable/test_stm32_version_display.py"
+    },
+    "utilities/bmi30_portable_assets.py": {
+      "bytes": 8829,
+      "origin": "final-server-package",
+      "package_member": "Documents/utilities/bmi30_portable_assets.py",
+      "sha256": "cb2dfa2d0857e598975a34fa538d25005c26d73a161204c7d0d292e71c468363"
+    },
+    "utilities/bmi30_server_files.py": {
+      "bytes": 20551,
+      "origin": "final-server-package",
+      "package_member": "Documents/utilities/bmi30_server_files.py",
+      "sha256": "9041cf13bdd158bce17cb7b4cf1587b47dc66ad4ed906da6185b8270aef951e9"
+    },
+    "utilities/bmi30_server_update.py": {
+      "bytes": 26069,
+      "origin": "final-server-package",
+      "package_member": "Documents/utilities/bmi30_server_update.py",
+      "sha256": "96ecd91973158679e37a25a473827d97745783e15c914b7c3c7b613d21ea50cd"
+    },
+    "utilities/create_bmi30_split_bundle.sh": {
+      "bytes": 15987,
+      "origin": "final-server-package",
+      "package_member": "Documents/utilities/create_bmi30_split_bundle.sh",
+      "sha256": "bcac51ed9400c221510a1242fe7700b4c7622eda79f378a242b7a21e1967284d"
+    },
+    "utilities/list_tools.sh": {
+      "bytes": 1574,
+      "origin": "final-server-package",
+      "package_member": "Documents/utilities/list_tools.sh",
+      "sha256": "38ad26e2404183353b95f7cda613c3d6a4c3a87179688c49a46039b591e9070e"
+    },
+    "utilities/menu.sh": {
+      "bytes": 9272,
+      "origin": "final-server-package",
+      "package_member": "Documents/utilities/menu.sh",
+      "sha256": "04e965006a6edeacc1f3ea5230be947ccb2b4ea63b9e68a8dc37f07ae9162b47"
+    },
+    "utilities/migrate_system_between_disks.sh": {
+      "bytes": 57624,
+      "origin": "final-server-package",
+      "package_member": "Documents/utilities/migrate_system_between_disks.sh",
+      "sha256": "b8f2fe5c3f937d5eb700c53d534b22ed9159d4ba65d8e9407eb86fb013917029"
+    },
+    "utilities/portal_firmware_operation.sh": {
+      "bytes": 2223,
+      "origin": "final-server-package",
+      "package_member": "Documents/utilities/portal_firmware_operation.sh",
+      "sha256": "f5a1a96639dba6edd7e16fa5bd6345eed9ea436fe894931029705fe56cb47ff6"
+    },
+    "utilities/retire_drive_firmware.sh": {
+      "bytes": 2455,
+      "origin": "final-server-package",
+      "package_member": "Documents/utilities/retire_drive_firmware.sh",
+      "sha256": "7a00d995f5e6da31bf93f1dd959151f90db6ae3d2c205370cdc8d06705d6a05b"
+    },
+    "utilities/server_firmware.sh": {
+      "bytes": 264,
+      "origin": "final-server-package",
+      "package_member": "Documents/utilities/server_firmware.sh",
+      "sha256": "388b5587ae05a85172b3b826bf6026faa9a88dd3785cf600ddd1feca4ad295cb"
+    }
+  },
+  "official_archive_sha256": "c232edef8f6926b300570d65432367ef0c0bd447f35ac11b00e9e5e748f3215d",
+  "omitted_from_source_archive": [
+    "project/host/bmi30_config.json",
+    "project/host/usb_vendor/crc16.o",
+    "project/host/usb_vendor/host_to_device_report.txt",
+    "project/host/usb_vendor/main.o",
+    "project/host/usb_vendor/ring.o",
+    "project/host/usb_vendor/usb_stream_demo",
+    "project/host/usb_vendor/util.o"
+  ],
+  "release": "2026-10-08-1211",
+  "schema": 1
+}

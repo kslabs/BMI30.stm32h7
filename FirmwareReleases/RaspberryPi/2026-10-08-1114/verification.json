@@ -1,0 +1,13 @@
+{
+  "boot_verified": false,
+  "failure": "BMI30_OFFLINE_ACTIVATION was lost through sudo during offline asset activation.",
+  "installation_completed": false,
+  "offline_installation": "failed; rollback performed",
+  "published": true,
+  "release": "2026-10-08-1114",
+  "schema": 1,
+  "scope": "Published release history; no successful deployment is claimed for this release.",
+  "server_download_verified": true,
+  "status": "superseded_installation_rolled_back",
+  "superseded_by": "2026-10-08-1131"
+}

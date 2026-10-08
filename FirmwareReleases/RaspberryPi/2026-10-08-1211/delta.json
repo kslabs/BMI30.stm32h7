@@ -1,0 +1,32 @@
+{
+  "release": "2026-10-08-1211",
+  "reports": [
+    {
+      "changed_network_sources": [
+        {
+          "file": "service.py",
+          "new_sha256": "acd335d9627c62c913f84db74cb43ab20eafff88489dd9626bfb265a559167e1",
+          "old_sha256": "5983ae6f9edd2636a862e87bfc8bd65cac8a6a00df27ca2517f906fb0e1fd41f"
+        },
+        {
+          "file": "communication_recovery.py",
+          "new_sha256": "ab5b2fc1e035e75f7b314f8f55164b3076959dc145592a21e32c9e24cbfedcc4",
+          "old_sha256": "5e62c6e9485d62d1e69598b93c2d03e4afc9ffbfad6eb3453865c0d7e4727bbf"
+        }
+      ],
+      "exact_packaged_arm_tests": 63,
+      "from_bundle": "2026-10-08-1131",
+      "from_network": "0.1.15",
+      "policy": "NetworkManager 1.42.4 /etc filename eligibility; metadata preserved; legacy profiles included; actual profile errors still fatal",
+      "source_doc": "HostTools/bmi30_network/NM_KEYFILE_POLICY_RU.md",
+      "targeted_tests": 8,
+      "to_bundle": "2026-10-08-1211",
+      "to_network": "0.1.16",
+      "unchanged_backend_tools": true,
+      "unchanged_core": true,
+      "unchanged_engine": true,
+      "unchanged_scope": true
+    }
+  ],
+  "schema": 1
+}
