@@ -1,0 +1,257 @@
+{
+  "version": "1.2.55",
+  "date": "2026-10-07",
+  "description": "Warning cleanup and compile-checked disabled diagnostics; acquisition geometry and memory layout preserved",
+  "compiler": "GNU STM32 13.3.rel1",
+  "warnings": 0,
+  "full_build_c_files": 65,
+  "diagnostic_variants_checked": 3,
+  "hashes": {
+    "BMI30-STM32-1.2.55.bin": "81e02679cbaa0c21bcabd83b290bca460742dd9381ce564cecebcfa6b5224445",
+    "BMI30-STM32-1.2.55.elf": "e9ed47269af2b02d6b3fce04ad8832771f53e4299a70848e7af87f9cd371cb7a",
+    "BMI30-STM32-1.2.55.map": "08e600e47ca9aeb6c539de423974c47e4bb3966593d3034b95257e6c188d1b53",
+    "build_autogen.h": "4660eb86a9afdd9cfeccc81a0f7768c193eb9804ce8552fe780819c026910f06"
+  },
+  "deployment": "verified_on_two_devices",
+  "persistent_sector": "0x080E0000..0x080FFFFF",
+  "devices": [
+    {
+      "board": "S10",
+      "version": "1.2.55",
+      "stlink": "0667FF514953667287233516",
+      "uid96": "0E000F001751323034353633",
+      "download_verified": true,
+      "persistent_sector_unchanged": true,
+      "persistent_sha256": "5db9fe4258155a30cc9127b61cdf6f3e5c7411b4fee98b6b601e1b8f82551f27",
+      "reset_exit": 0,
+      "previous_version": "1.2.54",
+      "host": "BMI30-D5EB8F26C",
+      "live_validation": {
+        "host": "BMI30-D5EB8F26C",
+        "root": "/dev/mmcblk0p2",
+        "stm32": "1.2.55",
+        "raspberry": "2026-10-07-095945",
+        "sync": {
+          "value": "master",
+          "code": "M10",
+          "source": "event-cache",
+          "device_responded": true
+        },
+        "all_fresh": true,
+        "all_workers_alive": true,
+        "mode": {
+          "selected": 6,
+          "stream_mode": 2,
+          "view_mode": 0,
+          "base_buf_len": 200,
+          "freq_hz": 200,
+          "desired_freq": 200,
+          "avg_n": 24,
+          "det_ratio": 3.0
+        },
+        "mode_stable": true,
+        "stream_delta": {
+          "rx_cnt_ch0": 156,
+          "rx_cnt_ch1": 156,
+          "seq_gap_ch0": 0,
+          "seq_gap_ch1": 0,
+          "crc_bad": 0,
+          "magic_bad": 0,
+          "host_rx_ack_fail": 0
+        },
+        "worker_overflows_delta": 0,
+        "https": 200,
+        "boot_id": "ec2fa5ee-99a6-4dbb-aa2b-28dac266bd46"
+      },
+      "full_flash_backup": ".tmp\\warnings-memory-20261007\\0667FF514953667287233516-before-full.bin",
+      "full_flash_backup_sha256": "24866a08525af2364b86f548152828bc93bdff34823f89aeedbce2a51aa5bd90"
+    },
+    {
+      "board": "S09",
+      "version": "1.2.55",
+      "stlink": "066EFF514953667287242707",
+      "uid96": "2E000F001751323034353633",
+      "download_verified": true,
+      "persistent_sector_unchanged": true,
+      "persistent_sha256": "3de330880484aeaae4203309cb662170a1e30e21bbe829ecffae97d666cb9e83",
+      "reset_exit": 0,
+      "previous_version": "1.2.44",
+      "host": "BMI30-6922A5A0D",
+      "live_validation": {
+        "host": "BMI30-6922A5A0D",
+        "root": "/dev/sda2",
+        "stm32": "1.2.55",
+        "raspberry": "2026-10-07-095945",
+        "sync": {
+          "value": "slave",
+          "code": "S09",
+          "source": "event-cache",
+          "device_responded": true
+        },
+        "all_fresh": true,
+        "all_workers_alive": true,
+        "mode": {
+          "selected": 5,
+          "stream_mode": 2,
+          "view_mode": 0,
+          "base_buf_len": 200,
+          "freq_hz": 200,
+          "desired_freq": 200,
+          "avg_n": 24,
+          "det_ratio": 3.0
+        },
+        "mode_stable": true,
+        "stream_delta": {
+          "rx_cnt_ch0": 157,
+          "rx_cnt_ch1": 157,
+          "seq_gap_ch0": 0,
+          "seq_gap_ch1": 0,
+          "crc_bad": 0,
+          "magic_bad": 0,
+          "host_rx_ack_fail": 0
+        },
+        "worker_overflows_delta": 0,
+        "https": 200,
+        "boot_id": "26921a84-435b-4b62-9241-b6331c550970"
+      },
+      "full_flash_backup": ".tmp\\warnings-memory-20261007\\066EFF514953667287242707-before-full.bin",
+      "full_flash_backup_sha256": "504c635cdf54e82dbf897428f515f7d3404ba540ac1769d79064f6dd69bb2a27"
+    }
+  ],
+  "verification": {
+    "full_build": "65 C translation units and 1 assembler unit; 0 warnings; 0 errors",
+    "diagnostic_variants": "3 variants with diagnostics enabled; -Werror -fsyntax-only passed",
+    "flash": "program verified by STM32CubeProgrammer on both ST-LINK serials",
+    "persistent_sector": "128 KiB before/after byte comparison identical on both boards, read before reset",
+    "runtime": "both boards report 1.2.55 through EVT1 FW_INFO; fresh frames; 10-second transport checks passed",
+    "raspberry_roots": [
+      {
+        "board": "S10",
+        "host": "BMI30-D5EB8F26C",
+        "device": "/dev/sda2",
+        "media": "USB",
+        "serial": "25072933730021",
+        "uuid": "d24efc0b-47e6-444f-bc0a-aff5691c7266",
+        "partuuid": "23fb63d1-02",
+        "active": false,
+        "boot_tested_this_run": false,
+        "observed_running": false,
+        "application_version": "2026-10-07-0959",
+        "installed_code_hashes_verified": 33
+      },
+      {
+        "board": "S10",
+        "host": "BMI30-D5EB8F26C",
+        "device": "/dev/mmcblk0p2",
+        "media": "eMMC",
+        "serial": "0xc60d4af9",
+        "uuid": "46776a4f-bbf7-40ec-a809-2126c1488239",
+        "partuuid": "1ea8f1a1-02",
+        "active": true,
+        "boot_tested_this_run": false,
+        "observed_running": true,
+        "application_version": "2026-10-07-0959",
+        "installed_code_hashes_verified": 33
+      },
+      {
+        "board": "S09",
+        "host": "BMI30-6922A5A0D",
+        "device": "/dev/sda2",
+        "media": "USB",
+        "serial": "25072933770324",
+        "uuid": "d24efc0b-47e6-444f-bc0a-aff5691c7266",
+        "partuuid": "23fb63d1-02",
+        "active": true,
+        "boot_tested_this_run": false,
+        "observed_running": true,
+        "application_version": "2026-10-07-0959",
+        "installed_code_hashes_verified": 33
+      },
+      {
+        "board": "S09",
+        "host": "BMI30-6922A5A0D",
+        "device": "/dev/mmcblk0p2",
+        "media": "eMMC",
+        "serial": "0x4610b649",
+        "uuid": "29c7f4bc-3774-443c-b211-ae83d06ada70",
+        "partuuid": "fcd0ed34-02",
+        "active": false,
+        "boot_tested_this_run": false,
+        "observed_running": false,
+        "application_version": "2026-10-07-0959",
+        "installed_code_hashes_verified": 33
+      }
+    ],
+    "s09_emmc": {
+      "version": "2026-10-07-0959",
+      "hashes_verified": 96,
+      "modules_verified": 22,
+      "settings_preserved": true,
+      "runtime_configuration_preserved": [
+        "host/bmi30_config.json",
+        "host/tag_response_filters/Barkhausen.json",
+        "host/tag_response_filters/Casino.json",
+        "host/tag_response_filters/Microwire.json",
+        "host/tag_response_filters/Paper.json"
+      ],
+      "identity_preserved": true,
+      "backup": "/var/backups/bmi30-emmc-release/20261007-172541",
+      "rtc_environment_copied": true,
+      "tests": "portTests.test_valid_packet_keeps_uid_and_generation) ... ok\n\n----------------------------------------------------------------------\nRan 37 tests in 7.947s\n\nOK\n",
+      "boot_tested": false,
+      "kernel_and_os_not_replaced": true,
+      "host": "BMI30-6922A5A0D",
+      "device": "/dev/mmcblk0p2",
+      "uuid": "29c7f4bc-3774-443c-b211-ae83d06ada70",
+      "live_root": "/dev/sda2",
+      "live_core_pid_unchanged": true
+    },
+    "s09_service_identity": {
+      "roots": [
+        {
+          "root": "/dev/sda2",
+          "changed": [
+            "/etc/systemd/system/bmi30-channel-policy.service",
+            "/etc/systemd/system/bmi30-communication-recovery.service",
+            "/opt/bmi30-network/bmi30-channel-policy.service",
+            "/opt/bmi30-network/bmi30-communication-recovery.service"
+          ],
+          "backup": "/var/backups/bmi30-service-identity/20261007-173559",
+          "identity_guard_checked": true,
+          "settings_preserved": true
+        },
+        {
+          "root": "/dev/mmcblk0p2",
+          "changed": [
+            "/mnt/bmi30-s09-service-fix/etc/systemd/system/bmi30-channel-policy.service",
+            "/mnt/bmi30-s09-service-fix/etc/systemd/system/bmi30-communication-recovery.service",
+            "/mnt/bmi30-s09-service-fix/opt/bmi30-network/bmi30-channel-policy.service",
+            "/mnt/bmi30-s09-service-fix/opt/bmi30-network/bmi30-communication-recovery.service"
+          ],
+          "backup": "/mnt/bmi30-s09-service-fix/var/backups/bmi30-service-identity/20261007-173559",
+          "identity_guard_checked": true,
+          "settings_preserved": true
+        }
+      ],
+      "recovery_service": "active",
+      "core_pid_unchanged": true,
+      "mode_preserved": true
+    },
+    "cold_power_cycle_tested": false,
+    "rf_tag_detection_tested": false,
+    "runtime_stack_high_water_measured": false
+  },
+  "full_build_asm_files": 1,
+  "preservation": {
+    "saved_date": "2026-10-08",
+    "firmware_bytes_unchanged": true,
+    "source_archive": "BMI30-STM32-1.2.55-source-inputs.tar.gz",
+    "source_archive_sha256": "3e31d81bc0ac596dca768ee15966ccb5a0ea43f2efbbb528213f1f731208443a",
+    "dtcm_review": "DTCM_MOVE_REVIEW_RU.txt",
+    "memory_relocation_performed": false,
+    "repositories": [
+      "https://github.com/kslabs/BMI30.stm32h7",
+      "https://github.com/kslabs/bmi30-rpi"
+    ]
+  }
+}

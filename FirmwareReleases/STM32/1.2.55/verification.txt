@@ -1,0 +1,41 @@
+BMI30 validation, 2026-10-07 Europe/Prague
+STM32 1.2.55: full build 65 C units and 1 assembler unit, 0 warnings, 0 errors.
+Diagnostics enabled: main/ADC/vendor variants pass -Werror syntax checks.
+Warning flags remain enabled; unused legacy code removed; quiet diagnostics remain compile checked.
+DMA acquisition geometry and bank placement unchanged; 32 x 1360 samples per ADC buffer.
+
+Devices:
+S10 (BMI30-D5EB8F26C): STM32 1.2.54 -> 1.2.55, verified and reset; role M10; ST-LINK 0667FF514953667287233516.
+  10 s: A +156, B +156; seq/CRC/magic/ACK/worker overflow increments 0; HTTPS 200.
+  Full backup: .tmp\warnings-memory-20261007\0667FF514953667287233516-before-full.bin; persistent sector 0x080E0000..0x080FFFFF unchanged.
+S09 (BMI30-6922A5A0D): STM32 1.2.44 -> 1.2.55, verified and reset; role S09; ST-LINK 066EFF514953667287242707.
+  10 s: A +157, B +157; seq/CRC/magic/ACK/worker overflow increments 0; HTTPS 200.
+  Full backup: .tmp\warnings-memory-20261007\066EFF514953667287242707-before-full.bin; persistent sector 0x080E0000..0x080FFFFF unchanged.
+
+Raspberry Pi roots:
+S10 USB /dev/sda2: 2026-10-07-0959; 33 installed code hashes match; offline audit, not boot tested. UUID d24efc0b-47e6-444f-bc0a-aff5691c7266; serial 25072933730021.
+S10 eMMC /dev/mmcblk0p2: 2026-10-07-0959; 33 installed code hashes match; currently running. UUID 46776a4f-bbf7-40ec-a809-2126c1488239; serial 0xc60d4af9.
+S09 USB /dev/sda2: 2026-10-07-0959; 33 installed code hashes match; currently running. UUID d24efc0b-47e6-444f-bc0a-aff5691c7266; serial 25072933770324.
+S09 eMMC /dev/mmcblk0p2: 2026-10-07-0959; 33 installed code hashes match; offline audit, not boot tested. UUID 29c7f4bc-3774-443c-b211-ae83d06ada70; serial 0x4610b649.
+S09 eMMC updated from 2026-08-14-1702; 96 packaged hashes / 22 host modules verified; 37 unit tests passed in chroot.
+S09 eMMC backup: /var/backups/bmi30-emmc-release/20261007-172541; host/config/mode/filter profiles preserved; Linux OS/kernel not replaced.
+S09 USB/eMMC recovery and channel-policy units adapted from stale S10 hostname to S09; recovery daemon active.
+Raspberry Pi not rebooted; inactive S10 USB and S09 eMMC not boot tested in this run.
+Standalone PATRIOT F: on the Windows PC was not updated.
+
+RAM, bytes (from the linked 1.2.55 ELF, includes reserved heap and stack):
+RAM_D1: total 327680, allocated 327672, free 8.
+DTCM: total 131072, allocated 11904, free 119168.
+RAM_D2: total 32768, allocated 512, free 32256.
+RAM_D3: total 16384, allocated 0, free 16384.
+ITCM: total 65536, allocated 0, free 65536.
+Backup SRAM: additional 4096 bytes, not linked.
+Normal RAM free: 233352 bytes across banks; not a contiguous DMA-capable block.
+Largest D1 objects: ADC1/ADC2 87040 bytes each; paired frame queue 44416; averaging sums 21760; averaged output queue 21760; DSP state 10916.
+Stack reservation: 8192 bytes; heap reservation: 512 bytes; current _sbrk limit permits about 520 bytes total heap.
+Runtime stack high-water has not been measured; full D1 map includes the reserved stack.
+Possible next memory change: move CPU-only averaging sums + DSP state to DTCM, about 32676 bytes (31.91 KiB); explicit initialization required for NOLOAD data.
+DMA1/2 and USB buffers must remain in accessible SRAM; do not blindly move them to TCM.
+Flash program capacity 917504; image 324496; free 593008; final 131072 bytes reserved for persistent data.
+Hardware memory reference: https://www.st.com/resource/en/datasheet/stm32h723zg.pdf
+No RF/tag pass testing or cold power cycle was performed.

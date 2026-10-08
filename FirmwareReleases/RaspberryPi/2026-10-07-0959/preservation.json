@@ -1,0 +1,69 @@
+{
+  "saved_date": "2026-10-08",
+  "bundle_version": "2026-10-07-0959",
+  "manifest_version": "2026-10-07-095945",
+  "bundle_bytes_unchanged": true,
+  "sha256": "41bd4a07e76bbafad9bc3c3bd95eae2ae95181de7a54647ab55f1246ea0dbd51",
+  "stm32_version": "1.2.55",
+  "settings_included": false,
+  "activation_performed": false,
+  "roots": [
+    {
+      "board": "S10",
+      "host": "BMI30-D5EB8F26C",
+      "device": "/dev/sda2",
+      "media": "USB",
+      "serial": "25072933730021",
+      "uuid": "d24efc0b-47e6-444f-bc0a-aff5691c7266",
+      "partuuid": "23fb63d1-02",
+      "active": false,
+      "boot_tested_this_run": false,
+      "observed_running": false,
+      "application_version": "2026-10-07-0959",
+      "installed_code_hashes_verified": 33
+    },
+    {
+      "board": "S10",
+      "host": "BMI30-D5EB8F26C",
+      "device": "/dev/mmcblk0p2",
+      "media": "eMMC",
+      "serial": "0xc60d4af9",
+      "uuid": "46776a4f-bbf7-40ec-a809-2126c1488239",
+      "partuuid": "1ea8f1a1-02",
+      "active": true,
+      "boot_tested_this_run": false,
+      "observed_running": true,
+      "application_version": "2026-10-07-0959",
+      "installed_code_hashes_verified": 33
+    },
+    {
+      "board": "S09",
+      "host": "BMI30-6922A5A0D",
+      "device": "/dev/sda2",
+      "media": "USB",
+      "serial": "25072933770324",
+      "uuid": "d24efc0b-47e6-444f-bc0a-aff5691c7266",
+      "partuuid": "23fb63d1-02",
+      "active": true,
+      "boot_tested_this_run": false,
+      "observed_running": true,
+      "application_version": "2026-10-07-0959",
+      "installed_code_hashes_verified": 33
+    },
+    {
+      "board": "S09",
+      "host": "BMI30-6922A5A0D",
+      "device": "/dev/mmcblk0p2",
+      "media": "eMMC",
+      "serial": "0x4610b649",
+      "uuid": "29c7f4bc-3774-443c-b211-ae83d06ada70",
+      "partuuid": "fcd0ed34-02",
+      "active": false,
+      "boot_tested_this_run": false,
+      "observed_running": false,
+      "application_version": "2026-10-07-0959",
+      "installed_code_hashes_verified": 33
+    }
+  ],
+  "s09_units_expected_host": "BMI30-6922A5A0D"
+}

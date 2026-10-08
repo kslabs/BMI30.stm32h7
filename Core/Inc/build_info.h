@@ -8,9 +8,9 @@ extern "C" {
 // Семантическая версия прошивки
 #define FW_VERSION_MAJOR 1
 #define FW_VERSION_MINOR 2
-#define FW_VERSION_PATCH 53  // Background measured RX polarity, independent per channel
+#define FW_VERSION_PATCH 55  // Warning cleanup; compile-checked disabled diagnostics
 
-#define FW_VERSION_STR  "1.2.53"
+#define FW_VERSION_STR  "1.2.55"
 
 // Опционально: можно переопределить через ключ компиляции -DGIT_HASH="..."
 #ifndef GIT_HASH

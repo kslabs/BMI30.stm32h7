@@ -250,6 +250,7 @@ static void ws2812_scope_sync_begin(void)
   ws2812_scope_pulse_count(1u);
 }
 
+#if !WS2812_SPI_USE_DMA
 static HAL_StatusTypeDef ws2812_wait_spi_flush(uint32_t timeout_ms)
 {
   uint32_t start = HAL_GetTick();
@@ -269,6 +270,8 @@ static HAL_StatusTypeDef ws2812_wait_spi_flush(uint32_t timeout_ms)
   __HAL_SPI_CLEAR_EOTFLAG(&hspi3);
   return HAL_OK;
 }
+
+#endif /* !WS2812_SPI_USE_DMA */
 
 static void ws2812_pin_spi_mode(void)
 {
@@ -323,26 +326,6 @@ static void ws2812_encode_led_rgb(uint8_t *dst, uint8_t r, uint8_t g, uint8_t b)
 #endif
 }
 
-static void ws2812_fill_encoded_buffer(uint8_t *buf,
-                                       uint8_t onboard_r, uint8_t onboard_g, uint8_t onboard_b,
-                                       uint8_t strip_r, uint8_t strip_g, uint8_t strip_b)
-{
-  uint32_t led = 0u;
-  uint8_t *dst = buf + WS2812_PREFIX_BYTES;
-
-  memset(buf, 0, WS2812_PREFIX_BYTES);
-
-  for (led = 0u; led < WS2812_LED_COUNT; ++led) {
-    if (led < WS2812_ONBOARD_LED_COUNT) {
-      ws2812_encode_led_rgb(dst, onboard_r, onboard_g, onboard_b);
-    } else {
-      ws2812_encode_led_rgb(dst, strip_r, strip_g, strip_b);
-    }
-    dst += WS2812_BYTES_PER_LED;
-  }
-
-  memset(dst, 0, WS2812_RESET_BYTES);
-}
 
 static void ws2812_build_tx_buffer(void)
 {

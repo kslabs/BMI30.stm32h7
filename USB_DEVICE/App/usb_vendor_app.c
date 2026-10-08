@@ -51,7 +51,7 @@ extern TIM_HandleTypeDef htim5;
 #if VND_DC_LOG_ENABLE
 #define VND_DC_LOGF(...) printf(__VA_ARGS__)
 #else
-#define VND_DC_LOGF(...) do { } while(0)
+#define VND_DC_LOGF(...) do { if (0) { (void)(printf)(__VA_ARGS__); } } while (0)
 #endif
 
 #ifndef VND_PROF_LOG_ENABLE
@@ -60,7 +60,7 @@ extern TIM_HandleTypeDef htim5;
 #if VND_PROF_LOG_ENABLE
 #define VND_PROF_LOGF(...) printf(__VA_ARGS__)
 #else
-#define VND_PROF_LOGF(...) do { } while(0)
+#define VND_PROF_LOGF(...) do { if (0) { (void)(printf)(__VA_ARGS__); } } while (0)
 #endif
 
 /* Verification build default: keep the COM port quiet except explicit DC speed
@@ -69,7 +69,8 @@ extern TIM_HandleTypeDef htim5;
 #define VND_UART_LOG_ENABLE 0
 #endif
 #if !VND_UART_LOG_ENABLE
-#define printf(...) ((void)0)
+/* Validate disabled diagnostics while keeping UART and argument reads absent. */
+#define printf(...) do { if (0) { (void)(printf)(__VA_ARGS__); } } while (0)
 #endif
 
 #ifndef VND_CDC_LOG_ENABLE
@@ -899,6 +900,19 @@ static uint32_t vnd_dc_last_save_ms = 0;
 static uint32_t vnd_dc_last_dirty_log_ms = 0;
 static volatile uint8_t vnd_dc_load_request = 0;
 static volatile uint8_t vnd_dc_save_request = 0;
+/* K1 recovery uses previously reserved metadata bytes; DC slot addresses and
+   the v2 RS485 role record remain readable by the previous firmware. */
+#define VND_COMM_RECOVERY_META_FLAG 0x40u
+#define VND_COMM_RECOVERY_CHECK 0xA55Au
+#define VND_COMM_RECOVERY_HOLD_MS 2000u
+/* CPU-only state lives in DTCM; keep the acquisition RAM_D1 budget unchanged.
+   NOLOAD memory is initialized explicitly before reading the Flash journal. */
+static volatile uint16_t vnd_comm_recovery_generation __attribute__((section(".ram_dtcm")));
+static volatile uint8_t vnd_comm_recovery_pending __attribute__((section(".ram_dtcm")));
+static volatile uint8_t vnd_comm_recovery_durable __attribute__((section(".ram_dtcm")));
+static volatile uint16_t vnd_comm_recovery_ack_request __attribute__((section(".ram_dtcm")));
+static uint8_t vnd_comm_recovery_boot_armed __attribute__((section(".ram_dtcm")));
+static uint32_t vnd_comm_recovery_boot_ms __attribute__((section(".ram_dtcm")));
 /* One coefficient bank and one time base per channel/parity. Fractional Q16
    progress is kept per sample so slow RPI settings remain accurate without a
    forced one-LSB step. */
@@ -1194,7 +1208,10 @@ static void vnd_rs485_role_meta_store(vnd_dc_blob_t *blob)
 
     meta.magic = VND_RS485_ROLE_META_MAGIC;
     meta.version = VND_RS485_ROLE_META_VER;
-    meta.flags = state.flags;
+    meta.flags = state.flags | (vnd_comm_recovery_pending ? VND_COMM_RECOVERY_META_FLAG : 0u);
+    meta.reserved[0] = (uint8_t)vnd_comm_recovery_generation;
+    meta.reserved[1] = (uint8_t)(vnd_comm_recovery_generation >> 8);
+    blob->_rsv0 = vnd_comm_recovery_generation ^ VND_COMM_RECOVERY_CHECK;
     meta.node_id = state.node_id;
     meta.slave_id_high_water = state.slave_id_high_water;
     meta.master_assigned_unix_s = state.master_assigned_unix_s;
@@ -1234,7 +1251,15 @@ static void vnd_rs485_role_meta_restore(const vnd_dc_blob_t *blob)
     }
 
     memset(&state, 0, sizeof(state));
-    state.flags = meta.flags;
+    state.flags = meta.flags & (uint8_t)~VND_COMM_RECOVERY_META_FLAG;
+    {
+        uint16_t generation = (uint16_t)meta.reserved[0] | ((uint16_t)meta.reserved[1] << 8);
+        if (blob->_rsv0 == (uint16_t)(generation ^ VND_COMM_RECOVERY_CHECK)) {
+            vnd_comm_recovery_generation = generation;
+            vnd_comm_recovery_pending = ((meta.flags & VND_COMM_RECOVERY_META_FLAG) != 0u && generation != 0u);
+            vnd_comm_recovery_durable = 1u;
+        }
+    }
     state.node_id = meta.node_id;
     state.slave_id_high_water = meta.slave_id_high_water;
     state.master_assigned_unix_s = meta.master_assigned_unix_s;
@@ -1947,7 +1972,78 @@ static void vnd_dc_load_once(void)
 
 void vnd_persistent_config_load_once(void)
 {
+    vnd_comm_recovery_generation = 0u;
+    vnd_comm_recovery_pending = 0u;
+    vnd_comm_recovery_durable = 0u;
+    vnd_comm_recovery_ack_request = 0u;
+    vnd_comm_recovery_boot_armed = 0u;
+    vnd_comm_recovery_boot_ms = 0u;
     vnd_dc_load_once();
+}
+
+void vnd_comm_recovery_boot_begin(void)
+{
+    vnd_comm_recovery_boot_ms = HAL_GetTick();
+    vnd_comm_recovery_boot_armed = (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET);
+}
+
+void vnd_comm_recovery_boot_service(uint32_t now_ms)
+{
+    /* Consume EP0 ACK outside the USB interrupt, before any Flash snapshot.
+       An IRQ must not clear dirty while an older journal append is in flight. */
+    uint16_t acknowledgement = vnd_comm_recovery_ack_request;
+    if (acknowledgement != 0u) {
+        vnd_comm_recovery_ack_request = 0u;
+        if (vnd_comm_recovery_pending && vnd_comm_recovery_durable &&
+            acknowledgement == vnd_comm_recovery_generation) {
+            vnd_comm_recovery_pending = 0u;
+            vnd_comm_recovery_durable = 0u;
+            vnd_dc_dirty = vnd_dc_dirty_public = 1u;
+            vnd_dc_save_request = 1u;
+            printf("[COMM] Recovery acknowledged generation=%u\r\n", (unsigned)acknowledgement);
+        }
+    }
+    if (!vnd_comm_recovery_boot_armed) return;
+    if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) != GPIO_PIN_SET) {
+        vnd_comm_recovery_boot_armed = 0u;
+        return;
+    }
+    if ((uint32_t)(now_ms - vnd_comm_recovery_boot_ms) < VND_COMM_RECOVERY_HOLD_MS) return;
+    vnd_comm_recovery_boot_armed = 0u;
+    /* Each deliberate held-K1 boot is a new request, including when an older
+       host ACK was interrupted by power loss. Do not deduplicate this gesture. */
+    {
+        uint16_t generation = (uint16_t)(vnd_comm_recovery_generation + 1u);
+        vnd_comm_recovery_generation = generation ? generation : 1u;
+        vnd_comm_recovery_pending = 1u;
+        vnd_comm_recovery_durable = 0u;
+        vnd_dc_dirty = vnd_dc_dirty_public = 1u;
+        vnd_dc_save_request = 1u;
+        printf("[COMM] K1 recovery requested generation=%u\r\n", (unsigned)vnd_comm_recovery_generation);
+    }
+}
+
+uint16_t vnd_build_comm_recovery(uint8_t *dst, uint16_t max_len)
+{
+    if (dst == NULL || max_len < VND_COMM_RECOVERY_SIZE) return 0u;
+    memset(dst, 0, VND_COMM_RECOVERY_SIZE);
+    memcpy(dst, "COM1", 4u);
+    dst[4] = 1u;
+    dst[5] = vnd_comm_recovery_pending;
+    dst[6] = vnd_comm_recovery_durable;
+    dst[8] = (uint8_t)vnd_comm_recovery_generation;
+    dst[9] = (uint8_t)(vnd_comm_recovery_generation >> 8);
+    dst[10] = (uint8_t)VND_COMM_RECOVERY_HOLD_MS;
+    dst[11] = (uint8_t)(VND_COMM_RECOVERY_HOLD_MS >> 8);
+    memcpy(dst + 12u, (const void *)UID_BASE, 12u);
+    return VND_COMM_RECOVERY_SIZE;
+}
+
+static void vnd_ack_comm_recovery(uint16_t generation)
+{
+    if (!vnd_comm_recovery_pending || !vnd_comm_recovery_durable ||
+        generation == 0u || generation != vnd_comm_recovery_generation) return;
+    vnd_comm_recovery_ack_request = generation;
 }
 
 static void vnd_dc_try_save_periodic(void)
@@ -2172,6 +2268,12 @@ static void vnd_dc_try_save_periodic(void)
        We treat HAL_OK for all program operations as success. */
 
     if(ok){
+        /* Only a committed journal append makes a request eligible for host ACK. */
+        if (blob._rsv0 == (uint16_t)(vnd_comm_recovery_generation ^ VND_COMM_RECOVERY_CHECK) &&
+            (((const vnd_rs485_role_meta_t *)(const void *)blob._pad)->flags & VND_COMM_RECOVERY_META_FLAG) ==
+            (vnd_comm_recovery_pending ? VND_COMM_RECOVERY_META_FLAG : 0u)) {
+            vnd_comm_recovery_durable = 1u;
+        }
         vnd_dc_dirty = 0;
         vnd_dc_dirty_public = 0;
         vnd_dc_dirty_since_ms = 0;
@@ -2840,7 +2942,7 @@ static void vnd_cdc_sync_diag(uint32_t now_ms)
              (unsigned)n,
              (unsigned)delta,
              (unsigned long)age);
-#if VND_SYNC_DIAG_PRINTF
+  if (VND_SYNC_DIAG_PRINTF) {
     printf("[SYNC_DBG] t=%lums buf=%lu idx=%u/%u d=%u age=%lums\r\n",
            (unsigned long)now_ms,
            (unsigned long)buf,
@@ -2848,7 +2950,7 @@ static void vnd_cdc_sync_diag(uint32_t now_ms)
            (unsigned)n,
            (unsigned)delta,
            (unsigned long)age);
-#endif
+  }
 }
 
 static void vnd_cdc_periodic_stats(uint32_t now_ms)
@@ -2905,7 +3007,7 @@ static void vnd_cdc_periodic_stats(uint32_t now_ms)
              (unsigned long)dbg_sent_ch0_total, (unsigned long)dbg_sent_ch1_total, (unsigned long)stream_seq,
              (unsigned long)tx_attempt, (unsigned long)tx_reject, (unsigned long)tx_ok,
              (unsigned long)frame_abort, (unsigned long)size_mism);
-#if VND_SYNC_DIAG_PRINTF
+  if (VND_SYNC_DIAG_PRINTF) {
     printf("[USB_RATE] tx=%luB/s raw=%luB/s tx=%.2fMbps raw=%.2fMbps ns=%u frame=%u ch=%u buf=%u A=%lu B=%lu txcplt=%lu\r\n",
            (unsigned long)bps,
            (unsigned long)demand_bps,
@@ -2918,7 +3020,7 @@ static void vnd_cdc_periodic_stats(uint32_t now_ms)
            (unsigned long)dbg_sent_ch0_total,
            (unsigned long)dbg_sent_ch1_total,
            (unsigned long)tx_ok);
-#endif
+  }
 }
 
 /* CRC16-CCITT-FALSE: poly 0x1021, init 0xFFFF. */
@@ -6747,7 +6849,7 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
             dbg_avg_in_last = in_now; dbg_avg_out_last = out_now; dbg_avg_tx_last = tx_now;
             dbg_avg_last_print_ms = now_ms;
                  uint32_t dsp_avg_us = (vnd_dsp.dsp_us_cnt ? (vnd_dsp.dsp_us_total / vnd_dsp.dsp_us_cnt) : 0u);
-#if VND_AVG_DIAG_PRINTF
+  if (VND_AVG_DIAG_PRINTF) {
                                  printf("[AVG] n=%u q=%u drop=%lu cnt0=%u cnt1=%u in=%lu(+%lu/s) out=%lu(+%lu/s) tx=%lu(+%lu/s) dsp=%luus(avg) %luus(max) corr_eo=(%.3f,%.3f) corr_ab=(e=%.3f,o=%.3f)\r\n",
                                      (unsigned)vnd_avg_n, (unsigned)vnd_avg_q_count,
                                      (unsigned long)dbg_avg_drop_frames,
@@ -6758,7 +6860,7 @@ void __attribute__((unused)) Vendor_Stream_Task(void)
                                          (unsigned long)dsp_avg_us, (unsigned long)vnd_dsp.dsp_us_max,
                                          (double)vnd_dsp.corr_eo[0], (double)vnd_dsp.corr_eo[1],
                                          (double)vnd_dsp.corr_ab[0], (double)vnd_dsp.corr_ab[1]);
-#endif
+  }
 
                      /* DC save вызывается выше (вне 1Hz блока), чтобы не зависеть от печати. */
 
@@ -8109,6 +8211,9 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
 
         case VND_CMD_SET_RELAY_ENABLE:
             if(len == 2u && data[1] <= 1u) relay_set_enabled(data[1]);
+            break;
+        case VND_CMD_ACK_COMM_RECOVERY:
+            if (len == 3u) vnd_ack_comm_recovery((uint16_t)data[1] | ((uint16_t)data[2] << 8));
             break;
         case VND_CMD_SET_RELAY_TEST:
             if(len == 2u && data[1] <= 1u) relay_set_test(data[1]);

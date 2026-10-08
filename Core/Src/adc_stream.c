@@ -15,7 +15,8 @@
 #if ADC_LOG_ENABLE
 #define ADC_LOGF(...)    printf(__VA_ARGS__)
 #else
-#define ADC_LOGF(...)    do { } while (0)
+/* Compile-check diagnostics without evaluating arguments or printing in ISR. */
+#define ADC_LOGF(...)    do { if (0) { (void)(printf)(__VA_ARGS__); } } while (0)
 #endif
 
 /* ВАЖНО: никакого printf в ISR по умолчанию.
@@ -707,18 +708,12 @@ static uint16_t g_fine_buf_rate_override = 0;
 // Fine ARR offset: ручная подстройка ARR для точной частоты (например -4 для 200→200.35 Гц)
 static int32_t g_arr_fine_offset = 0;  // По умолчанию БЕЗ коррекции
 
-// Периодическое применение offset: применять на 1 буфер каждые N буферов (0 = постоянно)
-static uint32_t g_arr_fine_period = 1000;  // 1 раз на 1000 буферов (~5 сек) → очень медленная коррекция
-
 // Флаг: отключить автоматическое переопределение ARR (для ручного тестирования)
 // По умолчанию ARR задаётся только из профиля в adc_stream_apply_timing().
 volatile uint8_t g_arr_manual_mode = 0;
 
-// Автоматическая подстройка частоты по sync_buffers_between_edges (0=откл, 1=вкл)
 static uint8_t g_auto_freq_sync_enable = 0;  // RS485 sync не меняет частоту/ARR автоматически
 
-static uint32_t g_sync_last_check_buf = 0;  // Номер буфера последней проверки
-static const uint32_t SYNC_CHECK_PERIOD_BUFFERS = 32;    // ~160ms при 200 Hz (быстрая реакция)
 
 // Диагностика
 volatile uint32_t g_auto_freq_regulation_count = 0;
@@ -832,8 +827,6 @@ static inline void adc_sync_phase_on_buffer(void)
     }
     
     extern TIM_HandleTypeDef htim15;
-    extern volatile uint32_t sync_buffers_between_edges;
-    extern volatile uint32_t sync_edge_count;
     
     /* Читаем TIM15->CNT на момент буфера для фазы */
     uint32_t tim15_cnt_now = htim15.Instance->CNT;
@@ -974,7 +967,6 @@ uint32_t adc_stream_get_fs(void) { return g_profiles[g_active_profile].fs_hz; }
 static void adc_stream_apply_timing(void)
 {
     extern TIM_HandleTypeDef htim15;
-    extern TIM_HandleTypeDef htim16;
     uint16_t samples = adc_stream_get_active_samples();
     uint16_t buf_rate_hz = adc_stream_get_buf_rate();
     if (samples == 0u || buf_rate_hz == 0u) {
@@ -3262,7 +3254,8 @@ void adc_stream_watchdog(void)
                ((lastB == 0u) || (tick_diff32(now_ms, lastB) > ADC_WD_TIMEOUT_MS))){
                 b_stuck_strikes++;
                 ADC_LOGF("[ADC][WD] CH_B DMA not advancing: ndtrB=%u unchanged %lums (strike=%u). dtA=%lu dtB=%lu -> restart BOTH\r\n",
-                         (unsigned)ndtrB, (unsigned long)stuck_ms, (unsigned)b_stuck_strikes, (unsigned long)dtA, (unsigned long)dtB_now);
+                         (unsigned)ndtrB, (unsigned long)stuck_ms, (unsigned)b_stuck_strikes, (unsigned long)dtA,
+                         (unsigned long)((lastB == 0u) ? 0u : tick_diff32(now_ms, lastB)));
                 dump_b_path_regs(ndtrA, ndtrB);
                 if(adc_stream_watchdog_recover(now_ms, 3u, "channel B DMA stalled") == HAL_OK){
                     b_stuck_strikes = 0;

@@ -1,0 +1,165 @@
+Проверка перед переносом вычислительных массивов в DTCM
+BMI30 STM32 1.2.55; 2026-10-08, Europe/Prague
+
+Вывод
+-----
+vnd_avg_sum (21760 байт) и vnd_dsp (10916 байт) используются только CPU.
+Перенести их можно при явной корректной инициализации новой области.
+Один section(".ram_dtcm") недостаточен. Перенос, изменение startup и исправления
+алгоритмов в этой проверке не выполнялись; платы не перепрошивались.
+
+Проверено по исходникам, сохранённому ELF/MAP и первичным документам ST.
+Чтение живых регистров — подтверждение текущей конфигурации двух плат,
+а не отдельный cold-boot тест и не замер будущего ускорения.
+
+Размеры и эффект на память
+-------------------------
+Текущая RAM_D1: 327680 байт; после heap/stack reserve свободны 8 байт.
+Текущая DTCM: 131072 байта; размещено 11904, свободны 119168.
+Кандидаты: 32676 байт = 31,910 КиБ; после переноса свободная D1 станет
+примерно 31,92 КиБ, свободная DTCM — примерно 84,44 КиБ, с учётом выравнивания.
+Общий объём RAM не увеличивается: данные перераспределяются между банками.
+Стек остаётся в D1 с резервом 8192 байта. _sbrk использует свободное пространство
+от _end до _estack-_Min_Stack_Size: фактический предел malloc увеличится
+примерно на 32 КиБ относительно нынешних примерно 520 байт. Ранее неудачные
+выделения памяти могут начать проходить; это тоже изменение поведения.
+При ROI=200 горячая часть этих объектов примерно 4,7 КиБ; 31,91 КиБ — размер
+выделенных массивов для максимального окна, не показатель постоянного трафика.
+Zero-initialized DTCM не добавляет 32 КиБ исходных данных во Flash; потребуется
+дополнительный код и время раннего обнуления. Точный новый размер покажет сборка.
+
+Инициализация и ECC
+------------------
+STM32H723VGTX_FLASH.ld:171: .ram_dtcm является NOLOAD; только границы секции
+выровнены на 32 байта. Отдельных start/end символов zero-region нет.
+Core/Startup/startup_stm32h723vgtx.s:60-87: Reset_Handler вызывает SystemInit,
+копирует .data и обнуляет только _sbss.._ebss в D1, затем libc/main.
+Область .ram_dtcm стандартным startup не обнуляется.
+
+USB_DEVICE/App/usb_vendor_app.c:759: vnd_avg_sum — uint32_t накопители parity/channel.
+:2409-2423: vnd_avg_reset обнуляет counters/queue и vnd_dsp, но не суммы.
+:2466-2471: при avg_cnt[parity]==0 активный ROI сумм явно обнуляется uint32 stores
+до первого +=. После завершённой группы счётчик снова становится нулём (:2556).
+USB_DEVICE/App/usb_vendor_app.c:2312: vnd_dsp сегодня получает нули через .bss
+и memset в vnd_avg_reset. Запись = {0} сама по себе не инициализирует NOLOAD RAM.
+
+В сохранённом ELF memset по адресу 0x080496C4 — цикл byte stores;
+инструкция 0x080496CE: strb.w r1, [r3], #1. Это проверено дизассемблированием.
+Первое такое обнуление DSP в неподготовленной DTCM может делать ECC read-modify-write
+с ещё невалидными данными. Требуется ранняя инициализация выровненными 32-битными
+stores до первого чтения или sub-word write. DTCM имеет ECC на 32-битное слово;
+RM0468 отдельно оговаривает отключение TCM ECC в CPUFREQ_BOOST.
+ECC fault в этой проверке не наблюдался; HAL_RAMECC_MODULE_ENABLED сейчас отключён.
+
+Предпочтительный будущий вариант: отдельная .dtcm_bss для этих двух объектов,
+с start/end bounds и 32-битным startup zero-loop до доступа из USB/IRQ.
+Не обнулять всю существующую .ram_dtcm при USB reconnect: она также хранит
+ADC snapshots, диагностику фазы и recovery state. Объекты с ненулевыми
+начальными значениями требуют отдельной копии из Flash, а не простого NOLOAD.
+
+Чтение плат без остановки, сброса и записи, 2026-10-08:
+S10 ST-LINK 0667FF514953667287233516 и S09 066EFF514953667287242707:
+CCR     (0xE000ED14) = 0x00040200: I-cache и D-cache выключены.
+ITCMCR  (0xE000EF90) = 0x0000003B: ITCM включена, размер 64 КиБ.
+DTCMCR  (0xE000EF94) = 0x00000043: DTCM включена, размер 128 КиБ,
+EN=1, RMW=1, RETEN=0. Это текущие значения, не вывод из generic reset defaults.
+До/после чтения оба устройства сообщали 1.2.55; core PID и mode не изменились,
+worker работал и поступали свежие кадры. Полные результаты — memory-registers.json.
+
+DMA и указатели
+---------------
+ADC1/2: DMA1 Stream0/1, реальные M0AR/M1AR указывают на s_adc*_storage в D1.
+Core/Src/stm32h7xx_hal_msp.c:123,167; adc_stream.c:174,1106,1137.
+CPU копирует завершённые пары в s_consumer_snapshot в DTCM с проверкой поколения:
+adc_stream.c:1827,1854,1867. Сам DMA пишет исходные D1 буферы.
+
+vnd_avg_sum читается/пишется CPU (:2467,2495,2526).
+vnd_dsp передаёт указатели только CPU-функции корреляции (:2373,2389,2394).
+Адреса этих двух объектов не передаются DMA или USB hardware.
+vnd_avg_q_out -> CPU copy -> g_frames[].buf -> USB (:5627,5705,5730).
+Очередь и передающие буферы остаются в D1; их перенос в эту работу не входит.
+
+USB_DEVICE/Target/usbd_conf.c:359: контроллер OTG_HS работает в FullSpeed,
+dma_enable=DISABLE; сейчас передачу обслуживает CPU. Сам USB DMA DTCM не достигает.
+LED SPI3: DMA1 Stream7 и s_tx_buf в D2; ws2812_spi.c:68,922;
+stm32h7xx_hal_msp.c:424. Эти DMA буферы переносить в DTCM нельзя.
+DMA1/2 DTCM не достигают; MDMA достигает; BDMA ограничена D3.
+В конечном ELF активного MDMA/BDMA использования нет; weak default IRQ остаются.
+TIM/USART DMA declarations не доказывают использование: соответствующие
+неиспользуемые handles/calls удалены linker GC; USART2 RX DMA default=0.
+
+Уточнение карты D2: 512 байт — EP0/class buffers 208 + LED TX 271 + alignment 33.
+Это не только USB EP0. Ограничения DMA нельзя обобщать на все контроллеры сразу.
+
+Что может измениться после корректного переноса
+----------------------------------------------
+При тех же входных кадрах и параметрах placement не меняет integer sum,
+rounding, avg_n, parity grouping, DC correction, packet format и калибровки.
+Максимальная сумма 65535*64+32=4194272 укладывается в uint32_t.
+DSP metrics — диагностика; DSP state напрямую не корректирует samples.
+
+Изменятся длительности CPU memory access, AXI contention, averaging task,
+интервалы обслуживания USB и других main-loop задач. Ускорение вероятно,
+но процент неизвестен: измерений новой реализации ещё нет. Cache сейчас
+выключен; включение cache не требуется для переноса и здесь не предлагается.
+Существующий DWT profile измеряет DSP update, а не весь FIFO drain.
+
+VND_AVG_LATEST_WINS=1 (:246-249): новый средний результат отбрасывает старый
+неотправленный (:2510-2515); drain burst зависит от USB busy (:2441-2451).
+Изменение времени обработки способно изменить набор кадров, дошедших до Pi
+при backpressure. Поэтому live detector timing/срабатывания могут отличаться,
+хотя арифметика для одинаковых выбранных кадров осталась прежней.
+
+START/STOP и USB pipeline reset используют vnd_reset_buffers, но не обязаны
+сбрасывать averaging/DSP (:3967,3982,4866,7825,8076). Частичные группы могут
+сохраняться, пока последующая команда mode/ROI их не сбросит. Перенос не должен
+незаметно менять это существующее правило. На настоящий MCU reset новые области
+должны обнуляться заново; на USB-only reconnect — согласно прежнему контракту.
+
+Два существующих вопроса, независимых от перемещения адресов
+----------------------------------------------------------
+1. SET_WINDOWS принимает unrestricted uint16 start (:8421); drain сравнивает
+ns < (uint16_t)(roi_start+roi_len) (:2460). Например, start=65535,len=200
+даёт 199 после переполнения; кадр на 600 samples проходит проверку, а a_ptr+65535
+выходит за пределы (:2473). Некорректная команда не отправлялась на платы;
+отказ на устройствах не наблюдался. До будущего переноса нужна отдельная
+проверка start/length без сужающего переполнения.
+2. USB IRQ через USBD_CDCVND_DataOut (:usbd_cdc_custom.c:902) может вызвать
+vnd_avg_reset при SET_WINDOWS/SET_STREAM_MODE/SET_ROI_US (:8428,8446,8797),
+пока main-loop выполняет accumulation/DSP. Нет единой атомарной границы смены
+конфигурации. Перенос не создаёт эту гонку, но меняет временное окно.
+Будущее решение — перенос reset/config mutation на безопасную main-loop границу
+или generation protocol; не отключать IRQ на весь длинный averaging loop.
+Оба вопроса в 1.2.55 документированы и не исправлялись этим аудитом.
+
+Проверки для будущей версии, до штатного применения
+------------------------------------------------
+1. Новая MAP: только два согласованных CPU объекта перенесены; все реальные
+DMA buffer addresses доступны своим контроллерам; размер/alignment zero-region.
+2. Disassembly: ранние aligned word stores, никакого first-touch byte memset;
+инициализация раньше peripheral/USB IRQ и первого DSP access.
+3. Cold power-on, MCU/software/watchdog reset; USB reconnect и STOP/START.
+Проверить parity warm-up, N=8/24/64, ROI=200 и максимальное окно, смену ROI/N
+в активном стриме и некорректные границы в контролируемом стенде.
+4. Сравнить на одинаковом детерминированном входе усреднения sample bytes,
+CRC, parity, group sequence с 1.2.55. TEST_OVERLAY_SAWTOOTH подменяет конечный
+payload и самостоятельно не проверяет averaging/DSP.
+5. Измерить весь averaging task, максимальные IRQ/main-loop задержки, ADC phase,
+FIFO depth, queue/drop/restart counters, USB sequence/CRC/ACK. Нагрузка,
+замедленное/остановленное чтение host, concurrent acquisition и reconnect.
+6. После транспортных проверок — реальные counted tag passes для оценки
+детекторной задержки и пропусков. Статическая карта этого не доказывает.
+На каждом этапе иметь rollback к точному сохранённому BIN 1.2.55.
+
+Первичные источники
+-------------------
+RM0468, STM32H723/733/725/735, sections 2.1.6 and 2.4:
+https://www.st.com/resource/en/reference_manual/dm00603761.pdf
+AN4891, section 2.5.2, interconnect/DMA accessibility:
+https://www.st.com/resource/en/application_note/an4891-stm32h72x-stm32h73x-and-singlecore-stm32h74x75x-system-architecture-and-performance-stmicroelectronics.pdf
+AN5342, section 2.2, ECC and partial writes:
+https://www.st.com/resource/en/application_note/an5342-error-correction-code-ecc-management-for-internal-memories-protection-on-stm32h7-series-stmicroelectronics.pdf
+PM0253, section 4.9.1, TCMCR fields and hardware integration at reset:
+https://www.st.com/resource/en/programming_manual/pm0253-stm32f7-series-and-stm32h7-series-cortexm7-processor-programming-manual-stmicroelectronics.pdf
+Official ST H723 DMA example:
+https://github.com/STMicroelectronics/STM32CubeH7/blob/master/Projects/NUCLEO-H723ZG/Examples/SPI/SPI_FullDuplex_ComDMA/readme.txt

@@ -1,5 +1,10 @@
 # Custom makefile definitions to auto-generate build timestamp header
 
+ifeq ($(OS),Windows_NT)
+# Native Windows make must not inherit Git Bash as its recipe shell.
+SHELL := cmd.exe
+endif
+
 # Path is relative to Debug/ directory which includes this file as ..\makefile.defs
 AUTOGEN_HDR := ../Core/Inc/build_autogen.h
 AUTOGEN_SCRIPT := ../.vscode/gen_build_autogen.py
@@ -13,6 +18,9 @@ build-autogen:
 # Make sure autogen runs before the main build
 main-build: build-autogen
 all: build-autogen
+
+# Generate the timestamp before its consumer, including parallel builds.
+Core/Src/build_info.o: ../Core/Src/build_info.c build-autogen
 
 # Also works before CubeIDE regenerates Core/Src/subdir.mk for this new file.
 USER_OBJS += $(filter-out $(OBJS),Core/Src/rx_phase_detector.o)

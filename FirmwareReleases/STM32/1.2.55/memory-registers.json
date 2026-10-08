@@ -1,0 +1,228 @@
+[
+  {
+    "board": "S10",
+    "stlink": "0667FF514953667287233516",
+    "command": [
+      "C:/ST/STM32CubeCLT_1.19.0/STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe",
+      "-c",
+      "port=SWD",
+      "sn=0667FF514953667287233516",
+      "ap=0",
+      "freq=4000",
+      "mode=HOTPLUG",
+      "-r32",
+      "0xE000ED14",
+      "4",
+      "-r32",
+      "0xE000EF90",
+      "4",
+      "-r32",
+      "0xE000EF94",
+      "4"
+    ],
+    "registers": {
+      "0xE000ED14": "0x00040200",
+      "0xE000EF90": "0x0000003B",
+      "0xE000EF94": "0x00000043"
+    },
+    "dtcm_enabled": true,
+    "dtcm_rmw": true,
+    "dtcm_reten": false,
+    "itcm_enabled": true,
+    "icache_enabled": false,
+    "dcache_enabled": false,
+    "before": {
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.1548464298248291
+      },
+      "worker": true,
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 3.0
+      },
+      "stats": {
+        "rx_cnt_ch0": 939166,
+        "rx_cnt_ch1": 939166,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "seq_dup_ch0": 0,
+        "seq_dup_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 1,
+        "host_rx_ack_fail": 0,
+        "queues": {
+          "stereo_q": 0,
+          "qA": 0,
+          "qB": 0,
+          "bufA": 0,
+          "bufB": 0
+        },
+        "last_crc_bad_info": null
+      },
+      "stm32": "1.2.55",
+      "pid": "1396"
+    },
+    "after": {
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.013333320617675781
+      },
+      "worker": true,
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 3.0
+      },
+      "stats": {
+        "rx_cnt_ch0": 939171,
+        "rx_cnt_ch1": 939171,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "seq_dup_ch0": 0,
+        "seq_dup_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 1,
+        "host_rx_ack_fail": 0,
+        "queues": {
+          "stereo_q": 0,
+          "qA": 0,
+          "qB": 0,
+          "bufA": 0,
+          "bufB": 0
+        },
+        "last_crc_bad_info": null
+      },
+      "stm32": "1.2.55",
+      "pid": "1396"
+    }
+  },
+  {
+    "board": "S09",
+    "stlink": "066EFF514953667287242707",
+    "command": [
+      "C:/ST/STM32CubeCLT_1.19.0/STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe",
+      "-c",
+      "port=SWD",
+      "sn=066EFF514953667287242707",
+      "ap=0",
+      "freq=4000",
+      "mode=HOTPLUG",
+      "-r32",
+      "0xE000ED14",
+      "4",
+      "-r32",
+      "0xE000EF90",
+      "4",
+      "-r32",
+      "0xE000EF94",
+      "4"
+    ],
+    "registers": {
+      "0xE000ED14": "0x00040200",
+      "0xE000EF90": "0x0000003B",
+      "0xE000EF94": "0x00000043"
+    },
+    "dtcm_enabled": true,
+    "dtcm_rmw": true,
+    "dtcm_reten": false,
+    "itcm_enabled": true,
+    "icache_enabled": false,
+    "dcache_enabled": false,
+    "before": {
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.012659072875976562
+      },
+      "worker": true,
+      "mode": {
+        "selected": 5,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 3.0
+      },
+      "stats": {
+        "rx_cnt_ch0": 923884,
+        "rx_cnt_ch1": 923884,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "seq_dup_ch0": 0,
+        "seq_dup_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 2,
+        "host_rx_ack_fail": 0,
+        "queues": {
+          "stereo_q": 0,
+          "qA": 0,
+          "qB": 0,
+          "bufA": 0,
+          "bufB": 0
+        },
+        "last_crc_bad_info": null
+      },
+      "stm32": "1.2.55",
+      "pid": "1421"
+    },
+    "after": {
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.041764020919799805
+      },
+      "worker": true,
+      "mode": {
+        "selected": 5,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 3.0
+      },
+      "stats": {
+        "rx_cnt_ch0": 923891,
+        "rx_cnt_ch1": 923891,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "seq_dup_ch0": 0,
+        "seq_dup_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 2,
+        "host_rx_ack_fail": 0,
+        "queues": {
+          "stereo_q": 0,
+          "qA": 0,
+          "qB": 0,
+          "bufA": 0,
+          "bufB": 0
+        },
+        "last_crc_bad_info": null
+      },
+      "stm32": "1.2.55",
+      "pid": "1421"
+    }
+  }
+]

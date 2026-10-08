@@ -31,6 +31,7 @@
 #include "usb_cdc_proto.h"
 /* Для ранних CDC-тестов (COM4) */
 #include "usbd_cdc_if.h"
+#include "usbd_cdc_custom.h"
 #include "adc_stream.h"
 #include "ws2812_spi.h"
 #include "font.h"
@@ -39,7 +40,8 @@
 #define MAIN_COM_LOG_ENABLE 0
 #endif
 #if !MAIN_COM_LOG_ENABLE
-#define printf(...) ((void)0)
+/* Keep format/argument checking even when UART output is compiled out. */
+#define printf(...) do { if (0) { (void)(printf)(__VA_ARGS__); } } while (0)
 #endif
 
 #ifndef MAIN_LED_INDICATION_ENABLE
@@ -253,14 +255,14 @@ static volatile uint8_t rs485_det_adc_bits = 0u;
 #define RS485_DMA_RX_BUFFER_SIZE 256u
 
 static uint8_t rs485_tx_byte = 0xA5u;
+#if RS485_USART2_USE_DMA_RX
 static uint8_t rs485_dma_rx_buf[RS485_DMA_RX_BUFFER_SIZE] = {0u};
+#endif
 static volatile uint16_t rs485_dma_rx_rd = 0u;
 static volatile uint32_t rs485_dma_rx_overrun_count = 0u;
 static volatile uint32_t rs485_last_rx_ms = 0;
 static volatile uint32_t rs485_rx_packets = 0;
 static volatile uint32_t rs485_tx_packets = 0;
-/* boot_listen_ms: UID-стагированная задержка (200-2000ms), вычисляется при init */
-static uint32_t rs485_boot_listen_ms = 0u;
 static volatile uint8_t rs485_tx_busy = 0;
 static volatile uint32_t rs485_tx_start_ms = 0u;
 static volatile uint8_t rs485_last_sync_edge_kind = 0u;
@@ -268,7 +270,10 @@ static volatile uint8_t rs485_sync_phase_relation = 0u;
 static volatile uint8_t rs485_sync_locked = 0u;
 static volatile uint8_t rs485_sync_led_active = 0u;
 static volatile int8_t rs485_sync_relation_score = 0;
+#define RS485_SYNC_UART_PERIODIC_LOG_ENABLE 0u
+#if RS485_SYNC_UART_PERIODIC_LOG_ENABLE
 static uint32_t rs485_sync_uart_next_log_edge = 0u;
+#endif
 static volatile uint32_t rs485_sync_control_edge_count = 0u;
 static volatile uint32_t rs485_sync_control_period_accum_ticks = 0u;
 static volatile uint32_t rs485_sync_control_period_ticks = 0u;
@@ -460,18 +465,13 @@ static volatile uint8_t rs485_role_persist_save_pending = 0u;
 static uint32_t rs485_role_persist_save_ok_snapshot = 0u;
 static uint32_t rs485_role_persist_last_request_ms = 0u;
 static volatile uint8_t rs485_role_boot_listen_active = 1u;
-static uint32_t rs485_role_boot_listen_until_ms = 0u;
 
 /* In fallback (no host-assigned MASTER), remember the strongest MASTER UID
    accepted on E7. A rebooting lower-UID board can briefly elect itself while
    the real bus is quiet; its stale E7 must not erase every slave number. */
 static volatile uint8_t rs485_role_auto_master_valid = 0u;
-static uint8_t rs485_role_auto_master_uid[12] = {0u};
-static uint32_t rs485_role_auto_master_conflict_ms = 0u;
 static volatile uint8_t rs485_role_auto_probe_active = 0u;
-static uint32_t rs485_role_auto_probe_until_ms = 0u;
 static volatile uint8_t rs485_role_auto_heartbeat_tx_remaining = 0u;
-static uint32_t rs485_role_auto_heartbeat_tx_next_ms = 0u;
 
 /* Host MASTER assignment is propagated over RS485. Regular announcements let
    a board which was powered off learn the current assignment before it can
@@ -506,8 +506,12 @@ static volatile uint8_t rs485_role_enum_waiting_assignment = 0u;
 static volatile uint8_t rs485_role_last_confirmed_node_id = 0u;
 static uint32_t rs485_role_enum_ack_tx_next_ms = 0u;
 static volatile uint8_t rs485_role_enum_reset_tx_remaining = 0u;
+#if 0 /* retired role enumeration path */
 static uint32_t rs485_role_enum_reset_tx_next_ms = 0u;
+#endif
+#if 0 /* retired role enumeration path */
 static uint32_t rs485_role_enum_deadline_ms = 0u;
+#endif
 static uint32_t rs485_role_enum_next_ms = 0u;
 static uint32_t rs485_role_enum_stable_mask = 0u;
 static uint32_t rs485_role_enum_stable_since_ms = 0u;
@@ -705,7 +709,6 @@ static volatile uint8_t rs485_status_master_no_reply_slot = 0u;
 #define RS485_SYNC_EARLY_REJECT_DEN 4u
 #define RS485_SYNC_EARLY_REJECT_MAX_TICKS 550000u
 #define RS485_SYNC_PERIOD_GUARD_ENABLE 1u
-#define RS485_SYNC_UART_PERIODIC_LOG_ENABLE 0u
 #define RS485_SYNC_UART_PERIODIC_LOG_EDGES 10u
 #define RS485_SYNC_ANTI_PHASE_RECOVERY_ENABLE 1u
 #define RS485_SYNC_PHASE_TRACK_ENABLE 1u
@@ -781,17 +784,6 @@ static uint8_t rs485_wire_regular_reply_divisor(void)
   return 1u;
 }
 
-static uint32_t rs485_wire_lease_remaining_ms(uint32_t now_ms)
-{
-  uint32_t deadline = rs485_wire_lease_deadline_ms;
-  int32_t remaining;
-
-  if ((rs485_wire_mode == RS485_WIRE_MODE_FULL) || (deadline == 0u)) {
-    return 0u;
-  }
-  remaining = (int32_t)(deadline - now_ms);
-  return (remaining > 0) ? (uint32_t)remaining : 0u;
-}
 
 uint8_t rs485_wire_mode_apply(uint8_t mode,
                               uint16_t lease_ms,
@@ -1049,11 +1041,7 @@ static void rs485_discovery_on_sync_received(void);
 static void rs485_discovery_on_request(uint8_t value);
 static void rs485_discovery_on_response(uint8_t value);
 static void rs485_discovery_reset_master_scan(void);
-static uint32_t rs485_status_get_effective_period_ticks(void);
-static uint32_t rs485_status_get_window_ticks(uint32_t period_ticks);
-static uint32_t rs485_status_get_response_delay_ticks(void);
 static void rs485_status_wait_bit_times(uint32_t bit_count);
-static void rs485_status_wait_response_delay(void);
 static uint8_t rs485_status_count_recent_peers(uint32_t now_ms, uint32_t hold_ms);
 static uint32_t rs485_status_get_recent_peer_mask(uint32_t now_ms, uint32_t hold_ms);
 static uint8_t rs485_status_confirm_peer_candidate(uint8_t node_id,
@@ -1108,7 +1096,6 @@ static int8_t rs485_compare_uid_words(const uint32_t *lhs, const uint32_t *rhs);
 static void rs485_uid_schedule_announce(uint32_t now_ms, uint8_t retries, uint32_t delay_ms);
 static void rs485_uid_service(uint32_t now_ms);
 static void rs485_uid_handle_received(const uint8_t *uid_bytes);
-static uint32_t rs485_uid_get_announce_delay_ms(void);
 static uint32_t rs485_compute_uid_mix(void);
 static uint8_t rs485_compute_local_node_id(void);
 static uint32_t rs485_compute_master_claim_delay_ms(void);
@@ -1126,9 +1113,6 @@ static void rs485_node_claim_reset_registry(void);
 static void rs485_node_claim_schedule(uint32_t now_ms, uint8_t retries);
 static void rs485_node_claim_service(uint32_t now_ms);
 static void rs485_node_claim_note(uint8_t node_id, const uint8_t uid[12]);
-static void rs485_role_schedule_auto_heartbeat(uint32_t now_ms,
-                                               uint8_t retries);
-static void rs485_role_auto_heartbeat_tx_service(uint32_t now_ms);
 static uint8_t rs485_role_frame_checksum(uint8_t magic,
                                          const uint8_t *payload,
                                          uint8_t payload_len);
@@ -2531,7 +2515,7 @@ void optic_tx_refresh_enable(void)
   optic_tx_apply_runtime_pattern();
 }
 
-#if MAIN_WS2812_STATUS_ENABLE
+#if MAIN_WS2812_STATUS_ENABLE && MAIN_WS2812_TEST_BUTTON_ENABLE
 static const char *ws2812_test_pattern_name(ws2812_pattern_t pattern)
 {
   switch (pattern) {
@@ -3319,6 +3303,7 @@ static uint8_t rs485_count_bits_u32(uint32_t value)
   return count;
 }
 
+#if 0 /* helper for the retired enumeration algorithm */
 static uint32_t rs485_status_make_contiguous_mask(uint8_t node_count)
 {
   uint32_t mask = 0u;
@@ -3333,6 +3318,8 @@ static uint32_t rs485_status_make_contiguous_mask(uint8_t node_count)
 
   return mask;
 }
+#endif
+
 
 static uint8_t rs485_status_contiguous_count_from_mask(uint32_t mask)
 {
@@ -3346,34 +3333,6 @@ static uint8_t rs485_status_contiguous_count_from_mask(uint32_t mask)
   return count;
 }
 
-static uint8_t rs485_status_normalize_slave_count(uint8_t mode,
-                                                  uint8_t local_id,
-                                                  uint8_t raw_count,
-                                                  uint32_t raw_mask)
-{
-  uint8_t count = 0u;
-
-  (void)raw_count;
-
-  if (mode == VND_SYNC_MODE_OFF) {
-    return 0u;
-  }
-
-  count = rs485_status_contiguous_count_from_mask(raw_mask);
-  if (rs485_slave_count_estimate > count) {
-    count = rs485_slave_count_estimate;
-  }
-  if ((mode == VND_SYNC_MODE_SLAVE) &&
-      (local_id != 0u) &&
-      (local_id > count)) {
-    count = local_id;
-  }
-  if (count > RS485_DISCOVERY_MAX_ID) {
-    count = RS485_DISCOVERY_MAX_ID;
-  }
-
-  return count;
-}
 
 static void rs485_status_set_slave_count_estimate(uint8_t count)
 {
@@ -3917,54 +3876,8 @@ uint8_t __attribute__((optimize("O2"))) rs485_identity_get_snapshot(uint8_t node
   return 1u;
 }
 
-static uint32_t rs485_status_get_effective_period_ticks(void)
-{
-  uint32_t period_ticks = sync_tim5_period_ticks;
 
-  if (period_ticks < 1000u) {
-    uint16_t buf_rate = adc_stream_get_buf_rate();
-    uint32_t tim_clk = rs485_sync_get_tim5_tick_hz();
 
-    if ((buf_rate != 0u) && (tim_clk != 0u)) {
-      period_ticks = (uint32_t)(((uint64_t)tim_clk + ((uint64_t)buf_rate / 2u)) / (uint64_t)buf_rate);
-    }
-  }
-
-  return period_ticks;
-}
-
-static uint32_t rs485_status_get_window_ticks(uint32_t period_ticks)
-{
-  uint32_t window_ticks = 0u;
-  uint32_t byte_ticks = rs485_sync_get_uart_packet_ticks();
-
-  if (period_ticks == 0u) {
-    return 0u;
-  }
-
-  window_ticks = period_ticks / RS485_STATUS_WINDOW_DIV;
-  if (window_ticks <= byte_ticks) {
-    return 0u;
-  }
-
-  return window_ticks - byte_ticks;
-}
-
-static uint32_t rs485_status_get_response_delay_ticks(void)
-{
-  uint32_t byte_ticks = rs485_sync_get_uart_packet_ticks();
-  uint32_t bit_ticks = rs485_sync_get_uart_bit_ticks();
-  uint32_t delay_ticks = 0u;
-
-  if (RS485_STATUS_RESPONSE_DELAY_BYTES != 0u) {
-    delay_ticks += byte_ticks * RS485_STATUS_RESPONSE_DELAY_BYTES;
-  }
-  if (RS485_STATUS_RESPONSE_DELAY_BITS != 0u) {
-    delay_ticks += bit_ticks * RS485_STATUS_RESPONSE_DELAY_BITS;
-  }
-
-  return delay_ticks;
-}
 
 static void rs485_status_wait_bit_times(uint32_t bit_count)
 {
@@ -3993,13 +3906,6 @@ static void rs485_status_wait_bit_times(uint32_t bit_count)
   }
 }
 
-static void rs485_status_wait_response_delay(void)
-{
-  uint32_t bit_count = (RS485_STATUS_RESPONSE_DELAY_BYTES * 10u) +
-                       RS485_STATUS_RESPONSE_DELAY_BITS;
-
-  rs485_status_wait_bit_times(bit_count);
-}
 
 static uint8_t rs485_status_count_recent_peers(uint32_t now_ms, uint32_t hold_ms)
 {
@@ -5716,32 +5622,8 @@ static int8_t rs485_compare_uid_words(const uint32_t *lhs, const uint32_t *rhs)
   return 0;
 }
 
-static int8_t rs485_compare_uid_bytes_numeric(const uint8_t lhs[12],
-                                               const uint8_t rhs[12])
-{
-  uint32_t lhs_words[3] = {0u, 0u, 0u};
-  uint32_t rhs_words[3] = {0u, 0u, 0u};
 
-  memcpy(lhs_words, lhs, sizeof(lhs_words));
-  memcpy(rhs_words, rhs, sizeof(rhs_words));
-  return rs485_compare_uid_words(lhs_words, rhs_words);
-}
 
-static void rs485_role_remember_auto_master(const uint8_t uid[12])
-{
-  memcpy(rs485_role_auto_master_uid,
-         uid,
-         sizeof(rs485_role_auto_master_uid));
-  rs485_role_auto_master_valid = 1u;
-}
-
-static void rs485_role_forget_auto_master(void)
-{
-  rs485_role_auto_master_valid = 0u;
-  memset(rs485_role_auto_master_uid,
-         0,
-         sizeof(rs485_role_auto_master_uid));
-}
 
 static void rs485_uid_schedule_announce(uint32_t now_ms, uint8_t retries, uint32_t delay_ms)
 {
@@ -5821,11 +5703,6 @@ static void rs485_uid_handle_received(const uint8_t *uid_bytes)
   /* PEER_UID debug-лог отключён для чистого phase-monitor потока. */
 }
 
-static uint32_t rs485_uid_get_announce_delay_ms(void)
-{
-  uint32_t slot = rs485_compute_uid_mix() & (RS485_UID_SLOT_COUNT - 1u);
-  return RS485_UID_ANNOUNCE_DELAY_MS + (slot * RS485_UID_SLOT_STEP_MS);
-}
 
 static uint8_t rs485_role_frame_checksum(uint8_t magic,
                                          const uint8_t *payload,
@@ -6034,51 +5911,7 @@ uint8_t rs485_multiple_master_detected(void)
                     RS485_MULTI_MASTER_HOLD_MS) ? 1u : 0u);
 }
 
-static void rs485_role_schedule_auto_heartbeat(uint32_t now_ms,
-                                               uint8_t retries)
-{
-  uint32_t slot_delay_ms =
-      RS485_ROLE_BUS_QUIET_MS + ((rs485_compute_uid_mix() & 0x1Fu) * 3u);
 
-  if (retries == 0u) {
-    return;
-  }
-  rs485_role_auto_heartbeat_tx_remaining = retries;
-  rs485_role_auto_heartbeat_tx_next_ms = now_ms + slot_delay_ms;
-  rs485_sync_tx_suppressed_until_ms =
-      now_ms + RS485_UID_ARBITRATION_QUIET_MS;
-  if (rs485_status_window_active != 0u) {
-    rs485_status_finalize_window();
-  }
-}
-
-static void rs485_role_auto_heartbeat_tx_service(uint32_t now_ms)
-{
-  extern volatile uint8_t vnd_sync_mode_public;
-
-  if (rs485_role_auto_heartbeat_tx_remaining == 0u) {
-    return;
-  }
-  if (vnd_sync_mode_public != VND_SYNC_MODE_MASTER) {
-    rs485_role_auto_heartbeat_tx_remaining = 0u;
-    return;
-  }
-  if ((int32_t)(now_ms - rs485_role_auto_heartbeat_tx_next_ms) < 0) {
-    return;
-  }
-  if ((rs485_tx_busy != 0u) ||
-      (rs485_tx_queue_count != 0u) ||
-      (rs485_status_window_active != 0u)) {
-    return;
-  }
-
-  rs485_role_queue_frame(RS485_ROLE_AUTO_HEARTBEAT_MAGIC,
-                         rs485_local_uid_bytes,
-                         12u);
-  rs485_role_auto_heartbeat_tx_remaining--;
-  rs485_role_auto_heartbeat_tx_next_ms =
-      now_ms + RS485_ROLE_AUTO_HEARTBEAT_RETRY_MS;
-}
 
 static int8_t rs485_role_compare_assignment(uint32_t unix_s,
                                             uint16_t millis,
@@ -6359,6 +6192,7 @@ static uint32_t rs485_role_enum_response_delay_ms(uint8_t round)
   return 12u + ((value & 0x1Fu) * 2u);
 }
 
+#if 0 /* helper for the retired enumeration algorithm */
 static uint8_t rs485_role_max_id_from_mask(uint32_t mask)
 {
   for (uint8_t node_id = RS485_DISCOVERY_MAX_ID; node_id != 0u; node_id--) {
@@ -6368,6 +6202,8 @@ static uint8_t rs485_role_max_id_from_mask(uint32_t mask)
   }
   return 0u;
 }
+#endif
+
 
 static void rs485_role_start_enumeration_epoch(uint32_t now_ms)
 {
@@ -7022,10 +6858,6 @@ static void rs485_role_process_frame(uint8_t magic, const uint8_t *payload)
   }
 }
 
-static void rs485_uid_begin_arbitration_window(uint32_t now_ms)
-{
-  rs485_sync_tx_suppressed_until_ms = now_ms + RS485_UID_ARBITRATION_QUIET_MS;
-}
 
 static void __attribute__((optimize("O2"))) rs485_tx_queue_push(uint8_t value)
 {
@@ -8596,10 +8428,10 @@ static void sync_phase_monitor_service(void)
   }
 
   last_print_ms = now_ms;
-#if SYNC_PHASE_MONITOR_PRINTF
+  if (SYNC_PHASE_MONITOR_PRINTF) {
   printf("%c,%u\r\n", (int)last_role, (unsigned)last_sample);
   /* Формат строки: role, real_sample_idx_at_sync */
-#endif
+  }
 
   {
     static uint32_t last_rel_print_ms = 0u;
@@ -8609,7 +8441,7 @@ static void sync_phase_monitor_service(void)
     uint8_t local_edge = rs485_sync_edge_kind_from_marker_level(local_level);
 
     if ((rel != last_rel) || ((now_ms - last_rel_print_ms) >= 1000u)) {
-#if SYNC_PHASE_MONITOR_PRINTF
+  if (SYNC_PHASE_MONITOR_PRINTF) {
       const char *rel_str = (rel == RS485_SYNC_RELATION_IN_PHASE) ? "IN" :
                             (rel == RS485_SYNC_RELATION_ANTI_PHASE) ? "ANTI" : "UNK";
       printf("[SYNC_REL] rel=%s score=%d local=%u edge=%u remote=%u fix=%u err=%ld pulse=%ld ok=%lu busy=%lu space=%lu uart=%lu ovr=%lu\r\n",
@@ -8626,7 +8458,7 @@ static void sync_phase_monitor_service(void)
              (unsigned long)sync_phase_fast_skip_spacing,
              (unsigned long)rs485_uart_error_count,
              (unsigned long)rs485_dma_rx_overrun_count);
-#endif
+  }
       last_rel = rel;
       last_rel_print_ms = now_ms;
     }
@@ -8986,6 +8818,7 @@ static void ws2812_gpio_test_init(void)
 #endif
 }
 
+#if WS2812_GPIO_BITBANG_TEST_MODE
 static void ws2812_gpio_test_wait_cycles(uint32_t cycles)
 {
   uint32_t start = DWT->CYCCNT;
@@ -9027,6 +8860,8 @@ static void ws2812_gpio_test_send_rgb(uint8_t r, uint8_t g, uint8_t b)
   __enable_irq();
   HAL_Delay(1);
 }
+
+#endif /* WS2812_GPIO_BITBANG_TEST_MODE */
 
 static void ws2812_gpio_test_service(uint32_t now_ms)
 {
@@ -9567,6 +9402,7 @@ int main(void)
      exposed to the host. Otherwise a very early host assignment could be
      overwritten by the old Flash record immediately after enumeration. */
   vnd_persistent_config_load_once();
+  vnd_comm_recovery_boot_begin();
   printf("[INIT] Before USB_DEVICE_Init\r\n");
   MX_USB_DEVICE_Init();
 #if DIAG_DISABLE_IWDG
@@ -9918,6 +9754,7 @@ int main(void)
 #endif
 
   optic_sensor_service(now);
+  vnd_comm_recovery_boot_service(now);
   ws2812_test_button_service(now);
   static uint8_t first_loop=1; if(first_loop){ PROG('M'); first_loop=0; }
   PROG('A'); // loop start
@@ -10082,7 +9919,9 @@ int main(void)
   }
 #endif
 
+#if MAIN_LOOP_ISOLATION_TEST && (MAIN_LOOP_ISOLATION_STAGE == 2)
 main_loop_second_half:
+#endif
 
   // PROG('V'); // vendor diag disabled for isolation
   // vnd_diag_send64_once();
@@ -12807,10 +12646,9 @@ void DrawUSBStatus(void){
     static uint16_t dc_bar_prev_len = 0xFFFF;
     static uint16_t dc_bar_prev_color = 0xFFFF;
     static uint64_t prev_tx_bytes = 0ULL;
-    static uint64_t prev_tx_samples = 0ULL;
     static uint32_t prev_rate_calc_ms = 0;
     static uint32_t last_rate_bps __attribute__((unused)) = 0; /* приблизительно bytes/sec */
-    static uint32_t last_rate_sps = 0; /* семплов в секунду (оба канала суммарно) */
+
     static uint16_t prev_line0_fg = 0, prev_line0_bg = 0;
     static uint16_t prev_line1_fg = 0, prev_line1_bg = 0;
     static uint16_t prev_line2_fg = 0, prev_line2_bg = 0;
@@ -12860,10 +12698,9 @@ void DrawUSBStatus(void){
       last_star_toggle_ms = now;
       star_on = 0u;
       prev_tx_bytes = vnd_get_total_tx_bytes();
-      prev_tx_samples = vnd_get_total_tx_samples();
       prev_rate_calc_ms = now;
       last_rate_bps = 0u;
-      last_rate_sps = 0u;
+
       force_full_redraw = 0u;
     }
 
@@ -12958,16 +12795,14 @@ void DrawUSBStatus(void){
     uint32_t dt = now - prev_rate_calc_ms;
     if(dt >= 500){
       uint64_t cur = vnd_get_total_tx_bytes();
-      uint64_t cur_samples = vnd_get_total_tx_samples();
       uint64_t dbytes = (cur >= prev_tx_bytes)? (cur - prev_tx_bytes):0ULL;
-      uint64_t dsamps = (cur_samples >= prev_tx_samples)? (cur_samples - prev_tx_samples):0ULL;
+
       /* bytes per second approximation */
       if(dt > 0){
         last_rate_bps = (uint32_t)( (dbytes * 1000ULL) / dt );
-        last_rate_sps = (uint32_t)( (dsamps * 1000ULL) / dt );
+
       }
       prev_tx_bytes = cur;
-      prev_tx_samples = cur_samples;
       prev_rate_calc_ms = now;
     }
     /* LCD shows the canonical held optical-sensor signal, not raw PD0. */
@@ -12987,9 +12822,8 @@ void DrawUSBStatus(void){
     }
     prev_rate_calc_ms = now;
     prev_tx_bytes = vnd_get_total_tx_bytes();
-    prev_tx_samples = vnd_get_total_tx_samples();
     last_rate_bps = 0;
-    last_rate_sps = 0;
+
   }
 
   /* Третья строка: при активной тревоге показываем её, иначе оставляем фазу TIM5. */
@@ -13202,4 +13036,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-

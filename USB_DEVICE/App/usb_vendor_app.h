@@ -33,6 +33,9 @@ extern "C" {
 #define VND_CMD_SET_TX2_PHASE    0x48u /* u8: 0=in phase, 1=antiphase; absolute setting */
 #define VND_CMD_GET_TX_PHASE     0x49u /* EP0 IN: TXP1, requested/applied local TX phases */
 #define VND_CMD_GET_RX_PHASE     0x4Eu /* EP0 IN: RXP1, measured per-channel RX polarity */
+#define VND_CMD_GET_COMM_RECOVERY 0x4Fu /* EP0 IN: COM1, 24 bytes; local K1 request */
+#define VND_CMD_ACK_COMM_RECOVERY 0x50u /* EP0 OUT: wValue=u16 generation; durable host acknowledgement */
+#define VND_COMM_RECOVERY_SIZE 24u
 #define VND_TX_PHASE_STATUS_SIZE 16u
 #define VND_CMD_SET_RELAY_ENABLE 0x4Au /* strict u8 0/1, RAM only; 0 stops immediately */
 #define VND_CMD_RELAY_EVENT      0x4Bu /* u32 duration_ms LE, 0=stop, max 0x7FFFFFFF */
@@ -518,6 +521,9 @@ extern volatile uint32_t vnd_dc_flash_next_off_public;
 uint8_t vnd_dc_note_flash_fault(uint32_t fault_addr, uint32_t cfsr);
 void vnd_dc_request_save_to_flash(void);
 void vnd_persistent_config_load_once(void);
+void vnd_comm_recovery_boot_begin(void);
+void vnd_comm_recovery_boot_service(uint32_t now_ms);
+uint16_t vnd_build_comm_recovery(uint8_t *dst, uint16_t max_len);
 
 /* Sync master/slave status for LCD */
 extern volatile uint8_t  vnd_sync_mode_public; /* 0=master,1=slave,2=off */

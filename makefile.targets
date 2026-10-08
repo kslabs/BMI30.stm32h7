@@ -2,4 +2,4 @@
 
 # Generate objects.list for the link step
 objects.list: $(OBJS)
-	@printf "%s\n" $(OBJS) > $@
+	@py -3 ../.vscode/gen_objects_list.py "$@" $(OBJS)

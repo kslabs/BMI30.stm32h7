@@ -1,0 +1,4 @@
+# Preserve every archived byte, including original line endings.
+* -text whitespace=cr-at-eol
+*.map -diff
+*.log -diff

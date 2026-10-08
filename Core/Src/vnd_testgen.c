@@ -6,7 +6,6 @@
 /* Внутренние буферы для тестового режима */
 static int16_t s_test_buf0[VND_MAX_SAMPLES];
 static int16_t s_test_buf1[VND_MAX_SAMPLES];
-static uint16_t s_test_sawtooth_phase = 0;
 static volatile uint32_t s_test_frame_counter = 0;
 static uint32_t s_test_frame_consumed = 0;
 

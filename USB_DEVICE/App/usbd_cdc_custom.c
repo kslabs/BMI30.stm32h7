@@ -612,6 +612,22 @@ static uint8_t USBD_CDCVND_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef 
       }
       USBD_CtlError(pdev, req);
       return (uint8_t)USBD_FAIL;
+    } else if (req->bmRequest == 0xC0u && req->bRequest == VND_CMD_GET_COMM_RECOVERY) {
+      static uint8_t buf[VND_COMM_RECOVERY_SIZE] __attribute__((section(".ram_d2"), aligned(32)));
+      if (req->wLength != sizeof(buf) || req->wValue != 0u || req->wIndex != 0u) {
+        USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL;
+      }
+      uint16_t l = vnd_build_comm_recovery(buf, sizeof(buf));
+      USBD_CtlSendData(pdev, buf, l);
+      return (uint8_t)USBD_OK;
+    } else if (req->bmRequest == 0x40u && req->bRequest == VND_CMD_ACK_COMM_RECOVERY) {
+      if (req->wLength != 0u || req->wIndex != 0u || req->wValue == 0u) {
+        USBD_CtlError(pdev, req); return (uint8_t)USBD_FAIL;
+      }
+      uint8_t cmd[3] = {VND_CMD_ACK_COMM_RECOVERY, (uint8_t)req->wValue, (uint8_t)(req->wValue >> 8)};
+      USBD_VND_DataReceived(cmd, sizeof(cmd));
+      USBD_CtlSendStatus(pdev);
+      return (uint8_t)USBD_OK;
     } else if ( (req->bmRequest & 0x80U) && req->bRequest == VND_CMD_GET_RX_PHASE ) {
       static uint8_t buf[RX_PHASE_STATUS_SIZE] __attribute__((section(".ram_d2"), aligned(32)));
       if(req->wLength < sizeof(buf) || req->wValue != 0u || req->wIndex != 0u) {

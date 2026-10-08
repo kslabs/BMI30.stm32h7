@@ -7,7 +7,8 @@
 
 // Заглушки TinyUSB теперь компилируются ТОЛЬКО если НЕ задан USE_TINYUSB.
 #ifndef USE_TINYUSB
-#warning "Используются STUB функции TinyUSB (USB CDC не работает)"
+/* The inactive TinyUSB compatibility API is stubbed. Production USB CDC/VND
+   is provided by the STM32 USB Device Library, independently of these stubs. */
 
 // --- Минимальный набор недостающих функций ---
 
