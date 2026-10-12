@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-12",
+  "preset": "early_tag_0.1.2_180s",
+  "bin_sha256": "0d01ec8d3a983f42f8b2657c6279d9335d7e662135e74e400c5263f551d34dc9",
+  "firmware_reflashed": false,
+  "prototype_uid": "2800350002504b4633363620",
+  "settings_saved_and_load_verified": true,
+  "settings_normal_reset_verified": true,
+  "cold_power_cycle_verified": false,
+  "after_normal_reset": {
+    "ok": true,
+    "device": "BMI30_XM125_GATE",
+    "firmware": "0.1.2",
+    "gpio0_mode": "open_drain",
+    "time_ms": 10600,
+    "armed": 1,
+    "calibrating": 0,
+    "gap_mm": 1101,
+    "nearest_mm": 1100,
+    "occupied": 0,
+    "gpio0": 0,
+    "fault": 0,
+    "stream": 0,
+    "frame_count": 318,
+    "frame_interval_ms": 33,
+    "config": {
+      "schema": 1,
+      "range_start_mm": 100,
+      "range_end_mm": 2000,
+      "gap_min_mm": 600,
+      "gap_max_mm": 1800,
+      "trigger_delta_mm": 60,
+      "release_delta_mm": 30,
+      "on_delay_ms": 20,
+      "off_delay_ms": 1000,
+      "clear_delay_ms": 2000,
+      "no_echo_ms": 500,
+      "calibration_ms": 3000,
+      "calibration_spread_mm": 30,
+      "rate_hz": 30,
+      "adaptation_ms": 180000,
+      "fault_high": 1,
+      "sensitivity_milli": 850,
+      "signal_quality_db": 25
+    }
+  },
+  "reset_observation": {
+    "samples": 101,
+    "gpio_high_samples": 0,
+    "fault_samples": 0
+  },
+  "cortex_m4_gate_tests": {
+    "passed": 92,
+    "failed": 0
+  },
+  "distribution_tests": {
+    "passed": 11,
+    "failed": 0
+  },
+  "new_adaptation_test_scope": "Cortex-M4 emulation: approximately 63 percent of a small 20 mm empty-passage shift tracked in 180 s; exact baseline frozen for 180 s of foreground; Flash settings roundtrip.",
+  "prior_repair": {
+    "cause": "After installation/nearby-object changes confirmed by operator, stable empty-passage echo shifted from saved 1175 mm to about 1100 mm. Delta exceeds trigger 60 mm; occupied state freezes adaptation.",
+    "saved_calibrated_background_mm": 1099,
+    "operator_empty_indicator_confirmed": true,
+    "physical_person_hold_at_previous_60s_setting": {
+      "samples": 150,
+      "duration_ms": 14908,
+      "high_samples": 150,
+      "fault_samples": 0,
+      "baseline_min_mm": 1100,
+      "baseline_max_mm": 1100
+    },
+    "physical_release_at_previous_60s_setting": {
+      "samples": 303,
+      "duration_ms": 29898,
+      "high_samples": 0,
+      "fault_samples": 0,
+      "baseline_min_mm": 1100,
+      "baseline_max_mm": 1101
+    }
+  },
+  "current_adaptation_ms": 180000,
+  "off_delay_ms": 1000,
+  "new_installation_requires_empty_calibration": true
+}

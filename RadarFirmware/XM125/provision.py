@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT.parents[1] / 'HostTools/rpi_radar'))
 from radar_gate import CONFIG_KEYS, RadarClient, RadarError
 from flash import RELEASE, verified_image
 
-PRESET = ROOT / 'presets/early_tag_0.1.2.json'
+PRESET = ROOT / 'presets/early_tag_0.1.2_180s.json'
 
 
 def check_state(state, preset):

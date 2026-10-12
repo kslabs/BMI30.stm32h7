@@ -92,6 +92,7 @@ class DistributionTests(unittest.TestCase):
         self.assertEqual(manifest['bin_sha256'], PRESET['bin_sha256'])
         self.assertEqual(elf.with_suffix('.bin').stat().st_size, 103040)
         self.assertEqual(PRESET['config']['off_delay_ms'], 1000)
+        self.assertEqual(PRESET['config']['adaptation_ms'], 180000)
         self.assertNotIn('gap_mm', PRESET)
 
     def test_corrupt_release_is_rejected(self):

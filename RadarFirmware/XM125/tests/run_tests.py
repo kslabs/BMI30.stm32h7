@@ -54,7 +54,7 @@ def main():
     values = {key: struct.unpack("<I", uc.mem_read(symbols[key], 4))[0]
               for key in ("test_failure", "test_count", "test_done")}
     print(json.dumps(values))
-    if values["test_failure"] or values["test_count"] != 87 or not values["test_done"]:
+    if values["test_failure"] or values["test_count"] != 92 or not values["test_done"]:
         raise SystemExit(1)
 
 

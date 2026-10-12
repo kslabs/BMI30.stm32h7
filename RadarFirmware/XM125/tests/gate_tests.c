@@ -300,6 +300,23 @@ void test_entry(void)
     CHECK(!g.gpio0 && !g.occupied, 86); /* 1023 ms */
     CHECK(gate_storage_save(0, &fast, 1177) && gate_storage_load(0, &saved, &saved_gap) &&
           saved.off_delay_ms == 1000 && saved.trigger_delta_mm == 60, 87);
+    /* Three-minute background time constant: track a small empty-passage
+     * drift gradually, then freeze the exact baseline for a standing person. */
+    init(1200);
+    fast.adaptation_ms = 180000;
+    CHECK(gate_set_config(&g, &fast), 88);
+    for (unsigned i = 0; i < 5455; i++) fast_frame(1180);
+    CHECK(!g.gpio0 && !g.occupied && gate_gap_mm(&g) >= 1187 &&
+          gate_gap_mm(&g) <= 1189, 89); /* about 63% of a 20-mm shift */
+    fast_frame(700); fast_frame(700);
+    CHECK(g.gpio0 && g.occupied, 90);
+    int32_t frozen_baseline = g.baseline_q16;
+    for (unsigned i = 0; i < 5455; i++) fast_frame(700);
+    CHECK(g.gpio0 && g.occupied && g.baseline_q16 == frozen_baseline &&
+          g.fault == GATE_OK, 91);
+    CHECK(gate_storage_save(0, &fast, gate_gap_mm(&g)) &&
+          gate_storage_load(0, &saved, &saved_gap) &&
+          saved.adaptation_ms == 180000 && saved.off_delay_ms == 1000, 92);
     test_done = 1;
     for (;;) __asm__ volatile("nop");
 }
