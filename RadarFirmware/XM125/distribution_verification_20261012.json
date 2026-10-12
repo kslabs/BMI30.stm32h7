@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-12",
+  "firmware": "0.1.2",
+  "bin_sha256": "0d01ec8d3a983f42f8b2657c6279d9335d7e662135e74e400c5263f551d34dc9",
+  "sealed_release_files_verified": 32,
+  "cortex_m4_gate_tests": {"passed": 87, "failed": 0},
+  "distribution_tests": {"passed": 11, "failed": 0},
+  "distribution_test_scope": "Release checksums, mocked programmer backup/target/download guards, mocked serial provisioning and failure paths. No new device flashed or calibrated.",
+  "prototype_serial_readback": {
+    "port": "COM35",
+    "firmware": "0.1.2",
+    "gpio0_mode": "open_drain",
+    "all_preset_config_values_match": true,
+    "armed": 1,
+    "calibrating": 0,
+    "fault": 0,
+    "gpio0": 0,
+    "gap_mm": 1175,
+    "frame_interval_ms": 33
+  },
+  "release_binary_rebuilt_or_reflashed": false,
+  "new_provisioning_tool_hardware_save_load_tested": false,
+  "cold_power_cycle_0_1_2_verified": false,
+  "portal_deployed": false
+}

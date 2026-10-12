@@ -1,0 +1,33 @@
+          <div data-radar-root class="radar-settings">
+            <h3>Radar XM125</h3>
+            <p>GPIO0 is low for an empty passage and high for an obstacle. Background adaptation pauses while the passage is occupied.</p>
+            <div class="radar-connection">
+              <label>USB / UART port <input data-radar-port list="radar-ports" placeholder="/dev/ttyUSB0" autocomplete="off"></label>
+              <datalist id="radar-ports"></datalist>
+              <button class="link link-secondary" type="button" data-radar-connect>Connect</button>
+              <button class="link link-secondary" type="button" data-radar-disconnect>Disconnect</button>
+            </div>
+            <p data-radar-status role="status" aria-live="polite">XM125: disconnected</p>
+            <div class="radar-metrics">
+              <span>Passage: <b data-radar-gap>—</b></span>
+              <span>Nearest object: <b data-radar-nearest>—</b></span>
+              <span>GPIO0: <b data-radar-gpio>—</b></span>
+            </div>
+            <div class="radar-fields">
+              <label>Trigger difference, mm<input data-radar-setting="trigger_delta_mm" type="number" min="20" max="400" value="100"></label>
+              <label>Release difference, mm<input data-radar-setting="release_delta_mm" type="number" min="10" max="399" value="60"></label>
+              <label>Trigger delay, ms<input data-radar-setting="on_delay_ms" type="number" min="0" max="2000" value="50"></label>
+              <label>Release delay, ms<input data-radar-setting="off_delay_ms" type="number" min="0" max="5000" value="100"></label>
+              <label>Adaptation time, sec<input data-radar-setting="adaptation_ms" data-radar-scale="1000" type="number" min="10" max="3600" value="60"></label>
+              <label>Update rate, Hz<input data-radar-setting="rate_hz" type="number" min="5" max="30" value="20"></label>
+              <label>Radar sensitivity, %<input data-radar-setting="sensitivity_milli" data-radar-scale="10" type="number" min="10" max="95" value="75"></label>
+              <label>Signal quality, dB<input data-radar-setting="signal_quality_db" type="number" min="5" max="30" value="20"></label>
+            </div>
+            <div class="actions actions-inline">
+              <button class="link" type="button" data-radar-apply disabled>Apply settings</button>
+              <button class="link link-secondary" type="button" data-radar-calibrate disabled>Calibrate empty passage</button>
+              <button class="link link-secondary" type="button" data-radar-save disabled>Save to sensor</button>
+            </div>
+            <p class="radar-note">Install beside one antenna, facing the other. Keep the passage empty during the 3-second calibration, then save. Passage range: 60–180 cm. Recalibrate after a large change in antenna spacing. USB and the exposed TX/RX use 115200 baud, 8N1.</p>
+            <p class="radar-note">If reliable measurements disappear for 0.5 sec, GPIO0 goes high and a sensor fault is shown. Obstacle detection continues independently when the portal is disconnected.</p>
+          </div>

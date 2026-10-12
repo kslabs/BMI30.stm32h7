@@ -1,0 +1,5 @@
+{
+  "operator": "Now it worked well. The tag detection system already has its own OFF delay. Keep radar OFF delay <=1 s. Fast ON is most important.",
+  "final_off_delay_ms": 1000,
+  "continuous_hand_presence_guaranteed": false
+}

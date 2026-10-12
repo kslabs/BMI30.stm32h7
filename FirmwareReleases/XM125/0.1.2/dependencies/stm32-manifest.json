@@ -1,0 +1,827 @@
+{
+  "repository": "STMicroelectronics/STM32CubeL4",
+  "ref": "v1.17.0",
+  "tree": "5e1553e07706491bd11f4edd304e093b6e4b83a4",
+  "files": [
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32L4xx/Include/stm32l431xx.h",
+      "git_blob": "7bf60112681d8609e22801d7e04203ec93265ef7",
+      "sha256": "17a962e7a7b2b08fcd85257fbc7e9845cc77ce9f6ae7777b1996ea13cddf736c"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32L4xx/Include/stm32l4xx.h",
+      "git_blob": "f4ae4f7fdf4e67a119324277f17402c0ff712184",
+      "sha256": "5ba42679be8c847f6dc5a467c5378c7050f6de2ed87963a4c85de18d5f296efe"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32L4xx/Include/system_stm32l4xx.h",
+      "git_blob": "00166a51797fa1d7cdf0c481a963e6ee1c60b79f",
+      "sha256": "c45a348ac348f25fa82b3e449065ebeec9b50e53db007a7a013ca71ffe850b5d"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32L4xx/License.md",
+      "git_blob": "e0d829b638a76e28b99b1d39eeaa7823e720b8d9",
+      "sha256": "dadb755f51d36614173b28c5790cb4a991e8f4cc822e5b634fd66a4f4145824d"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32L4xx/Source/Templates/gcc/startup_stm32l431xx.s",
+      "git_blob": "7e5fba43e43d2ccb2d47a1aa9cc8a940b9ac1cbb",
+      "sha256": "883bd64896e0227202efe40513805c3175159c3698c419ded82d96c2fca2a8cd"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_armcc.h",
+      "git_blob": "59f173ac71b996c8615e3c1804963c8b4c311cde",
+      "sha256": "5a80286d68d0b4478895a222da683c8ca561d3bcf6392aaaea225d4a117c843e"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_armclang.h",
+      "git_blob": "e917f357a328c66909aac8cefea5891211481e3e",
+      "sha256": "e24f4bd1548b94e0ad424f4f13f59a4db4ca5aad7b644d10a893a330775d3003"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_armclang_ltm.h",
+      "git_blob": "feec32405974c068e9baf77f6b1dcbf070755fec",
+      "sha256": "e8f040e9ef61e466cc751677ab3c413a463cb74d1fc33fb6dfd94225bd93c8c1"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_compiler.h",
+      "git_blob": "adbf296f15a47a93e5058abddad6742bb4b9854d",
+      "sha256": "b51963d271c1571ca3463654c76aa7ea50c4eac5d0a2710df10414ac64d9e0f8"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_gcc.h",
+      "git_blob": "3ddcc58b69f6a8d60f614df45fb98932b07ac9c2",
+      "sha256": "1fba3e120e5c0a439e0982bd37fae04bd033dbd14187428214462a1707c56252"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_iccarm.h",
+      "git_blob": "12d68fd9a63b37d3a94c1114213cdd161dddbb6d",
+      "sha256": "820bcd68b0a92f97abf5cdde6413e5e842fb286e0514be2c1be1547bb2dd2e7d"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_version.h",
+      "git_blob": "f2e2746626afefeebcc3435ef433895b5bcc4cdb",
+      "sha256": "1b2c47a90e9ae741c8fd4d0f323495327b25ff5d555a6c7afd6749a65ba1bb8e"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_armv81mml.h",
+      "git_blob": "8441e57fb1b917bc669588a6cc94b439b565374d",
+      "sha256": "b4bc83a6ff10fd2fb7e4c0abefdbd447eb7f78f3db898ca9aac5676307e2b862"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_armv8mbl.h",
+      "git_blob": "344dca51483e7388f6681ea89b7508a29a276a25",
+      "sha256": "74b92c994af7355e222b45a0342754840b7221b611ef95bd206345879cc2caaa"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_armv8mml.h",
+      "git_blob": "5ddb8aeda7f58da418da42f6da1403f4925fdc8c",
+      "sha256": "77255f30508cf0d225f8b72207e28bf81353f8b353e8b120132c6db7e9bead9e"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm0.h",
+      "git_blob": "cafae5a0a73644129a486644044b54eedee18d11",
+      "sha256": "52e8826259be4fcb10d0de2d3655c24d52436e54cd1509f3beb1a31a45524f38"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm0plus.h",
+      "git_blob": "d104965db5198d5b45737d48abb3981fc1936ba2",
+      "sha256": "36e9aec815eef944241e5fed7085845346de6bcb5ba30561f956356b393ba5f0"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm1.h",
+      "git_blob": "76b4569743a651d8c8188924c487c159ec3132a3",
+      "sha256": "944bf0c4f940eef30a632cd99d5dcfe8270e8a8431eb98c0f081bcf4f61f728e"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm23.h",
+      "git_blob": "b79c6af0b1edb390960a492a0fdd56cf0ac5e13f",
+      "sha256": "f04d3e5f385b0ff219a75f6648acabf7debb779a72f0628573b64dac5ad49fdc"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm3.h",
+      "git_blob": "8157ca782da2c1d0515ec4be7252534f039ce562",
+      "sha256": "0191499015f3af7b37ce83092df29d1d63dbba9fa5f31b6d2341a2e850b20cb4"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm33.h",
+      "git_blob": "7fed59a88e31707a7fc126bd96f5b9cb84d8b1fd",
+      "sha256": "3566c5bf835091b1cc46baf6e9b6ce94d83dd0885e0db122f43e901e9326945a"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm35p.h",
+      "git_blob": "5579c823068095053751a108d29b2af612d8541e",
+      "sha256": "1f6da4c033261293acb8f0a7da42a0e9b6ab392c9462cc26f5e3e35d4db4e2d3"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm4.h",
+      "git_blob": "12c023b8017d9f712b2bdad1f27a0308310e14ba",
+      "sha256": "53d609b900c262650fcaf5a48eabd0fa299c3ac4d1426eb0f20e2aab053f8abb"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm7.h",
+      "git_blob": "c4515d8fa3196e587d820b521c27c30c580010c3",
+      "sha256": "34d91327a5f1b251c54fa6bb532d9f5ec0423bf3b7f2b679c8f7b3df95af0fc8"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_sc000.h",
+      "git_blob": "cf92577b63e45ccdf3f42cf1d179999aee41c9bd",
+      "sha256": "cc9037b32401824436d251de860799fcdbab3cf69e2321438c8f446f3f342526"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_sc300.h",
+      "git_blob": "40f3af81becf238f2ed2a3cf3e3cfa4b78dffa16",
+      "sha256": "e6a78d85b3ca77e35dc512e32e535028a46e156adab8629360fa4b7fe6731827"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/mpu_armv7.h",
+      "git_blob": "66ef59b4a0bff6e7f2d077cbaa235b55f5e1bfb2",
+      "sha256": "c9ad7cc99ba0481365550ae997c63cde9732d067d9ec0de28b0d6ac39280656d"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/mpu_armv8.h",
+      "git_blob": "0041d4dc6ff536afb59c5863d21f6ced2b42531f",
+      "sha256": "53f9e848af62ea8704f463992e4d65c7c79fc72cfd8fab6fa14adc73478b0afd"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/tz_context.h",
+      "git_blob": "0d09749f3a5066f0e061783a1e67972b72ab61a7",
+      "sha256": "45565c8cb04c653aabaf3cceddfc848b6a0de28c20d4f7e3d475a992c7eee788"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h",
+      "git_blob": "1f40166fcd0fc6f00ae047ce0cda115290e6148a",
+      "sha256": "120ad5bbb7276fdcf698baaf19a0e23b6aca4c150a995599c7c78fed49ced761"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/Legacy/stm32l4xx_hal_can_legacy.h",
+      "git_blob": "b221774204a4b8b570e1abf3efdf079c9003448b",
+      "sha256": "87f79b18e5ab77d061c98300326e75fd26e597f63c4c70816520edad3dae64dd"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32_assert_template.h",
+      "git_blob": "5370447161d72899a11687725edb37f4609be411",
+      "sha256": "629654db02047aaf190e23158123256ab610e63af61ae236be423db10155be61"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h",
+      "git_blob": "c1ba9cf6c32c38dd54e03bb43eb5ff11bb4d3582",
+      "sha256": "6c9aed165bbd6ac6b05d4b620a9ef0098c2c4494303498a4757007e593ceb895"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_adc.h",
+      "git_blob": "2a5eed289e3d644afb08fc259f1f575c812d8c2a",
+      "sha256": "a95d86da78cc2b9e5a3fbc9829736c385f7b27f90c95034b1450ffbdeab76841"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_adc_ex.h",
+      "git_blob": "c6cf3e811322714895051f1be6d255b4297efd2e",
+      "sha256": "2aeb2c9e3a84fe981c2bc42728c1b032aef80e9c4becc3e621e0e0a287e74be7"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_can.h",
+      "git_blob": "8572b0144b36cf3511dfb9d257b4346ff3460c4a",
+      "sha256": "bc03c03a64f8031dd9ed1f5752956a457df81cba3efaff4acdceecfedd6162dd"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_comp.h",
+      "git_blob": "00d1817bab3e1e15deb037450335b8450e3f155b",
+      "sha256": "892b8f602e6e411d8268c828ff1aa461d81e7f6a24746c68fc41a9c696a05afa"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_conf_template.h",
+      "git_blob": "26fb6c4d79a1daceac86ef4900bea480881f2fa8",
+      "sha256": "9749029a464d7239db7fe37e16e00c80655b45f20e5353532b4fe4711bbcd1ab"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_cortex.h",
+      "git_blob": "64f140b76c738ffbc35c26339b8d7fb8e00efb91",
+      "sha256": "a93b5651f6b596a039cbbb2a280c83432184e4d67cd3fffe9b612dd179574dc0"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_crc.h",
+      "git_blob": "342427d8b11a460564edd8d676a8732bfedcbd7f",
+      "sha256": "d357533366cc8f8da0fc25de3db2639bea360519807291f972ca0384dbe8b7c0"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_crc_ex.h",
+      "git_blob": "11dad827db37ed9e167c2dfd72e8122ee07695a9",
+      "sha256": "deeea1e28c248761cf4e2f71fc5dac099daa562137afff338b65724c2c646742"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_cryp.h",
+      "git_blob": "ed32dee17870452e4f6d54e652164162dd0858c4",
+      "sha256": "436264486fb35a4d951b4606ec0615ef2a8afb80897894e1b00827b5fada2b47"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_cryp_ex.h",
+      "git_blob": "e1ce98b1ca3117d64644af350a9ca1a22c65b031",
+      "sha256": "da9c3d85748f89d55f7dfbdc44e8900763a6c68e200b315df3c72b8d3e0e6303"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dac.h",
+      "git_blob": "94394dae3f8fb36d03406e3b8098db7113408b85",
+      "sha256": "b6bd01994ade94c31eedd58b57f3e63d8ede3ad91c9b838276645e057d1b0b85"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dac_ex.h",
+      "git_blob": "afb64d97c1d4881d800bd7bef355e9531ca38c25",
+      "sha256": "f68c66103168037c0f3198058131d183fe9ee8095e2e755d73bc89558c08214e"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dcmi.h",
+      "git_blob": "e08ea91df2f8f20f3cc3d0b95b01490ea78b80b2",
+      "sha256": "e85f9709d5cd8da5d0a1fa51e5292cbe4c5bde664820f15a10b667ec630984a2"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_def.h",
+      "git_blob": "055b1f1e863f5d76aa1b9c78dc1e504523af3ce7",
+      "sha256": "a7e763665d85a2b38f62bca7b510b62006cde0fe2cde53a8c4a45ac04c39599f"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dfsdm.h",
+      "git_blob": "40ca7450c515a84cece8ddc1622f29bf919a443e",
+      "sha256": "58888ed07a8750318e64aeeb7c284f6daa9ed351a35c2f1892291d3fd3513c05"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dfsdm_ex.h",
+      "git_blob": "d749fe5e800780e1b1361ebfe7cbddfdbe2c119d",
+      "sha256": "683ab990091a6e6aa1b3441e3cb669234486e0ecde6a414144e649339353b356"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dma.h",
+      "git_blob": "9fc722660ab40227e2394e884939575677871750",
+      "sha256": "411a57de268d0f05ab82aa9ef56e6f9ac341abaf064bcc46f1ee85d06509aaa5"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dma2d.h",
+      "git_blob": "82ed6f1be8f8004a271407998962d78130e595c0",
+      "sha256": "1969e479f99a7fffcdbd510a0720acf85bbb894a1f873e6a7acad6cc85af49a1"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dma_ex.h",
+      "git_blob": "8e4c2baf1bca518225245514fed2135a65d28538",
+      "sha256": "4519fca8df37e127b50af9a47de2d247ec4f104f7b21632755e240f4d859843c"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_dsi.h",
+      "git_blob": "53f553c9d797838d67735348e8e28ca29522ea10",
+      "sha256": "cb679a5198f10ff449fbb42950817ccb6b2131e17f7c86e6ae10509a24ec783f"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_exti.h",
+      "git_blob": "67d624d4a96528a8e61aef12a78b0d428a349d03",
+      "sha256": "b74ed6ae28f317c359e1a1a336e8bf04af3a0bf23e4f04fd138b9447d4671376"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_firewall.h",
+      "git_blob": "59d60300800b5d443b217ee90ac0636b17fbb030",
+      "sha256": "6e05774a51849b3d5cb231aa950cb4ccc2edba3a52bf5dccc26dec7bb36598f1"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_flash.h",
+      "git_blob": "b96ba8cae1e933c178c2abaae2c71dc007579886",
+      "sha256": "3bcb734f5cdacab84d0e44bf8773b724baea0b08934de3a12d01089f31d3348d"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_flash_ex.h",
+      "git_blob": "7eec0e954623eb805d0584c1a629d62f1a5558c5",
+      "sha256": "3487b82612d845f62b12450ac89b98ddebda1e0db1d860ab296bd5a6a7713d2b"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_flash_ramfunc.h",
+      "git_blob": "936033532c2500a905a3d8f2e6aafa0b75f8deab",
+      "sha256": "337d7e7060a80911067e79eb89f178f92a8a2612e65be354341c9bae2e86f5b1"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_gfxmmu.h",
+      "git_blob": "289b4500a947ce7753214efcdbb9b690e2dc4cf9",
+      "sha256": "07026305a957c98b528d129b189dab068d58ee05b9123cfc445b54d05d2e04bc"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_gpio.h",
+      "git_blob": "074a268bd9005ea94edc6467e39f2316f4e3c80f",
+      "sha256": "3783f3023f5305c0af668564a42631099b4e9df4a2c2e9c61ce150b6519a6445"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_gpio_ex.h",
+      "git_blob": "3d01e607a805b9242acfeada31fcb36066de5ea0",
+      "sha256": "50a38ce54c33108ef87f494d982f2a35efdea9d7e7581f8e663c2956de923ed4"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_hash.h",
+      "git_blob": "005e5eaa6596d4faaba5167e358b7bd058d463cc",
+      "sha256": "1e325dd32eb43e4a369a673ea531b06ef67487fda10228aca0701175c34dd0b9"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_hash_ex.h",
+      "git_blob": "618e402d394cd02a2ce6f4de3b11b182d9f8c39b",
+      "sha256": "5dda4de17e23fa3335d8a7f607d6045e2a9e591050be9f506df3bd49696b4dfd"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_hcd.h",
+      "git_blob": "da363f78ab1cb75d0ea48de301bd3c72da249f26",
+      "sha256": "31b9234ce5ce9910801925bee3a14e561580f7e0f6351f9b441d666f631f8aeb"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_i2c.h",
+      "git_blob": "128a11b4decb05c050960f7184302b68c7b0c68e",
+      "sha256": "f5f500a08a44b4aae7d042894c6654bf51a9635d91efb447490191b82e501591"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_i2c_ex.h",
+      "git_blob": "14b43816d6269dc149c84b877436caa27616617a",
+      "sha256": "82a0dd84caeff64a1e0bb45859f9d536bb1f1ef0a32dd1b4712d7638b84fc95b"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_irda.h",
+      "git_blob": "c362909e8a93e00d81b3cd1c3a18eb71c39fcde3",
+      "sha256": "8eef443ecccdc6c38457addda61fd10f13416ac3fd5fb40f617be15bfb26f3ca"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_irda_ex.h",
+      "git_blob": "0c107882765874ca7ce29c95daacf20f12391e31",
+      "sha256": "7be2c0c5884c25e9e063058157ada5bbe0340d7290ee9c37808e4ef4703bf0f7"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_iwdg.h",
+      "git_blob": "23d4902a5910dbca29709d6cbfa4b25cfdddc2f6",
+      "sha256": "b9d23d05544e5e7bbdfda95cc433970a08de70e9125ae1302066f908a52c480b"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_lcd.h",
+      "git_blob": "2e9d3a8f95c02062f487937e68cf82c86b7c7665",
+      "sha256": "d4a4dac0db5053a8928bceb445fadeaa5e601590ed841fb1f25f33cec24670c6"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_lptim.h",
+      "git_blob": "db8d2e7d92b5a2f2d8d0c0669addc728a5feef32",
+      "sha256": "c75b51913724505b8e800cb66e29f5626427eaf2b05351d215f052b3c3315d3a"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_ltdc.h",
+      "git_blob": "a48b37ecc7d0ed05aef3300723537f3ae41ba184",
+      "sha256": "7de624423b24901979b9265eeabc23e00dbc81d380172c840856b1d1664f9ac1"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_ltdc_ex.h",
+      "git_blob": "82147aaeab0f959b772f630c6ba9cbe0e9e15906",
+      "sha256": "6192132296c4233a02048cd770488139020a82d06def6c16469b43c1d7336aaa"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_mmc.h",
+      "git_blob": "4c5afe1f8cb8382384c6b3fcd5f8125e4c20e235",
+      "sha256": "93ec014bcf5385019a5e77135cdd89fafa64e109cb93aa81bf55e165cbc6ea25"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_mmc_ex.h",
+      "git_blob": "d742b1dca17b3abc4c8a741650ef9c30869ed468",
+      "sha256": "6a164141d1c189427d32ac4b2e8a6e329dbf8761ca52515fb88cb38324bcea2d"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_nand.h",
+      "git_blob": "f1a2ebd1eded2f62e789f2faf5aa3f4c671bc949",
+      "sha256": "3f29b02d70c962ebc0d368502ef94d34159e5889a9b78661c366cbd0943babc9"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_nor.h",
+      "git_blob": "62d00c2e35ba86896267c6f81322d5a534fbf29e",
+      "sha256": "afb51c37a46907ba50991205d8a7ffa55b36232739fe5af0ef98a957ce920b74"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_opamp.h",
+      "git_blob": "4e520c7a419aef5dcc20e3232916880a5bc6f757",
+      "sha256": "0032222b3f660fa8c571adb5215d2e302d2016a3dea06995169f3b97baf45ee6"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_opamp_ex.h",
+      "git_blob": "052fad3694220ba85280b6f351e351f70cbc41c5",
+      "sha256": "3c894d23731424f8436371ada96ceae04d6b753330598af0eab5121fcf608ec5"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_ospi.h",
+      "git_blob": "35210eea0e99f36e6ceff1850b021c8f26a84a55",
+      "sha256": "10cfacc64e2d43c2a93730825a2ae7810d3b9626cb2814e425a0b8bc2f2cf8c0"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pcd.h",
+      "git_blob": "c36508b59d5f0a9ad996f6cf7626fafd425ebd24",
+      "sha256": "5ac9d4feec19c2ccee07c03f7fd414ea10a8ad67d86b98b112c697105b2a2cab"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pcd_ex.h",
+      "git_blob": "ea547229e64e8fce9ad23f5bc323a4fec6fe54bd",
+      "sha256": "c695613244383d2adf36d4cc4b7c2be5287fbf9ddaad54fd193a3c83ecc5f535"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pka.h",
+      "git_blob": "385bb0ca72f19d73201947060be52eb9cf568344",
+      "sha256": "38c47b6bff7e611932b1657498d90f184680720e997ac5b9aebe9ea3e4fbcd87"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pssi.h",
+      "git_blob": "0a74420ec459e47678700ede53cebaadc5fe1c0c",
+      "sha256": "17c607449a91edfdc2c6e9809bfaa4dc8ff7efe87d7e267f07c0b78fc5aa4d2a"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr.h",
+      "git_blob": "c006a0d8b11e9b04c12e25d8d88b9a8f187fe3c8",
+      "sha256": "68ef01142de2d50835ca12d558ec4b86056b1a2a90c0e6341b1300ac6a880547"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_pwr_ex.h",
+      "git_blob": "0b4d7036f7c83daaf76ef089e29db0f00e86c994",
+      "sha256": "1217a2fff3d0396ddd8e7b0ff1d4663ea884eb4854689fc15b09d8be5a1e012d"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_qspi.h",
+      "git_blob": "1f10f89e88539df3fa26624114408b87cc62a266",
+      "sha256": "24c514ae7fd3afce21349ebe74d1e942dac044de296a1f81dd60bcabc562a5ae"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rcc.h",
+      "git_blob": "5d1339401f15337076b1588cda6546a49578dd91",
+      "sha256": "84c64a39e7961c8258ee380e6e3c1c1d0b0bbcad278ea188ef778cd7c3c6f5a0"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rcc_ex.h",
+      "git_blob": "ebedaf56d13404cba47e30180b6738ea1377cfbf",
+      "sha256": "40e19f2a81cf23e65cbff7d716222ec38ef0067441dc621b4e146477a4f90571"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rng.h",
+      "git_blob": "526dfe5f8178c8e0240b58c7bfbd424212b7b5d1",
+      "sha256": "71253f123eff5e12e3aaa5a4e9cf8a4edccd83ecc8d82387731c233cf6573cd8"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rng_ex.h",
+      "git_blob": "235750d71a31f2a39cb145e59fa79088418480c6",
+      "sha256": "197275106434f58448847eacc95b36a42e248394888ec9caaf851ad83490327b"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rtc.h",
+      "git_blob": "fe79fd9d9e9ec52a5fdb0cfa78bca4cb45273eba",
+      "sha256": "7d7ccab838e29151e0508210e65b6df20cc86ea17ce0614d530f1b49ec1b8e8f"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_rtc_ex.h",
+      "git_blob": "171a4bf81212f6e9980b599500763f613a7f19c2",
+      "sha256": "c9820cc713945291c784e76ccc278f55749164ea52966e7e30266ed0d1b591f4"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_sai.h",
+      "git_blob": "63d6eaefdcdb79b8e35e6eb04018827a1426e354",
+      "sha256": "fd7b1b8fd7ae6c2be3d8305cce6f8716a8087b468b39ec3c55e9a5e40ae52d78"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_sai_ex.h",
+      "git_blob": "0da376d0668a75b2ee6ba163c98335158d0db649",
+      "sha256": "c98b0daa2ef6fd6e84787b7024744bcf0b1b663fbdedba3608f8735bd6788076"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_sd.h",
+      "git_blob": "55a5f374a6bcf06e683959234f24c8184b8ff129",
+      "sha256": "068c2eb691cc7c308c7d697f7dddc0f263433471dd444fdf9cc2a3cbdbd201be"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_sd_ex.h",
+      "git_blob": "227a992912333d01021da757d3e492826e76a259",
+      "sha256": "c58ef3aa270c9c6a6d105d275b2b199c91d295713b68ad64fa4acd99d86a19a5"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_smartcard.h",
+      "git_blob": "63c52b936ef48d7b62c79e915d092c47d3c030c5",
+      "sha256": "580be8e64453611c5985c3d61596481a09bbcb178851d2f33d4929b1c21245ed"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_smartcard_ex.h",
+      "git_blob": "be029f8c1a60950dbfd9228a9767b7354b907951",
+      "sha256": "366619d7f261a371490ad7f78e87c8db13a96f6e0aad922006f27bbabd00aecc"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_smbus.h",
+      "git_blob": "dfb422ea11b48ce9b64c95662ae2f13682707ec4",
+      "sha256": "d1e039c3ad679782cc5473a454aab5ef63e2adc6e1a4fe950f3545f0f28b848e"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_smbus_ex.h",
+      "git_blob": "702058fc7c641137788a844429aadd96bb5c77f1",
+      "sha256": "223bde1f46f51eac399ca0ff65b79c67d3155f571d553fbd9c1570ab67e0b245"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_spi.h",
+      "git_blob": "1eb436b8342f43d36f14e3f1da4056488863dad5",
+      "sha256": "3c60f2229fa9f54bdc3b8a2084f76c4302896578e57546f0ed74ad79515760e5"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_spi_ex.h",
+      "git_blob": "ce59e853479dadcde22b6c68ade08ffe7cd64434",
+      "sha256": "6d5b1700f8ffe3cbc7cd156b855fac8683712f3f895e5f3b978ada5189af266f"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_sram.h",
+      "git_blob": "410a00f213908f99666e55af460476e74848eeae",
+      "sha256": "0df748a7ad54de371c67266311539f3ab82cdb433ec74672a66eb8b76da3a60f"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_swpmi.h",
+      "git_blob": "514c5ba5500e6770ea89ac00ea4ffaad68b1d478",
+      "sha256": "1a4785ce63436adf3db47f39b187d9da906d62d0bcd8aeb21b8a7d454dbdc03d"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim.h",
+      "git_blob": "f1d40b7e0190b26a8abaf32084b7905cc95658e1",
+      "sha256": "b813d435df71030a58371689636458534202aa7443fdac10b742e2c200d3fc3a"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tim_ex.h",
+      "git_blob": "b699a5afd83419fb89afd7461bbcc68000865dc4",
+      "sha256": "77b8ef925dbfc0d24ab8c3f9a4a21345c55a836bfad7cc3538e5a344d52f0515"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_tsc.h",
+      "git_blob": "12f9a7b32b1d26f8715dacf37cdf37999598c370",
+      "sha256": "0a2e424f694dc8cf885d4e2fda762f620e033b0cc38e2f6399be00a43339b340"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart.h",
+      "git_blob": "b061dcdee44d10350aa0f5676aae331a13f12fcd",
+      "sha256": "93d920b6f23e89ca4e5eb3cc74537724da5a561caf492e8fc11817681867ff1e"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_uart_ex.h",
+      "git_blob": "9ab3741fcab5e7b409b1e239dd7326c7fc5095d8",
+      "sha256": "505fb658d5d887dd28c516962bb312c58c8e7441ed18c51dd0941f9a7b9632ae"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_usart.h",
+      "git_blob": "a09944f1b67d86ad8e313e51120e0cb2aab6e94d",
+      "sha256": "693a0a4e01754be32a8cd3b6a2ccd7e7a990338f434859337be32a00a2957ae1"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_usart_ex.h",
+      "git_blob": "c59cf4be2d1974045347f50e4679e8569eb584af",
+      "sha256": "8d0f0805705dc0f66b718fe1d3b6adaf6c189899a21e11801baf0f884fd47dbc"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal_wwdg.h",
+      "git_blob": "2d4c6425d652ab1252887124a67ba88176d5d268",
+      "sha256": "0cb670b6de7f92adf934c95753d235c9ad5ad6c968b24e7708b29dce67dc9d00"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_adc.h",
+      "git_blob": "3c44efb677c43c3483857c97d038c4a2961e83e2",
+      "sha256": "0c522b287ca67ac0562885d1171432aacc2cd49313dbb56ac0e1d8d9063fbc23"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_bus.h",
+      "git_blob": "cf79193de8957fe15e173a38aa8116ddc1101d73",
+      "sha256": "f826eb15104f3ada82981d766bfb2bdf4d0b4370bd5872500ac2c7f2897e457a"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_comp.h",
+      "git_blob": "9061dfef95f856c53c6b986924957467d581735b",
+      "sha256": "13c8ff5f597dfc0b8828eb2c398e96767d0d11dc6ca8003989bfd444c58606c9"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_cortex.h",
+      "git_blob": "2cb0a8891c72d0b4df981ee18e237f7103d72f5c",
+      "sha256": "c094740fd253c3cd9ee67888ba99c77f5f08e348881835dd6b419c34ac66771f"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_crc.h",
+      "git_blob": "6ca1a28512ce661b3b141d6f5a5752c6e45de89d",
+      "sha256": "3349b0ae48ea0d7b4d5eb4ad2fa1beba71e0f11a9571f2d19bcabd28ccd2b99b"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_crs.h",
+      "git_blob": "13dabf7001fdb3be51fadb5d98ec2963564b09fa",
+      "sha256": "620cb4df06f9088dfaedd6910be7ea163bcddc7de7ae5eee520ef6aef901ea5b"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_dac.h",
+      "git_blob": "37ae2023e51241f407ec34e9dc459b7958b8f059",
+      "sha256": "e6673dd5cf4e641ff8be6800b3c7793896324d5324533382cfbdcee4df1fd67a"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_dma.h",
+      "git_blob": "5b3b909bc4bb54624c4602129151d80117534d21",
+      "sha256": "e3713c31b001b1cdf169380b846d9be1935ef8edc502bf11c797c09ce76fbc3a"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_dma2d.h",
+      "git_blob": "b3a6b4580ea22dbfbe1a688e23ca5fbd0dd93c5b",
+      "sha256": "25058215c4e33bb47571998ff3b57cf309bd7af23039f18e60437a5a62009671"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_dmamux.h",
+      "git_blob": "2769c21730b7a5168058401026cc411cb14a5ba4",
+      "sha256": "c079173cf3fd08ff485817b478c76473e7f28b1fc7884fe044cb75403313d6fe"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_exti.h",
+      "git_blob": "6e06963cbacdc7069ffbe4b0501172f71019c9b9",
+      "sha256": "ca25ec7ebd47af7e390608caabbe11435a09f3d12cb5986f9bcd76161db7cd18"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_fmc.h",
+      "git_blob": "d3625726de3cb0cbfbbbf649bc6138a147e3017a",
+      "sha256": "a8f9a78241085c3446cd829429b576d9b7e29bdcdd6a28764119cd96e44c6d4e"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_gpio.h",
+      "git_blob": "02858106a04d5b92d9c184263ae2be8123a0d3af",
+      "sha256": "155fcc64207afc47626984b48748f47ec9afc797830fa8eec1bf2ccdc6769a4d"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_i2c.h",
+      "git_blob": "46f5f7816c94ce895306fd8963dcbc16d288be47",
+      "sha256": "529271a4a1872b4c4cc15a5f2aa5e0da30b2c9cbd0a5ac3fcf33124f6efdb1a1"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_iwdg.h",
+      "git_blob": "bac7d565066a3f94d0d5b3592e71b6c03e8b45f5",
+      "sha256": "ba2ae642f99c0bcd04bd0804629b734b91484fa56a0e7bd8234a6df792ed268d"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_lptim.h",
+      "git_blob": "ad78047beec4d527bc5885f2b7e7255745707c6c",
+      "sha256": "815e6af38b729a821700583eb769f749466fb130dfb179c99b0ca30542c4a78b"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_lpuart.h",
+      "git_blob": "82be58a1106386a6f10aa70c904e3ed8fe5071ab",
+      "sha256": "b4a0768f80793ca66b38fc1c42be0f831072e50cd8b972772ded8c622844fe90"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_opamp.h",
+      "git_blob": "af5e226cd4f8411cfcaa29a921a958dccbc37a02",
+      "sha256": "c6783f932d8195d6add9b52910ca8c2dfd378219d63543d28bb088594efb50a2"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_pka.h",
+      "git_blob": "e714f91b1cf88d7af451947f65425ba01d5c0ccb",
+      "sha256": "d87ef9671fff810936229f3fca1f354958764ecdb605b0190c2f0e1aa5a54215"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_pwr.h",
+      "git_blob": "436649cb0a2205e689689e580799cbebb9a478ae",
+      "sha256": "fc94b41899d49cdeb65a9ed559cf92fcd26b5fcb683e72d0b71e88afac224980"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_rcc.h",
+      "git_blob": "fa04e5c09d53f65442909001575dcdf08a64eba2",
+      "sha256": "a46ebecf3a81d04db5e530d7e09e2514d763222bc31fbbe98302a20762271884"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_rng.h",
+      "git_blob": "6dc5f52942ee305f5cd7478b90b7cebca75939a4",
+      "sha256": "e2c0426c1cbd6c0c962453b1285e0c1c6f8f29602a2a83908682820d26a1e82a"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_rtc.h",
+      "git_blob": "47009b2b79a2c898561aba03014f65f81cf559ea",
+      "sha256": "2ac83b088ce045c3a68626beb57584fc71a1f41a15ceeb769dd50c2555d2b79a"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_sdmmc.h",
+      "git_blob": "9fe81fec8861797153e92ecc51613b89ae7a8371",
+      "sha256": "31f08602d0df67b859ba79ee14e9cf96c9ff3f88ad3cfece5998fb35f405c3fa"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_spi.h",
+      "git_blob": "1f94578829e7bf0d49ddfa42906c78a4af8e942e",
+      "sha256": "ba69477c79ad07b85ba461cb4fe8a562666cbcd4408499b5dd9efc073e3ed654"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_swpmi.h",
+      "git_blob": "a1a8522e7477a0ae29a9292cf9173aff8b8ea7a3",
+      "sha256": "e51974b4bb34bf7d3918d1803493a3c5b09ccbeed2c19ef3c37742e76f393dd9"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_system.h",
+      "git_blob": "f153225669e18a332a341e675e4095eff3af0aba",
+      "sha256": "406e8b5230c4a0020ce53384bc4408c8d60d26e4b67697556cd06d9e9e9388cc"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_tim.h",
+      "git_blob": "e1602ac2582d77cc3e7aee3c2650899217e7f4a1",
+      "sha256": "09879983cf2ea4abc203d4b3d22e819553ab2448c33d63949ae658f78a63a5ba"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_usart.h",
+      "git_blob": "57681f5bbccac9b35218047bd077850cf90fdc5e",
+      "sha256": "c7acf8579745a90e3675788e6866c0f8dc91bbdf5a54fdcdf2221964a3ab0fbc"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_usb.h",
+      "git_blob": "571f0c42b5e3e0d1f9a39e167035ef3dba6c53c3",
+      "sha256": "85a24477e05fdd65bd0e63a129dbea13e3d62c4f5361f1fbecf924cf235de889"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_utils.h",
+      "git_blob": "eedac7239fa4f490dd8425c69bc6e70162d27e03",
+      "sha256": "a21a17d3005c7595b288000f33d4ac83e1b5fda17a1af2e7da2aed562503f622"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_ll_wwdg.h",
+      "git_blob": "93b871fc5251a51b2ac50d8cb4059ef06a90a7fb",
+      "sha256": "b15fabb3ea8858e9e7efe1f957b8350aedebdd4766f9da35f5590e0d2337a864"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/License.md",
+      "git_blob": "f8a538516fdde797a560a38a5216ad10289de149",
+      "sha256": "430ad69a6c84719f5a68f7af686c5075d248a73d03150ddfe0dd0cd98a0df795"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal.c",
+      "git_blob": "be400728d773d76eeb29a6aeb082c972778c6db3",
+      "sha256": "d5a512809a03747e0548e7eb9a251478bcb0fbdea8b586d46a60bd45370085a5"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_cortex.c",
+      "git_blob": "149d4ba77a471b1e7aa572790deb52a8b8cd2311",
+      "sha256": "1e2338dc28dada12a2eda992b80b5327001ca9939a857c6b897c5cad5afd0997"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_dma.c",
+      "git_blob": "24856b9a3a85772f0bda9fd725c8b0ffff1da35e",
+      "sha256": "8a682a3bb1be375765043f2819307ce9d3e4a845ba4b0bed077bb9d6360ea905"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_exti.c",
+      "git_blob": "dafb7a065655f82d8d4af754bdd0c58a890742c1",
+      "sha256": "17947453f8ffb8b43df7a4063ef44fb8fe0651b37f251a0a026a38ff9105ae9b"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash.c",
+      "git_blob": "d32aa85d8ef05669b4366d021cab592200c1dcab",
+      "sha256": "21ae61708a04782960af20050358985d8591593c1b35fdb99cbae7c6b95bc7b5"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_flash_ex.c",
+      "git_blob": "c889f639374a2b8c992a33b2827673e3a936e9a9",
+      "sha256": "852b406d61d14bca6574833359a360fa333604d0c262473a36d964feed86a494"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_gpio.c",
+      "git_blob": "66f01e10ef23277f4e6fba36ad8f0a0f9ada0b44",
+      "sha256": "9a62e868950e77e81834833b4a7f34c40be73e6323fb7e3f3eda48b4854f4d37"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.c",
+      "git_blob": "b05692d5a455bf602f5b652898b232010764f009",
+      "sha256": "5aff802a11444046a0ad2859524da9c3a6b423ae68a145861f22f426e526c272"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.c",
+      "git_blob": "c304bf6fd6b4fa935d540a7cb9a5a9d7ce81cbed",
+      "sha256": "2dc8eef26f554d362dc60ca9eb26167bdc918ccd1394edbcba53178786aa00bc"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr.c",
+      "git_blob": "bee73b022b5ba8e09087bb4a5a4552767c5f5e54",
+      "sha256": "6decca0dc644865d23bab48dedee64f3506a960b0ae73ba069262cbdb25204e0"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_pwr_ex.c",
+      "git_blob": "972a0d8ada40846997c7d61c96ec5287238a9216",
+      "sha256": "f4cf2b5c50c09f5dab05bce218dbf3ef5abf558587262be741f6d8ca07374de7"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc.c",
+      "git_blob": "552a47138bcc22c4933b7ad53308d57910ef1f9c",
+      "sha256": "6f5187f020003846b4caedc6f25918c108489b093e8cfbd5981772ab69282cf8"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rcc_ex.c",
+      "git_blob": "135f9f42d4b6887c1368acc012b5d4a0d6427128",
+      "sha256": "bed38f3f7cd3b8cbd1ccca972f58c42487051abf3488657c48113ac30d35afae"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rtc.c",
+      "git_blob": "86c8335e8f3587fae33e2cd7915ea9d3782bb52c",
+      "sha256": "af019bfa81a1464e3a66104c6ad0306e5445947edbe79969d2de4a2638762f18"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_rtc_ex.c",
+      "git_blob": "010084d94c4dfb8a8db9e12aa0c5b2496db5d200",
+      "sha256": "52bdf95ab93a1f3dff1a75605e029e2b5c41eab2151a690b9b9ff8b8c0be45bd"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_spi.c",
+      "git_blob": "25f60fd06b1f3b365c9c365dcb2cb7d4bbb8fe2a",
+      "sha256": "8a46d89e89705fd8a86971e7eb37fdcbfac64dbc3616efc5beb00b2c41500661"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart.c",
+      "git_blob": "7ccc5f9b06e4db616f09ab90e83b931b4b154098",
+      "sha256": "c5ee740071ee85a9c494bae88e445c16ed1d4a411418f6e1d8092eeb9e9064c1"
+    },
+    {
+      "path": "Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_uart_ex.c",
+      "git_blob": "b375d294689addb103b7221c802558d263bef234",
+      "sha256": "4ecc292ef52ee80758ac0bb1d9299570ca35bb97c4fe24f02fa5726f07ce3708"
+    }
+  ]
+}

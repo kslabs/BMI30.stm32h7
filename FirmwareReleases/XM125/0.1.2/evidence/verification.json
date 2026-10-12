@@ -1,0 +1,101 @@
+{
+  "date": "2026-10-12",
+  "firmware": "0.1.2",
+  "bin_sha256": "0d01ec8d3a983f42f8b2657c6279d9335d7e662135e74e400c5263f551d34dc9",
+  "target_uid": "2800350002504b4633363620",
+  "stlink_serial": "066DFF514953667287234159",
+  "gate_tests": {
+    "test_failure": 0,
+    "test_count": 87,
+    "test_done": 1
+  },
+  "flash_verified": true,
+  "settings_retained_during_flash": true,
+  "gpio0_registers_verified": {
+    "mode": "output",
+    "type": "open_drain",
+    "pull": "none",
+    "analog_switch": false
+  },
+  "new_settings_saved": true,
+  "normal_reset_verified": true,
+  "cold_power_cycle_verified": false,
+  "radio": {
+    "max_profile": 3,
+    "max_step_length": 4,
+    "range_end_mm": 2000,
+    "measurement_ms": 18,
+    "frame_interval_ms": 33
+  },
+  "physical_angle_verification": "Presence at operator-selected off-axis point verified; numeric angle not measured.",
+  "foreground_during_prior_profile5_off_axis_tests": "intermittent; no sustained detection",
+  "background_observation": {
+    "samples": 1010,
+    "duration_ms": 99998,
+    "high_samples": 0
+  },
+  "rollback_image": "before_dense_flash.bin",
+  "profile3_physical_record": {
+    "samples": 556,
+    "duration_ms": 54929,
+    "real_foreground_peak_samples": 1,
+    "high_samples": 11,
+    "near_edge_samples": 20,
+    "output_transitions": [
+      {
+        "time_ms": 86490,
+        "nearest_mm": 1180,
+        "gpio0": 0,
+        "fault": 0
+      },
+      {
+        "time_ms": 114590,
+        "nearest_mm": 100,
+        "gpio0": 1,
+        "fault": 0
+      },
+      {
+        "time_ms": 115283,
+        "nearest_mm": 1175,
+        "gpio0": 0,
+        "fault": 0
+      },
+      {
+        "time_ms": 119045,
+        "nearest_mm": 1177,
+        "gpio0": 1,
+        "fault": 0
+      },
+      {
+        "time_ms": 119442,
+        "nearest_mm": 1174,
+        "gpio0": 0,
+        "fault": 0
+      }
+    ]
+  },
+  "operator_feedback": "Much better: indicator off during approach and standing to side; remained off in center and at edge with some flicker; on after leaving.",
+  "telemetry_agrees_with_operator": true,
+  "synchronous_hold_test": "passed",
+  "early_enable_config": {
+    "rate_hz": 30,
+    "trigger_delta_mm": 60,
+    "release_delta_mm": 30,
+    "on_delay_ms": 20,
+    "off_delay_ms": 1000,
+    "sensitivity_milli": 850,
+    "signal_quality_db": 25,
+    "adaptation_ms": 60000
+  },
+  "hold_samples": 202,
+  "hold_span_ms": 19960,
+  "release_samples": 303,
+  "release_span_ms": 29898,
+  "early_config_normal_reset_verified": true,
+  "hand_tag_test": "passed",
+  "final_off_delay_ms": 1000,
+  "final_config_normal_reset_verified": true,
+  "operator_final_choice": "1000 ms OFF; fast ON is the priority; BMI30 label detector already has its own release hold.",
+  "hand_tag_test_scope": "Early activation observed and operator confirmed. Intermittent echoes caused short dropouts at the fringe; uninterrupted GPIO during every hand pose is not guaranteed.",
+  "hand_tag_observed_max_echo_gap_ms": 1584
+}

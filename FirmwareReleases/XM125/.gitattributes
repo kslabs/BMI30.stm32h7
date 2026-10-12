@@ -1,0 +1,2 @@
+# Preserve byte-for-byte release files and their SHA256 manifest on checkout.
+0.1.2/** -text

@@ -1,0 +1,11 @@
+[data-radar-root]{margin-top:24px;padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--note-bg)}
+[data-radar-root] h3{margin:0 0 10px}
+[data-radar-root] p{font-size:13px;line-height:1.5}
+[data-radar-root] label{display:grid;gap:5px;font-size:12px}
+.radar-connection,.radar-metrics{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin:12px 0}
+.radar-connection label{flex:1 1 220px}
+.radar-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:16px 0}
+[data-radar-root] input{box-sizing:border-box;width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text);font:inherit}
+.radar-metrics span{padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+[data-radar-root] .radar-note{font-size:11px;color:var(--muted)}
+[data-radar-status].is-error{color:#e74c3c}
