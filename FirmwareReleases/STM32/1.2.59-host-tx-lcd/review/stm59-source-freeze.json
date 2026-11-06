@@ -1,0 +1,87 @@
+{
+  "ok": true,
+  "kind": "source-only-STM59-LCD-candidate",
+  "hardware_qualified": false,
+  "flashed": false,
+  "version": "1.2.59-host-tx-lcd",
+  "baseline58v2_archive_sha256": "141d43962294673e030205cc20763b26dcdaaf909575c3d866e24ce9d1c834b0",
+  "files": {
+    "BMI30-STM32-1.2.59-host-tx-lcd-sources.tar.gz": {
+      "sha256": "380db9351b2f6d1a961db75a0f4b43fa8b527fd23cc6e2c1387eeb6633755d44",
+      "bytes": 7919346
+    },
+    "author-source-build-review.json": {
+      "sha256": "34238458c0c23c2c0ac932024a7a01c962297e6652001b806977753b86b39049",
+      "bytes": 4028
+    },
+    "source-vs-reviewed58v2.diff": {
+      "sha256": "9099a3a96d7f24a1e782ff5917c9176e23c4b29da9098b6ea3bffa6bfc132a66",
+      "bytes": 8165
+    },
+    "source/builder/build-spec.json": {
+      "sha256": "a30ea0e1c8af0d91c1d17d86c7f1f72bc088883ea1030eb9bfd3fdaf9ad05f82",
+      "bytes": 55225
+    },
+    "source/builder/review/source-tree-sha256.json": {
+      "sha256": "3ad1900655293436a0d9fd637de7a1d4854cb058d682f79aef83a6771bab8040",
+      "bytes": 154085
+    },
+    "source/builder/review/build_autogen.h": {
+      "sha256": "068b2b78e61ad9d9bda57cdcecc736dce24a21d3fc55d39e75bb747e046806db",
+      "bytes": 138
+    },
+    "source/builder/build_source.py": {
+      "sha256": "4d229a59e6000cedcd0420760924afc75ea9b80aebf8e90a4418a29d0b975324",
+      "bytes": 8876
+    },
+    "build-59-pinned-repeat/build-report.json": {
+      "sha256": "5f92b77d793369f0c9b1bec7ee54c80eb46a848d19c481a36992f429e5357b42",
+      "bytes": 920
+    },
+    "build-59-pinned-repeat/BMI30-STM32-1.2.59-host-tx-lcd.bin": {
+      "sha256": "6188b176ddebe196bcfde8631303f33e27287c3630af249a3d666ca2f1e0d02b",
+      "bytes": 327960
+    },
+    "audit_source.py": {
+      "sha256": "abbb610905146f5e6cb5ca4bf7d8c8636eccc5cc9a5193db3acd3ad182d8de7d",
+      "bytes": 6635
+    },
+    "README_RU.md": {
+      "sha256": "1fa02fa0b5057559f8efd66adfa88d3c093a5613b37899b766eb84ce795ca5b0",
+      "bytes": 4533
+    }
+  },
+  "project_files": {
+    "Core/Inc/build_info.h": {
+      "sha256": "c6bd4dd84143ed301717ed48e38c37b77ac0361cad851f0653f881ef6304dc02",
+      "bytes": 843,
+      "baseline_sha256": "609f402c4fe78b6f5b66865de263e8c030682ba0ab7773981cf99f98afa292be"
+    },
+    "Core/Src/main.c": {
+      "sha256": "cfc97aa6dbcdf85349c7a223fa77654466bbd4abbb3934621ed7569e904d0ae1",
+      "bytes": 492360,
+      "baseline_sha256": "a472437e5f7822b69088dca08461a73ac5ae5cd72a899ded9496d867003d4e0f"
+    },
+    "Drivers/BSP/ST7735/lcd.c": {
+      "sha256": "9afffc55da957311fecbe6601fa176daf0bf875c00d8126f43bd654807396128",
+      "bytes": 14697,
+      "baseline_sha256": "299066ea9bfcca1a11482af5b1fd48060e37f7162f85f5057e4d2a24581f29a5"
+    },
+    "Drivers/BSP/ST7735/lcd.h": {
+      "sha256": "b5b4a3b5e208b4ac94c6b9d6beb8201a8248565408a296f7ee4c0295d69611d7",
+      "bytes": 2774,
+      "baseline_sha256": "06ccf8696fb99af5c2fbfeda6af204d60db65ebd5fe9f7a00aee8bcec178ab08"
+    },
+    "Drivers/BSP/ST7735/st7735.c": {
+      "sha256": "4733b36b8a7363efdfc083a9626d04711b0e2756dab2cf2b4a6c7f7fe98419d6",
+      "bytes": 6140,
+      "baseline_sha256": "a72b4949737e10e5ecacd799488dac3d4726d6d457591f5a09e765739e2e87f1"
+    }
+  },
+  "TX_lease_source_exact58v2": true,
+  "added_RAM_fields_or_buffers": false,
+  "all_RAM_sections_address_size_same58v2": true,
+  "author_cases_passed": 7,
+  "pinned_full66_compile_repeat_equal": true,
+  "independent_mockSPI_peer": "separate evidence required"
+}

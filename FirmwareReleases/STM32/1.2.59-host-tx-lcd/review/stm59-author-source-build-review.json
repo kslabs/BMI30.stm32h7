@@ -1,0 +1,99 @@
+{
+  "ok": true,
+  "scope": "offline source/build only",
+  "version": "1.2.59-host-tx-lcd",
+  "baseline_source_sha256": "141d43962294673e030205cc20763b26dcdaaf909575c3d866e24ce9d1c834b0",
+  "changed_project_files": {
+    "Core/Inc/build_info.h": {
+      "sha256": "c6bd4dd84143ed301717ed48e38c37b77ac0361cad851f0653f881ef6304dc02",
+      "bytes": 843,
+      "baseline_sha256": "609f402c4fe78b6f5b66865de263e8c030682ba0ab7773981cf99f98afa292be"
+    },
+    "Core/Src/main.c": {
+      "sha256": "cfc97aa6dbcdf85349c7a223fa77654466bbd4abbb3934621ed7569e904d0ae1",
+      "bytes": 492360,
+      "baseline_sha256": "a472437e5f7822b69088dca08461a73ac5ae5cd72a899ded9496d867003d4e0f"
+    },
+    "Drivers/BSP/ST7735/lcd.c": {
+      "sha256": "9afffc55da957311fecbe6601fa176daf0bf875c00d8126f43bd654807396128",
+      "bytes": 14697,
+      "baseline_sha256": "299066ea9bfcca1a11482af5b1fd48060e37f7162f85f5057e4d2a24581f29a5"
+    },
+    "Drivers/BSP/ST7735/lcd.h": {
+      "sha256": "b5b4a3b5e208b4ac94c6b9d6beb8201a8248565408a296f7ee4c0295d69611d7",
+      "bytes": 2774,
+      "baseline_sha256": "06ccf8696fb99af5c2fbfeda6af204d60db65ebd5fe9f7a00aee8bcec178ab08"
+    },
+    "Drivers/BSP/ST7735/st7735.c": {
+      "sha256": "4733b36b8a7363efdfc083a9626d04711b0e2756dab2cf2b4a6c7f7fe98419d6",
+      "bytes": 6140,
+      "baseline_sha256": "a72b4949737e10e5ecacd799488dac3d4726d6d457591f5a09e765739e2e87f1"
+    }
+  },
+  "all_other_project_files_byte_exact": true,
+  "all_RAM_sections_address_size_same58v2": true,
+  "TX_lease_header_sha256": "1d771fa1c1b3983867e92a5e9584fd02964f8692cf26eadbdbea07551814870a",
+  "boot_strings": [
+    "BMI30",
+    "STM32 1.2.59",
+    "Starting..."
+  ],
+  "boot_visible_hold_ms": 500,
+  "added_RAM_fields_or_buffers": false,
+  "author_tests_passed": 7,
+  "build_report": {
+    "version": "1.2.59-host-tx-lcd",
+    "compiler": "arm-none-eabi-gcc.exe (GNU Tools for STM32 13.3.rel1.20240926-1715) 13.3.1 20240614",
+    "source_count": 66,
+    "binary_matches_pinned_release": null,
+    "flash_end_exclusive": "0x8050118",
+    "persistent_sector_in_elf": false,
+    "flashed": false,
+    "files": {
+      "BMI30-STM32-1.2.59-host-tx-lcd.bin": {
+        "sha256": "6188b176ddebe196bcfde8631303f33e27287c3630af249a3d666ca2f1e0d02b",
+        "bytes": 327960
+      },
+      "BMI30-STM32-1.2.59-host-tx-lcd.elf": {
+        "sha256": "764eb3a33988c27d1fe05114929f5cd642537f7187368ad8f9ee43c69676a164",
+        "bytes": 3228316
+      },
+      "BMI30-STM32-1.2.59-host-tx-lcd.map": {
+        "sha256": "f8b64dc5a44052bac000109dd3bce52ba4eceac0d27b4d4007039227a547d308",
+        "bytes": 2909699
+      }
+    },
+    "elf_map_identity_limit": "DWARF and map contain absolute build paths; only BIN is pinned byte-for-byte."
+  },
+  "hardware_queried": false,
+  "flashed": false,
+  "limits": [
+    "MockSPI actual-driver execution is separate evidence",
+    "No physical LCD/controller/timing qualification"
+  ],
+  "pinned_repeat_build_report": {
+    "version": "1.2.59-host-tx-lcd",
+    "compiler": "arm-none-eabi-gcc.exe (GNU Tools for STM32 13.3.rel1.20240926-1715) 13.3.1 20240614",
+    "source_count": 66,
+    "binary_matches_pinned_release": true,
+    "flash_end_exclusive": "0x8050118",
+    "persistent_sector_in_elf": false,
+    "flashed": false,
+    "files": {
+      "BMI30-STM32-1.2.59-host-tx-lcd.bin": {
+        "sha256": "6188b176ddebe196bcfde8631303f33e27287c3630af249a3d666ca2f1e0d02b",
+        "bytes": 327960
+      },
+      "BMI30-STM32-1.2.59-host-tx-lcd.elf": {
+        "sha256": "ebd5078a5059a5c22b2d28f462da2909cb998f5df120992df1be2f9f5c0ffd36",
+        "bytes": 3228320
+      },
+      "BMI30-STM32-1.2.59-host-tx-lcd.map": {
+        "sha256": "f829ca4b4e796556000b3f7b52423a50dacd5d645902db707040c76d0868bcd0",
+        "bytes": 2973919
+      }
+    },
+    "elf_map_identity_limit": "DWARF and map contain absolute build paths; only BIN is pinned byte-for-byte."
+  },
+  "pinned_repeat_binary_matches": true
+}

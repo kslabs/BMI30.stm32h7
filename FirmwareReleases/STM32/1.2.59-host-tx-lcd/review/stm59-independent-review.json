@@ -1,0 +1,66 @@
+{
+  "NVM_role_compatibility": {
+    "ELF_NVM_payload": false,
+    "application_flash_end_exclusive": "0x08050118",
+    "own_NVM_and_role_before_after_checks_required": true,
+    "roles_transferred_or_assigned": false,
+    "source_layout_compatible": true,
+    "unchanged_from_reviewed58v2": true
+  },
+  "Root_actual_driver_C_execution": {
+    "cases": 8,
+    "checks": 1222,
+    "compiler": "LinuxGCC12.2 ASAN+UBSAN",
+    "harness_source_pack_sha256": "9b60f3f59038e9c8c74c8f85352dc8316cf99e12d2f50aac6fdb84721e2dd3e7",
+    "performed_by_Root_not_reviewer": true,
+    "production_files": {
+      "production/font.c": "49fd7be8389035cd69e424ae23d5462c346d5b3c89089fd6e3ebc3e3caea7ac1",
+      "production/font.h": "3e5f2afb49448334592caaa4d40013e6d6891c1425ccc2b4c1de12aa044665de",
+      "production/lcd.c": "9afffc55da957311fecbe6601fa176daf0bf875c00d8126f43bd654807396128",
+      "production/lcd.h": "b5b4a3b5e208b4ac94c6b9d6beb8201a8248565408a296f7ee4c0295d69611d7",
+      "production/st7735.c": "4733b36b8a7363efdfc083a9626d04711b0e2756dab2cf2b4a6c7f7fe98419d6",
+      "production/st7735.h": "abf043d5d2a2ef6d89de5986c480ec71d166877752326e91a732fe934e870320"
+    },
+    "report_sha256": "cad7ff35915a83145ed1fa80505ec800074434ac0ba024411f6994a214884b29",
+    "service_PIDs_startticks_unchanged": true
+  },
+  "additional_actual_main_and_driver_source_cases_passed": 2,
+  "author_cases_independently_passed": 7,
+  "bin_bytes": 327960,
+  "bin_sha256": "6188b176ddebe196bcfde8631303f33e27287c3630af249a3d666ca2f1e0d02b",
+  "blockers": [],
+  "flashed_by_reviewer": false,
+  "hardware_LCD_tested": false,
+  "hardware_network_server_calls_by_reviewer": 0,
+  "independent_test_sha256": "8d2b9e80a7d964bfecb5a83aeefa8603e5c7de25497c503df97d99ee80ee29e5",
+  "limits": [
+    "Ctest executesactualdriverswithmockHAL/SPI/GPIO; no physicalpanel/timing/coldbootqualification",
+    "ASAN/UBSAN scope excludesrealIRQ/cache/buscontention; nominaloneDMAphasebudget isnot measuredCPUdeadline",
+    "59inherits58TXpolicy; 58hardwarecanary evidence remains58anddoesnotclaim59hardwarePASS",
+    "Physicalcoldboot/panel/RDPUSBrole/NVM checks remainRootscope; nohardwareactions by reviewer"
+  ],
+  "ok": true,
+  "reviewed": [
+    "DISPOFF duringcontrollerinit; all80knownRGB565rows complete before soleDISPON DMA",
+    "DISPON completion then500ms hold; bootUIwrites blockeduntilrunning; bootASCII hasnofakeTXorrole",
+    "may_start0 yields withoutDMAstart butallowscompletionhousekeeping; <=oneDMAphase/call and>=1msnextstart",
+    "BUSY/error/timeout/EOTerror behavior failsclosedwithoutunknownGRAMdisplay orUSB/ADCrecovery",
+    "Actualmainloop tail afterwire/stream/role/sync/adcphase; constant1budget avoids stickyvnd_tx_kick starvation",
+    "RuntimeLCD usesDMA only, no HAL_Delay/blockingSPI/IRQmask; priorities15 andexistingRAMbuffersretained",
+    "Exact5LCD/versionfiledelta vs58v2, allTXlease/ADC/DMA/NVM/role/linker unchanged; sixRAMsectionaddress+sizeequal",
+    "Complete66sourcepinnedrepeatBINequal;flashend08050118<NVM080e0000"
+  ],
+  "schema": 1,
+  "source_archive_regular_members_all_match": 1327,
+  "source_archive_sha256": "380db9351b2f6d1a961db75a0f4b43fa8b527fd23cc6e2c1387eeb6633755d44",
+  "source_freeze_sha256": "fffbc23e465d65053355467b88d743c17395548afd8703bd87ac8afda7a32704",
+  "source_hashes": {
+    "Core/Inc/build_info.h": "c6bd4dd84143ed301717ed48e38c37b77ac0361cad851f0653f881ef6304dc02",
+    "Core/Src/main.c": "cfc97aa6dbcdf85349c7a223fa77654466bbd4abbb3934621ed7569e904d0ae1",
+    "Drivers/BSP/ST7735/lcd.c": "9afffc55da957311fecbe6601fa176daf0bf875c00d8126f43bd654807396128",
+    "Drivers/BSP/ST7735/lcd.h": "b5b4a3b5e208b4ac94c6b9d6beb8201a8248565408a296f7ee4c0295d69611d7",
+    "Drivers/BSP/ST7735/st7735.c": "4733b36b8a7363efdfc083a9626d04711b0e2756dab2cf2b4a6c7f7fe98419d6"
+  },
+  "source_only": true,
+  "version": "1.2.59-host-tx-lcd"
+}

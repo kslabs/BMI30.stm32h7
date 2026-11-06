@@ -1,0 +1,24 @@
+{
+  "NVM_bytes_after_user_cold_claimed": false,
+  "Root_live_readback": {
+    "STM_version": "1.2.59",
+    "connected_fresh_frames": true,
+    "observed_utc": "2026-11-06T11:32:30Z",
+    "own_role": {
+      "node_id": 7,
+      "role": "slave"
+    },
+    "worker_results_increase": true
+  },
+  "board": "S07",
+  "private_live_report_sha256": "022c0d5f2076f97f2c50de3ef755ff7a8dab815a72b5098829ed4699ef5d8e97",
+  "range_or_detection_probability_qualified": false,
+  "schema": 1,
+  "status": "USER_TRUE_COLD_LCD_AND_OWN_ROLE_CONFIRMED",
+  "user_observation": {
+    "LCD_intro_visible": true,
+    "own_S07_role_visible": true,
+    "provenance": "Explicit user confirmation relayed by Root; not automated visual inspection",
+    "true_power_cycle": true
+  }
+}

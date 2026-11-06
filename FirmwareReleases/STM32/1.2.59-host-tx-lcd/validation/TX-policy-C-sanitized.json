@@ -1,0 +1,20 @@
+{
+  "execution": {
+    "TTL_ms": 5000,
+    "cases": 13,
+    "checks": 70,
+    "hardware_operations": 0,
+    "ok": true,
+    "production_header_executed": true
+  },
+  "kind": "actual production TX lease header",
+  "observed_utc": "2026-11-06T10:29:29Z",
+  "physical_hardware_calls": false,
+  "private_execution_report_sha256": "945b8a57c7f671e726bc96ea8e834710e8d8c59fbb108028b8c3677ceb885565",
+  "protected_services_unchanged": true,
+  "schema": 1,
+  "source_binding": {
+    "tx_host_lease_header_sha256": "1d771fa1c1b3983867e92a5e9584fd02964f8692cf26eadbdbea07551814870a"
+  },
+  "status": "ACTUAL_C_ASAN_UBSAN_PASS"
+}

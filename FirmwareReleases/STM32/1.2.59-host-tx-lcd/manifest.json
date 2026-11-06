@@ -1,0 +1,188 @@
+{
+  "Raspberry_USB_status_snapshot": {
+    "APP123519": "public APP tar only;no full image/physical USB copy/boot qualification claimed",
+    "native123518_M02": "pending own DNS/conversion",
+    "native123518_S07": "Root reports committed and central catalog1 read",
+    "source": "Root task updates; separate from STM59 release proof"
+  },
+  "Root_public_copy_review_pending": true,
+  "active_source_tree_promotion": false,
+  "artifacts": {
+    "BMI30-STM32-1.2.59-host-tx-lcd-sources.tar.gz": {
+      "bytes": 7919346,
+      "sha256": "380db9351b2f6d1a961db75a0f4b43fa8b527fd23cc6e2c1387eeb6633755d44"
+    },
+    "BMI30-STM32-1.2.59-host-tx-lcd.bin": {
+      "bytes": 327960,
+      "sha256": "6188b176ddebe196bcfde8631303f33e27287c3630af249a3d666ca2f1e0d02b"
+    },
+    "BMI30-STM32-1.2.59-host-tx-lcd.elf": {
+      "bytes": 3228320,
+      "sha256": "ebd5078a5059a5c22b2d28f462da2909cb998f5df120992df1be2f9f5c0ffd36"
+    },
+    "BMI30-STM32-1.2.59-host-tx-lcd.map": {
+      "bytes": 2973919,
+      "sha256": "f829ca4b4e796556000b3f7b52423a50dacd5d645902db707040c76d0868bcd0"
+    }
+  },
+  "canonical_build_source": "BMI30-STM32-1.2.59-host-tx-lcd-sources.tar.gz",
+  "created_utc": "2026-11-06T12:28:01.699698+00:00",
+  "exclusions": [
+    "NVM/full-flash/options dumps or logs",
+    "raw observer samples/traces",
+    "SSH routes/keys/credentials",
+    "DPAPI/private identity/settings",
+    "device flasher/operator scripts",
+    "RAW/XZ images"
+  ],
+  "files": [
+    {
+      "bytes": 7919346,
+      "mode": 420,
+      "path": "BMI30-STM32-1.2.59-host-tx-lcd-sources.tar.gz",
+      "sha256": "380db9351b2f6d1a961db75a0f4b43fa8b527fd23cc6e2c1387eeb6633755d44"
+    },
+    {
+      "bytes": 327960,
+      "mode": 420,
+      "path": "BMI30-STM32-1.2.59-host-tx-lcd.bin",
+      "sha256": "6188b176ddebe196bcfde8631303f33e27287c3630af249a3d666ca2f1e0d02b"
+    },
+    {
+      "bytes": 3228320,
+      "mode": 420,
+      "path": "BMI30-STM32-1.2.59-host-tx-lcd.elf",
+      "sha256": "ebd5078a5059a5c22b2d28f462da2909cb998f5df120992df1be2f9f5c0ffd36"
+    },
+    {
+      "bytes": 2973919,
+      "mode": 420,
+      "path": "BMI30-STM32-1.2.59-host-tx-lcd.map",
+      "sha256": "f829ca4b4e796556000b3f7b52423a50dacd5d645902db707040c76d0868bcd0"
+    },
+    {
+      "bytes": 6959,
+      "mode": 420,
+      "path": "README_RU.md",
+      "sha256": "2106730af75550e9a0055fa4aecc2a6e3e6bd8ab3e34d9412e716622cc757628"
+    },
+    {
+      "bytes": 55225,
+      "mode": 420,
+      "path": "build-spec.json",
+      "sha256": "a30ea0e1c8af0d91c1d17d86c7f1f72bc088883ea1030eb9bfd3fdaf9ad05f82"
+    },
+    {
+      "bytes": 8876,
+      "mode": 420,
+      "path": "build_source.py",
+      "sha256": "4d229a59e6000cedcd0420760924afc75ea9b80aebf8e90a4418a29d0b975324"
+    },
+    {
+      "bytes": 138,
+      "mode": 420,
+      "path": "review/build_autogen.h",
+      "sha256": "068b2b78e61ad9d9bda57cdcecc736dce24a21d3fc55d39e75bb747e046806db"
+    },
+    {
+      "bytes": 154085,
+      "mode": 420,
+      "path": "review/source-tree-sha256.json",
+      "sha256": "3ad1900655293436a0d9fd637de7a1d4854cb058d682f79aef83a6771bab8040"
+    },
+    {
+      "bytes": 8165,
+      "mode": 420,
+      "path": "review/source-vs-reviewed58v2.diff",
+      "sha256": "9099a3a96d7f24a1e782ff5917c9176e23c4b29da9098b6ea3bffa6bfc132a66"
+    },
+    {
+      "bytes": 4028,
+      "mode": 420,
+      "path": "review/stm59-author-source-build-review.json",
+      "sha256": "34238458c0c23c2c0ac932024a7a01c962297e6652001b806977753b86b39049"
+    },
+    {
+      "bytes": 3857,
+      "mode": 420,
+      "path": "review/stm59-independent-review.json",
+      "sha256": "fb6c3f92d4a7687869081b23c59dad60506b727920138bb4ea7958f0739442d9"
+    },
+    {
+      "bytes": 3528,
+      "mode": 420,
+      "path": "review/stm59-source-freeze.json",
+      "sha256": "fffbc23e465d65053355467b88d743c17395548afd8703bd87ac8afda7a32704"
+    },
+    {
+      "bytes": 5156,
+      "mode": 420,
+      "path": "review/tx-lease-independent-review.json",
+      "sha256": "d005f00922fe65f9b04ef33e963f86363e7e8778dc496670564574b4f8fe3430"
+    },
+    {
+      "bytes": 1086,
+      "mode": 420,
+      "path": "validation/LCD-driver-C-sanitized.json",
+      "sha256": "8a0d56ad8352c041e6d616b707ce89af202917dbbd5d3fc4f3de6bf78d5d54fa"
+    },
+    {
+      "bytes": 1112,
+      "mode": 420,
+      "path": "validation/M02-install-sanitized.json",
+      "sha256": "3e42b20de2d0d6e7c4f9d2d040193d578695721e2d7d18e42cad44edfa872108"
+    },
+    {
+      "bytes": 755,
+      "mode": 420,
+      "path": "validation/S07-cold-user-sanitized.json",
+      "sha256": "78fad3b41f13bee66fd4bc4bab6b773e5f606535f019a52d24cff575b76d43f3"
+    },
+    {
+      "bytes": 1370,
+      "mode": 420,
+      "path": "validation/S07-host-silence-sanitized.json",
+      "sha256": "2bd2b85daf030f3bd85b6d31d6b43ac34841cc1a274c94dafb79bf2c85f3b9d8"
+    },
+    {
+      "bytes": 1110,
+      "mode": 420,
+      "path": "validation/S07-install-sanitized.json",
+      "sha256": "5b977776b53506159472d815ec5b284de5e7a2927410848b782f73c5ccf490e3"
+    },
+    {
+      "bytes": 619,
+      "mode": 420,
+      "path": "validation/TX-policy-C-sanitized.json",
+      "sha256": "47a7216621583e7b9afa685ea9953e806b4a19be8277c1814cfb931d64e426e6"
+    },
+    {
+      "bytes": 920,
+      "mode": 420,
+      "path": "validation/pinned-repeat-build.json",
+      "sha256": "5f92b77d793369f0c9b1bec7ee54c80eb46a848d19c481a36992f429e5357b42"
+    }
+  ],
+  "hardware_validation": {
+    "M02": "own_APP_readback_NVM_role_runtime_PASS",
+    "S07": "own_APP_readback_NVM_role_runtime_PASS;user_true_cold_LCD_PASS;actual5000ms_host_silence_bracket_PASS",
+    "own_NVM_and_options_preserved": true,
+    "range_or_probability_qualified": false,
+    "roles_transferred": false
+  },
+  "numeric_version": "1.2.59",
+  "packager_device_calls": false,
+  "partial_11_file_promotion_to_older_ISO_tree_prohibited": true,
+  "published": false,
+  "schema": 1,
+  "software_validation": {
+    "ELF_map_paths_not_cross_directory_reproducible": true,
+    "compile_units": 66,
+    "flash_end_exclusive": "0x08050118",
+    "persistent_sector_in_ELF": false,
+    "pinned_repeat_BIN_equal": true,
+    "source_archive_extract_rebuild_claimed": false,
+    "source_members": 1327
+  },
+  "version": "1.2.59-host-tx-lcd"
+}
