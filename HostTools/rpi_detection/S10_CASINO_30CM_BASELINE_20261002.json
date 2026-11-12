@@ -1,0 +1,279 @@
+{
+  "status": "baseline_recording_complete_labels_partly_ambiguous",
+  "date": "2026-10-02",
+  "user_confirmed_series_finished": true,
+  "conditions_as_instructed": {
+    "board": "S10",
+    "tag": "Casino",
+    "distance_cm": 30,
+    "channel": "upper"
+  },
+  "archive": "HostTools\\rpi_detection\\recordings\\2026-10-02\\S10-Casino-30cm-baseline-01",
+  "raw_log_sha256": "67960ef7a2df43111543c57f8378e53f3368793f883af6098048d9108bc7e287",
+  "compressed_archive_readback_verified": true,
+  "recording_start_epoch": 1790942454.3999774,
+  "recording_end_epoch": 1790943354.5329032,
+  "raw_human_counts": {
+    "miss": 76,
+    "hit": 50,
+    "unlabelled": 3
+  },
+  "marked_passes_total": 129,
+  "unmatched_outcome_mark_count": 17,
+  "unmatched_outcome_marks": [
+    {
+      "epoch": 1790942541.2433746,
+      "observed_mono": 10379.230283181,
+      "kind": "ignored_mark",
+      "action": "miss",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790942689.593999,
+      "observed_mono": 10527.580907501,
+      "kind": "ignored_mark",
+      "action": "hit",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790942819.1959195,
+      "observed_mono": 10657.18282814,
+      "kind": "ignored_mark",
+      "action": "hit",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790942879.9162254,
+      "observed_mono": 10717.903134082,
+      "kind": "ignored_mark",
+      "action": "miss",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790942910.6966023,
+      "observed_mono": 10748.683510853,
+      "kind": "ignored_mark",
+      "action": "miss",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790942925.5464053,
+      "observed_mono": 10763.533313914,
+      "kind": "ignored_mark",
+      "action": "hit",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790942987.1375778,
+      "observed_mono": 10825.124486226,
+      "kind": "ignored_mark",
+      "action": "miss",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790943052.2980514,
+      "observed_mono": 10890.284959756,
+      "kind": "ignored_mark",
+      "action": "miss",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790943052.807844,
+      "observed_mono": 10890.794752453,
+      "kind": "ignored_mark",
+      "action": "miss",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790943077.978681,
+      "observed_mono": 10915.965589651,
+      "kind": "ignored_mark",
+      "action": "hit",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790943078.4281764,
+      "observed_mono": 10916.415084906,
+      "kind": "ignored_mark",
+      "action": "hit",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790943078.7281404,
+      "observed_mono": 10916.715048772,
+      "kind": "ignored_mark",
+      "action": "hit",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790943137.8587487,
+      "observed_mono": 10975.845657096,
+      "kind": "ignored_mark",
+      "action": "miss",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790943138.15905,
+      "observed_mono": 10976.145958619,
+      "kind": "ignored_mark",
+      "action": "miss",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790943138.4299338,
+      "observed_mono": 10976.416842427,
+      "kind": "ignored_mark",
+      "action": "miss",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790943208.5995412,
+      "observed_mono": 11046.586449724,
+      "kind": "ignored_mark",
+      "action": "hit",
+      "reason": "no_open_pass"
+    },
+    {
+      "epoch": 1790943208.84178,
+      "observed_mono": 11046.828688546,
+      "kind": "ignored_mark",
+      "action": "hit",
+      "reason": "no_open_pass"
+    }
+  ],
+  "label_disagreements": [
+    {
+      "pass_id": 4,
+      "human_result": "hit",
+      "selected_fire_snapshot_count": 0,
+      "sound_active_samples": 0
+    },
+    {
+      "pass_id": 23,
+      "human_result": "miss",
+      "selected_fire_snapshot_count": 1,
+      "sound_active_samples": 13
+    },
+    {
+      "pass_id": 43,
+      "human_result": "miss",
+      "selected_fire_snapshot_count": 1,
+      "sound_active_samples": 1
+    },
+    {
+      "pass_id": 44,
+      "human_result": "miss",
+      "selected_fire_snapshot_count": 1,
+      "sound_active_samples": 5
+    },
+    {
+      "pass_id": 59,
+      "human_result": "miss",
+      "selected_fire_snapshot_count": 1,
+      "sound_active_samples": 10
+    },
+    {
+      "pass_id": 66,
+      "human_result": "miss",
+      "selected_fire_snapshot_count": 1,
+      "sound_active_samples": 9
+    },
+    {
+      "pass_id": 85,
+      "human_result": "hit",
+      "selected_fire_snapshot_count": 0,
+      "sound_active_samples": 0
+    },
+    {
+      "pass_id": 87,
+      "human_result": "miss",
+      "selected_fire_snapshot_count": 1,
+      "sound_active_samples": 9
+    },
+    {
+      "pass_id": 90,
+      "human_result": "miss",
+      "selected_fire_snapshot_count": 1,
+      "sound_active_samples": 11
+    },
+    {
+      "pass_id": 104,
+      "human_result": "hit",
+      "selected_fire_snapshot_count": 0,
+      "sound_active_samples": 0
+    },
+    {
+      "pass_id": 115,
+      "human_result": "miss",
+      "selected_fire_snapshot_count": 1,
+      "sound_active_samples": 3
+    },
+    {
+      "pass_id": 117,
+      "human_result": "miss",
+      "selected_fire_snapshot_count": 1,
+      "sound_active_samples": 11
+    },
+    {
+      "pass_id": 119,
+      "human_result": "miss",
+      "selected_fire_snapshot_count": 1,
+      "sound_active_samples": 14
+    }
+  ],
+  "concordant_miss_windows": {
+    "count": 66,
+    "all_contained_candidates": true,
+    "sampled_confirm_seen_max": {
+      "1": 33,
+      "2": 32,
+      "0": 1
+    },
+    "windows_with_sampled_width_rejection": 53,
+    "windows_with_sampled_common_mode_rejection": 46
+  },
+  "health": {
+    "samples": 8992,
+    "unhealthy_samples": 0,
+    "stream_delta": {
+      "rx_cnt_ch0": 14337,
+      "rx_cnt_ch1": 14337,
+      "seq_gap_ch0": 0,
+      "seq_gap_ch1": 0,
+      "crc_bad": 0,
+      "magic_bad": 0,
+      "host_rx_ack_fail": 0
+    },
+    "overflows_delta": 0,
+    "over_100ms_delta": 7,
+    "core_pid_unchanged": true
+  },
+  "config_sha256": "99c53350ee04f5358bf594df5aea06c8e568d59746fc26fd37efed72cf3e3459",
+  "config_unchanged": true,
+  "runtime_static_parameters_unchanged": true,
+  "trial_applied": false,
+  "proposed_comparison": {
+    "channel": "upper",
+    "confirm_count_before": 3,
+    "confirm_count_trial": 2,
+    "change_other_parameters": false,
+    "requires": "Separate no-tag observation and comparable marked pass series",
+    "result": "Not tested; no success improvement or false-alarm rate claimed"
+  },
+  "limitations": [
+    "129 logged start marks are not independently verified physical pass count.",
+    "17 orphan outcomes may include corrections or held-button repeats; raw labels retained.",
+    "Sound API records software output state, not acoustic measurement.",
+    "100ms status snapshots miss some intermediate frames; gate counts are sampled evidence, not causal prevalence.",
+    "No controlled tag-absent interval was confirmed; out-of-pass events are not labelled false alarms."
+  ],
+  "recording_content": "Sampled detector status (100ms) and timestamped human input events; not full raw ADC frames",
+  "full_parameter_replay_possible": false,
+  "replay_missing_inputs": [
+    "Continuous full sample arrays from both input channels",
+    "Every frame sequence and inter-channel arrival order",
+    "Replay-compatible detector state/warm-up",
+    "User-confirmed tag-absent noise intervals"
+  ],
+  "existing_player_replay_warning": "Current player recording/loading suspends live detection; offline player calculation differs from live common-mode/stream history path"
+}

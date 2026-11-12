@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "created": true,
+  "catalog": "/var/lib/bmi30hub/data/network/credentials.json",
+  "key_exists": true,
+  "scope_count": 0,
+  "catalog_sha256": "22b35eb5fc74dfd2564640fd2a8a2adffe51bd72d7e3177c42c3f31e0fab7038",
+  "private_modes_verified": true,
+  "key_byte_readback_verified": true,
+  "existing_files_overwritten": false,
+  "SFTP_only": true,
+  "API_activated": false,
+  "server_fsync_not_claimed": true
+}

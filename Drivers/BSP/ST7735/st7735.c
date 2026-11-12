@@ -150,7 +150,7 @@ void ST7735_Init(void)
     HAL_Delay(10);
 
     // 12: Display on
-    ST7735_WriteCommand(ST7735_DISPON);
+    ST7735_WriteCommand(ST7735_DISPOFF); /* GRAM is not yet initialized. */
     HAL_Delay(100);
 
     LCD_CS_HIGH();

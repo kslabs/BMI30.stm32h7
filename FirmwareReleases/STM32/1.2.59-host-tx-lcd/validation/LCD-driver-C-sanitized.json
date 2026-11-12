@@ -1,0 +1,24 @@
+{
+  "execution": {
+    "actual_driver_C_executed": true,
+    "cases": 8,
+    "checks": 1222,
+    "ok": true,
+    "physical_SPI_or_GPIO_operations": 0
+  },
+  "kind": "actual production LCD drivers with mock HAL/SPI/GPIO",
+  "observed_utc": "2026-11-06T11:02:57Z",
+  "physical_hardware_calls": false,
+  "private_execution_report_sha256": "cad7ff35915a83145ed1fa80505ec800074434ac0ba024411f6994a214884b29",
+  "protected_services_unchanged": true,
+  "schema": 1,
+  "source_binding": {
+    "production/font.c": "49fd7be8389035cd69e424ae23d5462c346d5b3c89089fd6e3ebc3e3caea7ac1",
+    "production/font.h": "3e5f2afb49448334592caaa4d40013e6d6891c1425ccc2b4c1de12aa044665de",
+    "production/lcd.c": "9afffc55da957311fecbe6601fa176daf0bf875c00d8126f43bd654807396128",
+    "production/lcd.h": "b5b4a3b5e208b4ac94c6b9d6beb8201a8248565408a296f7ee4c0295d69611d7",
+    "production/st7735.c": "4733b36b8a7363efdfc083a9626d04711b0e2756dab2cf2b4a6c7f7fe98419d6",
+    "production/st7735.h": "abf043d5d2a2ef6d89de5986c480ec71d166877752326e91a732fe934e870320"
+  },
+  "status": "ACTUAL_C_ASAN_UBSAN_PASS"
+}

@@ -1,0 +1,47 @@
+{
+  "USB_image_included": false,
+  "delivery_151000_installed_on_devices": false,
+  "device_version_at_publication": "2026-11-06-123518",
+  "files": {
+    ".gitattributes": {
+      "bytes": 8,
+      "sha256": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da"
+    },
+    "README_RU.md": {
+      "bytes": 3812,
+      "sha256": "b1e0661274c8d3355183d4facd7d0500d9a89cff4d4248363ed8f3db6dfc31c3"
+    },
+    "bmi30_backup_20261106_151000.tar.gz": {
+      "bytes": 3217523,
+      "sha256": "129555be6524ee69f036516d2d03de086a5ab71d6c74cfb9a5e5dfccc03f8ba8"
+    },
+    "bmi30_latest.env": {
+      "bytes": 222,
+      "sha256": "dcfd92e794a88703598ff948b6a5036d9aacf33d138cbce8a2ed9ab9a6c1ddb3"
+    },
+    "build-report.json": {
+      "bytes": 2638,
+      "sha256": "c6691c5570f15abb18997392acadd035c31584c71df5e7a4845b16d361b959ab"
+    },
+    "build_runtime_release.py": {
+      "bytes": 10559,
+      "sha256": "7ec495c1d247230a540b38e7d4ee3b3bcb23210af7a9ea0a98969456ea2dcc31"
+    },
+    "independent-review.json": {
+      "bytes": 4013,
+      "sha256": "627011e8b48a3317adc28f12c5d7da25813f67a734b44ef7a300e88f4f96a58b"
+    },
+    "test_runtime_release.py": {
+      "bytes": 3739,
+      "sha256": "936bb7acd4d95af15a95370001e7414aabe88381d2ffb01d2291a50a6471db9d"
+    }
+  },
+  "kind": "public-standard-Raspberry-runtime-release",
+  "native_full_system_OS_network_STM_update": false,
+  "private_device_state_included": false,
+  "runtime_only": true,
+  "schema": 1,
+  "server_download_SHA_verified_Root_reported": true,
+  "server_publication_Root_reported": true,
+  "version": "2026-11-06-151000"
+}

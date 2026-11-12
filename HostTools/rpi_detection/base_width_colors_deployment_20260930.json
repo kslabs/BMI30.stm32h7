@@ -1,0 +1,1869 @@
+{
+  "bundle": {
+    "version": "2026-09-30-1650",
+    "sha256": "67bf97504a275fcbe1f99ca434b810578053206f9500d0a65d6e7f67d7ee5ca0",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-30-1650": "4794c5ef0734465ef3ac9a8e931c7283da0efcad3452809a8b14687ba4abbe26",
+      "host/BMI30.200.py.2026-09-30-1650": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+      "host/BMI30.GUI.001.py.2026-09-30-1650": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95",
+      "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2"
+    },
+    "release": "BMI30_FIRMWARE_VERSION=2026-09-30-165049\nBMI30_FIRMWARE_LABEL=\"Distinct pulse base width colors\"\nBMI30_FIRMWARE_CREATED_AT=2026-09-30T14:50:49Z\nBMI30_FIRMWARE_SIGNATURE_VERSION=9\nBMI30_FIRMWARE_BUNDLE_ID=2026-09-30-1650\nBMI30_FIRMWARE_CORE_PATH=host/bmi30_active_runtime/project/host/BMI30.001.py.2026-09-30-1650\nBMI30_FIRMWARE_CORE_SHA256=4794c5ef0734465ef3ac9a8e931c7283da0efcad3452809a8b14687ba4abbe26\nBMI30_FIRMWARE_ENGINE_PATH=host/bmi30_active_runtime/project/host/BMI30.200.py.2026-09-30-1650\nBMI30_FIRMWARE_ENGINE_SHA256=b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44\nBMI30_FIRMWARE_GUI_PATH=host/bmi30_active_runtime/project/host/BMI30.GUI.001.py.2026-09-30-1650\nBMI30_FIRMWARE_GUI_SHA256=36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1\nBMI30_FIRMWARE_PORTAL_PATH=host/bmi30_active_runtime/project/hotspot_info_server.py\nBMI30_FIRMWARE_PORTAL_SHA256=62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2\nBMI30_FIRMWARE_CONFIG_PATH=host/bmi30_active_runtime/project/host/bmi30_config.json\nBMI30_FIRMWARE_CONFIG_SHA256=ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356\nBMI30_FIRMWARE_TAG_FILTERS_PATH=host/bmi30_active_runtime/project/host/tag_response_filters\nBMI30_FIRMWARE_USB_STREAM_PATH=host/bmi30_active_runtime/project/host/usb_vendor/usb_stream.py\nBMI30_FIRMWARE_USB_STREAM_SHA256=b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c\n"
+  },
+  "deployment": {
+    "M01": {
+      "host": "BMI30-05AB38E6A",
+      "version": "2026-09-30-1650",
+      "hashes": {
+        "host/BMI30.001.py.2026-09-30-1650": "4794c5ef0734465ef3ac9a8e931c7283da0efcad3452809a8b14687ba4abbe26",
+        "host/BMI30.200.py.2026-09-30-1650": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+        "host/BMI30.GUI.001.py.2026-09-30-1650": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+        "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95",
+        "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2"
+      },
+      "settings": {
+        "base_width_enabled": true,
+        "base_width_max": 26
+      },
+      "other_settings_preserved": true,
+      "mode": 6,
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.028917789459228516
+      },
+      "fps": {
+        "a": 19.914005693373127,
+        "b": 20.862291678771847,
+        "a_even": 9.482859853987204,
+        "a_odd": 10.431145839385923,
+        "b_even": 9.482859853987204,
+        "b_odd": 11.379431824784644
+      },
+      "base_width": [
+        {
+          "valid": true,
+          "left": 33,
+          "right": 73,
+          "width": 40,
+          "left_kind": "minimum",
+          "right_kind": "minimum",
+          "reason": "too_wide",
+          "enabled": true,
+          "limit": 26,
+          "ok": false
+        },
+        {
+          "valid": true,
+          "left": 2,
+          "right": 25,
+          "width": 23,
+          "left_kind": "minimum",
+          "right_kind": "minimum",
+          "reason": "measured",
+          "enabled": true,
+          "limit": 26,
+          "ok": true
+        }
+      ],
+      "root": "/dev/mmcblk0p2"
+    },
+    "S10": {
+      "host": "BMI30-D5EB8F26C",
+      "version": "2026-09-30-1650",
+      "hashes": {
+        "host/BMI30.001.py.2026-09-30-1650": "4794c5ef0734465ef3ac9a8e931c7283da0efcad3452809a8b14687ba4abbe26",
+        "host/BMI30.200.py.2026-09-30-1650": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+        "host/BMI30.GUI.001.py.2026-09-30-1650": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+        "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95",
+        "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2"
+      },
+      "settings": {
+        "base_width_enabled": true,
+        "base_width_max": 26
+      },
+      "other_settings_preserved": true,
+      "mode": 6,
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.0633840560913086
+      },
+      "fps": {
+        "a": 6.631256753191843,
+        "b": 6.631256753191843,
+        "a_even": 2.841967179939361,
+        "a_odd": 3.7892895732524816,
+        "b_even": 2.841967179939361,
+        "b_odd": 3.7892895732524816
+      },
+      "base_width": [
+        {
+          "valid": false,
+          "left": null,
+          "right": 11,
+          "width": null,
+          "left_kind": "open_edge",
+          "right_kind": "minimum",
+          "reason": "open_edge",
+          "enabled": true,
+          "limit": 26,
+          "ok": false
+        },
+        {
+          "valid": false,
+          "left": null,
+          "right": 19,
+          "width": null,
+          "left_kind": "open_edge",
+          "right_kind": "minimum",
+          "reason": "open_edge",
+          "enabled": true,
+          "limit": 26,
+          "ok": false
+        }
+      ],
+      "root": "/dev/mmcblk0p2"
+    },
+    "S11": {
+      "host": "BMI30-D5507EDFC",
+      "version": "2026-09-30-1650",
+      "hashes": {
+        "host/BMI30.001.py.2026-09-30-1650": "4794c5ef0734465ef3ac9a8e931c7283da0efcad3452809a8b14687ba4abbe26",
+        "host/BMI30.200.py.2026-09-30-1650": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+        "host/BMI30.GUI.001.py.2026-09-30-1650": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+        "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95",
+        "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2"
+      },
+      "settings": {
+        "base_width_enabled": true,
+        "base_width_max": 26
+      },
+      "other_settings_preserved": true,
+      "mode": 6,
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.0015015602111816406
+      },
+      "fps": {
+        "a": 14.91420155304114,
+        "b": 14.91420155304114,
+        "a_even": 7.954240828288609,
+        "a_odd": 6.959960724752532,
+        "b_even": 7.954240828288609,
+        "b_odd": 6.959960724752532
+      },
+      "base_width": [
+        {
+          "valid": true,
+          "left": 173,
+          "right": 188,
+          "width": 15,
+          "left_kind": "minimum",
+          "right_kind": "minimum",
+          "reason": "measured",
+          "enabled": true,
+          "limit": 26,
+          "ok": true
+        },
+        {
+          "valid": true,
+          "left": 183,
+          "right": 198,
+          "width": 15,
+          "left_kind": "minimum",
+          "right_kind": "minimum",
+          "reason": "measured",
+          "enabled": true,
+          "limit": 26,
+          "ok": true
+        }
+      ],
+      "root": "/dev/mmcblk0p2"
+    },
+    "S12": {
+      "host": "BMI30-27448D72B",
+      "version": "2026-09-30-1650",
+      "hashes": {
+        "host/BMI30.001.py.2026-09-30-1650": "4794c5ef0734465ef3ac9a8e931c7283da0efcad3452809a8b14687ba4abbe26",
+        "host/BMI30.200.py.2026-09-30-1650": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+        "host/BMI30.GUI.001.py.2026-09-30-1650": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+        "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95",
+        "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2"
+      },
+      "settings": {
+        "base_width_enabled": true,
+        "base_width_max": 26
+      },
+      "other_settings_preserved": true,
+      "mode": 6,
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.034249067306518555
+      },
+      "fps": {
+        "a": 20.018068910219988,
+        "b": 20.971310286897133,
+        "a_even": 10.485655143448566,
+        "a_odd": 9.532413766771423,
+        "b_even": 10.485655143448566,
+        "b_odd": 10.485655143448566
+      },
+      "base_width": [
+        {
+          "valid": true,
+          "left": 10,
+          "right": 31,
+          "width": 21,
+          "left_kind": "minimum",
+          "right_kind": "minimum",
+          "reason": "measured",
+          "enabled": true,
+          "limit": 26,
+          "ok": true
+        },
+        {
+          "valid": true,
+          "left": 31,
+          "right": 43,
+          "width": 12,
+          "left_kind": "minimum",
+          "right_kind": "minimum",
+          "reason": "measured",
+          "enabled": true,
+          "limit": 26,
+          "ok": true
+        }
+      ],
+      "root": "/dev/mmcblk0p2"
+    },
+    "S13": {
+      "host": "BMI30-7AA5CED27",
+      "version": "2026-09-30-1650",
+      "hashes": {
+        "host/BMI30.001.py.2026-09-30-1650": "4794c5ef0734465ef3ac9a8e931c7283da0efcad3452809a8b14687ba4abbe26",
+        "host/BMI30.200.py.2026-09-30-1650": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+        "host/BMI30.GUI.001.py.2026-09-30-1650": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+        "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95",
+        "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2"
+      },
+      "settings": {
+        "base_width_enabled": true,
+        "base_width_max": 26
+      },
+      "other_settings_preserved": true,
+      "mode": 6,
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.02042531967163086
+      },
+      "fps": {
+        "a": 6.544844809164883,
+        "b": 6.544844809164883,
+        "a_even": 2.8049334896420928,
+        "a_odd": 3.73991131952279,
+        "b_even": 2.8049334896420928,
+        "b_odd": 3.73991131952279
+      },
+      "base_width": [
+        {
+          "valid": false,
+          "left": null,
+          "right": 28,
+          "width": null,
+          "left_kind": "open_edge",
+          "right_kind": "minimum",
+          "reason": "open_edge",
+          "enabled": true,
+          "limit": 26,
+          "ok": false
+        },
+        {
+          "valid": false,
+          "left": null,
+          "right": 21,
+          "width": null,
+          "left_kind": "open_edge",
+          "right_kind": "minimum",
+          "reason": "open_edge",
+          "enabled": true,
+          "limit": 26,
+          "ok": false
+        }
+      ],
+      "root": "/dev/mmcblk0p2"
+    }
+  },
+  "journal_sync": "CSV: docs/BMI30_version_registry_google_sheet.csv\nRows: 151\nColumns: 14\nUploaded: mode=replace updated=0 appended=151 sheet=BMI30 Versions\n\n",
+  "performance_before_color_update": {
+    "M01": {
+      "samples": 200,
+      "usable_samples": 200,
+      "request_errors": 0,
+      "complete": true,
+      "same_core_pid": true,
+      "elapsed_s": 39.81762363200323,
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 4.0
+      },
+      "mode_changed": false,
+      "stream_delta": {
+        "rx_cnt_ch0": 634,
+        "rx_cnt_ch1": 634,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0
+      },
+      "received_fps": {
+        "ch0": 15.92259763815803,
+        "ch1": 15.92259763815803
+      },
+      "fire_delta": {
+        "ch0": 0,
+        "ch1": 0
+      },
+      "worker_delta": {
+        "submitted": 1268,
+        "results": 1268,
+        "overflows": 0
+      },
+      "worker_alive_all_samples": true,
+      "worker_max_sampled_queue": {
+        "request_queue": 1,
+        "result_queue": 2
+      },
+      "over_100ms_delta": 0,
+      "worker_lifetime_max_ms": 14.266240999859292,
+      "optic_blocked_samples": 0,
+      "channels_enabled": {
+        "upper": true,
+        "lower": true
+      },
+      "settings": {
+        "common_mode_enabled": false,
+        "common_mode_require_pair": false,
+        "common_mode_same_lag": false,
+        "common_mode_strength": 100.0,
+        "common_mode_balance": 1.0,
+        "common_mode_radius": 0,
+        "common_mode_min_snr": 1.5,
+        "common_mode_residual_threshold": 100.0,
+        "smooth_mode": 2,
+        "confirm_phase_gate": 15,
+        "tag_filter_slot1": "",
+        "tag_filter_slot2": "",
+        "tag_filter_slot3": "",
+        "filter_casino": false,
+        "filter_barkhausen": false,
+        "filter_microwire": false,
+        "filter_paper": false,
+        "noise_divisions": 6,
+        "noise_guard_radius": 40,
+        "noise_skip_parts": 1,
+        "peak_index_min": 20,
+        "base_width_max": 26,
+        "base_width_enabled": true,
+        "peak_index_max": 80,
+        "barkhausen_radius": 24,
+        "barkhausen_frac": 0.22,
+        "barkhausen_min_width": 4,
+        "barkhausen_max_span": 140,
+        "barkhausen_min_product_level": 800000,
+        "barkhausen_max_product_level": 20000000,
+        "barkhausen_max_total_fraction": 0.82,
+        "barkhausen_all_quarter_frac": 0.45,
+        "phase_max_shift": 12,
+        "phase_shift_penalty": 0.02,
+        "mark_window_start_frac": 0.05,
+        "mark_window_end_frac": 0.95,
+        "mark_gap": 21,
+        "mark_gap_tol": 7,
+        "mark_second_frac": 0.18,
+        "mark_valley_frac": 0.7,
+        "mark_multi_max_humps": 3,
+        "locality_max_outside_peaks": 1,
+        "locality_outside_peak_frac": 0.35,
+        "noise_window_s": 5.0,
+        "ratio_noise_max_u16": 10.0,
+        "auto_floor_u16": 10.0,
+        "auto_slope": 4.0
+      },
+      "confirmed_events": [],
+      "limitations": "API sampling does not record every detector decision or establish physical tag passages. Lifetime latency maximum is not the observation-window maximum. Output state is sampled after the event.",
+      "cpu_busy_pct_all_cores": {
+        "mean": 6.606144077688617,
+        "p95": 12.373737373737374,
+        "max": 14.467005076142131
+      },
+      "core_process_pct_one_cpu": {
+        "mean": 11.714105526656587,
+        "p95": 15.007007507161042,
+        "max": 15.069276886545538
+      },
+      "busiest_core_thread_pct_one_cpu": {
+        "mean": 4.100874661282152,
+        "p95": 5.005327821101932,
+        "max": 5.998495403407825
+      },
+      "temperature_c": {
+        "mean": 39.38375,
+        "p95": 40.8,
+        "max": 41.35
+      },
+      "throttle": [
+        "throttled=0x0",
+        "throttled=0x0"
+      ],
+      "latency_ms": {
+        "worker_ms": {
+          "mean": 1.154250749896164,
+          "p95": 2.003723002417246,
+          "max": 2.545815001212759
+        },
+        "delivery_ms": {
+          "mean": 1.317456150045473,
+          "p95": 2.132222001819173,
+          "max": 4.267036998498952
+        },
+        "total_ms": {
+          "mean": 2.471706899941637,
+          "p95": 3.5481109989632387,
+          "max": 5.5348700007016305
+        }
+      },
+      "width_sampling": {
+        "0": {
+          "distinct_sampled_frames": 197,
+          "level_and_position_pass": 7,
+          "width_fail": 4,
+          "widths": [
+            {
+              "valid": true,
+              "left": 19,
+              "right": 38,
+              "width": 19,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 39,
+              "right": 59,
+              "width": 20,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 37,
+              "right": 42,
+              "width": 5,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": false,
+              "left": null,
+              "right": 45,
+              "width": null,
+              "left_kind": "open_edge",
+              "right_kind": "minimum",
+              "reason": "open_edge",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 49,
+              "right": 76,
+              "width": 27,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 47,
+              "right": 82,
+              "width": 35,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 56,
+              "right": 89,
+              "width": 33,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            }
+          ],
+          "confirm_need": [
+            4
+          ]
+        },
+        "1": {
+          "distinct_sampled_frames": 198,
+          "level_and_position_pass": 13,
+          "width_fail": 10,
+          "widths": [
+            {
+              "valid": true,
+              "left": 39,
+              "right": 57,
+              "width": 18,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 65,
+              "right": 102,
+              "width": 37,
+              "left_kind": "zero",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 50,
+              "right": 87,
+              "width": 37,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 41,
+              "right": 75,
+              "width": 34,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 47,
+              "right": 77,
+              "width": 30,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 38,
+              "right": 67,
+              "width": 29,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 60,
+              "right": 77,
+              "width": 17,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 32,
+              "right": 54,
+              "width": 22,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 5,
+              "right": 40,
+              "width": 35,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 44,
+              "right": 74,
+              "width": 30,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 48,
+              "right": 80,
+              "width": 32,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 7,
+              "right": 43,
+              "width": 36,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 50,
+              "right": 82,
+              "width": 32,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            }
+          ],
+          "confirm_need": [
+            4
+          ]
+        }
+      }
+    },
+    "S10": {
+      "samples": 200,
+      "usable_samples": 200,
+      "request_errors": 0,
+      "complete": true,
+      "same_core_pid": true,
+      "elapsed_s": 39.845577590000175,
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 3.5
+      },
+      "mode_changed": false,
+      "stream_delta": {
+        "rx_cnt_ch0": 635,
+        "rx_cnt_ch1": 635,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0
+      },
+      "received_fps": {
+        "ch0": 15.93652391073288,
+        "ch1": 15.93652391073288
+      },
+      "fire_delta": {
+        "ch0": 0,
+        "ch1": 0
+      },
+      "worker_delta": {
+        "submitted": 1270,
+        "results": 1270,
+        "overflows": 0
+      },
+      "worker_alive_all_samples": true,
+      "worker_max_sampled_queue": {
+        "request_queue": 1,
+        "result_queue": 2
+      },
+      "over_100ms_delta": 0,
+      "worker_lifetime_max_ms": 205.41975900050602,
+      "optic_blocked_samples": 0,
+      "channels_enabled": {
+        "upper": true,
+        "lower": true
+      },
+      "settings": {
+        "common_mode_enabled": true,
+        "common_mode_require_pair": true,
+        "common_mode_same_lag": true,
+        "common_mode_strength": 100.0,
+        "common_mode_balance": 1.0,
+        "common_mode_radius": 6,
+        "common_mode_min_snr": 1.2,
+        "common_mode_residual_threshold": 100.0,
+        "smooth_mode": 2,
+        "confirm_phase_gate": 15,
+        "tag_filter_slot1": "",
+        "tag_filter_slot2": "",
+        "tag_filter_slot3": "",
+        "filter_casino": false,
+        "filter_barkhausen": false,
+        "filter_microwire": false,
+        "filter_paper": false,
+        "noise_divisions": 6,
+        "noise_guard_radius": 40,
+        "noise_skip_parts": 1,
+        "peak_index_min": 20,
+        "base_width_max": 26,
+        "base_width_enabled": true,
+        "peak_index_max": 80,
+        "barkhausen_radius": 24,
+        "barkhausen_frac": 0.22,
+        "barkhausen_min_width": 4,
+        "barkhausen_max_span": 140,
+        "barkhausen_min_product_level": 800000,
+        "barkhausen_max_product_level": 20000000,
+        "barkhausen_max_total_fraction": 0.82,
+        "barkhausen_all_quarter_frac": 0.45,
+        "phase_max_shift": 12,
+        "phase_shift_penalty": 0.02,
+        "mark_window_start_frac": 0.05,
+        "mark_window_end_frac": 0.95,
+        "mark_gap": 21,
+        "mark_gap_tol": 7,
+        "mark_second_frac": 0.18,
+        "mark_valley_frac": 0.7,
+        "mark_multi_max_humps": 3,
+        "locality_max_outside_peaks": 1,
+        "locality_outside_peak_frac": 0.35,
+        "noise_window_s": 5.0,
+        "ratio_noise_max_u16": 10.0,
+        "auto_floor_u16": 10.0,
+        "auto_slope": 4.0
+      },
+      "confirmed_events": [],
+      "limitations": "API sampling does not record every detector decision or establish physical tag passages. Lifetime latency maximum is not the observation-window maximum. Output state is sampled after the event.",
+      "cpu_busy_pct_all_cores": {
+        "mean": 21.9124137886141,
+        "p95": 27.480916030534353,
+        "max": 33.50253807106599
+      },
+      "core_process_pct_one_cpu": {
+        "mean": 12.499107114384312,
+        "p95": 15.97207868212487,
+        "max": 20.0343960327464
+      },
+      "busiest_core_thread_pct_one_cpu": {
+        "mean": 4.456452662318785,
+        "p95": 6.010318809823921,
+        "max": 7.0153537330429705
+      },
+      "temperature_c": {
+        "mean": 36.8675,
+        "p95": 38.05,
+        "max": 38.6
+      },
+      "throttle": [
+        "throttled=0x0",
+        "throttled=0x0"
+      ],
+      "latency_ms": {
+        "worker_ms": {
+          "mean": 1.1823276299946883,
+          "p95": 2.6562599996395875,
+          "max": 4.980316000001039
+        },
+        "delivery_ms": {
+          "mean": 2.5336851649444725,
+          "p95": 4.734983001981163,
+          "max": 14.776669999264413
+        },
+        "total_ms": {
+          "mean": 3.716012794939161,
+          "p95": 6.973984000069322,
+          "max": 15.528189000178827
+        }
+      },
+      "width_sampling": {
+        "0": {
+          "distinct_sampled_frames": 195,
+          "level_and_position_pass": 9,
+          "width_fail": 0,
+          "widths": [
+            {
+              "valid": true,
+              "left": 57,
+              "right": 74,
+              "width": 17,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 38,
+              "right": 58,
+              "width": 20,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 27,
+              "right": 45,
+              "width": 18,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 30,
+              "right": 47,
+              "width": 17,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 35,
+              "right": 54,
+              "width": 19,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 25,
+              "right": 49,
+              "width": 24,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 35,
+              "right": 56,
+              "width": 21,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 46,
+              "right": 65,
+              "width": 19,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 42,
+              "right": 60,
+              "width": 18,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            }
+          ],
+          "confirm_need": [
+            4
+          ]
+        },
+        "1": {
+          "distinct_sampled_frames": 195,
+          "level_and_position_pass": 6,
+          "width_fail": 0,
+          "widths": [
+            {
+              "valid": true,
+              "left": 51,
+              "right": 62,
+              "width": 11,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 50,
+              "right": 65,
+              "width": 15,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 31,
+              "right": 47,
+              "width": 16,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 35,
+              "right": 56,
+              "width": 21,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 45,
+              "right": 62,
+              "width": 17,
+              "left_kind": "minimum",
+              "right_kind": "zero",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 46,
+              "right": 63,
+              "width": 17,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            }
+          ],
+          "confirm_need": [
+            4
+          ]
+        }
+      }
+    },
+    "S11": {
+      "samples": 200,
+      "usable_samples": 200,
+      "request_errors": 0,
+      "complete": true,
+      "same_core_pid": true,
+      "elapsed_s": 39.83662851899862,
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 4.0
+      },
+      "mode_changed": false,
+      "stream_delta": {
+        "rx_cnt_ch0": 635,
+        "rx_cnt_ch1": 635,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0
+      },
+      "received_fps": {
+        "ch0": 15.940103959780632,
+        "ch1": 15.940103959780632
+      },
+      "fire_delta": {
+        "ch0": 0,
+        "ch1": 0
+      },
+      "worker_delta": {
+        "submitted": null,
+        "results": null,
+        "overflows": 0
+      },
+      "worker_alive_all_samples": true,
+      "worker_max_sampled_queue": {
+        "request_queue": 1,
+        "result_queue": 2
+      },
+      "over_100ms_delta": 0,
+      "worker_lifetime_max_ms": 36.5320109995082,
+      "optic_blocked_samples": 3,
+      "channels_enabled": {
+        "upper": true,
+        "lower": true
+      },
+      "settings": {
+        "common_mode_enabled": false,
+        "common_mode_require_pair": false,
+        "common_mode_same_lag": false,
+        "common_mode_strength": 100.0,
+        "common_mode_balance": 1.0,
+        "common_mode_radius": 0,
+        "common_mode_min_snr": 1.5,
+        "common_mode_residual_threshold": 100.0,
+        "smooth_mode": 2,
+        "confirm_phase_gate": 15,
+        "tag_filter_slot1": "",
+        "tag_filter_slot2": "",
+        "tag_filter_slot3": "",
+        "filter_casino": false,
+        "filter_barkhausen": false,
+        "filter_microwire": false,
+        "filter_paper": false,
+        "noise_divisions": 6,
+        "noise_guard_radius": 40,
+        "noise_skip_parts": 1,
+        "peak_index_min": 20,
+        "base_width_max": 26,
+        "base_width_enabled": true,
+        "peak_index_max": 80,
+        "barkhausen_radius": 24,
+        "barkhausen_frac": 0.22,
+        "barkhausen_min_width": 4,
+        "barkhausen_max_span": 140,
+        "barkhausen_min_product_level": 800000,
+        "barkhausen_max_product_level": 20000000,
+        "barkhausen_max_total_fraction": 0.82,
+        "barkhausen_all_quarter_frac": 0.45,
+        "phase_max_shift": 12,
+        "phase_shift_penalty": 0.02,
+        "mark_window_start_frac": 0.05,
+        "mark_window_end_frac": 0.95,
+        "mark_gap": 21,
+        "mark_gap_tol": 7,
+        "mark_second_frac": 0.18,
+        "mark_valley_frac": 0.7,
+        "mark_multi_max_humps": 3,
+        "locality_max_outside_peaks": 1,
+        "locality_outside_peak_frac": 0.35,
+        "noise_window_s": 5.0,
+        "ratio_noise_max_u16": 10.0,
+        "auto_floor_u16": 10.0,
+        "auto_slope": 4.0
+      },
+      "confirmed_events": [],
+      "limitations": "API sampling does not record every detector decision or establish physical tag passages. Lifetime latency maximum is not the observation-window maximum. Output state is sampled after the event.",
+      "cpu_busy_pct_all_cores": {
+        "mean": 22.78799363854353,
+        "p95": 32.72727272727273,
+        "max": 34.912718204488776
+      },
+      "core_process_pct_one_cpu": {
+        "mean": 13.297409764692475,
+        "p95": 18.002223274606663,
+        "max": 20.064687629899094
+      },
+      "busiest_core_thread_pct_one_cpu": {
+        "mean": 4.790875932443026,
+        "p95": 6.01003506372595,
+        "max": 6.019406288969728
+      },
+      "temperature_c": {
+        "mean": 37.0325,
+        "p95": 38.05,
+        "max": 38.05
+      },
+      "throttle": [
+        "throttled=0x0",
+        "throttled=0x0"
+      ],
+      "latency_ms": {
+        "worker_ms": {
+          "mean": 1.6339306300869794,
+          "p95": 3.8551830002688803,
+          "max": 9.270753998862347
+        },
+        "delivery_ms": {
+          "mean": 1.7677342948627484,
+          "p95": 3.979998000431806,
+          "max": 9.417938999831676
+        },
+        "total_ms": {
+          "mean": 3.4016649249497277,
+          "p95": 6.5277739995508455,
+          "max": 14.044177001778735
+        }
+      },
+      "width_sampling": {
+        "0": {
+          "distinct_sampled_frames": 195,
+          "level_and_position_pass": 10,
+          "width_fail": 2,
+          "widths": [
+            {
+              "valid": true,
+              "left": 36,
+              "right": 58,
+              "width": 22,
+              "left_kind": "minimum",
+              "right_kind": "zero",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 41,
+              "right": 58,
+              "width": 17,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 43,
+              "right": 61,
+              "width": 18,
+              "left_kind": "minimum",
+              "right_kind": "zero",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 54,
+              "right": 83,
+              "width": 29,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 46,
+              "right": 75,
+              "width": 29,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "too_wide",
+              "enabled": true,
+              "limit": 26,
+              "ok": false
+            },
+            {
+              "valid": true,
+              "left": 39,
+              "right": 61,
+              "width": 22,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 42,
+              "right": 60,
+              "width": 18,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 47,
+              "right": 73,
+              "width": 26,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 58,
+              "right": 76,
+              "width": 18,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 38,
+              "right": 56,
+              "width": 18,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            }
+          ],
+          "confirm_need": [
+            4
+          ]
+        },
+        "1": {
+          "distinct_sampled_frames": 196,
+          "level_and_position_pass": 3,
+          "width_fail": 0,
+          "widths": [
+            {
+              "valid": true,
+              "left": 43,
+              "right": 62,
+              "width": 19,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 56,
+              "right": 77,
+              "width": 21,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 29,
+              "right": 46,
+              "width": 17,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            }
+          ],
+          "confirm_need": [
+            4
+          ]
+        }
+      }
+    },
+    "S12": {
+      "samples": 200,
+      "usable_samples": 200,
+      "request_errors": 0,
+      "complete": true,
+      "same_core_pid": true,
+      "elapsed_s": 39.84808319100193,
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 4.0
+      },
+      "mode_changed": false,
+      "stream_delta": {
+        "rx_cnt_ch0": 635,
+        "rx_cnt_ch1": 635,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0
+      },
+      "received_fps": {
+        "ch0": 15.93552184069393,
+        "ch1": 15.93552184069393
+      },
+      "fire_delta": {
+        "ch0": 0,
+        "ch1": 0
+      },
+      "worker_delta": {
+        "submitted": null,
+        "results": null,
+        "overflows": 0
+      },
+      "worker_alive_all_samples": true,
+      "worker_max_sampled_queue": {
+        "request_queue": 1,
+        "result_queue": 1
+      },
+      "over_100ms_delta": 0,
+      "worker_lifetime_max_ms": 93.6548040008347,
+      "optic_blocked_samples": 3,
+      "channels_enabled": {
+        "upper": true,
+        "lower": false
+      },
+      "settings": {
+        "common_mode_enabled": false,
+        "common_mode_require_pair": false,
+        "common_mode_same_lag": false,
+        "common_mode_strength": 100.0,
+        "common_mode_balance": 1.0,
+        "common_mode_radius": 0,
+        "common_mode_min_snr": 1.5,
+        "common_mode_residual_threshold": 100.0,
+        "smooth_mode": 3,
+        "confirm_phase_gate": 15,
+        "tag_filter_slot1": "",
+        "tag_filter_slot2": "",
+        "tag_filter_slot3": "",
+        "filter_casino": false,
+        "filter_barkhausen": false,
+        "filter_microwire": false,
+        "filter_paper": false,
+        "noise_divisions": 6,
+        "noise_guard_radius": 40,
+        "noise_skip_parts": 1,
+        "peak_index_min": 20,
+        "base_width_max": 26,
+        "base_width_enabled": true,
+        "peak_index_max": 80,
+        "barkhausen_radius": 24,
+        "barkhausen_frac": 0.22,
+        "barkhausen_min_width": 4,
+        "barkhausen_max_span": 140,
+        "barkhausen_min_product_level": 800000,
+        "barkhausen_max_product_level": 20000000,
+        "barkhausen_max_total_fraction": 0.82,
+        "barkhausen_all_quarter_frac": 0.45,
+        "phase_max_shift": 12,
+        "phase_shift_penalty": 0.02,
+        "mark_window_start_frac": 0.05,
+        "mark_window_end_frac": 0.95,
+        "mark_gap": 21,
+        "mark_gap_tol": 7,
+        "mark_second_frac": 0.18,
+        "mark_valley_frac": 0.7,
+        "mark_multi_max_humps": 3,
+        "locality_max_outside_peaks": 1,
+        "locality_outside_peak_frac": 0.35,
+        "noise_window_s": 5.0,
+        "ratio_noise_max_u16": 10.0,
+        "auto_floor_u16": 10.0,
+        "auto_slope": 4.0
+      },
+      "confirmed_events": [],
+      "limitations": "API sampling does not record every detector decision or establish physical tag passages. Lifetime latency maximum is not the observation-window maximum. Output state is sampled after the event.",
+      "cpu_busy_pct_all_cores": {
+        "mean": 22.777593746166907,
+        "p95": 29.41176470588235,
+        "max": 35.16209476309227
+      },
+      "core_process_pct_one_cpu": {
+        "mean": 12.396131125149696,
+        "p95": 14.998451139931001,
+        "max": 16.034551604546127
+      },
+      "busiest_core_thread_pct_one_cpu": {
+        "mean": 4.456683976934729,
+        "p95": 5.0333904603318675,
+        "max": 5.9921777991271385
+      },
+      "temperature_c": {
+        "mean": 43.385,
+        "p95": 44.65,
+        "max": 45.2
+      },
+      "throttle": [
+        "throttled=0x0",
+        "throttled=0x0"
+      ],
+      "latency_ms": {
+        "worker_ms": {
+          "mean": 1.4716981452147593,
+          "p95": 3.4179079993919004,
+          "max": 5.956515000434592
+        },
+        "delivery_ms": {
+          "mean": 1.6060802600077295,
+          "p95": 3.2824629997776356,
+          "max": 7.0642239988956135
+        },
+        "total_ms": {
+          "mean": 3.077778405222489,
+          "p95": 6.0892010005773045,
+          "max": 10.408760997961508
+        }
+      },
+      "width_sampling": {
+        "0": {
+          "distinct_sampled_frames": 195,
+          "level_and_position_pass": 4,
+          "width_fail": 0,
+          "widths": [
+            {
+              "valid": true,
+              "left": 63,
+              "right": 80,
+              "width": 17,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 25,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 42,
+              "right": 58,
+              "width": 16,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 25,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 58,
+              "right": 76,
+              "width": 18,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 25,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 40,
+              "right": 56,
+              "width": 16,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            }
+          ],
+          "confirm_need": [
+            4
+          ]
+        },
+        "1": {
+          "distinct_sampled_frames": 196,
+          "level_and_position_pass": 0,
+          "width_fail": 0,
+          "widths": [],
+          "confirm_need": [
+            0
+          ]
+        }
+      }
+    },
+    "S13": {
+      "samples": 200,
+      "usable_samples": 200,
+      "request_errors": 0,
+      "complete": true,
+      "same_core_pid": true,
+      "elapsed_s": 39.8219820129998,
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 4.0
+      },
+      "mode_changed": false,
+      "stream_delta": {
+        "rx_cnt_ch0": 635,
+        "rx_cnt_ch1": 635,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0
+      },
+      "received_fps": {
+        "ch0": 15.945966722417424,
+        "ch1": 15.945966722417424
+      },
+      "fire_delta": {
+        "ch0": 0,
+        "ch1": 0
+      },
+      "worker_delta": {
+        "submitted": 1270,
+        "results": 1270,
+        "overflows": 0
+      },
+      "worker_alive_all_samples": true,
+      "worker_max_sampled_queue": {
+        "request_queue": 1,
+        "result_queue": 1
+      },
+      "over_100ms_delta": 0,
+      "worker_lifetime_max_ms": 91.73077699961141,
+      "optic_blocked_samples": 5,
+      "channels_enabled": {
+        "upper": true,
+        "lower": true
+      },
+      "settings": {
+        "common_mode_enabled": false,
+        "common_mode_require_pair": false,
+        "common_mode_same_lag": false,
+        "common_mode_strength": 100.0,
+        "common_mode_balance": 1.0,
+        "common_mode_radius": 0,
+        "common_mode_min_snr": 1.5,
+        "common_mode_residual_threshold": 100.0,
+        "smooth_mode": 3,
+        "confirm_phase_gate": 15,
+        "tag_filter_slot1": "",
+        "tag_filter_slot2": "",
+        "tag_filter_slot3": "",
+        "filter_casino": false,
+        "filter_barkhausen": false,
+        "filter_microwire": false,
+        "filter_paper": false,
+        "noise_divisions": 6,
+        "noise_guard_radius": 40,
+        "noise_skip_parts": 1,
+        "peak_index_min": 20,
+        "base_width_max": 26,
+        "base_width_enabled": true,
+        "peak_index_max": 80,
+        "barkhausen_radius": 24,
+        "barkhausen_frac": 0.22,
+        "barkhausen_min_width": 4,
+        "barkhausen_max_span": 140,
+        "barkhausen_min_product_level": 800000,
+        "barkhausen_max_product_level": 20000000,
+        "barkhausen_max_total_fraction": 0.82,
+        "barkhausen_all_quarter_frac": 0.45,
+        "phase_max_shift": 12,
+        "phase_shift_penalty": 0.02,
+        "mark_window_start_frac": 0.05,
+        "mark_window_end_frac": 0.95,
+        "mark_gap": 21,
+        "mark_gap_tol": 7,
+        "mark_second_frac": 0.18,
+        "mark_valley_frac": 0.7,
+        "mark_multi_max_humps": 3,
+        "locality_max_outside_peaks": 1,
+        "locality_outside_peak_frac": 0.35,
+        "noise_window_s": 5.0,
+        "ratio_noise_max_u16": 10.0,
+        "auto_floor_u16": 10.0,
+        "auto_slope": 4.0
+      },
+      "confirmed_events": [],
+      "limitations": "API sampling does not record every detector decision or establish physical tag passages. Lifetime latency maximum is not the observation-window maximum. Output state is sampled after the event.",
+      "cpu_busy_pct_all_cores": {
+        "mean": 7.157268982590815,
+        "p95": 12.121212121212121,
+        "max": 13.432835820895523
+      },
+      "core_process_pct_one_cpu": {
+        "mean": 11.174638245971495,
+        "p95": 14.043289126845867,
+        "max": 16.08772090445208
+      },
+      "busiest_core_thread_pct_one_cpu": {
+        "mean": 3.793279785845309,
+        "p95": 5.008995504761811,
+        "max": 5.027412782641275
+      },
+      "temperature_c": {
+        "mean": 36.8125,
+        "p95": 38.05,
+        "max": 38.6
+      },
+      "throttle": [
+        "throttled=0x0",
+        "throttled=0x0"
+      ],
+      "latency_ms": {
+        "worker_ms": {
+          "mean": 1.1940237950329902,
+          "p95": 2.157349001208786,
+          "max": 6.473064997408073
+        },
+        "delivery_ms": {
+          "mean": 1.3665477601171006,
+          "p95": 2.1432190005725715,
+          "max": 3.4557180006231647
+        },
+        "total_ms": {
+          "mean": 2.5605715551500907,
+          "p95": 3.658180001366418,
+          "max": 9.149006000370719
+        }
+      },
+      "width_sampling": {
+        "0": {
+          "distinct_sampled_frames": 195,
+          "level_and_position_pass": 3,
+          "width_fail": 0,
+          "widths": [
+            {
+              "valid": true,
+              "left": 53,
+              "right": 70,
+              "width": 17,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 37,
+              "right": 56,
+              "width": 19,
+              "left_kind": "minimum",
+              "right_kind": "zero",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 57,
+              "right": 78,
+              "width": 21,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            }
+          ],
+          "confirm_need": [
+            4
+          ]
+        },
+        "1": {
+          "distinct_sampled_frames": 195,
+          "level_and_position_pass": 4,
+          "width_fail": 0,
+          "widths": [
+            {
+              "valid": true,
+              "left": 54,
+              "right": 72,
+              "width": 18,
+              "left_kind": "zero",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 64,
+              "right": 81,
+              "width": 17,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 38,
+              "right": 56,
+              "width": 18,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            },
+            {
+              "valid": true,
+              "left": 57,
+              "right": 79,
+              "width": 22,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 26,
+              "ok": true
+            }
+          ],
+          "confirm_need": [
+            4
+          ]
+        }
+      }
+    }
+  },
+  "s10_base_width_cpu_benchmark": {
+    "width24_False": {
+      "cpu_us_per_call_median": 12.759926,
+      "cpu_us_per_call_max_batch": 13.583332
+    },
+    "width24_True": {
+      "cpu_us_per_call_median": 12.245017,
+      "cpu_us_per_call_max_batch": 12.440149
+    },
+    "width199_False": {
+      "cpu_us_per_call_median": 53.76437,
+      "cpu_us_per_call_max_batch": 54.984907
+    },
+    "width199_True": {
+      "cpu_us_per_call_median": 54.183277000000004,
+      "cpu_us_per_call_max_batch": 54.395943
+    }
+  }
+}

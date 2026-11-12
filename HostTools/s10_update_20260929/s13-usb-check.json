@@ -1,0 +1,11 @@
+{
+  "seconds": 12.237,
+  "delta": {
+    "adc_publish_count": 4898,
+    "usb_tx_cplt": 310,
+    "adc_overflow_drop": 104,
+    "adc_fault_count": 0,
+    "usb_recovery": 0
+  },
+  "last_usb_age_ms": 62
+}

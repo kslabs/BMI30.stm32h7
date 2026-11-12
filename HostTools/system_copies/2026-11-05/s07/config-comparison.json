@@ -1,0 +1,22 @@
+{
+  "snapshot_sha": "ec1b3b60c3f7ab0844e86b53547d27dbb38f626fe0be6c509c76ce51324db542",
+  "snapshot_matches_result": true,
+  "current_sha": "a8890287ed3c5fb2c45576880d3df73e61b6f5b5f64aec0b8609894bfc5ca4e5",
+  "changed_paths": [],
+  "count": 0,
+  "proof": {
+    "format": "bmi30-copy-config-semantic-proof-v1",
+    "job_id": "20261105-s07-3074d26c85",
+    "host": "BMI30-C9775FBAE",
+    "cm5": "abdd2dbc9775fbae",
+    "target_root_uuid": "a00fe68d-80c6-4d25-88d4-f81e5db08035",
+    "target_root_partuuid": "868b9fea-02",
+    "usb_serial": "25072933730021",
+    "snapshot_byte_sha256": "ec1b3b60c3f7ab0844e86b53547d27dbb38f626fe0be6c509c76ce51324db542",
+    "current_byte_sha256": "a8890287ed3c5fb2c45576880d3df73e61b6f5b5f64aec0b8609894bfc5ca4e5",
+    "config_semantic_sha256": "4a2668350705edcb52ada206a8eecb028d4c9915f32f203ce9714458c90467c0",
+    "semantic_equal": true,
+    "snapshot_matches_result": true
+  },
+  "source_semantic_sha256": "4a2668350705edcb52ada206a8eecb028d4c9915f32f203ce9714458c90467c0"
+}

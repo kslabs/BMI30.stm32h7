@@ -1,0 +1,49 @@
+{
+  "ok": true,
+  "reviewed_at": 1793873292.2841663,
+  "resume_sha256": "612d9041d2267b4a15a5d229f95b88fccfb1fad6d537c4ac87a265caa7cd0b2e",
+  "personalizer_sha256": "85d31296fff8aacd67b3b08980ab3561bdcd78133c81fdb5538fcb2a8d9e6f7f",
+  "stager_sha256": "738d5977746b16a11bbc4628d990775b36ec05275edc56601b7bcf670023a859",
+  "resume_plan_sha256": "07e45f7eca66ad23c88386b2bc994bd4437ef52b1a809c377db4f64c2d5247d7",
+  "original_worker_sha256": "5c1272a3150776741cd2272aa23ec718d0d25ede7b106197a1a49106839a8d8a",
+  "original_personalizer_sha256": "969c694d612edcef29b229968f0e5b910bbc082cdefeaf57f03a57feb293c22e",
+  "original_backup_manifest_sha256": "d713ee8e8383c93512932d0ef43cf9d918741eb3d2209d8caba3b131413cb939",
+  "original_plan_preserved_outside_resume_fields": true,
+  "scope": "Independent local source/AST and fixture review; no live commands or device mutations by reviewer",
+  "tests": {
+    "hook": {
+      "passed": 10,
+      "failures": 0,
+      "errors": 0,
+      "source_sha256": "5bfaf43e4df6dd85ad751e1730b0669fc231fdc4bd00b7a26d822a6207e58b58"
+    },
+    "independent_resume": {
+      "passed": 9,
+      "failures": 0,
+      "errors": 0,
+      "source_sha256": "a89febab5dcbeab60c066b685c5df393f90b1b53e239ac1d6db501cd639f574b"
+    },
+    "author_resume": {
+      "passed": 7,
+      "evidence": "Reported by capture_review for pinned612d9041 source; not duplicated here"
+    }
+  },
+  "guards_reviewed": [
+    "Exact original worker5c127 imported; customexecute does not call base.execute, backup_old_settings, sfdisk, wipefs or mkfs",
+    "Only exact failed-personalizer job/reason and clean oldcleanup may resume; copyunit inactive or current ownMainPID",
+    "Original old-eMMC backup seal and allfingerprints remain immutable; original969c hooklineage preserved separately fromfixed85d hook",
+    "TargetexistingFSUUIDs andnewcommonDOSPARTUUIDs verified repeatedly; USBsource andoldtargetUUID cannot be confused",
+    "Same ownCM5/eMMC CID/USB serial/bootid/dev_t/diskseq/source code guards reused",
+    "Only2hookhunks versus exact969c old source; non.nmconnection nmmeta masks ignored, linked.nmconnection still rejected",
+    "Stager verifies oldfiles/status/source/seal/layout beforewriting; archives oldplan/status/hook byteexact with exclusive creation",
+    "Root parity, fixedhook personalization and rootfsync precede kernel-lastbootactivation",
+    "Maintenancelease/locks/ownednormalcleanup+ExecStopPost reused; preclaimfailure cannot unmount/restart/rewrite anotheroperation"
+  ],
+  "hook_delta_sha256": "91a3f32ed84d4d76c8b5771c5c86cdb45e87814f39020172a27721fbd186a37d",
+  "remaining_blockers": [],
+  "limits": [
+    "No Linux mount/systemd/rsync/fsck or media writes executed by reviewer",
+    "Tests use actual resume definitions with read-only fixtures and command/metadata stubs; hardware continuity and boot require parent verification",
+    "Original settings backup remains on sourceUSB and is not recreated from the partiallywritten destination"
+  ]
+}

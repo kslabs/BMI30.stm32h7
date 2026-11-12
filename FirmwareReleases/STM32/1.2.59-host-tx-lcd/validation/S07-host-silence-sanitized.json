@@ -1,0 +1,31 @@
+{
+  "OFF_pin_clamped_samples": 12,
+  "ON_samples": 118,
+  "STM_version": "1.2.59",
+  "USB_generation_unchanged": true,
+  "antenna_RF_measurement": false,
+  "board": "S07",
+  "host_Core_source_tested": "2026-11-04-185916",
+  "host_USBstream_sha256": "aafe8faa0d04824e0374a784d7ed58b819a63b8d5fa117b8eb967700cbcc8945",
+  "host_operation": {
+    "actual_STOP_duration_s": 8.000197954,
+    "duration_provenance": "Root supplied actual finite host-silence status; helper resumer is independent",
+    "signal": "SIGSTOP then owned SIGCONT"
+  },
+  "later_ON_samples": 51,
+  "limits": [
+    "Register reads are sequential/non-atomic;4936..5289ms is a sampling bracket, not an exact switching-time measurement",
+    "Firmware main-loop software lease; not an independent hardware timer/watchdog",
+    "GPIO control clamp observed; no antenna RF power or field-strength measurement",
+    "New Raspberry Core111748 runtime qualification is a separate deployment"
+  ],
+  "observed_first_OFF_elapsed_ms": 5289,
+  "observed_last_ON_elapsed_ms": 4936,
+  "policy_TTL_ms": 5000,
+  "raw_observer_trace_sha256": "c7561f3c7914587fa2c51833a9d074c51dc09f41e69c1bae25f0ab9dd761c2a5",
+  "raw_trace_included": false,
+  "samples": 130,
+  "schema": 1,
+  "status": "ACTUAL_HOST_SILENCE_TX_CONTROL_CLAMP_PASS",
+  "target_sha256": "6188b176ddebe196bcfde8631303f33e27287c3630af249a3d666ca2f1e0d02b"
+}

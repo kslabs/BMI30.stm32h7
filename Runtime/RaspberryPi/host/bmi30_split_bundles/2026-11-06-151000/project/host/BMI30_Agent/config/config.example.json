@@ -1,0 +1,13 @@
+{
+  "schema_version": 3,
+  "server_url": "https://www.teiots.net/bmi30",
+  "ssh_private_key_path": "/etc/bmi30-agent/id_ed25519",
+  "ssh_public_key_path": "/etc/bmi30-agent/id_ed25519.pub",
+  "ssh_known_hosts_path": "/etc/bmi30-agent/known_hosts",
+  "device_api_token_path": "/var/lib/bmi30-agent/device_api_token",
+  "local_port": 80,
+  "heartbeat_seconds": 30,
+  "request_timeout_seconds": 10,
+  "auth_error_retry_seconds": 60,
+  "last_remote_port": null
+}

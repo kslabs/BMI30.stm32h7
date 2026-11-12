@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BMI30 — аварийная USB-система</title>
+<style>
+:root{color-scheme:dark;--bg:#101b2a;--panel:#1c293b;--text:#eef3f9;--muted:#aebbc9;--accent:#24c7be;--line:#3b4a5d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,sans-serif}
+main{max-width:980px;margin:40px auto;padding:0 24px 48px}a{color:var(--accent)}header{display:flex;justify-content:space-between;gap:20px;align-items:center}
+h1{font-size:32px;line-height:1.2;margin:12px 0}h2{font-size:21px;margin:0 0 12px}.muted{color:var(--muted)}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;margin-top:22px}
+label{display:block;margin-top:15px}select,button{font:inherit;border:1px solid var(--line);border-radius:9px;padding:11px 14px;color:var(--text);background:var(--bg)}select{width:100%;margin-top:8px}button{cursor:pointer}button.primary{background:var(--accent);color:#062b2a;font-weight:700}button:disabled{opacity:.45;cursor:default}button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid #66dfff;outline-offset:3px}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.facts span{display:block;color:var(--muted);font-size:14px}.facts strong{overflow-wrap:anywhere}
+progress{width:100%;height:22px;accent-color:var(--accent)}[hidden]{display:none!important}.error{color:#ffb8ae}.success{color:#7be4bd}.confirm{padding:18px;border:1px solid #d3a354;border-radius:10px;margin-top:18px}.confirm label{display:flex;align-items:flex-start;gap:10px}.confirm input{margin-top:6px}p{margin:10px 0}
+@media(max-width:620px){main{margin-top:20px;padding:0 15px 32px}h1{font-size:26px}.card{padding:18px}.facts{grid-template-columns:1fr}header{display:block}}
+</style></head><body><main>
+<header><div><small class="muted">BMI30 · ДОСТУП И БЕЗОПАСНОСТЬ</small><h1>Аварийная USB-система</h1></div><a href="portal#privacy">← К управлению прибором</a></header>
+<p class="muted">Сохраните рабочую систему на флешку, чтобы загрузиться с неё при проблемах со встроенной памятью. Копия подходит для совместимых приборов BMI30.</p>
+<section class="card"><div class="facts"><div><span>Текущий прибор</span><strong id="source" translate="no">—</strong></div><div><span>Назначение копии</span><strong id="purpose">Аварийная загрузка и работа с USB</strong></div></div><p id="boot" class="muted"></p></section>
+<section class="card" id="copy-card"><h2>System copy</h2><p><strong id="copy-direction" translate="no">—</strong></p><p id="presence" role="status" aria-live="polite">Проверяем подключённые носители…</p>
+<div id="usb-target" hidden><label for="disk">Доступные USB‑носители</label><select id="disk" disabled><option value="">USB не подключён</option></select></div>
+<div class="facts" id="copy-destination" hidden><div><span>Copy destination</span><strong id="copy-destination-value" translate="no">—</strong></div></div>
+<p id="emmc-target" hidden>Destination: internal eMMC</p>
+<div class="actions"><button id="refresh" type="button">Обновить список</button><button id="prepare" type="button" disabled>Подготовить запись</button></div>
+<div id="confirmation" class="confirm" hidden><p id="selected"></p><p id="space"></p><label><input type="checkbox" id="erase"><span id="erase-label">Данные на выбранном USB будут удалены. Разрешаю записать на него систему.</span></label><div class="actions"><button class="primary" id="start" type="button" disabled>Скопировать систему на USB</button><button id="cancel" type="button">Отмена</button></div></div>
+<h2 style="margin-top:24px">Копирование и проверка</h2><progress id="progress" max="100" value="0" aria-label="Прогресс записи"></progress><p id="operation" role="status" aria-live="polite">Запись не запущена.</p>
+<div class="facts" id="copy-metrics"><div><span>Elapsed time</span><strong id="elapsed" translate="no">—</strong></div><div><span>Copied data</span><strong id="copied" translate="no">—</strong></div><div><span>Average speed (whole operation)</span><strong id="average-speed" translate="no">—</strong></div></div>
+<p class="muted">Average speed includes checking and final saving.</p><p id="finishing-detail" class="muted" hidden></p><p id="failed-note" class="error" hidden>Copying has stopped. The progress bar shows the failed attempt.</p>
+<p id="result" hidden></p><p id="wifi-seed-status" class="muted" hidden></p><p class="muted">До сообщения о готовности оставьте флешку подключённой. Страницу можно закрыть и открыть снова — копирование продолжится.</p></section>
+<section class="card"><h2>Boot from USB</h2><p>После сообщения о готовности отключите питание прибора, вставьте подготовленную флешку и включите питание. При загрузке с USB собственные настройки прибора читаются из eMMC, если она доступна. При ошибке чтения запуск продолжается с USB.</p><p>На приборе, где создана копия, используются его настройки, сохранённые на USB. На другом приборе используются его собственные доступные настройки eMMC. Если прочитать их нельзя, запускается система с начальными настройками и собственным именем; чужая калибровка не применяется. Пароль аварийного хотспота остаётся от системы, сохранённой на флешке.</p><p class="muted">Приоритет USB должен поддерживаться загрузчиком прибора. Проверенная копия и успешная загрузка — отдельные результаты.</p></section>
+<section class="card"><h2>Параметры STM32</h2><p>Поддерживаемые параметры можно прочитать из контроллера, не изменяя его работу и не обращаясь к встроенной памяти Raspberry.</p><button type="button" id="read-stm32">Прочитать STM32</button><p id="stm32" role="status" aria-live="polite"></p><p class="muted">Чтение не применяет настройки автоматически. Параметры Raspberry, которые не хранятся в STM32, потребуется настроить отдельно.</p></section>
+<p id="error" class="error" role="alert"></p>
+</main><script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id);let selectedPlan=null,busy=false,lastOptions='',refreshing=false,preparing=false,actionError='',progressJob=null,displayProgress=0,lastState=null,statusKnown=false;
+const tr=value=>window.BMI30I18n?window.BMI30I18n.t(value):value;
+const write=(id,value)=>window.BMI30I18n?window.BMI30I18n.text($(id),value):($(id).textContent=value);
+const active=new Set(['queued','preparing','formatting','copying','verifying','finishing']);
+let meterObservedAt=performance.now();
+const duration=value=>{value=Math.max(0,Math.floor(value));return [Math.floor(value/3600),Math.floor(value/60)%60,value%60].map(n=>String(n).padStart(2,'0')).join(':');};
+function updateMeters(){const op=lastState&&lastState.operation;if(!op)return;const running=active.has(op.stage),delta=running?(performance.now()-meterObservedAt)/1000:0;
+ const elapsed=typeof op.elapsed_s==='number'?op.elapsed_s+delta:null;
+ $('elapsed').textContent=elapsed===null?'—':duration(elapsed);
+ const bytes=typeof op.bytes_copied==='number'?op.bytes_copied:null;
+ const locale=window.BMI30I18n?window.BMI30I18n.language:undefined;
+ $('copied').textContent=bytes===null?'—':(bytes/1e9).toLocaleString(locale,{maximumFractionDigits:2})+' '+tr('GB');
+ $('average-speed').textContent=bytes===null||!bytes||!elapsed?'—':(bytes/elapsed/1e6).toLocaleString(locale,{maximumFractionDigits:2})+' '+tr('MB/s');
+ $('finishing-detail').hidden=typeof op.step_elapsed_s!=='number';
+ if(!$('finishing-detail').hidden)$('finishing-detail').textContent=tr('Finishing step time')+': '+duration(op.step_elapsed_s+(running?delta:0))+(typeof op.step_timeout_s==='number'?' / '+duration(op.step_timeout_s):'');
+ $('failed-note').hidden=op.stage!=='failed';}
+const size=n=>(n/1e9).toLocaleString(window.BMI30I18n?window.BMI30I18n.language:'en',{maximumFractionDigits:1})+' '+tr('GB');
+function clearError(){actionError='';$('error').textContent='';}
+function actionFailed(error){actionError=error.message;$('error').textContent=actionError;}
+async function request(action,body){
+const r=await fetch('api/usb-recovery/'+action,{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:body?{'Content-Type':'application/json','X-BMI30-USB':'1'}:{},body:body?JSON.stringify(body):undefined});
+const raw=await r.text();
+if(!raw.trim()){
+ if(r.ok&&action==='start'&&body&&body.id){const state=await request('status');if(state.operation&&state.operation.id===body.id&&state.operation.stage!=='idle')return {ok:true,started:true,operation:state.operation};}
+ throw Error(tr('The device returned an empty response.')+' HTTP '+r.status);
+}
+let value;try{value=JSON.parse(raw);}catch(_){throw Error(tr('The device returned an invalid response.')+' HTTP '+r.status);}
+if(!r.ok||!value||!value.ok)throw Error((value&&value.error)||tr('Access denied')+' HTTP '+r.status);
+return value;}
+
+function clearPlan(){selectedPlan=null;$('confirmation').hidden=true;$('erase').checked=false;$('start').disabled=true;}
+function ready(){
+ if(!statusKnown||!lastState||!lastState.can_write||busy||preparing)return false;
+ const mode=lastState.copy||{};
+ if(mode.kind==='usb')return lastState.disks.some(d=>d.path===$('disk').value&&d.eligible);
+ return mode.kind==='emmc-restore'&&!!lastState.emmc&&(lastState.emmc.available||lastState.emmc.requires_reboot_to_enable);
+}
+function controls(){
+ $('prepare').disabled=!ready();
+ $('start').disabled=!ready()||!selectedPlan||!$('erase').checked;
+ $('erase').disabled=busy||preparing||!statusKnown;
+ $('disk').disabled=!statusKnown||!lastState||(lastState.copy||{}).kind!=='usb'||busy||preparing||!lastState.can_write||!lastState.disks.some(d=>d.eligible);
+}
+async function refresh(){if(refreshing)return;refreshing=true;try{
+ const s=await request('status');lastState=s;meterObservedAt=performance.now();statusKnown=true;updateMeters();const mode=s.copy||{};const internal=mode.kind==='emmc-restore';
+ if(!actionError)$('error').textContent='';$('source').textContent=s.source;
+ write('boot',internal?'Booted from USB.':mode.kind==='usb'?'Booted from internal eMMC.':'The current boot drive does not support system copying.');
+ write('purpose',internal?'Restore the internal system':'Emergency USB boot');
+ $('copy-direction').textContent=internal?'USB → eMMC':mode.kind==='usb'?'eMMC → USB':'—';
+ $('usb-target').hidden=mode.kind!=='usb';$('emmc-target').hidden=!internal;busy=active.has(s.operation.stage);
+ const signature=JSON.stringify([s.version,mode.kind,mode.target,internal?s.emmc:s.disks,busy?s.operation.target_path:null]);
+ if(signature!==lastOptions){lastOptions=signature;const old=busy&&s.operation.target_path?s.operation.target_path:$('disk').value;$('disk').replaceChildren();const empty=document.createElement('option');empty.value='';empty.textContent=tr(s.disks.length?'Выберите USB…':'USB не подключён');$('disk').append(empty);s.disks.forEach(d=>{const o=document.createElement('option');o.value=d.path;o.textContent=d.model+' · '+size(d.size)+(d.serial?' · '+d.serial:'')+' · '+d.path+(!busy&&d.reason?' — '+tr(d.reason):'');o.disabled=!d.eligible;$('disk').append(o);});if(busy&&old&&![...$('disk').options].some(o=>o.value===old)){const o=document.createElement('option');o.value=old;o.textContent=(s.operation.target_model||'USB')+' · '+size(s.operation.target_size||0)+' · '+old;o.disabled=true;$('disk').append(o);}if([...$('disk').options].some(o=>o.value===old&&(busy||!o.disabled)))$('disk').value=old;clearPlan();}
+ const destination=s.operation.target_path;$('copy-destination').hidden=!destination;
+ $('copy-destination-value').textContent=destination?[(s.operation.target_model||'').trim(),s.operation.target_size?size(s.operation.target_size):'',destination,s.operation.target_serial?'…'+s.operation.target_serial.slice(-8):''].filter(Boolean).join(' · '):'—';
+ write('prepare',internal&&s.emmc.requires_reboot_to_enable?'Подготовить восстановление eMMC':'Подготовить запись');
+ write('presence',s.blocked_reason||(busy?'Запись выполняется.':internal?(s.emmc.available?'Встроенная eMMC обнаружена. Можно подготовить запись.':s.emmc.reason):mode.kind!=='usb'?'The current boot drive does not support system copying.':!s.disks.length?'USB не подключён. Вставьте флешку в прибор-источник.':'USB обнаружен. Выберите носитель для записи.'));
+ $('disk').disabled=mode.kind!=='usb'||busy||preparing||!s.can_write||!s.disks.some(d=>d.eligible);controls();
+if(s.operation.stage==='idle'||s.operation.id!==progressJob){progressJob=s.operation.id;displayProgress=0;}displayProgress=Math.max(displayProgress,Number(s.operation.progress)||0);if(s.operation.stage==='complete')displayProgress=100;$('progress').value=displayProgress;$('operation').textContent=(s.operation.stage==='idle'?'':displayProgress+'% · ')+tr(s.operation.message||'Запись не запущена.');$('operation').className=s.operation.stage==='failed'?'error':s.operation.stage==='complete'?'success':'';$('result').hidden=s.operation.stage!=='complete';$('result').textContent=s.operation.kind==='emmc-restore'?'eMMC записана и проверена. Выключите питание, извлеките USB и включите прибор. Фактическая загрузка eMMC ещё не проверена.':'Аварийная USB-система готова. Копия проверена и файловая система отключена; флешку можно извлечь. Фактическая загрузка с неё ещё не проверена.';
+const seed=s.operation.wifi_seed;$('wifi-seed-status').hidden=s.operation.stage!=='complete'||s.operation.kind==='emmc-restore'||!seed||typeof seed.active_wifi_saved!=='boolean';
+if(seed)write('wifi-seed-status',seed.active_wifi_saved?(seed.source_hotspot_fallback_saved?'Saved Internet Wi-Fi settings and a fallback connection through the source device.':'Saved Internet Wi-Fi settings.'):(seed.source_hotspot_fallback_saved?'Saved a fallback connection through the source device.':'No active Wi-Fi connection was available to save.'));
+}catch(e){statusKnown=false;if(!actionError)$('error').textContent=e.message;controls();}finally{refreshing=false;}}
+$('refresh').onclick=()=>{clearError();refresh();};$('disk').onchange=()=>{clearPlan();controls();};$('erase').onchange=controls;$('cancel').onclick=()=>{clearPlan();controls();};
+async function prepare(kind,target){clearError();clearPlan();preparing=true;controls();try{const r=await request('plan',{target,kind});if(!statusKnown||lastState.copy.kind!==kind)throw Error(tr('Источник системы изменился.'));selectedPlan=r.plan;const internal=kind==='emmc-restore';$('selected').textContent=(internal?'Будет очищена внутренняя eMMC: ':'Будет очищен USB: ')+r.plan.model+' · '+size(r.plan.size)+' · '+r.plan.target_path+(r.plan.serial?' · '+r.plan.serial:'');$('space').textContent='Для системы требуется не менее '+size(r.plan.required_bytes)+'.';$('erase-label').textContent=internal?'Разрешаю заменить данные на внутренней eMMC этого прибора работающей системой с USB.':'Данные на выбранном USB будут удалены. Разрешаю записать на него систему.';$('start').textContent=internal?'Копировать USB → eMMC':'Copy eMMC → USB';$('confirmation').hidden=false;$('erase').checked=false;$('confirmation').scrollIntoView({behavior:'smooth',block:'center'});}catch(e){actionFailed(e);}finally{preparing=false;controls();}}
+$('prepare').onclick=async()=>{
+ if(!ready())return;
+ const mode=lastState.copy;
+ if(mode.kind!=='emmc-restore'||!lastState.emmc.requires_reboot_to_enable){await prepare(mode.kind,mode.kind==='usb'?$('disk').value:mode.target);return;}
+ if(!confirm(tr('Перезапустить прибор с USB, включив eMMC для восстановления? Запись начнётся только после отдельного подтверждения.')))return;
+ clearError();clearPlan();preparing=true;controls();try{const r=await request('enable-emmc',{confirm_reboot:true});$('presence').textContent=r.message;statusKnown=false;}catch(e){actionFailed(e);}finally{preparing=false;controls();}
+};
+$('start').onclick=async()=>{clearError();try{if(!ready()||!selectedPlan||!$('erase').checked)return;preparing=true;controls();await request('start',{id:selectedPlan.id,confirmation:selectedPlan.confirmation,erase_confirmed:true});clearPlan();await refresh();}catch(e){actionFailed(e);clearPlan();}finally{preparing=false;controls();}};
+$('read-stm32').onclick=async()=>{const button=$('read-stm32');button.disabled=true;$('stm32').textContent='Чтение…';try{const r=(await request('read-stm32',{})).stm32;const parts=[];if(r.device_code)parts.push('Роль и адрес: '+r.device_code);if(r.firmware)parts.push('ПО: '+r.firmware);if(r.uid96||r.short_id)parts.push('ID: '+(r.uid96||r.short_id));if(r.dc)parts.push('Коррекция DC: '+(r.dc.enabled?'включена, '+r.dc.settle_ms+' мс':'выключена'));$('stm32').textContent=parts.join(' · ')+' · Только чтение; параметры не изменены.';}catch(e){$('stm32').textContent=e.message;}finally{button.disabled=false;}};
+refresh();setInterval(()=>{if(!document.hidden)refresh();},3000);setInterval(updateMeters,1000);
+})();
+</script></body></html>

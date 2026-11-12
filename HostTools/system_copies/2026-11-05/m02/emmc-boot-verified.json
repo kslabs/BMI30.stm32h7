@@ -1,0 +1,135 @@
+{
+  "ok": true,
+  "boot_tested": true,
+  "host": "BMI30-E29805C7C",
+  "cm5": "490df72e29805c7c",
+  "medium": {
+    "current": "emmc",
+    "root": "/dev/mmcblk0p2",
+    "boot": "/dev/mmcblk0p1",
+    "root_partuuid": "cd5a1133-02",
+    "boot_partuuid": "cd5a1133-01",
+    "usb_serial": "25072913740186",
+    "usb_size": 31457280000,
+    "usb_path": "/dev/sda",
+    "boot_mode": 1,
+    "inactive_medium_unmounted": true
+  },
+  "boot_id": "bc2a00c1-dc19-4c37-9a44-e624950089b7",
+  "prior_boot_id": "190d3e04-727c-4ed8-80fd-7070d71f62dc",
+  "bootloader": {
+    "config_sha256": "830ea3a2d2fdf6d2dd2f149ae6a9b7061b8d9e6000a275b7d2e8380d9ffaae3f",
+    "order": "0xf2614",
+    "eeprom_write_performed": false
+  },
+  "source_version": "2026-11-04-185916",
+  "base_bundle_id": "2026-11-04-175044",
+  "source_sha256": {
+    "BMI30_CORE_PATH": "cb7415fda8ec8f996b061c9fe37fc032d3db2dec17916c1dc0e7924c7c5cacee",
+    "BMI30_ENGINE_SOURCE": "d5905f22c629b6b915f656958e236b48de28288c720a537f1781df954a0d74a6",
+    "bmi30_common_mode.py": "9d0b58edd1c81d217777df6fc6954e2592c36f1f93c51717c5f7a45bd1a1270e",
+    "bmi30_dual_detector.py": "166f1f6ed1e55267462ab18232ed4d4746c3feeb6638b3c65e9ab3f16143c08d"
+  },
+  "network_source_sha256": {
+    "opt/bmi30-network/access.py": "ec373f37a9231196ff77aad61a7be312b8f8f9b5ee46ca1f411e6cb58fca53fe",
+    "opt/bmi30-network/access_policy.py": "adc2fe2093d0a2e868883cb36039d856f7fbbdd7367a43cc415a53855165faab",
+    "opt/bmi30-network/access_power.py": "ce9bf29c4d5da459e0228909e88d461ca3a960beef2817b4b493954906fe5a69",
+    "opt/bmi30-network/bluetooth_transport.py": "b4d1628cddb92868b74ac0fc64aa31e29314370825696458bf7e8da82b27a13e",
+    "opt/bmi30-network/bluez_service.py": "6f98778932a3cda4d19f6705a8aa21452be240b140072ea1f253e49029017504",
+    "opt/bmi30-network/cohesion.py": "8ca452ce2e5893889e75494cff94d575b6df377563ccc760cbee7d34179cbb04",
+    "opt/bmi30-network/communication_recovery.py": "60b00003c2e6846080732b951a5edbc6cc69d6e9aea85627d117981e7d73cc59",
+    "opt/bmi30-network/freshness.py": "b0bc584c73fb773ba257d65b7885c3f5799a049a9f04c67c85f72c6233482391",
+    "opt/bmi30-network/group.py": "4d40aab9e9880d2f3746a4321d6a006bd466a64eb75c52012cee99c6e90ee9a4",
+    "opt/bmi30-network/install_scope_rtc.py": "f22c814b23e9251f204a6a5df89fc786826ecab846af96d84e2fdb32f50bbba8",
+    "opt/bmi30-network/network.py": "b1e838f90a3fe22cfe38343d3fd57f1cd8ca55f8763cbc63149a506a1f26072f",
+    "opt/bmi30-network/owner_events.py": "017103657ecfbf6022546781c5021ac58f5631c2d129ca83437dd36ef2e6e930",
+    "opt/bmi30-network/patch_communication_recovery.py": "72c50dad1d0bb056593a6eccf843a9729e23840d93020757d8e18a9d6eb1c6c6",
+    "opt/bmi30-network/policy.py": "00a473f01c4bbcb97e039e4231d0a98622ab8d9bb98a58eee722fdac322a7af0",
+    "opt/bmi30-network/protocol.py": "df29af62b5f86bda8198899843a494b730a02f21e5401759c341922b737dc1c8",
+    "opt/bmi30-network/realtime.py": "db005ec7cb9052d11edbbde59a8f71085ac92ac1641f4d764cc7684d71d1d652",
+    "opt/bmi30-network/scope_codec.py": "8241843ad2487e8cde4d4ab0ea12d47fa1c8556bac97f7565954028d14332769",
+    "opt/bmi30-network/scope_live.py": "7147ee6762bc929128b45ed24b4bbd6ca255326c742312eb32c52f8d9d4e11cc",
+    "opt/bmi30-network/scope_rtc.py": "228784e1faefa204ab01aafeacee196eef00be6907300649f4c5609aaec7cd5c",
+    "opt/bmi30-network/scope_rtc_proxy.py": "981d3ead4bf828e0ec240786dd6cc21609f5b274792b9d2e1f7ec9ec2a547c1f",
+    "opt/bmi30-network/service.py": "4baa0817e2591a5add12150d0c615fe1f57a836b5c0eb5602d2b9a12fca5c51b",
+    "opt/bmi30-network/test_communication_recovery.py": "1e10711c484ea2dca2f61e920bfd72b68012a013a0291e7e707011634472ecd8",
+    "opt/bmi30-network/test_group.py": "89fc790e132b468a555a1ac38b0af3fd61f18662b84837682f6de7cd7392471d",
+    "opt/bmi30-network/test_local_led.py": "8c3405761d353952c6f27de9391b1860a4381b85761be95d4d61520a0d12e77e",
+    "opt/bmi30-network/test_network.py": "3aa5d3f63e4c6d8bce6e6e62a92658792262c3a9379bcbf5800ecd16e92cc5e2",
+    "opt/bmi30-network/test_realtime.py": "f8f7a8702b745ad6382d602fe8d9b15512d3915d5539e255418bd0934f8dc8a8",
+    "opt/bmi30-network/test_scope_codec.py": "dd32bee0cbf80b0b5ad02cb6405036bdc8d358e2c6f0ff367a7c7e5667e90d3e",
+    "opt/bmi30-network/test_scope_live.py": "a493c091fc2868c661ce20656d9da4872d704be14ec681c9c279c359e466471c",
+    "opt/bmi30-network/test_scope_rtc.py": "c4fa8c067e3e0034432b4ec7f74d35fcb842cddab75d1f365708f4ae32cba652",
+    "opt/bmi30-network/test_stability.py": "4783e313298f221c061b3c27c8dfe257c273ebc857df87696a1b73f9bd84f549",
+    "opt/bmi30-network/transport_policy.py": "b73007d1b089d8739fbdad9354ff949e93f9dc2a09a7f95d2ca43e963fe29187"
+  },
+  "config_sha256": "c081d5b5a3a6e130b5c02f8d16f4b4e83647b5d6836f0d1511a5eacbf272edbe",
+  "config_semantic_sha256": "0d3dc4685bb22c65b6c7c259a9fa2370f44afc62288f3a1821a9e5adca484f69",
+  "copied_config_sha256": "6ed9392e70f7d1014af39c7831c83efbcc2332b0d551146c2e995cf8b6600a6d",
+  "selection_env_sha256": "8deb35296cb07077a8c6a9e41e99012ad7cdb1f6b3fef99df496af37f8a1476d",
+  "source_config_values_match_final_copy": true,
+  "source_config_bytes_match_final_copy": false,
+  "config_sha256_at_observation_start": "c081d5b5a3a6e130b5c02f8d16f4b4e83647b5d6836f0d1511a5eacbf272edbe",
+  "role": {
+    "value": "master",
+    "device_id": 2,
+    "code": "M02",
+    "role_persisted": true
+  },
+  "mode": {
+    "selected": 6,
+    "stream_mode": 2,
+    "view_mode": 0,
+    "base_buf_len": 200,
+    "freq_hz": 200,
+    "desired_freq": 200,
+    "avg_n": 8,
+    "rpi_avg_n": 12,
+    "det_ratio": 2.0
+  },
+  "core_process": {
+    "pid": 775,
+    "start_ticks": "318"
+  },
+  "uptime_s": 35.4611291885376,
+  "worker_results_start_end": [
+    2951,
+    3153
+  ],
+  "frame_age_s": 0.02760934829711914,
+  "noise_reference_valid": true,
+  "stm32_usb_serial": "3342355E3032",
+  "observed_stream_counter_deltas": {
+    "rx_cnt_ch0": 100,
+    "rx_cnt_ch1": 100,
+    "seq_gap_ch0": 0,
+    "seq_gap_ch1": 0,
+    "seq_dup_ch0": 0,
+    "seq_dup_ch1": 0,
+    "crc_bad": 0,
+    "magic_bad": 0,
+    "host_rx_ack_fail": 0
+  },
+  "portal_http": 200,
+  "network": {
+    "version": "0.2.10",
+    "status": "online",
+    "STA_available": true,
+    "own_AP_available": true,
+    "routing_age_s": 0.8975927030000008,
+    "group_fresh": true,
+    "group_nodes": [
+      {
+        "id": "BMI30-E29805C7C",
+        "age_s": 0.01907444399999747,
+        "transport": "local"
+      },
+      {
+        "id": "BMI30-C9775FBAE",
+        "age_s": 0.7456326360000247,
+        "transport": "wifi"
+      }
+    ]
+  },
+  "scope": "Actual new boot/media and bounded runtime checks; no physical tag/range qualification or exact capture zero-loss claim"
+}

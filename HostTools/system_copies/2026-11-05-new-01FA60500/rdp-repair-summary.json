@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "host": "BMI30-01FA60500",
+  "scope": "Created only missing xrdp.log with installed-package ownership/mode; existing daemon autorestarted itself.",
+  "config_files_unchanged": true,
+  "runtime_listener_verified_after_emmc_boot": true,
+  "graphical_windows_login_verified": false
+}

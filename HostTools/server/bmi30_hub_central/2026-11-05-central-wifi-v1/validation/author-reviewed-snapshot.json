@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "ok": true,
+  "author_tests": 26,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "independent_review_complete": false,
+  "tested_at": "2026-11-05T16:22:24.520541+00:00",
+  "duration_s": 2.1342825000174344,
+  "environment": {
+    "python": "3.14.0 (tags/v3.14.0:ebf955d, Oct  7 2025, 10:15:03) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "packages": {
+      "fastapi": "0.115.14",
+      "starlette": "0.46.2",
+      "httpx": "0.28.1",
+      "cryptography": "46.0.3",
+      "pydantic": "2.14.3"
+    }
+  },
+  "real_handlers": true,
+  "real_AESGCM": true,
+  "fake_component": "approved-device authentication only; existing system query runs against SQLite fixture",
+  "server_calls": 0,
+  "server_writes": false,
+  "deployed": false,
+  "captures_enabled_in_main": false,
+  "source_hashes": {
+    "API_CONTRACT.json": {
+      "sha256": "1a97d877b5a285e8d9e5cd4dd4034bac5c3656ea61b2cf84642c01c8803c95b5",
+      "bytes": 4908
+    },
+    "baseline/main.py": {
+      "sha256": "d3eb53e4012c259772ba9b62a6a937150734a188a8c339a7c647dd4dc056bd9c",
+      "bytes": 103907
+    },
+    "build_patch.py": {
+      "sha256": "ba0280054fb098aedc9d70b6fcb10865dfbbf7976740af86c264009c8970bbf4",
+      "bytes": 2550
+    },
+    "candidate/bmi30hub/central_store.py": {
+      "sha256": "410f2560fadd3ba1da3250c408555d68419d855d0aae35ad42c91df8e38c2b9a",
+      "bytes": 28616
+    },
+    "candidate/bmi30hub/main.py": {
+      "sha256": "751bbf23486dbc05cc5bb896d8e585d9384dd951b38453fd5fbcfe2d8767a89f",
+      "bytes": 104240
+    },
+    "candidate/docker-compose.central-wifi.yml": {
+      "sha256": "6cd2d9243dacef2c516563a2c41e982504d7a1af81c35360a7e95c0dfe629203",
+      "bytes": 94
+    },
+    "candidate/Dockerfile.central-wifi": {
+      "sha256": "4507e4f2f7b48022e6a333f195bd5ddd4ad9c76ffa3708d492cef21d9ef1a017",
+      "bytes": 445
+    },
+    "deployment-evidence/existing-compose-chain.json": {
+      "sha256": "e7a88946d3ee9f0f2421f9a1a2817aa798c18c699fb758fb17efab4e50ffdea9",
+      "bytes": 1820
+    },
+    "DEPLOYMENT_RU.md": {
+      "sha256": "323d8dea04a380374ff2ee1589afde830c0d9e44a7085c37fd04c014d5d62e05",
+      "bytes": 10171
+    },
+    "patch-provenance.json": {
+      "sha256": "7fd93850e36243e7a1cb69ca55f705c58d60c54fadd82460c2acae77eca08841",
+      "bytes": 468
+    },
+    "README_RU.md": {
+      "sha256": "9b69206efbc05cf2f530292749dd3316014fa326b8fff1ea7f37d3e5abac423d",
+      "bytes": 9936
+    },
+    "SOURCE.diff": {
+      "sha256": "da55a7ee814505b6a52ad2e8c0a4be70085ef8fb6ce11c9ccb047d8720dce8d3",
+      "bytes": 30612
+    },
+    "test_central_store.py": {
+      "sha256": "196c65d1a071c0fc9748e97c4061f8efc222a936da1f03920b0e6128d072edce",
+      "bytes": 17393
+    },
+    "validate_candidate.py": {
+      "sha256": "3d4d2bdf147a27f0cbfde429333e5eae2b64c9a550413d0a411edc8d78cd03c4",
+      "bytes": 2287
+    }
+  },
+  "output": "test_approved_cross_tenant_cannot_receive_same_ssid_psk (test_central_store.Tests.test_approved_cross_tenant_cannot_receive_same_ssid_psk) ... ok\ntest_auth_https_query_and_unassigned_scope_fail_closed (test_central_store.Tests.test_auth_https_query_and_unassigned_scope_fail_closed) ... ok\ntest_capture_api_default_disabled (test_central_store.Tests.test_capture_api_default_disabled) ... ok\ntest_capture_corrupt_acknowledged_data_never_commits (test_central_store.Tests.test_capture_corrupt_acknowledged_data_never_commits) ... ok\ntest_capture_failed_create_hidden_staging_does_not_poison_next (test_central_store.Tests.test_capture_failed_create_hidden_staging_does_not_poison_next) ... ok\ntest_capture_order_hash_replay_commit_and_download (test_central_store.Tests.test_capture_order_hash_replay_commit_and_download) ... ok\ntest_capture_owner_isolation_and_create_idempotence (test_central_store.Tests.test_capture_owner_isolation_and_create_idempotence) ... ok\ntest_capture_path_query_chunk_bounds (test_central_store.Tests.test_capture_path_query_chunk_bounds) ... ok\ntest_capture_quotas_never_delete_existing (test_central_store.Tests.test_capture_quotas_never_delete_existing) ... ok\ntest_capture_unacked_tail_recovery_preserves_acked_prefix (test_central_store.Tests.test_capture_unacked_tail_recovery_preserves_acked_prefix) ... ok\ntest_cas_and_explicit_choice_required_for_different_saved_psk (test_central_store.Tests.test_cas_and_explicit_choice_required_for_different_saved_psk) ... ok\ntest_ciphertext_scope_swap_tamper_is_rejected_without_plaintext_error (test_central_store.Tests.test_ciphertext_scope_swap_tamper_is_rejected_without_plaintext_error) ... ok\ntest_client_revision_boundary_cannot_poison_server_counter (test_central_store.Tests.test_client_revision_boundary_cannot_poison_server_counter) ... ok\ntest_exact_utf8_case_and_spaces_are_independent_keys (test_central_store.Tests.test_exact_utf8_case_and_spaces_are_independent_keys) ... ok\ntest_failed_atomic_wifi_replace_preserves_old_catalog_then_retry (test_central_store.Tests.test_failed_atomic_wifi_replace_preserves_old_catalog_then_retry) ... ok\ntest_fresh_reported_connection_allows_cas_replacement_but_nm_timestamp_does_not (test_central_store.Tests.test_fresh_reported_connection_allows_cas_replacement_but_nm_timestamp_does_not) ... ok\ntest_init_cli_wrong_service_identity_never_writes (test_central_store.Tests.test_init_cli_wrong_service_identity_never_writes) ... ok\ntest_init_only_refuses_existing_and_readback_no_secret (test_central_store.Tests.test_init_only_refuses_existing_and_readback_no_secret) ... ok\ntest_json_input_bounds_and_no_request_echo (test_central_store.Tests.test_json_input_bounds_and_no_request_echo) ... ok\ntest_key_missing_does_not_silently_regenerate_or_reset_master (test_central_store.Tests.test_key_missing_does_not_silently_regenerate_or_reset_master) ... ok\ntest_main_integration_is_only_four_reviewed_additions (test_central_store.Tests.test_main_integration_is_only_four_reviewed_additions) ... ok\ntest_open_wpa64hex_sae_and_invalid_ap_or_psk (test_central_store.Tests.test_open_wpa64hex_sae_and_invalid_ap_or_psk) ... ok\ntest_psk_encrypted_at_rest_key_stable_and_record_schema_compatible (test_central_store.Tests.test_psk_encrypted_at_rest_key_stable_and_record_schema_compatible) ... ok\ntest_replaced_valid_key_cannot_append_new_scope_or_mix_catalog (test_central_store.Tests.test_replaced_valid_key_cannot_append_new_scope_or_mix_catalog) ... ok\ntest_system_deactivation_revokes_next_request_without_cache (test_central_store.Tests.test_system_deactivation_revokes_next_request_without_cache) ... ok\ntest_verified_same_password_upgrade_is_not_downgraded_by_saved_profile (test_central_store.Tests.test_verified_same_password_upgrade_is_not_downgraded_by_saved_profile) ... ok\n\n----------------------------------------------------------------------\nRan 26 tests in 2.060s\n\nOK\n"
+}

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "ok": true,
+  "reviewed_at": "2026-11-05T16:24:06.731421+00:00",
+  "initializer_sha256": "9b8798dbfd3292cb9ea106ab6c9939e035a849a7c63f8ad8692f3889b2fce6a4",
+  "backend_module_sha256": "410f2560fadd3ba1da3250c408555d68419d855d0aae35ad42c91df8e38c2b9a",
+  "catalog_schema": 2,
+  "key_binding_formula": "sha256(raw32bytekey).hexdigest()",
+  "independently_rerun_author_memory_tests": 6,
+  "additional_independent_source_executed_tests": 4,
+  "all_tests_passed": true,
+  "tests_sha256": {
+    "test_hub_catalog_init_sftp.py": "f79dcce0af2215e93091efc5a39dbf4f980e62e93705a11ca3a3aa66731bc79c",
+    "test_hub_catalog_initializer_independent.py": "0d4b936aca66ee8d80f5a2a27154e954a0ecc825e755f598ade123bc39e4d1b3"
+  },
+  "review_scope": [
+    "exact pinned server key before private key loading/auth",
+    "bounded connect/banner/auth/channel timeouts",
+    "create-only lstat refusal existing key OR catalog and symlink parents",
+    "private root-owned0700 staging then600service-owned files",
+    "standard rename refuses existing target; no posix overwrite",
+    "in-memory boundedconstanttime byte readback",
+    "partial failure preserves key/staging and refuses retry",
+    "dynamic empty catalog byte-equal actual backend make_empty_catalog",
+    "execute gated by exact initializer SHA review",
+    "no secret values in reports/errors"
+  ],
+  "critical_blockers": [],
+  "server_calls": 0,
+  "server_writes": false,
+  "limitations": [
+    "SFTP fsync/power-loss durability not claimed",
+    "Key+catalog are not an atomic pair; partial commit is preserved and fails closed",
+    "Hub API still needs legitimate admin image update; SFTP is not a command route"
+  ],
+  "live_execution_performed": false
+}

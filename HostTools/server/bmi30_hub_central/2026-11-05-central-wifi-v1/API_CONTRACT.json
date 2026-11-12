@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "status": "LOCAL_CANDIDATE_NOT_DEPLOYED",
+  "base_url": "https://www.teiots.net/bmi30",
+  "auth": "Authorization: Bearer existing approved-device token; never in URL/logs",
+  "redirects": "client must reject every redirect before forwarding Authorization",
+  "scope": {
+    "source": "existing devices.system_id joined to active systems.id",
+    "format": "system:<positive_id>",
+    "unassigned_or_inactive": 403,
+    "client_selected_scope": false,
+    "cross_system_access": false,
+    "global_admin_device_bypass": false
+  },
+  "catalog_file": "/var/lib/bmi30hub/data/network/credentials.json",
+  "key_file": "/var/lib/bmi30hub/secrets/wifi-catalog.key",
+  "key_mode": "0600 owned by HubUID10001",
+  "new_directories": "0700 UID10001:GID10002; preserve existing parent ownership/modes",
+  "get": {
+    "method": "GET",
+    "path": "/api/v1/wifi/catalog",
+    "response": {
+      "ok": true,
+      "scope": "system:1",
+      "revision": 7,
+      "records": {
+        "wifi:Exact SSID": {
+          "ssid": "Exact SSID",
+          "psk": "<plaintext only inside authenticated TLS response/RAM>",
+          "security": "wpa-psk",
+          "origin": "BMI30-0000000000000001",
+          "revision": 7,
+          "updated": 123.0
+        }
+      },
+      "provenance": {
+        "wifi:Exact SSID": {
+          "source": "nm_saved_profile",
+          "verification": "unverified",
+          "reported_by": "BMI30-0000000000000001",
+          "client_record_origin": "BMI30-0000000000000001",
+          "client_record_revision": 42,
+          "client_record_updated": 100.0,
+          "server_received_at": 123.0
+        }
+      }
+    }
+  },
+  "merge": {
+    "method": "POST",
+    "path": "/api/v1/wifi/catalog/merge",
+    "body_keys": [
+      "expected_revision",
+      "records",
+      "provenance(optional)",
+      "explicit_replacements(optional list of exact record keys)"
+    ],
+    "records": "mapping wifi:<exactUTF8SSID> -> exactly {ssid,psk,security,origin,revision,updated}; no trim/casefold/normalization; AP entries rejected",
+    "max_records": 32,
+    "max_json_bytes": 65536,
+    "max_catalog_entries_all_systems": 1024,
+    "revisions": "server CAS counter increments independently; incoming record revision retained in provenance only; never use untrusted revision to set server counter",
+    "existing_different_psk": "requires current expected_revision AND (explicit_replacements containing key OR fresh active_station_server_reachable/client_reported_connected evidence)",
+    "fresh_verification": {
+      "source": "active_station_server_reachable",
+      "verification": "client_reported_connected",
+      "client_observed_at": "numeric epoch within server-now-60s .. server-now+30s"
+    },
+    "verification_semantics": "reported by approved client, not independently measured by server; NM saved timestamp never proves PSK; do not label unverified candidates verified",
+    "other_sources": [
+      "nm_saved_profile",
+      "operator_entry"
+    ],
+    "idempotent": "same credentials do not alter revision, except upgrade from unverified to fresh client-reported connection",
+    "conflict": {
+      "status": 409,
+      "codes": [
+        "revision_conflict",
+        "credential_choice_required"
+      ],
+      "client_action": "fetch latest; no silent overwrite; fresh proof or explicit user choice"
+    },
+    "result": "ok/scope/revision/added/updated/unchanged/count only; PSK never echoed"
+  },
+  "client_ram_only": {
+    "durable_local_credentials_or_recordings": false,
+    "offline_fallback": false,
+    "existing_peer_gossip": "unchanged; do not blindly compare central CAS counter to existing peer revision; caller integration must preserve explicit central choice separately"
+  },
+  "captures": {
+    "default_enabled": false,
+    "activation": "separate reviewed change to explicit enable_captures=True",
+    "owner_only": true,
+    "routes": [
+      "POST /api/v1/captures",
+      "GET /api/v1/captures",
+      "GET /api/v1/captures/{32hex_id}",
+      "PUT /api/v1/captures/{id}/chunks/{sequence}",
+      "POST /api/v1/captures/{id}/commit",
+      "GET /api/v1/captures/{id}/download"
+    ],
+    "chunk_limit_bytes": 1048576,
+    "ack": "durable=true plus exactsequence/SHA/size; idempotent same chunk, conflicts reject",
+    "quota": "507, never auto-delete captures; partial sessions not claimed committed"
+  },
+  "https_forwarding_evidence": "existing Dockerfile enables proxy-headers and forwarded-allow-ips=*; Nginx overwrites X-Forwarded-Proto=https. Admin must retain backend isolation/no external8000 publication; no new direct HTTP bypass.",
+  "query_parameters": "rejected all new endpoints",
+  "initialization": "init-only fails if key OR catalog already exists; canonical root and UID10001:GID10002 required; no secret output"
+}

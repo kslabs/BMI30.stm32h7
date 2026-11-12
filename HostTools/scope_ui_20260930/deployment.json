@@ -1,0 +1,192 @@
+{
+  "M01-result": {
+    "version": "2026-09-30-1135",
+    "root": "/dev/mmcblk0p2",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-30-1135": "7a200cff04d20650a1f1ee7660cff8afc0b72adda31a7c23409ea2bcedac3ad1",
+      "host/BMI30.200.py.2026-09-30-1135": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-30-1135": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "settings_preserved": true,
+    "mode": {
+      "selected": 6,
+      "stream_mode": 2,
+      "view_mode": 0,
+      "base_buf_len": 200,
+      "freq_hz": 200,
+      "desired_freq": 200,
+      "avg_n": 24,
+      "det_ratio": 4.0
+    },
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.04522585868835449
+    },
+    "fps": {
+      "a": 6.5295035085920645,
+      "b": 6.5295035085920645,
+      "a_even": 3.731144862052608,
+      "a_odd": 2.798358646539456,
+      "b_even": 3.731144862052608,
+      "b_odd": 2.798358646539456
+    },
+    "html_sha256": "2ca021baa3803dabdd6636046b21145833cd28541f451c542d344201087b451d",
+    "third_row_removed": true
+  },
+  "S10-result": {
+    "version": "2026-09-30-1135",
+    "root": "/dev/mmcblk0p2",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-30-1135": "7a200cff04d20650a1f1ee7660cff8afc0b72adda31a7c23409ea2bcedac3ad1",
+      "host/BMI30.200.py.2026-09-30-1135": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-30-1135": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "settings_preserved": true,
+    "mode": {
+      "selected": 6,
+      "stream_mode": 2,
+      "view_mode": 0,
+      "base_buf_len": 200,
+      "freq_hz": 200,
+      "desired_freq": 200,
+      "avg_n": 24,
+      "det_ratio": 3.5
+    },
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.05917191505432129
+    },
+    "fps": {
+      "a": 6.6233342477224495,
+      "b": 6.6233342477224495,
+      "a_even": 2.8385718204524784,
+      "a_odd": 3.784762427269971,
+      "b_even": 2.8385718204524784,
+      "b_odd": 3.784762427269971
+    },
+    "html_sha256": "2ca021baa3803dabdd6636046b21145833cd28541f451c542d344201087b451d",
+    "third_row_removed": true
+  },
+  "S11-result": {
+    "version": "2026-09-30-1135",
+    "root": "/dev/mmcblk0p2",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-30-1135": "7a200cff04d20650a1f1ee7660cff8afc0b72adda31a7c23409ea2bcedac3ad1",
+      "host/BMI30.200.py.2026-09-30-1135": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-30-1135": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "settings_preserved": true,
+    "mode": {
+      "selected": 6,
+      "stream_mode": 2,
+      "view_mode": 0,
+      "base_buf_len": 200,
+      "freq_hz": 200,
+      "desired_freq": 200,
+      "avg_n": 24,
+      "det_ratio": 4.0
+    },
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.04592537879943848
+    },
+    "fps": {
+      "a": 6.529642915045846,
+      "b": 6.529642915045846,
+      "a_even": 3.7312245228833407,
+      "a_odd": 2.7984183921625054,
+      "b_even": 3.7312245228833407,
+      "b_odd": 2.7984183921625054
+    },
+    "html_sha256": "2ca021baa3803dabdd6636046b21145833cd28541f451c542d344201087b451d",
+    "third_row_removed": true
+  },
+  "S12-result": {
+    "version": "2026-09-30-1135",
+    "root": "/dev/mmcblk0p2",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-30-1135": "7a200cff04d20650a1f1ee7660cff8afc0b72adda31a7c23409ea2bcedac3ad1",
+      "host/BMI30.200.py.2026-09-30-1135": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-30-1135": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "settings_preserved": true,
+    "mode": {
+      "selected": 6,
+      "stream_mode": 2,
+      "view_mode": 0,
+      "base_buf_len": 200,
+      "freq_hz": 200,
+      "desired_freq": 200,
+      "avg_n": 24,
+      "det_ratio": 4.0
+    },
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.05447530746459961
+    },
+    "fps": {
+      "a": 14.964898902082755,
+      "b": 14.964898902082755,
+      "a_even": 6.983619487638619,
+      "a_odd": 7.981279414444137,
+      "b_even": 6.983619487638619,
+      "b_odd": 7.981279414444137
+    },
+    "html_sha256": "2ca021baa3803dabdd6636046b21145833cd28541f451c542d344201087b451d",
+    "third_row_removed": true
+  },
+  "S13-result": {
+    "version": "2026-09-30-1135",
+    "root": "/dev/mmcblk0p2",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-30-1135": "7a200cff04d20650a1f1ee7660cff8afc0b72adda31a7c23409ea2bcedac3ad1",
+      "host/BMI30.200.py.2026-09-30-1135": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-30-1135": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "settings_preserved": true,
+    "mode": {
+      "selected": 6,
+      "stream_mode": 2,
+      "view_mode": 0,
+      "base_buf_len": 200,
+      "freq_hz": 200,
+      "desired_freq": 200,
+      "avg_n": 24,
+      "det_ratio": 4.0
+    },
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.09369707107543945
+    },
+    "fps": {
+      "a": 21.791363193106204,
+      "b": 19.896462045879577,
+      "a_even": 11.369406883359758,
+      "a_odd": 10.421956309746445,
+      "b_even": 11.369406883359758,
+      "b_odd": 8.527055162519819
+    },
+    "html_sha256": "2ca021baa3803dabdd6636046b21145833cd28541f451c542d344201087b451d",
+    "third_row_removed": true
+  }
+}

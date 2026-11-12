@@ -1,0 +1,6 @@
+{
+  "format": "bmi30-tag-response-filter-v1",
+  "name": "Paper",
+  "algorithm": "paper",
+  "parameters": {}
+}

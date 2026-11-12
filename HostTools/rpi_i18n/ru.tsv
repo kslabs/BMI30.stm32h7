@@ -1,0 +1,442 @@
+Language	Язык
+Signed in as	Вход выполнен как
+Signed in as ·	Вход выполнен как ·
+Firmware version controls	Управление версиями прошивки
+Management sections	Разделы управления
+Averaging STM32 / Raspberry	Усреднение STM32 / Raspberry
+Averaging: STM32 / Raspberry. Change in 3Operating Mode.	Усреднение STM32 / Raspberry. Изменяется в разделе 3 «Режим работы».
+Disabled channels do not participate in the tag decision.	Отключённые каналы не участвуют в решении о наличии метки.
+Ratio of the common-noise product levels: upper / lower. Use 1 for equal levels.	Отношение уровней произведения синфазного шума: верхний / нижний канал. Для равных уровней укажите 1.
+After subtraction, the peak must remain at or above this percentage of the original threshold. Lower values increase sensitivity but may admit more noise.	После вычитания пик должен быть не ниже этого процента исходного порога. Меньшее значение повышает чувствительность, но может пропустить больше помех.
+An additional peak check after multiplication. Includes secondary peaks at matching phase positions in the other channel.	Дополнительная проверка пика после перемножения. Учитывает вторичные пики в соответствующих фазовых положениях другого канала.
+Subtract the synchronized reference from the other channel to suppress common interference.	Вычитать синхронный опорный сигнал другого канала для подавления общих помех.
+Display noise level where the manual curve reaches the high-noise threshold.	Уровень шума в единицах отображения, при котором ручная кривая достигает коэффициента для высокого шума.
+History duration for the noise estimate: the larger of mean and 95th percentile.	Длительность истории для оценки шума: используется большее из среднего и 95-го процентиля.
+Stronger subtraction may weaken a tag detected by both antennas. These settings apply to real-time detection. The original waveforms are preserved.	Более сильное вычитание может ослабить метку, обнаруженную обеими антеннами. Настройки применяются к детекции в реальном времени. Исходные осциллограммы сохраняются.
+Choose off, med3, med5, avg7, avg9, or avg11. The selected filter is applied once to each input frame before both detection and oscilloscope display.	Выберите off, med3, med5, avg7, avg9 или avg11. Выбранный фильтр применяется к каждому входному кадру один раз, до детекции и отображения осциллограммы.
+Accept widths at or below this limit (10–100 samples). The base runs between the nearest zeros or valleys on either side of the peak. Both sides must be visible. Applies to both channels, independently of named filters.	Допускается ширина не больше этого предела (10–100 отсчётов). Основание проходит между ближайшими нулями или впадинами с обеих сторон пика. Обе стороны должны быть видны. Применяется к обоим каналам независимо от именованных фильтров.
+Upper burst gate blank seconds	Пауза подавления импульсной помехи верхнего канала, с
+Lower burst gate blank seconds	Пауза подавления импульсной помехи нижнего канала, с
+Upper burst gate maximum ratio	Максимальное отношение к шуму для верхнего канала
+Lower burst gate maximum ratio	Максимальное отношение к шуму для нижнего канала
+Upper noise adaptation units	Единицы адаптации к шуму верхнего канала
+Lower noise adaptation units	Единицы адаптации к шуму нижнего канала
+Upper noise adaptation upward step	Шаг адаптации к шуму вверх для верхнего канала
+Lower noise adaptation upward step	Шаг адаптации к шуму вверх для нижнего канала
+Upper noise adaptation downward step	Шаг адаптации к шуму вниз для верхнего канала
+Lower noise adaptation downward step	Шаг адаптации к шуму вниз для нижнего канала
+Confirmation phase gate in samples	Допуск фазы подтверждений, отсчётов
+Close debug panel	Закрыть панель диагностики
+Upper trigger threshold	Порог детекции верхнего канала
+Lower trigger threshold	Порог детекции нижнего канала
+Increase upper trigger threshold	Увеличить порог верхнего канала
+Decrease upper trigger threshold	Уменьшить порог верхнего канала
+Increase lower trigger threshold	Увеличить порог нижнего канала
+Decrease lower trigger threshold	Уменьшить порог нижнего канала
+Current system password	Текущий системный пароль
+Scroll to top	Наверх
+0 uses the same sample. A larger tolerance uses the strongest response from the other channel within this range, including secondary peaks.	0 использует тот же отсчёт. При большем допуске выбирается самый сильный отклик другого канала в этом диапазоне, включая вторичные пики.
+100% subtracts the full reference level; 0% disables subtraction.	100% вычитает полный уровень опорного сигнала; 0% отключает вычитание.
+A reference peak below this noise ratio is not subtracted. Set to 0 to skip this check.	Опорный пик ниже этого отношения к шуму не вычитается. Значение 0 отключает эту проверку.
+After the pairing wait expires, a missing or invalid reference resets detection confirmations.	После истечения времени ожидания пары отсутствие или недостоверность опорного сигнала сбрасывает подтверждения детекции.
+Consecutive detector/phase calculation cycles required before sound starts; short detections remain silent.	Число последовательных циклов расчёта детектора/фазы до включения звука; короткие детекции остаются беззвучными.
+Use the candidate phase shift for the other channel as an additional check. Both checks must pass; existing rejections are preserved.	Дополнительно проверить другой канал с фазовым сдвигом кандидата. Обе проверки должны пройти; прежние причины отклонения сохраняются.
+Interface language	Язык интерфейса
+About Device	Об устройстве
+Acquisition, sec.	Захват, с
+Active	Активно
+Activ	Активно
+Passiv	Неактивно
+Adaptation timing	Время адаптации
+Adapter	Адаптер
+Adaptive phase	Адаптивная фаза
+Addressable LED patterns	Шаблоны адресной индикации
+Allowed peak index	Допустимое положение пика
+Also check the reference with the same phase shift	Также проверять опорный канал с тем же сдвигом фазы
+Amplitude detection	Амплитудная детекция
+Antenna Status	Состояние антенн
+Audio service	Аудиослужба
+Auto	Авто
+AUTO	АВТО
+Auto Reconnect	Автоподключение
+Auto min trigger level display	Минимальный автоматический порог в единицах графика
+Auto noise slope	Коэффициент автоматического порога по шуму
+Auto phase adaptation	Автоматическая адаптация фазы
+Automatic threshold	Автоматический порог
+BMI30 - Management Portal	BMI30 — портал управления
+BMI30 Core Oscilloscope	BMI30 — осциллограф
+BMI30 Management Portal	Портал управления BMI30
+BMI30 Portal	Портал BMI30
+BMI30 Portal Engineer Login	Вход инженера в портал BMI30
+Barkhausen	Баркгаузен
+Barkhausen shape	Форма Баркгаузена
+Blank	Пауза
+Bluetooth Audio	Аудио Bluetooth
+Bluetooth Headphones and Headsets	Наушники и гарнитуры Bluetooth
+Both antennas detection	Детекция обеих антенн
+Burst noise gate	Блокировка импульсных помех
+Casino	Казино
+Casino shape	Форма «Казино»
+Channel Decision Settings	Настройки решения по каналам
+Checking for a newer firmware release…	Проверка наличия новой прошивки…
+Choose visible network...	Выберите доступную сеть…
+Clean	Чистый фон
+Clear	Очистить
+Close	Закрыть
+Close theme panel	Закрыть панель оформления
+Common-Mode Noise Suppression	Подавление синфазных помех
+Communication	Связь
+Confirmation phase gate	Допуск фазы подтверждений
+Connect and Save Wi-Fi	Подключить и сохранить Wi-Fi
+Connecting…	Подключение…
+Connection	Подключение
+Connection Sound	Звук подключения
+Control	Управление
+Core	Ядро
+Created	Создано
+Crystal	Кристалл
+Current password	Текущий пароль
+DC control	Управление компенсацией DC
+Dark	Тёмная
+Debug	Диагностика
+Default averaging	Усреднение по умолчанию
+DetADC1 (modulation)	DetADC1 (модуляция)
+DetADC2 (modulation)	DetADC2 (модуляция)
+Detection	Детекция
+Detection Filtering	Фильтрация детекции
+Detection channel enable	Включение канала детекции
+Detection confirmations	Число подтверждений детекции
+Detection, sec.	Детекция, с
+Detector:	Детектор:
+Device	Устройство
+Device Control	Управление устройством
+Device online	Устройство в сети
+Disable Portal Engineer	Отключить вход инженера
+Discovery	Поиск устройств
+Documentation	Документация
+Down	Вниз
+Download	Скачать
+Enable	Включить
+Enable Microphone & Meter	Включить микрофон и индикатор
+Enable subtraction of the other channel	Включить вычитание другого канала
+Enabled	Включено
+End	Конец
+Engineer portal	Портал инженера
+Engineering access	Доступ инженера
+Errors	Ошибки
+Events	События
+FPS U/L:	Кадр/с В/Н:
+False	Ложная детекция
+Fault	Сбой
+Filter 1	Фильтр 1
+Filter 2	Фильтр 2
+Filter 3	Фильтр 3
+Filter file folder	Папка файлов фильтров
+Firmware	Прошивка
+For voice annotations:	Для голосовых пометок:
+Frac	Доля
+Frames	Кадры
+Freeze	Фиксация
+AutoFreeze	Автофиксация
+Gate	Блокировка
+Gap	Промежуток
+Glass	Стекло
+Group Devices	Устройства группы
+Group Mode	Групповой режим
+Group channel	Канал группы
+Headset microphone check	Проверка микрофона гарнитуры
+Heartbeat	Контроль активности
+High Quality	Высокое качество
+Host	Хост
+Hostname	Имя хоста
+HotSpot Wi-Fi Access	Доступ к точке Wi-Fi
+HotSpot network name	Имя сети точки доступа
+Humps	Пики
+IP address	IP-адрес
+Identity	Идентификация
+Idle	Ожидание
+Import	Импорт
+Input Smoothing	Сглаживание входа
+Interf	Помеха
+Internet	Интернет
+Internet WiFi	Интернет по Wi-Fi
+LED indication	Световая индикация
+LED output	Световой выход
+LED pattern	Шаблон индикации
+Large LCD role	Роль большого экрана
+Last device update	Последнее обновление устройства
+Last event	Последнее событие
+Last status update:	Последнее обновление состояния:
+Level	Уровень
+Light	Светлая
+Lightning timer, sec.	Таймер ускоренной адаптации, с
+Live	Онлайн
+Load	Загрузить
+Loading…	Загрузка…
+Local optic	Свой оптический датчик
+Locality	Локальность
+Login	Вход
+Lower	Нижний
+Lower Channel	Нижний канал
+Lower antenna detection	Детекция нижней антенны
+Lower phase max, Hz	Верхняя частота нижнего канала, Гц
+Lower phase min, Hz	Нижняя частота нижнего канала, Гц
+Lower tone, Hz	Тон нижнего канала, Гц
+Management Portal	Портал управления
+Manual high-noise threshold	Ручной коэффициент при высоком шуме
+Manual low-noise threshold	Ручной коэффициент при низком шуме
+Manual network name	Имя сети вручную
+Manual noise max display	Уровень шума для верхней точки кривой
+Mark >	Метка >
+Mark X	Удалить метку
+Max level	Максимальный уровень
+Max shift	Максимальный сдвиг
+Max x	Максимальное x
+Maximum base width	Максимальная ширина основания
+Meter: Off	Индикатор: выкл.
+Microphone	Микрофон
+Microwire	Микропровод
+Min frac	Минимальная доля
+Min level	Минимальный уровень
+Minimum ON (ms)	Минимальное включение (мс)
+Minimum reference peak / noise	Минимальное отношение пика к шуму опоры
+Minimum sound, ms	Минимальная длительность звука, мс
+Minimum tone cycles	Минимальное число периодов тона
+Mode	Режим
+Named Detection Filters	Именованные фильтры детекции
+Neighbor both antennas detection	Детекция обеих антенн соседа
+Neighbor lower antenna detection	Детекция нижней антенны соседа
+Neighbor upper antenna detection	Детекция верхней антенны соседа
+Network and Remote Access	Сеть и удалённый доступ
+Neumo	Неоморфизм
+New HotSpot password	Новый пароль точки доступа
+New RDP/VNC password	Новый пароль RDP/VNC
+New login	Новый логин
+New password	Новый пароль
+Next	Далее
+Next →	Далее →
+No available group devices reported yet.	Доступные устройства группы пока не найдены.
+Noise	Шум
+Noise estimator	Метод оценки шума
+Noise history window	Окно истории шума
+Noise measurement area	Область измерения шума
+Noise-level adaptation	Адаптация к уровню шума
+Off	Выкл.
+off	выкл.
+On	Вкл.
+on	вкл.
+ON	ВКЛ.
+OFF	ВЫКЛ.
+Operating Mode	Рабочий режим
+Operation Guide	Руководство по работе
+Optic	Оптика
+Optic active · reaction off	Оптика активна · реакция выключена
+Optic inactive	Оптика неактивна
+Optic sensor	Оптический датчик
+Optic trigger hold (sec)	Удержание оптического сигнала (с)
+Oscilloscope	Осциллограф
+Outside peaks	Внешние пики
+Own optic active · reaction on	Своя оптика активна · реакция включена
+Own optic → sound/LED/relay	Своя оптика → звук/индикация/реле
+Paper	Бумага
+Parameter	Параметр
+Pattern	Шаблон
+Peak Position Limits	Границы положения пика
+Peak frac	Доля пика
+Penalty	Штраф
+Percent	Проценты
+Permitted	Разрешено
+Phase detection	Фазовая детекция
+Phase tolerance, ± samples	Допуск фазы, ± отсчётов
+Play	Воспроизвести
+Player	Записи
+Portal	Портал
+Portal Login	Вход в портал
+Portal engineer login	Логин инженера портала
+Portal engineer password	Пароль инженера портала
+Power Off	Выключить питание
+Power On	Включить питание
+Prev	Назад
+Privacy	Доступ и безопасность
+Profile	Профиль
+Pulse Base Width	Ширина основания импульса
+Put the headphones into pairing mode, then start a scan.	Переведите наушники в режим сопряжения и запустите поиск.
+Quarters	Секторы
+RPi → speed only	RPi → только скорость
+RS485 ID	Адрес RS485
+RS485 neighbor optics → sound / LED / relay	Оптика соседей RS485 → звук / индикация / реле
+Radar	Радар
+Radius	Радиус
+Raspberry averaging	Усреднение Raspberry
+Reacting to selected neighbor	Реакция на выбранного соседа
+Read phases	Считать фазы
+Rec	Запись
+Recognize again	Распознать снова
+Reconnect	Переподключить
+Refresh	Обновить
+Refresh Networks	Обновить сети
+Refresh device list	Обновить список устройств
+Relay	Реле
+Relay: loading…	Реле: загрузка…
+Release	Выпуск
+Remote Desktop RDP/VNC Login	Вход на удалённый рабочий стол RDP/VNC
+Remote login	Логин удалённого доступа
+Repeat	Повторить
+Repeat HotSpot password	Повторите пароль точки доступа
+Repeat RDP/VNC password	Повторите пароль RDP/VNC
+Repeat new password	Повторите новый пароль
+Repeat portal engineer password	Повторите пароль инженера портала
+Require a synchronized reference	Требовать синхронный опорный канал
+Residual threshold, % of original	Порог остатка, % исходного уровня
+Response window	Окно отклика
+Restarts	Перезапуски
+Role	Роль
+Role assignment	Назначение роли
+Rollback becomes available after a successful firmware update.	Откат станет доступен после успешного обновления прошивки.
+Runtime	Рабочая система
+Safety and Service Notes	Безопасность и обслуживание
+Save	Сохранить
+Save Desktop Login	Сохранить доступ к рабочему столу
+Save HotSpot Access	Сохранить доступ к точке Wi-Fi
+Save Only	Только сохранить
+Save Portal Engineer	Сохранить доступ инженера
+Save Portal Login	Сохранить доступ к порталу
+Save and Apply	Сохранить и применить
+Save and Apply to Core	Сохранить и применить в ядре
+Scan 20 s	Поиск 20 с
+Searching for Bluetooth status…	Поиск состояния Bluetooth…
+Selected	Выбрано
+Sensors	Датчики
+Serial	Серийный номер
+Server mic on	Микрофон сервера включён
+Shape detection	Детекция формы
+Show	Показать
+Sign Out	Выйти
+Signal	Сигнал
+Simple and addressable LED strips · common enable; addressable patterns follow the settings above	Обычные и адресные светодиодные ленты · общее включение; адресные шаблоны используют настройки выше
+Situation	Ситуация
+Software	Программное обеспечение
+Sound	Звук
+Sound active	Звук активен
+Sound output	Звуковой выход
+Source	Источник
+Span	Размах
+Speech recognition has not started.	Распознавание речи ещё не началось.
+Split System	Раздельная система
+Start	Пуск
+Stop	Стоп
+State	Состояние
+State optic	Состояние оптики
+Statistics	Статистика
+Status	Состояние
+Stop Scan	Остановить поиск
+Stopped	Остановлено
+Stream	Поток
+Style	Стиль
+Subtraction strength, %	Сила вычитания, %
+TX phase	Фаза TX
+Tag Detection	Детекция меток
+Tag L?	Метка Н?
+Tag U?	Метка В?
+Tag detection · independent permission · Test holds until Stop	Детекция меток · независимое разрешение · тест действует до остановки
+Tag response filters	Фильтры отклика меток
+Target	Цель
+Test	Тест
+Test Lower	Тест нижнего
+Test Sound	Тест звука
+Test Upper	Тест верхнего
+Test sound volume	Громкость тестового звука
+Text	Текст
+Theme	Оформление
+Theme and style are saved only in this browser.	Тема и стиль сохраняются только в этом браузере.
+Tol	Допуск
+Total	Всего
+Transmission	Передача
+Unit	Единица
+Up	Вверх
+Uplink / signal	Соединение / сигнал
+Upper	Верхний
+Upper / lower channel balance	Баланс верхнего и нижнего каналов
+Upper Channel	Верхний канал
+Upper antenna detection	Детекция верхней антенны
+Upper phase max, Hz	Верхняя частота верхнего канала, Гц
+Upper phase min, Hz	Нижняя частота верхнего канала, Гц
+Upper tone, Hz	Тон верхнего канала, Гц
+Uptime	Время работы
+User access	Доступ пользователя
+Valley	Впадина
+Version	Версия
+Visible networks	Доступные сети
+Voice	Голос
+Volume 0-100%	Громкость 0–100%
+Waiting for Bluetooth status…	Ожидание состояния Bluetooth…
+Waiting for device readback…	Ожидание ответа устройства…
+Warm	Тёплый
+Weak X	Удалить слабую метку
+Wi-Fi Internet Access	Интернет по Wi-Fi
+Wi-Fi password	Пароль Wi-Fi
+Width	Ширина
+Wired	Проводное
+Work time	Время работы
+Work, sec.	Работа, с
+loading	загрузка
+online	в сети
+offline	нет связи
+connected	подключено
+connecting	подключение
+disconnected	отключено
+error	ошибка
+paused	приостановлено
+role ---	роль ---
+waiting for frame	ожидание кадра
+samples	отсчётов
+s	с
+ms	мс
+Hz	Гц
+ADC units	Единицы ADC
+max(mean, P95) — 95th percentile	max(среднее, P95) — 95-й процентиль
+0° · In phase	0° · В фазе
+180° · Antiphase	180° · В противофазе
+Integer readouts and two-second p/n/t/SN help	Целые показания и подсказка p/n/t/SN через 2 с
+Portal language and localized scope	Язык портала и перевод осциллографа
+U	В
+L	Н
+Master	Ведущий
+Slave	Ведомый
+Auto trigger	Автоматический порог
+Working zone	Рабочая зона
+start	начало
+end	конец
+NOISE	ШУМ
+DETECT	ДЕТЕКЦИЯ
+BASE	ОСНОВАНИЕ
+THR	ПОРОГ
+AMP	АМПЛИТУДА
+FIRE	ДЕТЕКЦИЯ
+REJECTED	ОТКЛОНЕНО
+SYNC	СИНХРОННО
+CONF	ПОДТВЕРЖДЕНИЯ
+POS	ПОЗИЦИЯ
+FILTER	ФИЛЬТР
+det	детекция
+thr	порог
+sum	сумма
+product	произведение
+energy	энергия
+Normal	Обычный
+Username	Имя пользователя
+Password	Пароль
+Sign in	Войти
+Sign In	Войти
+Remember me	Запомнить меня
+Remember this device	Запомнить устройство
+Access denied	Доступ запрещён
+Invalid username or password.	Неверное имя пользователя или пароль.
+Current firmware	Текущая прошивка
+Update	Обновить
+Rollback	Откатить
+↑ Update	↑ Обновить
+↓ Update	↓ Обновить
+↶ Rollback	↶ Откатить
+↓ PDF	↓ PDF
+← Prev	← Назад

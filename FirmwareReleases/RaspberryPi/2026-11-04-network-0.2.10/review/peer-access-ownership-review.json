@@ -1,0 +1,10 @@
+{
+  "format": "peer-access-ownership-review-v1",
+  "candidate_sha256": "ec373f37a9231196ff77aad61a7be312b8f8f9b5ee46ca1f411e6cb58fca53fe",
+  "baseline_sha256": "354fd91afabdfd11d20a379f90d535170ee933d99a16d6fbf74b31b04a883b13",
+  "syntax": "PASS",
+  "AST_outside_claim_release_tick_identical": true,
+  "fresh_foreign_marker_at_startup_preserved_by_existing_maintenance_guard": true,
+  "no_live_actions": true,
+  "scope": "Narrow cooperative queued-job ownership repair; not an adversarial cross-process pathname-unlink atomicity guarantee"
+}

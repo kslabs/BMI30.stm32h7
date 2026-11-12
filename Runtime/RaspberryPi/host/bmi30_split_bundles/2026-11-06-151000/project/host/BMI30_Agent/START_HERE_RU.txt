@@ -1,0 +1,33 @@
+BMI30 Agent 0.2.7 — БЫСТРЫЙ СТАРТ
+
+Production Hub: https://www.teiots.net/bmi30
+Production SSH: www.teiots.net:2222
+
+1. Распакуйте архив и откройте каталог BMI30_Agent.
+2. Установите новую версию. Installer сохранит backup и полностью удалит
+   старый bmi30-reverse-tunnel.service:
+
+   sudo ./install_bmi30_agent.sh
+
+   DEVICE_ID всегда вычисляется из реального CPU serial. При переносе копии
+   флешки на другую Raspberry чужие key/token автоматически сохраняются в
+   backup и заменяются отдельной регистрацией новой платы. Передаваемый Hub
+   hostname тоже вычисляется из CPU serial, а local_ips — из live-интерфейсов.
+   Отдельный bound_raspberry_serial не позволяет клону повторно использовать
+   Bearer token и SSH-ключ исходной платы. Специальный 409 от Hub выполняет
+   безопасную переинициализацию и один повтор check-in.
+
+3. Выполните ручной check-in:
+
+   sudo bmi30-agent-ctl checkin
+   sudo bmi30-agent-ctl status
+
+4. Подтвердите Pending-устройство в BMI30 Hub.
+5. Повторите check-in и проверьте bmi30-tunnel.service.
+6. Только после успешной проверки включите autostart:
+
+   sudo bmi30-agent-ctl enable
+
+HTTPS использует системное CA-хранилище. TLS fingerprint вручную не нужен.
+После HTTP 401/409 агент сохраняет identity и повторяет check-in примерно
+через одну минуту (60–66 секунд).

@@ -1,0 +1,43 @@
+{
+  "format": 1,
+  "physical_serial": "366b6f101fa60500",
+  "scope": "new Raspberry USB-to-eMMC; M04 update pending",
+  "files": {
+    "controller-review.json": {
+      "bytes": 1965,
+      "sha256": "40340aaef8cde00a526578feb055f06077a1434a0f331ff9a8110b855307c8eb"
+    },
+    "copy-summary.json": {
+      "bytes": 1724,
+      "sha256": "58077cb5544b0bef973cac22343c568ca21e054365623dbeda6383ff18a5b633"
+    },
+    "emmc-runtime.json": {
+      "bytes": 1310,
+      "sha256": "d06be26b75c0f8271c858ae5f1d222392fc2c97257f9f1a6a346c21a8b8a4cfe"
+    },
+    "initial-copy-review.json": {
+      "bytes": 2881,
+      "sha256": "2727afae9d68b4e5a71cfddb4076ee28ecff58f9ca3f0197976b9d6a9cc21585"
+    },
+    "radio-gate-review.json": {
+      "bytes": 1788,
+      "sha256": "5761d036ab67dd2579cbe82a96f0f962258a1ded3acb905658ecaa4aec4d3762"
+    },
+    "radio-identity-proof.json": {
+      "bytes": 1068,
+      "sha256": "3f9180fbc8cd4437d141e62636864db826c35e12e3e6e991720817b4d9d90a65"
+    },
+    "rdp-repair-summary.json": {
+      "bytes": 299,
+      "sha256": "01cc0719b77116399d33fa52f0eef6bc6e46dc1c79f4592367a29ceb9d751b83"
+    },
+    "README_RU.md": {
+      "bytes": 3816,
+      "sha256": "1e0f6e35d1f883802d63320b0fec1ea172cd110a5c1d85c4309e600dff4ab7d2"
+    },
+    "resume-review.json": {
+      "bytes": 3042,
+      "sha256": "4079970d055c792e2688d21cfc0922ec52bf1344122224fa7cc75320f26cb7ea"
+    }
+  }
+}

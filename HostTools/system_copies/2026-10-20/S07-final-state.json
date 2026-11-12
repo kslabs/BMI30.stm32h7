@@ -1,0 +1,156 @@
+{
+  "host": "BMI30-C9775FBAE",
+  "serial": "abdd2dbc9775fbae",
+  "root": "/dev/sda2",
+  "boot": "/dev/sda1",
+  "boot_id": "311258f6-13b2-44f8-be20-5ae2ba220f6f",
+  "emmc_cid": "150100424a54443452030f7c4acd7b00",
+  "disks": {
+    "blockdevices": [
+      {
+        "name": "sda",
+        "path": "/dev/sda",
+        "size": 31457280000,
+        "type": "disk",
+        "fstype": null,
+        "uuid": null,
+        "partuuid": null,
+        "mountpoints": [
+          null
+        ],
+        "serial": "25072933730021",
+        "children": [
+          {
+            "name": "sda1",
+            "path": "/dev/sda1",
+            "size": 536870912,
+            "type": "part",
+            "fstype": "vfat",
+            "uuid": "7CAE-93A5",
+            "partuuid": "23fb63d1-01",
+            "mountpoints": [
+              "/boot/firmware"
+            ],
+            "serial": null
+          },
+          {
+            "name": "sda2",
+            "path": "/dev/sda2",
+            "size": 30916214784,
+            "type": "part",
+            "fstype": "ext4",
+            "uuid": "d24efc0b-47e6-444f-bc0a-aff5691c7266",
+            "partuuid": "23fb63d1-02",
+            "mountpoints": [
+              "/"
+            ],
+            "serial": null
+          }
+        ]
+      },
+      {
+        "name": "mmcblk0",
+        "path": "/dev/mmcblk0",
+        "size": 31268536320,
+        "type": "disk",
+        "fstype": null,
+        "uuid": null,
+        "partuuid": null,
+        "mountpoints": [
+          null
+        ],
+        "serial": "0x0f7c4acd",
+        "children": [
+          {
+            "name": "mmcblk0p1",
+            "path": "/dev/mmcblk0p1",
+            "size": 536870912,
+            "type": "part",
+            "fstype": "vfat",
+            "uuid": "FDEC-A462",
+            "partuuid": "9049b4cd-01",
+            "mountpoints": [
+              null
+            ],
+            "serial": null
+          },
+          {
+            "name": "mmcblk0p2",
+            "path": "/dev/mmcblk0p2",
+            "size": 30727471104,
+            "type": "part",
+            "fstype": "ext4",
+            "uuid": "5268b679-64ca-40a7-8468-64917a953bdc",
+            "partuuid": "9049b4cd-02",
+            "mountpoints": [
+              null
+            ],
+            "serial": null
+          }
+        ]
+      },
+      {
+        "name": "mmcblk0boot0",
+        "path": "/dev/mmcblk0boot0",
+        "size": 4194304,
+        "type": "disk",
+        "fstype": null,
+        "uuid": null,
+        "partuuid": null,
+        "mountpoints": [
+          null
+        ],
+        "serial": "0x0f7c4acd"
+      },
+      {
+        "name": "mmcblk0boot1",
+        "path": "/dev/mmcblk0boot1",
+        "size": 4194304,
+        "type": "disk",
+        "fstype": null,
+        "uuid": null,
+        "partuuid": null,
+        "mountpoints": [
+          null
+        ],
+        "serial": "0x0f7c4acd"
+      }
+    ]
+  },
+  "version": "2026-10-16-1743",
+  "engine_source": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-10-16-1743",
+  "engine_sha256": "5d5d88437b79a1415a8d3e255f4fbc4a878c1a44d7342571f4e0af6296e6bbfe",
+  "core_pid": "1407",
+  "api": {
+    "core": {
+      "active": true,
+      "worker_alive": true,
+      "upper_confirm": 6,
+      "recording": false,
+      "playback": false
+    },
+    "hardware_role": {
+      "code": "S07",
+      "value": "slave",
+      "state": null
+    }
+  },
+  "available_bytes": 18283884544,
+  "critical_hashes": {
+    "home/techaid/Documents/host/bmi30_config.json": "1fdf75914f8e43b138ab5bb49e5d70e71f2287c8c14ff599d90001c5f208be32",
+    "etc/machine-id": "7633766f714f9e1898d4b11e0f8a8e29596fe159755f00cbbd1eaced5d68a9d9",
+    "etc/hostname": "520f3ebfb363068978bca05938c10f936b467d6d6ad92d3cbba84abf7f09ee12",
+    "etc/fstab": "78a06163c3b55d3cafd0afa62169488bac9d8e819443fbfd9cee65660eed7394"
+  },
+  "recordings": {
+    "player_recordings": {
+      "files": 0,
+      "bytes": 0
+    },
+    "tag_statistics": {
+      "files": 0,
+      "bytes": 0
+    }
+  },
+  "package_writers": []
+}

@@ -1,0 +1,21 @@
+{
+  "source_version": "2026-11-04-185916",
+  "base_bundle": "2026-11-04-175044",
+  "four_production_file_hashes": {
+    "BMI30.001.py.2026-11-04-185916": "cb7415fda8ec8f996b061c9fe37fc032d3db2dec17916c1dc0e7924c7c5cacee",
+    "BMI30.200.py.2026-11-04-185916": "d5905f22c629b6b915f656958e236b48de28288c720a537f1781df954a0d74a6",
+    "bmi30_common_mode.py": "9d0b58edd1c81d217777df6fc6954e2592c36f1f93c51717c5f7a45bd1a1270e",
+    "bmi30_dual_detector.py": "166f1f6ed1e55267462ab18232ed4d4746c3feeb6638b3c65e9ab3f16143c08d"
+  },
+  "installer_sha256": "82d19bd6b231a504a2072c5824b9e44121461201e278abcca0d8bb551e0d65c0",
+  "runner_sha256": "927bacf302d5e68a8a12472faf95b3b41a943eb7ec1d13c70212baba4f57b889",
+  "private_RAM_plan_sha256": "04c7a1feebac94255ac7d69e02a9c27a8ecdc80e9d50a5a3cafed43bdf50b05e",
+  "private_plan_content_included": false,
+  "native_marker": {
+    "stage": "adopted",
+    "physical_serial": "0d6b7531ed3e6af5",
+    "bundle_id": "2026-11-04-175044",
+    "location": "own eMMC only"
+  },
+  "source_USB_manifest_or_cohort_allowlist_changed": false
+}

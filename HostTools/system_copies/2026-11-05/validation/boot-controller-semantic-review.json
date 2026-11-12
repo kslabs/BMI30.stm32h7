@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "created_at": 1793867861.052551,
+  "status": "PASS_WITH_HARDWARE_LIMITS",
+  "source": {
+    "path": ".tmp\\emmc-usb-copies-20261105\\boot_control.py",
+    "bytes": 27290,
+    "sha256": "b69fc12f4985900cc8f3c373cb7d14c4a9aae0d7309768f6224ef4cd15092cdb"
+  },
+  "review_only": true,
+  "live_actions_by_reviewer": false,
+  "previous_review": {
+    "path": ".tmp\\emmc-usb-copies-20261105\\boot-controller-independent-review.json",
+    "bytes": 1401,
+    "sha256": "77eb05d6c7824ba606c94f9c68c598f600e4dcf36abbd1e2177930f277efc1f1"
+  },
+  "scope": [
+    "False UTF8 strict JSON semantic hash matches source checker",
+    "Source proof binds copied bytes, job, host, CM5, exact code and env",
+    "Prepare/commit and boot verification retain semantic+copiedhash; only current config byte hash ignored for format drift",
+    "Source runtime anchor persisted into boot plan and supplied for verify across boots"
+  ],
+  "remaining_blockers": [],
+  "limits": [
+    "No hardware execution by reviewer",
+    "Original bootcontroller review limits unchanged"
+  ]
+}

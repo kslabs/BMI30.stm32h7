@@ -1,0 +1,161 @@
+{
+  "ok": true,
+  "native005933_installed_both": true,
+  "native_Raspberry_runtime_qualified": true,
+  "central_RAM_credentials_qualified": false,
+  "central_daemon_started": false,
+  "M04_USB005934_hardware_boot_verified": false,
+  "known_issue": "Actual NetworkManager RAM profile Filename is /run tmpfs, not empty; NOT_SAVED secret flag2 discarded synthetic PSK. Correcting before central activation or USB qualification.",
+  "devices": {
+    "m04": {
+      "original_report_sha256": "193b9d7cc7cc4ee9c1cdd010c30ac3ae0d4e04f795a6a773bc0f08b97561e090",
+      "result": {
+        "Access_and_AP_not_restarted": true,
+        "archive_sha256": "afc66bad956e10e09c1dfb06dd178aad764ab99c113be34d893a62526ad03f89",
+        "backup": "/home/techaid/Documents/.bmi30_cloud_sync/canonical-m04/b17696c97d2c406d89a4c56822409e87",
+        "canary_metrics": {
+          "kind": "detector_worker",
+          "results": 2945
+        },
+        "central_daemon_not_started_precommit": true,
+        "detector_active": true,
+        "disarm_warning": null,
+        "factory_preferences_applied": true,
+        "mode": {
+          "avg_n": 8,
+          "base_buf_len": 200,
+          "desired_freq": 200,
+          "det_ratio": 2.0,
+          "freq_hz": 200,
+          "rpi_avg_n": 12,
+          "selected": 6,
+          "stream_mode": 2,
+          "view_mode": 0
+        },
+        "network_authority": {
+          "credential_authority": "server-ram",
+          "local_id": "BMI30-1ED3E6AF5",
+          "version": "0.2.11"
+        },
+        "network_prerequisites": {
+          "Access_process": {
+            "pid": 2231661,
+            "start_ticks": "3566573"
+          },
+          "Access_sha256": "bd1a0974917b5af9b62ff5fe5a8772554ee32e2c412c31c7091d3348418f511d",
+          "Access_version": "0.1.1",
+          "DNS_files": {
+            "90-bmi30-captive-portal.conf": "64743ec7d7c97fac60745719394f19f415bafabe546a854017c1c636938f9532",
+            "91-bmi30-captive-detection.conf": "1688f44279ca0c72e92082d3dbfc6aacc5dfe1165a589bade0cc22fa0bd36423"
+          },
+          "loaded_canonical_DNS": true,
+          "own_AP_IP": "10.170.114.1"
+        },
+        "no_agent_RDP_restart": true,
+        "ok": true,
+        "old_recordings_deleted": false,
+        "old_runtime_entries": 249,
+        "old_runtime_quarantined": true,
+        "protected_own_identity_preserved": true,
+        "role": {
+          "assigned_role": "master",
+          "code": "M04",
+          "device_id": 4,
+          "device_id_assigned": true,
+          "device_responded": true,
+          "local_node_id": 4,
+          "role": "master",
+          "role_persisted": true,
+          "source": "event-cache",
+          "sync_seen_mask": 144,
+          "value": "master"
+        },
+        "source_runtime_reverified": true,
+        "transaction": "b17696c97d2c406d89a4c56822409e87",
+        "version": "2026-11-06-005933",
+        "worker_results": 2945
+      },
+      "commit": {
+        "archive_sha256": "afc66bad956e10e09c1dfb06dd178aad764ab99c113be34d893a62526ad03f89",
+        "committed_at": 1793952373.6840608,
+        "transaction": "b17696c97d2c406d89a4c56822409e87",
+        "version": "2026-11-06-005933"
+      }
+    },
+    "s07": {
+      "original_report_sha256": "b3d53f2d78e446aaf5c23907341ffab40b04e734d88d344808871202e1f422f1",
+      "result": {
+        "Access_and_AP_not_restarted": true,
+        "archive_sha256": "afc66bad956e10e09c1dfb06dd178aad764ab99c113be34d893a62526ad03f89",
+        "backup": "/home/techaid/Documents/.bmi30_cloud_sync/canonical-s07/4adf8ff955674e9aa695c12c3c112546",
+        "canary_metrics": {
+          "kind": "detector_worker",
+          "results": 2948
+        },
+        "central_daemon_not_started_precommit": true,
+        "detector_active": true,
+        "disarm_warning": null,
+        "factory_preferences_applied": true,
+        "mode": {
+          "avg_n": 8,
+          "base_buf_len": 200,
+          "desired_freq": 200,
+          "det_ratio": 2.0,
+          "freq_hz": 200,
+          "rpi_avg_n": 12,
+          "selected": 6,
+          "stream_mode": 2,
+          "view_mode": 0
+        },
+        "network_authority": {
+          "credential_authority": "server-ram",
+          "local_id": "BMI30-C9775FBAE",
+          "version": "0.2.11"
+        },
+        "network_prerequisites": {
+          "Access_process": {
+            "pid": 1730246,
+            "start_ticks": "5252737"
+          },
+          "Access_sha256": "bd1a0974917b5af9b62ff5fe5a8772554ee32e2c412c31c7091d3348418f511d",
+          "Access_version": "0.1.1",
+          "DNS_files": {
+            "90-bmi30-captive-portal.conf": "60ba8d5a42898254a6f14c5c47bfa76f92d9a3791a24792a5229aa2dfbfb1028",
+            "91-bmi30-captive-detection.conf": "1688f44279ca0c72e92082d3dbfc6aacc5dfe1165a589bade0cc22fa0bd36423"
+          },
+          "loaded_canonical_DNS": true,
+          "own_AP_IP": "10.187.143.1"
+        },
+        "no_agent_RDP_restart": true,
+        "ok": true,
+        "old_recordings_deleted": false,
+        "old_runtime_entries": 198,
+        "old_runtime_quarantined": true,
+        "protected_own_identity_preserved": true,
+        "role": {
+          "assigned_role": "slave",
+          "code": "S07",
+          "device_id": 7,
+          "device_id_assigned": true,
+          "device_responded": true,
+          "local_node_id": 7,
+          "role": "slave",
+          "role_persisted": true,
+          "source": "event-cache",
+          "sync_seen_mask": 144,
+          "value": "slave"
+        },
+        "source_runtime_reverified": true,
+        "transaction": "4adf8ff955674e9aa695c12c3c112546",
+        "version": "2026-11-06-005933",
+        "worker_results": 2948
+      },
+      "commit": {
+        "archive_sha256": "afc66bad956e10e09c1dfb06dd178aad764ab99c113be34d893a62526ad03f89",
+        "committed_at": 1793952457.082434,
+        "transaction": "4adf8ff955674e9aa695c12c3c112546",
+        "version": "2026-11-06-005933"
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "appended": 0,
+  "base_operator_sha256": "4ce429bdcc9548c0cdf50ea6a031a07f993473682b35f8b8488f9dae16f326ca",
+  "board": "S07",
+  "credential_returned": false,
+  "csv_sha256": "827493056e4217f9e85497d214b411defc6433e77c0afabcba69c35c0f951e38",
+  "mode": "upsert",
+  "native_csv_unchanged": true,
+  "ok": true,
+  "replace": false,
+  "row_ids": [
+    "2026-11-05-195925",
+    "2026-11-05-202952"
+  ],
+  "updated": 2,
+  "utility_sha256": "0dd662414952abefaa148f7e8ca6df4c82d78499c71b1ea0e5d91aa28c2fdb58",
+  "wrapper_sha256": "01bb61ca8c26fcde386892c77179d226e28ff2be3f450ad335624c4c117b18f0"
+}

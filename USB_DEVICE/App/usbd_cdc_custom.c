@@ -489,6 +489,7 @@ static uint8_t USBD_CDCVND_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 
 static uint8_t USBD_CDCVND_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 {
+  vnd_host_session_revoke();
   /* Drop relay permission and held tests when USB is reset/deconfigured. */
   relay_set_enabled(0u);
   UNUSED(cfgidx);

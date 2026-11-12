@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "host": "BMI30-1ED3E6AF5",
+  "cm5": "0d6b7531ed3e6af5",
+  "target_root_partuuid": "e1b5c915-02",
+  "host_keys_unchanged": true,
+  "native_host_fingerprint": "SHA256:z1XKxwrGDdFL48kX90dxa6TMrfMlvyVusOQDGFpgCEA",
+  "bench_fingerprint": "SHA256:0+YaTTew6dyUcVKgofup/vMZNb4NC82hpLHdglHxx+U",
+  "source_USB_writes": false,
+  "service_actions": false,
+  "rebooted": false,
+  "appended": true,
+  "already_present": false,
+  "target_unmounted": true
+}

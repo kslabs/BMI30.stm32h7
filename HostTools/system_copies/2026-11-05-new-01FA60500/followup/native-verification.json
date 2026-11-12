@@ -1,0 +1,41 @@
+{
+  "ok": true,
+  "action": "verify",
+  "checked_at": 1793886344.5617635,
+  "boot_id": "0a26b69b-97cd-4360-a83f-8bc38c79a875",
+  "root": "/dev/mmcblk0p2 2da3faaa-02                          f7fd7da4-c9fc-45a6-8f36-a99d088ebf23",
+  "boot": "/dev/mmcblk0p1 2da3faaa-01                          2CC9-9537",
+  "code_verified": true,
+  "config_semantic_sha256": "4a2668350705edcb52ada206a8eecb028d4c9915f32f203ce9714458c90467c0",
+  "own_identity_verified": true,
+  "rdp_listener_verified": true,
+  "firmware_boot_mode": 1,
+  "network": {
+    "id": "BMI30-01FA60500",
+    "addresses": [
+      "10.43.0.1",
+      "192.168.0.133",
+      "10.69.7.1"
+    ],
+    "ap": {
+      "ssid": "BMI30-01FA60500",
+      "address": "10.69.7.1/24",
+      "bssid": "2e:cf:67:50:12:2d"
+    },
+    "radio_identity": {
+      "observed": "2e:cf:67:50:12:2d",
+      "sysfs": "2e:cf:67:50:12:2d",
+      "driver_permanent": "2e:cf:67:50:12:2d",
+      "addr_assign_type": "0",
+      "own_radio_verified": true
+    },
+    "internet_ok": true
+  },
+  "stm32_connected": false,
+  "eeprom_config_sha256": "5916730c7e1aae1e2dafa1e543ea1d52873fbfec0091ae2bc1fa191b1ed3d67a",
+  "usb_unmounted": true,
+  "limits": [
+    "Graphical Windows RDP login not verified.",
+    "No STM32 was connected to this new Raspberry; detector input not verified."
+  ]
+}

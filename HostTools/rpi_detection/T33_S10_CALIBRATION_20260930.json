@@ -1,0 +1,22 @@
+{
+  "status": "center_verified_only",
+  "hostname": "BMI30-D5EB8F26C",
+  "mac": "FF:24:01:26:A0:4A",
+  "button_gestures": {
+    "center": "tap"
+  },
+  "user_report": "center_pressed_9_times",
+  "expected_count": 9,
+  "received_count": 9,
+  "connection_changes_during_series": 0,
+  "source_file": "T33-S10-input-09-external-ant.jsonl",
+  "start_mono": 1251.100312,
+  "end_mono": 1263.101242,
+  "first_event_epoch": 1790786741.675491,
+  "last_event_epoch": 1790786753.676002,
+  "remaining_calibration": [
+    "up",
+    "down"
+  ],
+  "note": "Not sufficient for pass logging: up/down mapping is still unverified."
+}

@@ -1,0 +1,32 @@
+{
+  "S10": {
+    "version": "2026-09-30-1135",
+    "uuid": "d24efc0b-47e6-444f-bc0a-aff5691c7266",
+    "source": "/dev/sda2",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-30-1135": "7a200cff04d20650a1f1ee7660cff8afc0b72adda31a7c23409ea2bcedac3ad1",
+      "host/BMI30.200.py.2026-09-30-1135": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-30-1135": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "settings_preserved": true,
+    "core_pid_unchanged": "86569",
+    "boot_tested": false
+  },
+  "M01": {
+    "version": "2026-09-30-1135",
+    "uuid": "d24efc0b-47e6-444f-bc0a-aff5691c7266",
+    "source": "/dev/sda2",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-30-1135": "7a200cff04d20650a1f1ee7660cff8afc0b72adda31a7c23409ea2bcedac3ad1",
+      "host/BMI30.200.py.2026-09-30-1135": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-30-1135": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "settings_preserved": true,
+    "core_pid_unchanged": "107985",
+    "boot_tested": false
+  }
+}

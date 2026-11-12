@@ -1,0 +1,38 @@
+{
+  "ok": true,
+  "observed_at": 1793884998.9634714,
+  "boot_id": "c2173c2f-d588-43e0-86dc-36fdcee1b76a",
+  "physical_cm5": "0d6b7531ed3e6af5",
+  "root_partuuid": "e1b5c915-02",
+  "checks": {
+    "native_identity": true,
+    "physical_AP_type": true,
+    "own_AP_SSID": true,
+    "active_AP_NM_UUID": true,
+    "AP_profile_mode": true,
+    "AP_profile_interface": true,
+    "AP_shared_IPv4": true,
+    "actual_AP_CIDR_matches_priority_source": true,
+    "STA_connected": true,
+    "STA_IPv4_present": true,
+    "STA_default_route": true,
+    "direct_Internet": true,
+    "network_observer_fresh": true
+  },
+  "network_version": "0.2.10",
+  "status": "online",
+  "stale": false,
+  "own_AP": {
+    "ssid": "BMI30-1ED3E6AF5",
+    "type": "AP",
+    "interface": "wlan0ap",
+    "address": "10.170.114.1/24"
+  },
+  "direct_Internet": {
+    "ok": true,
+    "http_status": 204
+  },
+  "mutations": false,
+  "STM_commands": false,
+  "credentials_or_profile_contents_included": false
+}

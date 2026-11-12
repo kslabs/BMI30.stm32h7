@@ -1,0 +1,222 @@
+--- active_m02_network.py
++++ network.py
+@@ -86,6 +86,14 @@
+     return nm_fields("connection", profile, [name], secrets).get(name, "")
+ 
+ 
++def connection_uuid(value):
++    """NetworkManager's missing-connection markers are never profile IDs."""
++    try:
++        return isinstance(value, str) and str(uuid.UUID(value)) == value.lower()
++    except (ValueError, AttributeError):
++        return False
++
++
+ def probe(interface):
+     # TLS and an exact 204 reject captive portals. Two independent providers;
+     # no user data is sent. The interface binding prevents an alternate route
+@@ -146,8 +154,70 @@
+         path = Path(self.config["portal_config"])
+         return json.loads(path.read_text()).get("channel_permissions", {})
+ 
++    def refresh_stale_rid(self, core, opener):
++        """Request one bounded cached RID EP0 read through its Core owner.
++
++        This never scans RS485 or writes IP/RPi identity. The asynchronous
++        response is deliberately ignored; only a later normal status GET can
++        supply fresh membership evidence to cohesion.observe().
++        """
++        if (not isinstance(core, dict) or core.get("ok") is not True or core.get("stale") or core.get("busy")
++                or not isinstance(core.get("connection"), dict) or core["connection"].get("connected") is not True):
++            return {"attempted":False, "reason":"Core unavailable/stale/busy"}
++        rid, sync = core.get("rs485_ident"), core.get("sync")
++        if not isinstance(rid, dict) or not isinstance(sync, dict):
++            return {"attempted":False, "reason":"Cached RID/sync unavailable"}
++        entries = rid.get("nodes")
++        own = sync.get("local_node_id", sync.get("device_id"))
++        if not isinstance(entries, dict) or not 1 <= len(entries) <= 4 or type(own) is not int:
++            return {"attempted":False, "reason":"Known RID membership unavailable/too large"}
++        if rid.get("node_count", len(entries)) != len(entries):
++            return {"attempted":False, "reason":"Cached RID count inconsistent"}
++        now_wall, ids, updated = time.time(), [], []
++        for key, entry in entries.items():
++            if not isinstance(entry, dict):
++                return {"attempted":False, "reason":"Invalid cached RID entry"}
++            node, stamp = entry.get("node_id"), entry.get("host_updated_at")
++            if (type(node) is not int or not 0 <= node <= 31 or str(node) != str(key)
++                    or entry.get("complete") is not True or entry.get("short_valid") is not True
++                    or entry.get("node_id_matches_status") is not True or entry.get("node_conflict")
++                    or not re.fullmatch(r"[0-9A-Fa-f]{9}", str(entry.get("short_id") or entry.get("host_id") or ""))
++                    or type(stamp) not in (int, float) or not float("-inf") < stamp < float("inf")
++                    or now_wall-stamp < -1):
++                return {"attempted":False, "reason":"Invalid cached RID membership/timestamp"}
++            ids.append(node); updated.append(stamp)
++        if own not in ids or len(ids) != len(set(ids)):
++            return {"attempted":False, "reason":"Local RID membership unverified"}
++        mask = sync.get("sync_seen_mask")
++        if mask is not None and (type(mask) is not int or not 0 <= mask <= 0xFFFFFFFF
++                or {i for i in range(32) if mask & (1 << i)} != set(ids)):
++            return {"attempted":False, "reason":"Seen mask has unknown/inconsistent members"}
++        # Refresh before the strict45s evidence TTL expires. The normal15–18s
++        # tick then has a chance to pick up the asynchronous owner result.
++        if all(now_wall-stamp < 30 for stamp in updated):
++            return {"attempted":False, "reason":"RID host timestamps not aging yet"}
++        now = time.monotonic()
++        previous = getattr(self, "_last_rid_refresh_attempt", None)
++        if previous is not None and now-previous < 30:
++            return {"attempted":False, "reason":"Owner read cooldown"}
++        self._last_rid_refresh_attempt = now
++        request = urllib.request.Request("http://127.0.0.1:8765/api/command",
++            data=json.dumps({"action":"rs485_ident", "params":{"request_scan":False, "device_ids":sorted(ids)}}).encode(),
++            headers={"Content-Type":"application/json", "X-BMI30-Source":"network_rid_readonly_refresh"}, method="POST")
++        try:
++            with opener.open(request, timeout=1.5) as response:
++                response.read(65536)  # old/asynchronous cache is not evidence
++            return {"attempted":True, "http_completed":True, "device_ids":sorted(ids), "reason":"Await later normal status GET"}
++        except (OSError, ValueError, TimeoutError):
++            return {"attempted":True, "http_completed":False, "device_ids":sorted(ids), "reason":"Owner read unavailable; membership remains unknown"}
++
+     def active(self, interface):
+-        return nm_fields("device", interface, ["GENERAL.CON-UUID"]).get("GENERAL.CON-UUID", "--")
++        try:
++            return nm_fields("device", interface, ["GENERAL.CON-UUID"]).get("GENERAL.CON-UUID", "--")
++        except (RuntimeError, OSError, subprocess.TimeoutExpired):
++            if interface != self.ap:
++                raise
++            return "--"
+ 
+     def profiles(self):
+         result = {}
+@@ -207,7 +277,8 @@
+                           key=lambda r: r.get("metric", 0))
+         iface = defaults[0]["dev"] if defaults else self.sta
+         addresses, broadcasts = [], []
+-        for row in json.loads(run("ip", "-j", "-4", "address")):
++        addr_rows = json.loads(run("ip", "-j", "-4", "address"))
++        for row in addr_rows:
+             for addr in row.get("addr_info", []):
+                 if addr.get("scope") == "global":
+                     addresses.append(addr["local"])
+@@ -215,7 +286,8 @@
+                         broadcasts.append(addr["broadcast"])
+         ap_addresses = [r["prefsrc"] + "/" + r["dst"].split("/")[-1]
+                         for r in routes if r.get("dev") == self.ap and r.get("prefsrc") and "/" in r["dst"]]
+-        return {"id": self.config["id"], "role": role,
++        ap_uuid = self.active(self.ap)
++        snapshot = {"id": self.config["id"], "role": role,
+                 "stm32_uid96": portal.get("group_state", {}).get("stm32_uid96", ""),
+                 "rs485_id": int(code[1:]) if re.fullmatch(r"[MS]\d+", code) else 255,
+                 "code": code, "ssid": get(link, r"SSID: (.+)"),
+@@ -226,13 +298,60 @@
+                 "gateway": defaults[0].get("gateway") if defaults else None,
+                 "addresses": addresses, "broadcasts": broadcasts,
+                 "ap": {"ssid": apssid, "bssid": get(apinfo, r"addr ([0-9a-f:]+)").lower(),
+-                       "address": ap_addresses[0] if ap_addresses else self.config["ap_address"]},
++                       "address": ap_addresses[0] if ap_addresses else self.config["ap_address"],
++                       "available": bool(apssid and connection_uuid(ap_uuid) and re.search(r"\btype AP\b", apinfo))},
+                 "clients": run("iw", "dev", self.ap, "station", "dump", check=False).count("Station "),
+-                "station_uuid": self.active(self.sta), "ap_uuid": self.active(self.ap)}
+-
+-    def profile(self, choice, secret):
+-        name = "bmi30-net-" + choice["bssid"].replace(":", "")
+-        ident = str(uuid.uuid5(uuid.NAMESPACE_DNS, self.config["id"] + ":" + name))
++                "station_uuid": self.active(self.sta), "ap_uuid": ap_uuid}
++        neighbor_rows, core = [], {}
++        try:
++            gateway = defaults[0].get("gateway") if defaults else None
++            if gateway:
++                neighbor_rows = json.loads(run("ip", "-j", "neigh", "show", timeout=4))
++        except (RuntimeError, OSError, ValueError, subprocess.TimeoutExpired):
++            pass
++        try:
++            with opener.open("http://127.0.0.1:8765/api/status", timeout=1.5) as response:
++                core = json.load(response)
++        except (OSError, ValueError, TimeoutError):
++            pass
++        # tick() supplies its actual Internet probe before evaluating metadata,
++        # then removes this private input; raw Core status is never advertised.
++        refresh = self.refresh_stale_rid(core, opener)
++        snapshot["_cohesion_observation"] = {"addr_rows":addr_rows, "neighbor_rows":neighbor_rows, "core":core, "rid_refresh":refresh}
++        return snapshot
++
++    def profile(self, choice, secret, protected_ap_uuid=None):
++        bssid = choice["bssid"].lower()
++        if not re.fullmatch(r"(?:[0-9a-f]{2}:){5}[0-9a-f]{2}", bssid):
++            raise ValueError("Invalid station BSSID")
++        name = "bmi30-net-sta-" + bssid.replace(":", "")
++        ident = str(uuid.uuid5(uuid.NAMESPACE_DNS, self.config["id"] + ":sta:" + bssid))
++        ap_uuid = self.active(self.ap)
++        protected = {value for value in (protected_ap_uuid, ap_uuid) if connection_uuid(value)}
++        if ident in protected:
++            raise RuntimeError("Station profile aliases a protected AP")
++        path = Path("/etc/NetworkManager/system-connections") / (name + ".nmconnection")
++        # Validate both disk and loaded NM state before atomic() or con load.
++        # A new UUID alone is insufficient if the existing filename is an AP.
++        roles = []
++        if path.is_symlink():
++            raise RuntimeError("Station profile path is redirected")
++        if path.exists():
++            parser = configparser.ConfigParser(interpolation=None)
++            parser.read(path)
++            roles.append({"connection.id":parser.get("connection", "id", fallback=""),
++                          "connection.uuid":parser.get("connection", "uuid", fallback=""),
++                          "connection.interface-name":parser.get("connection", "interface-name", fallback=""),
++                          "802-11-wireless.mode":parser.get("wifi", "mode", fallback="")})
++        existing = {line.strip() for line in run("nmcli", "-t", "-f", "UUID", "con", "show").splitlines()}
++        if ident in existing:
++            roles.append(nm_fields("connection", ident, ["connection.id", "connection.uuid",
++                         "connection.interface-name", "802-11-wireless.mode"]))
++        for role in roles:
++            if (role.get("connection.uuid") in protected or role.get("connection.uuid") != ident
++                    or role.get("connection.id") != name or role.get("connection.interface-name") != self.sta
++                    or role.get("802-11-wireless.mode") != "infrastructure"):
++                raise RuntimeError("Existing target is not the owned station profile")
+         data = {
+             "connection": {"id": name, "uuid": ident, "type": "wifi", "interface-name": self.sta,
+                            "autoconnect": "false"},
+@@ -242,23 +361,27 @@
+             "ipv4": {"method": "auto", "route-metric": "600"}, "ipv6": {"method": "disabled"}}
+         text = "\n".join("[" + section + "]\n" + "\n".join(f"{k}={v}" for k, v in fields.items())
+                          + "\n" for section, fields in data.items())
+-        path = "/etc/NetworkManager/system-connections/" + name + ".nmconnection"
+         atomic(path, text)
+-        run("nmcli", "con", "load", path)
++        run("nmcli", "con", "load", str(path))
+         return ident
+ 
+     def activate(self, choice, secret, verify_peer=None, commit=True, require_internet=True):
+         old = self.snapshot()
+-        ident = self.profile(choice, secret)
++        if not connection_uuid(old.get("ap_uuid")):
++            raise RuntimeError("Local AP unavailable; station switch deferred")
++        ap_role = nm_fields("connection", old["ap_uuid"], ["802-11-wireless.mode", "connection.interface-name"])
++        if ap_role.get("802-11-wireless.mode") != "ap" or ap_role.get("connection.interface-name") != self.ap:
++            raise RuntimeError("Protected AP has the wrong connection role")
+         checkpoint = Checkpoint((self.sta, self.ap))
+         finalized = False
+         try:
++            ident = self.profile(choice, secret, protected_ap_uuid=old["ap_uuid"])
+             # One PHY/one channel: release AP before changing the STA channel.
+             run("nmcli", "--wait", "10", "con", "down", "uuid", old["ap_uuid"], check=False)
+             run("nmcli", "--wait", "35", "con", "up", "uuid", ident, "ifname", self.sta, timeout=40)
+             run("nmcli", "con", "modify", "uuid", old["ap_uuid"], "wifi.band",
+                 "a" if choice["freq"] >= 4900 else "bg", "wifi.channel", str(choice["channel"]))
+-            run("nmcli", "--wait", "20", "con", "up", "uuid", old["ap_uuid"], timeout=25)
++            run("nmcli", "--wait", "20", "con", "up", "uuid", old["ap_uuid"], "ifname", self.ap, timeout=25)
+             current = self.snapshot()
+             if current["bssid"] != choice["bssid"].lower():
+                 raise RuntimeError("Associated BSSID differs from selected route")
+@@ -288,10 +411,11 @@
+         while time.monotonic() < deadline:
+             link = run('iw', 'dev', self.sta, 'link', check=False).lower()
+             if (self.active(self.sta) == old['station_uuid']
+-                    and (not old.get('bssid') or old['bssid'].lower() in link)):
++                    and (not old.get('bssid') or old['bssid'].lower() in link)
++                    and (not connection_uuid(old.get('ap_uuid')) or self.active(self.ap) == old['ap_uuid'])):
+                 return
+             time.sleep(1)
+-        raise RuntimeError('Previous station is still reconnecting after rollback')
++        raise RuntimeError('Previous station/AP is not restored after rollback')
+ 
+     def remote_desktop_active(self):
+         # A network change can exceed the native XRDP reconnect timeout.

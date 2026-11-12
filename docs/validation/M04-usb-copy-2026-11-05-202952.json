@@ -1,0 +1,61 @@
+{
+  "ok": true,
+  "board": "M04",
+  "physical_USB_serial": "25072913740186",
+  "capacity_bytes": 31457280000,
+  "native_root_unchanged": true,
+  "full_image_sha256": "33df874a566688a26d408fc0d52a393b4452bb2c39af1e1b2af02559c3d46751",
+  "writer_fd_closed": true,
+  "writer_unit": {
+    "MainPID": "0",
+    "ControlPID": "0",
+    "ExecMainStatus": "0",
+    "ActiveState": "inactive"
+  },
+  "USB_kernel_read_only": true,
+  "tail_logically_zeroed": true,
+  "tail_zero_bytes": 22867345408,
+  "target_mounts_all_namespaces": [],
+  "block_handles_idle": true,
+  "target_not_swap": true,
+  "partitions": {
+    "blockdevices": [
+      {
+        "name": "sda",
+        "size": 31457280000,
+        "ro": true,
+        "partuuid": null,
+        "fstype": null,
+        "mountpoints": [
+          null
+        ],
+        "children": [
+          {
+            "name": "sda1",
+            "size": 536870912,
+            "ro": true,
+            "partuuid": "6ebeace9-01",
+            "fstype": "vfat",
+            "mountpoints": [
+              null
+            ]
+          },
+          {
+            "name": "sda2",
+            "size": 8044675072,
+            "ro": true,
+            "partuuid": "6ebeace9-02",
+            "fstype": "ext4",
+            "mountpoints": [
+              null
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "safe_to_remove": true,
+  "hardware_boot_verified": false,
+  "read_only_check": true,
+  "checked_at_utc": "2026-11-05T22:04:23.735327+00:00"
+}

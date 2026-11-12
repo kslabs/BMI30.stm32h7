@@ -56,3 +56,25 @@ adc_waveforms.png
 boot_log_latest.txt
 gui_debug.txt
 host_spike_log.txt
+
+# Результаты сборок и локальные данные; исходники текущей базы хранятся отдельно
+/Release/
+/tmp/
+/outputs/
+/debug.log
+/*.log
+/tmp-role-*.txt
+/tmp-final-role-*.txt
+/.venv/
+.vscode/*.txt
+!.vscode/commit-msg-*.txt
+.vscode/*snapshot/
+HostTools/summaries/
+HostTools/rpi_detection/recordings/
+HostTools/rpi_detection/tmp*/
+HostTools/bmi30_network/recovery_legacy/install-test-*/
+HostTools/NMRAM_RELEASE_2026-11-06_094934_094935/
+HostTools/S07_USB_DEPLOY_2026-11-06/
+HostTools/USB_IMAGE_BUILD_2026-11-06/
+HostTools/USB_IMAGE_DEPLOY_2026-11-06/
+*.bundle

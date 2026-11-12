@@ -1,0 +1,423 @@
+{
+  "schema": 1,
+  "ok": true,
+  "source_reverified": true,
+  "source_only": true,
+  "usb_boot_tested": false,
+  "physical_sensitivity_verified": false,
+  "board": "s07",
+  "host": "BMI30-C9775FBAE",
+  "cm5": "abdd2dbc9775fbae",
+  "boot_id": "558a0a76-0d70-4dad-8563-e4d4ec8336da",
+  "copy_job_id": "20261105-s07-3074d26c85",
+  "checked_at": 1793867834.189937,
+  "provenance": {
+    "plan_sha256": "b1e39ea9a1482174da37a77ba7393e9fc5028564da139855c678cf5661e44c8b",
+    "copy_result_sha256": "24573c0288318d259fdf7275d9654bb9f595ceb12a50a9cb9167cdf776116ed4",
+    "copy_start_sha256": "7755c09e4cd2040f10f4258ee60fa9798851dbea0c7a9d1cd7b47cc0a188f2ef",
+    "checker_sha256": "d8a44654d988dc8ad769ef3329430648440b259e194d862ee04a43271a4302fd"
+  },
+  "source": {
+    "root": "/dev/mmcblk0p2",
+    "boot": "/dev/mmcblk0p1",
+    "root_partuuid": "58350b37-02",
+    "boot_partuuid": "58350b37-01"
+  },
+  "usb_unmounted": true,
+  "usb_serial": "25072933730021",
+  "stm32_usb_serial": "333F35743032",
+  "copy_unit": {
+    "MainPID": "0",
+    "ControlPID": "0",
+    "Result": "success",
+    "LoadState": "not-found",
+    "ActiveState": "inactive",
+    "SubState": "dead"
+  },
+  "maintenance_busy_released": true,
+  "source_hashes": {
+    "BMI30_CORE_PATH": "cb7415fda8ec8f996b061c9fe37fc032d3db2dec17916c1dc0e7924c7c5cacee",
+    "BMI30_ENGINE_SOURCE": "d5905f22c629b6b915f656958e236b48de28288c720a537f1781df954a0d74a6",
+    "bmi30_common_mode.py": "9d0b58edd1c81d217777df6fc6954e2592c36f1f93c51717c5f7a45bd1a1270e",
+    "bmi30_dual_detector.py": "166f1f6ed1e55267462ab18232ed4d4746c3feeb6638b3c65e9ab3f16143c08d"
+  },
+  "config_sha256": "a8890287ed3c5fb2c45576880d3df73e61b6f5b5f64aec0b8609894bfc5ca4e5",
+  "source_config_snapshot_sha256": "ec1b3b60c3f7ab0844e86b53547d27dbb38f626fe0be6c509c76ce51324db542",
+  "copied_config_sha256": "ec1b3b60c3f7ab0844e86b53547d27dbb38f626fe0be6c509c76ce51324db542",
+  "config_semantic_sha256": "4a2668350705edcb52ada206a8eecb028d4c9915f32f203ce9714458c90467c0",
+  "config_semantic_proof_used": true,
+  "config_semantic_proof_sha256": "9114c7bf918a4b2b2cb4f78ac14692c44032b48e3168bcf3a3436c815c727e54",
+  "env_sha256": "8130589e7a5b5fb924744fd87933835cab8cd293b2eef70a22a2b21b7247339c",
+  "own_network_profiles_verified_count": 39,
+  "network_source_hashes": {
+    "opt/bmi30-network/access.py": "ec373f37a9231196ff77aad61a7be312b8f8f9b5ee46ca1f411e6cb58fca53fe",
+    "opt/bmi30-network/access_policy.py": "adc2fe2093d0a2e868883cb36039d856f7fbbdd7367a43cc415a53855165faab",
+    "opt/bmi30-network/access_power.py": "ce9bf29c4d5da459e0228909e88d461ca3a960beef2817b4b493954906fe5a69",
+    "opt/bmi30-network/bluetooth_transport.py": "b4d1628cddb92868b74ac0fc64aa31e29314370825696458bf7e8da82b27a13e",
+    "opt/bmi30-network/bluez_service.py": "6f98778932a3cda4d19f6705a8aa21452be240b140072ea1f253e49029017504",
+    "opt/bmi30-network/cohesion.py": "8ca452ce2e5893889e75494cff94d575b6df377563ccc760cbee7d34179cbb04",
+    "opt/bmi30-network/communication_recovery.py": "60b00003c2e6846080732b951a5edbc6cc69d6e9aea85627d117981e7d73cc59",
+    "opt/bmi30-network/freshness.py": "b0bc584c73fb773ba257d65b7885c3f5799a049a9f04c67c85f72c6233482391",
+    "opt/bmi30-network/group.py": "4d40aab9e9880d2f3746a4321d6a006bd466a64eb75c52012cee99c6e90ee9a4",
+    "opt/bmi30-network/install_scope_rtc.py": "f22c814b23e9251f204a6a5df89fc786826ecab846af96d84e2fdb32f50bbba8",
+    "opt/bmi30-network/network.py": "b1e838f90a3fe22cfe38343d3fd57f1cd8ca55f8763cbc63149a506a1f26072f",
+    "opt/bmi30-network/owner_events.py": "017103657ecfbf6022546781c5021ac58f5631c2d129ca83437dd36ef2e6e930",
+    "opt/bmi30-network/patch_communication_recovery.py": "72c50dad1d0bb056593a6eccf843a9729e23840d93020757d8e18a9d6eb1c6c6",
+    "opt/bmi30-network/policy.py": "00a473f01c4bbcb97e039e4231d0a98622ab8d9bb98a58eee722fdac322a7af0",
+    "opt/bmi30-network/protocol.py": "df29af62b5f86bda8198899843a494b730a02f21e5401759c341922b737dc1c8",
+    "opt/bmi30-network/realtime.py": "db005ec7cb9052d11edbbde59a8f71085ac92ac1641f4d764cc7684d71d1d652",
+    "opt/bmi30-network/scope_codec.py": "8241843ad2487e8cde4d4ab0ea12d47fa1c8556bac97f7565954028d14332769",
+    "opt/bmi30-network/scope_live.py": "7147ee6762bc929128b45ed24b4bbd6ca255326c742312eb32c52f8d9d4e11cc",
+    "opt/bmi30-network/scope_rtc.py": "228784e1faefa204ab01aafeacee196eef00be6907300649f4c5609aaec7cd5c",
+    "opt/bmi30-network/scope_rtc_proxy.py": "981d3ead4bf828e0ec240786dd6cc21609f5b274792b9d2e1f7ec9ec2a547c1f",
+    "opt/bmi30-network/service.py": "0891fe223accb259e374d3d377143a205edf83a1c03719aa1efdcb7c22ffc135",
+    "opt/bmi30-network/test_communication_recovery.py": "1e10711c484ea2dca2f61e920bfd72b68012a013a0291e7e707011634472ecd8",
+    "opt/bmi30-network/test_group.py": "89fc790e132b468a555a1ac38b0af3fd61f18662b84837682f6de7cd7392471d",
+    "opt/bmi30-network/test_local_led.py": "8c3405761d353952c6f27de9391b1860a4381b85761be95d4d61520a0d12e77e",
+    "opt/bmi30-network/test_network.py": "3aa5d3f63e4c6d8bce6e6e62a92658792262c3a9379bcbf5800ecd16e92cc5e2",
+    "opt/bmi30-network/test_realtime.py": "f8f7a8702b745ad6382d602fe8d9b15512d3915d5539e255418bd0934f8dc8a8",
+    "opt/bmi30-network/test_scope_codec.py": "dd32bee0cbf80b0b5ad02cb6405036bdc8d358e2c6f0ff367a7c7e5667e90d3e",
+    "opt/bmi30-network/test_scope_live.py": "a493c091fc2868c661ce20656d9da4872d704be14ec681c9c279c359e466471c",
+    "opt/bmi30-network/test_scope_rtc.py": "c4fa8c067e3e0034432b4ec7f74d35fcb842cddab75d1f365708f4ae32cba652",
+    "opt/bmi30-network/test_stability.py": "4783e313298f221c061b3c27c8dfe257c273ebc857df87696a1b73f9bd84f549",
+    "opt/bmi30-network/transport_policy.py": "b73007d1b089d8739fbdad9354ff949e93f9dc2a09a7f95d2ca43e963fe29187"
+  },
+  "status_samples": [
+    {
+      "service": {
+        "version": "001",
+        "engine_source": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-11-04-185916",
+        "uptime_s": 829.7190387248993
+      },
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 8,
+        "rpi_avg_n": 12,
+        "det_ratio": 1.6
+      },
+      "settings": {
+        "common_mode_enabled": false,
+        "common_mode_require_pair": false,
+        "common_mode_same_lag": false,
+        "common_mode_strength": 100.0,
+        "common_mode_balance": 1.0,
+        "common_mode_radius": 6,
+        "common_mode_min_snr": 1.2,
+        "common_mode_residual_threshold": 100.0,
+        "smooth_mode": 4,
+        "confirm_phase_gate": 25,
+        "confirm_sample_diversity": 0,
+        "confirm_change_mode": "off",
+        "confirm_growth_enabled": false,
+        "confirm_growth_ratio": 1.5,
+        "impulse_guard_enabled": true,
+        "tag_filter_slot1": "",
+        "tag_filter_slot2": "",
+        "tag_filter_slot3": "",
+        "filter_casino": false,
+        "filter_barkhausen": false,
+        "filter_microwire": false,
+        "filter_paper": false,
+        "noise_divisions": 6,
+        "noise_area_percent": 66,
+        "noise_guard_radius": 40,
+        "noise_skip_parts": 1,
+        "peak_index_min": 20,
+        "base_width_max": 30,
+        "base_width_enabled": true,
+        "peak_index_max": 66,
+        "barkhausen_radius": 24,
+        "barkhausen_frac": 0.22,
+        "barkhausen_min_width": 4,
+        "barkhausen_max_span": 140,
+        "barkhausen_min_product_level": 800000,
+        "barkhausen_max_product_level": 20000000,
+        "barkhausen_max_total_fraction": 0.82,
+        "barkhausen_all_quarter_frac": 0.45,
+        "phase_max_shift": 12,
+        "phase_shift_penalty": 0.02,
+        "mark_window_start_frac": 0.05,
+        "mark_window_end_frac": 0.95,
+        "mark_gap": 21,
+        "mark_gap_tol": 7,
+        "mark_second_frac": 0.18,
+        "mark_valley_frac": 0.7,
+        "mark_multi_max_humps": 3,
+        "locality_max_outside_peaks": 1,
+        "locality_outside_peak_frac": 0.35,
+        "noise_window_s": 1.0,
+        "noise_estimator": "max_mean_p95",
+        "noise_percentile": 95.0,
+        "ratio_noise_max_u16": 10.0,
+        "auto_floor_u16": 10.0,
+        "auto_slope": 4.0
+      },
+      "channel_policy": {
+        "upper": {
+          "enabled": true,
+          "confirm_count": 3,
+          "threshold": 1.6,
+          "threshold_high": 1.3,
+          "auto_threshold": false,
+          "burst_gate": true,
+          "burst_blank_s": 0.08,
+          "burst_max_ratio": 8.0
+        },
+        "lower": {
+          "enabled": true,
+          "confirm_count": 3,
+          "threshold": 2.0,
+          "threshold_high": 1.5,
+          "auto_threshold": false,
+          "burst_gate": true,
+          "burst_blank_s": 0.08,
+          "burst_max_ratio": 8.0
+        }
+      },
+      "connection": {
+        "connected": true,
+        "disconnected": false,
+        "last_frame_age_s": 0.009175539016723633
+      },
+      "worker": {
+        "alive": true,
+        "mode": "process",
+        "submitted": 82505,
+        "results": 82501,
+        "overflows": 0,
+        "source_seq0": 41356,
+        "source_seq1": 41356
+      },
+      "stream_stats": {
+        "rx_cnt_ch0": 41360,
+        "rx_cnt_ch1": 41360,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "crc_bad": 0
+      },
+      "noise": {
+        "upper": {
+          "noise_valid": true,
+          "noise_avg": 237.09999999999994,
+          "noise_samples": 50
+        },
+        "lower": {
+          "noise_valid": true,
+          "noise_avg": 3616.1999999999985,
+          "noise_samples": 49
+        }
+      },
+      "sync": {
+        "role": "slave",
+        "value": "slave",
+        "device_id": 7,
+        "device_responded": true,
+        "role_persisted": true
+      },
+      "optimize": {
+        "dc_autotune_active": false,
+        "fast_adapt_active": false
+      }
+    },
+    {
+      "service": {
+        "version": "001",
+        "engine_source": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-11-04-185916",
+        "uptime_s": 831.7249946594238
+      },
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 8,
+        "rpi_avg_n": 12,
+        "det_ratio": 1.6
+      },
+      "settings": {
+        "common_mode_enabled": false,
+        "common_mode_require_pair": false,
+        "common_mode_same_lag": false,
+        "common_mode_strength": 100.0,
+        "common_mode_balance": 1.0,
+        "common_mode_radius": 6,
+        "common_mode_min_snr": 1.2,
+        "common_mode_residual_threshold": 100.0,
+        "smooth_mode": 4,
+        "confirm_phase_gate": 25,
+        "confirm_sample_diversity": 0,
+        "confirm_change_mode": "off",
+        "confirm_growth_enabled": false,
+        "confirm_growth_ratio": 1.5,
+        "impulse_guard_enabled": true,
+        "tag_filter_slot1": "",
+        "tag_filter_slot2": "",
+        "tag_filter_slot3": "",
+        "filter_casino": false,
+        "filter_barkhausen": false,
+        "filter_microwire": false,
+        "filter_paper": false,
+        "noise_divisions": 6,
+        "noise_area_percent": 66,
+        "noise_guard_radius": 40,
+        "noise_skip_parts": 1,
+        "peak_index_min": 20,
+        "base_width_max": 30,
+        "base_width_enabled": true,
+        "peak_index_max": 66,
+        "barkhausen_radius": 24,
+        "barkhausen_frac": 0.22,
+        "barkhausen_min_width": 4,
+        "barkhausen_max_span": 140,
+        "barkhausen_min_product_level": 800000,
+        "barkhausen_max_product_level": 20000000,
+        "barkhausen_max_total_fraction": 0.82,
+        "barkhausen_all_quarter_frac": 0.45,
+        "phase_max_shift": 12,
+        "phase_shift_penalty": 0.02,
+        "mark_window_start_frac": 0.05,
+        "mark_window_end_frac": 0.95,
+        "mark_gap": 21,
+        "mark_gap_tol": 7,
+        "mark_second_frac": 0.18,
+        "mark_valley_frac": 0.7,
+        "mark_multi_max_humps": 3,
+        "locality_max_outside_peaks": 1,
+        "locality_outside_peak_frac": 0.35,
+        "noise_window_s": 1.0,
+        "noise_estimator": "max_mean_p95",
+        "noise_percentile": 95.0,
+        "ratio_noise_max_u16": 10.0,
+        "auto_floor_u16": 10.0,
+        "auto_slope": 4.0
+      },
+      "channel_policy": {
+        "upper": {
+          "enabled": true,
+          "confirm_count": 3,
+          "threshold": 1.6,
+          "threshold_high": 1.3,
+          "auto_threshold": false,
+          "burst_gate": true,
+          "burst_blank_s": 0.08,
+          "burst_max_ratio": 8.0
+        },
+        "lower": {
+          "enabled": true,
+          "confirm_count": 3,
+          "threshold": 2.0,
+          "threshold_high": 1.5,
+          "auto_threshold": false,
+          "burst_gate": true,
+          "burst_blank_s": 0.08,
+          "burst_max_ratio": 8.0
+        }
+      },
+      "connection": {
+        "connected": true,
+        "disconnected": false,
+        "last_frame_age_s": 0.02386331558227539
+      },
+      "worker": {
+        "alive": true,
+        "mode": "process",
+        "submitted": 82705,
+        "results": 82705,
+        "overflows": 0,
+        "source_seq0": 41458,
+        "source_seq1": 41458
+      },
+      "stream_stats": {
+        "rx_cnt_ch0": 41460,
+        "rx_cnt_ch1": 41460,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "crc_bad": 0
+      },
+      "noise": {
+        "upper": {
+          "noise_valid": true,
+          "noise_avg": 225.0,
+          "noise_samples": 51
+        },
+        "lower": {
+          "noise_valid": true,
+          "noise_avg": 3654.0,
+          "noise_samples": 51
+        }
+      },
+      "sync": {
+        "role": "slave",
+        "value": "slave",
+        "device_id": 7,
+        "device_responded": true,
+        "role_persisted": true
+      },
+      "optimize": {
+        "dc_autotune_active": false,
+        "fast_adapt_active": false
+      }
+    }
+  ],
+  "progress": {
+    "rx_cnt_ch0": 100,
+    "rx_cnt_ch1": 100,
+    "worker_results": 204
+  },
+  "service_states": {
+    "bmi30-core.service": "active",
+    "bmi30-hotspot-info.service": "active",
+    "bmi30-agent.service": "active",
+    "NetworkManager.service": "active",
+    "ssh.service": "active",
+    "bmi30-network.service": "active",
+    "bmi30-access.service": "active"
+  },
+  "network": {
+    "version": "0.2.10",
+    "status": "online",
+    "routing_tick_ok": true,
+    "checked_at": 1793867824.2947767
+  },
+  "network_local": {
+    "id": "BMI30-C9775FBAE",
+    "iface": "wlan0",
+    "uplink": "wifi",
+    "internet": {
+      "checks": 2,
+      "loss": 0.0,
+      "ok": true,
+      "rtt_ms": 86.5
+    },
+    "gateway": "192.168.0.1",
+    "ssid": "VINETA-EL 5GHz",
+    "bssid": "70:4f:57:da:0c:52",
+    "addresses": [
+      "10.43.0.1",
+      "192.168.0.153",
+      "10.187.143.1"
+    ],
+    "ap": {
+      "address": "10.187.143.1/24",
+      "available": true,
+      "bssid": "2e:cf:67:50:12:42",
+      "ssid": "BMI30-C9775FBAE"
+    },
+    "clients": 0,
+    "path": [
+      "BMI30-C9775FBAE"
+    ],
+    "parent": null
+  },
+  "limits": [
+    "Original eMMC only; USB remains unmounted and has not booted.",
+    "No physical detection sensitivity or absence of false alarms is asserted."
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "local_only": true,
+  "live_calls": false,
+  "private_plan_sha256": "04c7a1feebac94255ac7d69e02a9c27a8ecdc80e9d50a5a3cafed43bdf50b05e",
+  "installer_sha256": "82d19bd6b231a504a2072c5824b9e44121461201e278abcca0d8bb551e0d65c0",
+  "runner_sha256": "927bacf302d5e68a8a12472faf95b3b41a943eb7ec1d13c70212baba4f57b889",
+  "actual_plan_delta_passed": 5,
+  "current_installer_suite_passed": 17,
+  "current_runner_cleanup_passed": 5,
+  "commands_completed_successfully": [
+    "py -3 -B .tmp/m04-update-as-s07-20261105/test_native_plan_delta.py",
+    "py -3 -B .tmp/m04-update-as-s07-20261105/test_native_prefix_installer.py",
+    "py -3 -B .tmp/m04-update-as-s07-20261105/test_native_install_runner.py"
+  ],
+  "plan": {
+    "assets": 1999,
+    "links": 13,
+    "protected_entries": 6379,
+    "old_runtime_protected_descendants": 75,
+    "old_runtime_alias_replaced": false,
+    "all_selected_program_paths_exist": true,
+    "GUI_version": "2026-09-30-1650",
+    "own_config_sha256": "90530d9f05c3d397c51faf48ae307d358fb5a1dda0add934ff130d2a3610eb3d"
+  },
+  "source_files": {
+    "test_native_plan_delta.py": "27715e69b55b103d3cb1034e25c6df5b3fbce11d72a3e1da7d928cbd365cb5bd",
+    "test_native_prefix_installer.py": "738f0daf73cf56dacc070e69306402aea3faf333371e7b8986445a770b06edaf",
+    "test_native_install_runner.py": "7ff50e28e5250bc43c5b2c22287a7e27a549f879e79e37f6df93924c545e9faf",
+    "native-asset-plan-public.json": "9f9394ad781c7fc6d7cdda9292822d8a90735c7714bd7c16dbcb5cba735f3554"
+  },
+  "limits": [
+    "Local isolated tests and source/plan validation only; no deployment or native boot claim.",
+    "The stored250 configuration field is stale metadata, not an observed operating frequency; user confirms200 always."
+  ]
+}

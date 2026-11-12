@@ -1,0 +1,935 @@
+{
+  "usb_installations": {
+    "M01": {
+      "host": "BMI30-05AB38E6A",
+      "board": "M01",
+      "version": "2026-09-30-1650",
+      "serial": "25072913750154",
+      "uuid": "d24efc0b-47e6-444f-bc0a-aff5691c7266",
+      "source": "/dev/sda2",
+      "hashes": {
+        "host/BMI30.001.py.2026-09-30-1650": "4794c5ef0734465ef3ac9a8e931c7283da0efcad3452809a8b14687ba4abbe26",
+        "host/BMI30.200.py.2026-09-30-1650": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+        "host/BMI30.GUI.001.py.2026-09-30-1650": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+        "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95",
+        "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2"
+      },
+      "width_settings": {
+        "base_width_enabled": true,
+        "base_width_max": 24
+      },
+      "other_settings_preserved": true,
+      "mode": 6,
+      "live_core_pid_unchanged": "650432",
+      "boot_tested": false,
+      "usb_hostname": "BMI30-D5EB8F26C",
+      "backup": "home/techaid/Documents/.tmp/base-width-usb-20260930/before-20260930-173140",
+      "network_service_installed": false
+    },
+    "S10": {
+      "host": "BMI30-D5EB8F26C",
+      "board": "S10",
+      "version": "2026-09-30-1650",
+      "serial": "25072933770324",
+      "uuid": "d24efc0b-47e6-444f-bc0a-aff5691c7266",
+      "source": "/dev/sda2",
+      "hashes": {
+        "host/BMI30.001.py.2026-09-30-1650": "4794c5ef0734465ef3ac9a8e931c7283da0efcad3452809a8b14687ba4abbe26",
+        "host/BMI30.200.py.2026-09-30-1650": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+        "host/BMI30.GUI.001.py.2026-09-30-1650": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+        "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95",
+        "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2"
+      },
+      "width_settings": {
+        "base_width_enabled": true,
+        "base_width_max": 24
+      },
+      "other_settings_preserved": true,
+      "mode": 6,
+      "live_core_pid_unchanged": "996326",
+      "boot_tested": false,
+      "usb_hostname": "BMI30-D5EB8F26C",
+      "backup": "home/techaid/Documents/.tmp/base-width-usb-20260930/before-20260930-173156",
+      "network_service_installed": false
+    }
+  },
+  "verification": {
+    "M01": {
+      "host": "BMI30-05AB38E6A",
+      "journal_rows": 151,
+      "usb_verify": {
+        "base_width_max": 24,
+        "base_width_enabled": true,
+        "import_ok": true
+      },
+      "unmounted": true,
+      "stream_stats": {
+        "rx_cnt_ch0": 33057,
+        "rx_cnt_ch1": 33055,
+        "seq_gap_ch0": 8,
+        "seq_gap_ch1": 8,
+        "seq_dup_ch0": 0,
+        "seq_dup_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0,
+        "queues": {
+          "stereo_q": 0,
+          "qA": 0,
+          "qB": 0,
+          "bufA": 0,
+          "bufB": 0
+        },
+        "last_crc_bad_info": null
+      },
+      "latency": {
+        "worker_ms": 1.1108309990959242,
+        "delivery_ms": 0.9503310029685963,
+        "total_ms": 2.0611620020645205,
+        "samples": 66053,
+        "max_total_ms": 82.19177699720603,
+        "over_100ms": 0
+      }
+    },
+    "S10": {
+      "host": "BMI30-D5EB8F26C",
+      "journal_rows": 151,
+      "usb_verify": {
+        "base_width_max": 24,
+        "base_width_enabled": true,
+        "import_ok": true
+      },
+      "unmounted": true,
+      "stream_stats": {
+        "rx_cnt_ch0": 32443,
+        "rx_cnt_ch1": 32443,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "seq_dup_ch0": 0,
+        "seq_dup_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0,
+        "queues": {
+          "stereo_q": 0,
+          "qA": 0,
+          "qB": 0,
+          "bufA": 0,
+          "bufB": 0
+        },
+        "last_crc_bad_info": null
+      },
+      "latency": {
+        "worker_ms": 1.6283850018226076,
+        "delivery_ms": 2.1208789985394105,
+        "total_ms": 3.749264000362018,
+        "samples": 64854,
+        "max_total_ms": 205.89140599986422,
+        "over_100ms": 26
+      }
+    },
+    "S11": {
+      "host": "BMI30-D5507EDFC",
+      "journal_rows": 151,
+      "stream_stats": {
+        "rx_cnt_ch0": 32802,
+        "rx_cnt_ch1": 32802,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "seq_dup_ch0": 0,
+        "seq_dup_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0,
+        "queues": {
+          "stereo_q": 0,
+          "qA": 0,
+          "qB": 0,
+          "bufA": 0,
+          "bufB": 0
+        },
+        "last_crc_bad_info": null
+      },
+      "latency": {
+        "worker_ms": 1.2481650010158774,
+        "delivery_ms": 1.6259990006801672,
+        "total_ms": 2.8741640016960446,
+        "samples": 65572,
+        "max_total_ms": 41.76766999808024,
+        "over_100ms": 0
+      }
+    },
+    "S12": {
+      "host": "BMI30-27448D72B",
+      "journal_rows": 151,
+      "stream_stats": {
+        "rx_cnt_ch0": 32626,
+        "rx_cnt_ch1": 32626,
+        "seq_gap_ch0": 29,
+        "seq_gap_ch1": 26,
+        "seq_dup_ch0": 0,
+        "seq_dup_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0,
+        "queues": {
+          "stereo_q": 0,
+          "qA": 0,
+          "qB": 0,
+          "bufA": 0,
+          "bufB": 0
+        },
+        "last_crc_bad_info": null
+      },
+      "latency": {
+        "worker_ms": 2.6473360012460034,
+        "delivery_ms": 1.5557599981548265,
+        "total_ms": 4.20309599940083,
+        "samples": 65199,
+        "max_total_ms": 71.82273500075098,
+        "over_100ms": 0
+      }
+    },
+    "S13": {
+      "host": "BMI30-7AA5CED27",
+      "journal_rows": 151,
+      "stream_stats": {
+        "rx_cnt_ch0": 33592,
+        "rx_cnt_ch1": 33592,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "seq_dup_ch0": 0,
+        "seq_dup_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0,
+        "queues": {
+          "stereo_q": 0,
+          "qA": 0,
+          "qB": 0,
+          "bufA": 0,
+          "bufB": 0
+        },
+        "last_crc_bad_info": null
+      },
+      "latency": {
+        "worker_ms": 0.8111269999062642,
+        "delivery_ms": 1.0098120001202915,
+        "total_ms": 1.8209390000265557,
+        "samples": 67152,
+        "max_total_ms": 29.320771001948742,
+        "over_100ms": 0
+      }
+    }
+  },
+  "frame_monitor": {
+    "M01": {
+      "samples": 60,
+      "usable_samples": 60,
+      "request_errors": 0,
+      "complete": true,
+      "same_core_pid": true,
+      "elapsed_s": 59.00512065499788,
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 2.5
+      },
+      "mode_changed": false,
+      "stream_delta": {
+        "rx_cnt_ch0": 935,
+        "rx_cnt_ch1": 935,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0
+      },
+      "received_fps": {
+        "ch0": 15.84608233354749,
+        "ch1": 15.84608233354749
+      },
+      "fire_delta": {
+        "ch0": 0,
+        "ch1": 0
+      },
+      "worker_delta": {
+        "submitted": 1870,
+        "results": 1870,
+        "overflows": 0
+      },
+      "worker_alive_all_samples": true,
+      "worker_max_sampled_queue": {
+        "request_queue": 0,
+        "result_queue": 0
+      },
+      "over_100ms_delta": 0,
+      "worker_lifetime_max_ms": 82.19177699720603,
+      "optic_blocked_samples": 0,
+      "channels_enabled": {
+        "upper": true,
+        "lower": true
+      },
+      "settings": {
+        "common_mode_enabled": false,
+        "common_mode_require_pair": false,
+        "common_mode_same_lag": false,
+        "common_mode_strength": 100.0,
+        "common_mode_balance": 1.0,
+        "common_mode_radius": 0,
+        "common_mode_min_snr": 1.5,
+        "common_mode_residual_threshold": 100.0,
+        "smooth_mode": 4,
+        "confirm_phase_gate": 10,
+        "tag_filter_slot1": "",
+        "tag_filter_slot2": "",
+        "tag_filter_slot3": "",
+        "filter_casino": false,
+        "filter_barkhausen": false,
+        "filter_microwire": false,
+        "filter_paper": false,
+        "noise_divisions": 6,
+        "noise_guard_radius": 40,
+        "noise_skip_parts": 1,
+        "peak_index_min": 20,
+        "base_width_max": 24,
+        "base_width_enabled": true,
+        "peak_index_max": 80,
+        "barkhausen_radius": 24,
+        "barkhausen_frac": 0.22,
+        "barkhausen_min_width": 4,
+        "barkhausen_max_span": 140,
+        "barkhausen_min_product_level": 800000,
+        "barkhausen_max_product_level": 20000000,
+        "barkhausen_max_total_fraction": 0.82,
+        "barkhausen_all_quarter_frac": 0.45,
+        "phase_max_shift": 12,
+        "phase_shift_penalty": 0.02,
+        "mark_window_start_frac": 0.05,
+        "mark_window_end_frac": 0.95,
+        "mark_gap": 21,
+        "mark_gap_tol": 7,
+        "mark_second_frac": 0.18,
+        "mark_valley_frac": 0.7,
+        "mark_multi_max_humps": 3,
+        "locality_max_outside_peaks": 1,
+        "locality_outside_peak_frac": 0.35,
+        "noise_window_s": 5.0,
+        "ratio_noise_max_u16": 10.0,
+        "auto_floor_u16": 10.0,
+        "auto_slope": 4.0
+      },
+      "confirmed_events": [],
+      "limitations": "API sampling does not record every detector decision or establish physical tag passages. Lifetime latency maximum is not the observation-window maximum. Output state is sampled after the event."
+    },
+    "S10": {
+      "samples": 60,
+      "usable_samples": 60,
+      "request_errors": 0,
+      "complete": true,
+      "same_core_pid": true,
+      "elapsed_s": 59.014266612997744,
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 2.5
+      },
+      "mode_changed": false,
+      "stream_delta": {
+        "rx_cnt_ch0": 940,
+        "rx_cnt_ch1": 940,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0
+      },
+      "received_fps": {
+        "ch0": 15.928351802866722,
+        "ch1": 15.928351802866722
+      },
+      "fire_delta": {
+        "ch0": 0,
+        "ch1": 0
+      },
+      "worker_delta": {
+        "submitted": 1880,
+        "results": 1880,
+        "overflows": 0
+      },
+      "worker_alive_all_samples": true,
+      "worker_max_sampled_queue": {
+        "request_queue": 0,
+        "result_queue": 2
+      },
+      "over_100ms_delta": 0,
+      "worker_lifetime_max_ms": 205.89140599986422,
+      "optic_blocked_samples": 0,
+      "channels_enabled": {
+        "upper": true,
+        "lower": true
+      },
+      "settings": {
+        "common_mode_enabled": true,
+        "common_mode_require_pair": true,
+        "common_mode_same_lag": true,
+        "common_mode_strength": 100.0,
+        "common_mode_balance": 1.0,
+        "common_mode_radius": 6,
+        "common_mode_min_snr": 1.2,
+        "common_mode_residual_threshold": 100.0,
+        "smooth_mode": 2,
+        "confirm_phase_gate": 10,
+        "tag_filter_slot1": "",
+        "tag_filter_slot2": "",
+        "tag_filter_slot3": "",
+        "filter_casino": false,
+        "filter_barkhausen": false,
+        "filter_microwire": false,
+        "filter_paper": false,
+        "noise_divisions": 6,
+        "noise_guard_radius": 40,
+        "noise_skip_parts": 1,
+        "peak_index_min": 20,
+        "base_width_max": 24,
+        "base_width_enabled": true,
+        "peak_index_max": 80,
+        "barkhausen_radius": 24,
+        "barkhausen_frac": 0.22,
+        "barkhausen_min_width": 4,
+        "barkhausen_max_span": 140,
+        "barkhausen_min_product_level": 800000,
+        "barkhausen_max_product_level": 20000000,
+        "barkhausen_max_total_fraction": 0.82,
+        "barkhausen_all_quarter_frac": 0.45,
+        "phase_max_shift": 12,
+        "phase_shift_penalty": 0.02,
+        "mark_window_start_frac": 0.05,
+        "mark_window_end_frac": 0.95,
+        "mark_gap": 21,
+        "mark_gap_tol": 7,
+        "mark_second_frac": 0.18,
+        "mark_valley_frac": 0.7,
+        "mark_multi_max_humps": 3,
+        "locality_max_outside_peaks": 1,
+        "locality_outside_peak_frac": 0.35,
+        "noise_window_s": 5.0,
+        "ratio_noise_max_u16": 10.0,
+        "auto_floor_u16": 10.0,
+        "auto_slope": 4.0
+      },
+      "confirmed_events": [],
+      "limitations": "API sampling does not record every detector decision or establish physical tag passages. Lifetime latency maximum is not the observation-window maximum. Output state is sampled after the event."
+    },
+    "S11": {
+      "samples": 60,
+      "usable_samples": 60,
+      "request_errors": 0,
+      "complete": true,
+      "same_core_pid": true,
+      "elapsed_s": 59.0175255710019,
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 2.5
+      },
+      "mode_changed": false,
+      "stream_delta": {
+        "rx_cnt_ch0": 940,
+        "rx_cnt_ch1": 940,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0
+      },
+      "received_fps": {
+        "ch0": 15.927472236515902,
+        "ch1": 15.927472236515902
+      },
+      "fire_delta": {
+        "ch0": 0,
+        "ch1": null
+      },
+      "worker_delta": {
+        "submitted": 1880,
+        "results": 1880,
+        "overflows": 0
+      },
+      "worker_alive_all_samples": true,
+      "worker_max_sampled_queue": {
+        "request_queue": 0,
+        "result_queue": 2
+      },
+      "over_100ms_delta": 0,
+      "worker_lifetime_max_ms": 34.78097199695185,
+      "optic_blocked_samples": 1,
+      "channels_enabled": {
+        "upper": true,
+        "lower": true
+      },
+      "settings": {
+        "common_mode_enabled": false,
+        "common_mode_require_pair": false,
+        "common_mode_same_lag": false,
+        "common_mode_strength": 100.0,
+        "common_mode_balance": 1.0,
+        "common_mode_radius": 0,
+        "common_mode_min_snr": 1.5,
+        "common_mode_residual_threshold": 100.0,
+        "smooth_mode": 2,
+        "confirm_phase_gate": 10,
+        "tag_filter_slot1": "",
+        "tag_filter_slot2": "",
+        "tag_filter_slot3": "",
+        "filter_casino": false,
+        "filter_barkhausen": false,
+        "filter_microwire": false,
+        "filter_paper": false,
+        "noise_divisions": 6,
+        "noise_guard_radius": 40,
+        "noise_skip_parts": 1,
+        "peak_index_min": 20,
+        "base_width_max": 24,
+        "base_width_enabled": true,
+        "peak_index_max": 80,
+        "barkhausen_radius": 24,
+        "barkhausen_frac": 0.22,
+        "barkhausen_min_width": 4,
+        "barkhausen_max_span": 140,
+        "barkhausen_min_product_level": 800000,
+        "barkhausen_max_product_level": 20000000,
+        "barkhausen_max_total_fraction": 0.82,
+        "barkhausen_all_quarter_frac": 0.45,
+        "phase_max_shift": 12,
+        "phase_shift_penalty": 0.02,
+        "mark_window_start_frac": 0.05,
+        "mark_window_end_frac": 0.95,
+        "mark_gap": 21,
+        "mark_gap_tol": 7,
+        "mark_second_frac": 0.18,
+        "mark_valley_frac": 0.7,
+        "mark_multi_max_humps": 3,
+        "locality_max_outside_peaks": 1,
+        "locality_outside_peak_frac": 0.35,
+        "noise_window_s": 5.0,
+        "ratio_noise_max_u16": 10.0,
+        "auto_floor_u16": 10.0,
+        "auto_slope": 4.0
+      },
+      "confirmed_events": [
+        {
+          "observed_epoch": 1790782209.3696783,
+          "channel": 1,
+          "counter_delta": 1,
+          "snapshot": {
+            "seq": 1,
+            "timestamp": 1790782209.0251932,
+            "level": 445416,
+            "trigger": 178826,
+            "threshold_passed": true,
+            "noise_ref": 90915.0,
+            "noise_avg": 69410.2875,
+            "snr_avg": 2.718935935829397,
+            "instant_snr": 4.899257548259363,
+            "instant_ratio_required": 2.576359690044774,
+            "noise_window_s": 5.0,
+            "effective_ratio": 2.5763616092211112,
+            "auto_threshold": false,
+            "auto_floor_u16": 10.0,
+            "auto_slope": 4.0,
+            "manual_ratio": 2.576359690044774,
+            "peak_index": 56,
+            "peak_index_min": 20,
+            "peak_index_max": 80,
+            "peak_position_ok": true,
+            "base_width": {
+              "valid": true,
+              "left": 47,
+              "right": 65,
+              "width": 18,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 24,
+              "ok": true
+            },
+            "detector_frame_id": 59827,
+            "noise_quarter": 4,
+            "quarter_noises": [
+              445416.0,
+              406230.0,
+              67860.0,
+              71240.0,
+              90915.0,
+              80984.0
+            ],
+            "noise_segment": 4,
+            "noise_segments": [
+              445416.0,
+              406230.0,
+              67860.0,
+              71240.0,
+              90915.0,
+              80984.0
+            ],
+            "noise_divisions": 6,
+            "noise_guard_radius": 40,
+            "noise_skip_parts": 1,
+            "confirm_peaks": [
+              56,
+              56,
+              55,
+              56
+            ],
+            "confirm_source_sequences": [
+              29922,
+              29923,
+              29924,
+              29925
+            ],
+            "confirm_count": 4,
+            "confirm_required": 4,
+            "confirm_phase_gate": 10,
+            "confirm_phase_span": 1,
+            "confirm_step_reason": "continued",
+            "instant_noise_ok": true,
+            "instant_required": 234229.7412204206,
+            "common_mode": {
+              "enabled": false,
+              "applied": false,
+              "blocked": false,
+              "synchronized": false,
+              "reason": "disabled",
+              "pair_reason": "missing_phase_metadata"
+            },
+            "shape_filter_active": false,
+            "shape_ok": true,
+            "display_scale": 16384.250003814755
+          },
+          "optic_gate": true,
+          "sound_output": true
+        }
+      ],
+      "limitations": "API sampling does not record every detector decision or establish physical tag passages. Lifetime latency maximum is not the observation-window maximum. Output state is sampled after the event."
+    },
+    "S12": {
+      "samples": 60,
+      "usable_samples": 60,
+      "request_errors": 0,
+      "complete": true,
+      "same_core_pid": true,
+      "elapsed_s": 59.00561340599961,
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 3.0
+      },
+      "mode_changed": false,
+      "stream_delta": {
+        "rx_cnt_ch0": 941,
+        "rx_cnt_ch1": 940,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0
+      },
+      "received_fps": {
+        "ch0": 15.947635244892147,
+        "ch1": 15.930687704780679
+      },
+      "fire_delta": {
+        "ch0": 0,
+        "ch1": 0
+      },
+      "worker_delta": {
+        "submitted": 1882,
+        "results": 1882,
+        "overflows": 0
+      },
+      "worker_alive_all_samples": true,
+      "worker_max_sampled_queue": {
+        "request_queue": 0,
+        "result_queue": 1
+      },
+      "over_100ms_delta": 0,
+      "worker_lifetime_max_ms": 71.82273500075098,
+      "optic_blocked_samples": 1,
+      "channels_enabled": {
+        "upper": true,
+        "lower": false
+      },
+      "settings": {
+        "common_mode_enabled": false,
+        "common_mode_require_pair": false,
+        "common_mode_same_lag": false,
+        "common_mode_strength": 100.0,
+        "common_mode_balance": 1.0,
+        "common_mode_radius": 0,
+        "common_mode_min_snr": 1.5,
+        "common_mode_residual_threshold": 100.0,
+        "smooth_mode": 3,
+        "confirm_phase_gate": 10,
+        "tag_filter_slot1": "",
+        "tag_filter_slot2": "",
+        "tag_filter_slot3": "",
+        "filter_casino": false,
+        "filter_barkhausen": false,
+        "filter_microwire": false,
+        "filter_paper": false,
+        "noise_divisions": 6,
+        "noise_guard_radius": 40,
+        "noise_skip_parts": 1,
+        "peak_index_min": 20,
+        "base_width_max": 24,
+        "base_width_enabled": true,
+        "peak_index_max": 80,
+        "barkhausen_radius": 24,
+        "barkhausen_frac": 0.22,
+        "barkhausen_min_width": 4,
+        "barkhausen_max_span": 140,
+        "barkhausen_min_product_level": 800000,
+        "barkhausen_max_product_level": 20000000,
+        "barkhausen_max_total_fraction": 0.82,
+        "barkhausen_all_quarter_frac": 0.45,
+        "phase_max_shift": 12,
+        "phase_shift_penalty": 0.02,
+        "mark_window_start_frac": 0.05,
+        "mark_window_end_frac": 0.95,
+        "mark_gap": 21,
+        "mark_gap_tol": 7,
+        "mark_second_frac": 0.18,
+        "mark_valley_frac": 0.7,
+        "mark_multi_max_humps": 3,
+        "locality_max_outside_peaks": 1,
+        "locality_outside_peak_frac": 0.35,
+        "noise_window_s": 5.0,
+        "ratio_noise_max_u16": 10.0,
+        "auto_floor_u16": 10.0,
+        "auto_slope": 4.0
+      },
+      "confirmed_events": [],
+      "limitations": "API sampling does not record every detector decision or establish physical tag passages. Lifetime latency maximum is not the observation-window maximum. Output state is sampled after the event."
+    },
+    "S13": {
+      "samples": 60,
+      "usable_samples": 60,
+      "request_errors": 0,
+      "complete": true,
+      "same_core_pid": true,
+      "elapsed_s": 58.99839434599926,
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 3.0
+      },
+      "mode_changed": false,
+      "stream_delta": {
+        "rx_cnt_ch0": 942,
+        "rx_cnt_ch1": 942,
+        "seq_gap_ch0": 0,
+        "seq_gap_ch1": 0,
+        "crc_bad": 0,
+        "magic_bad": 0,
+        "host_rx_ack_fail": 0
+      },
+      "received_fps": {
+        "ch0": 15.966536215809372,
+        "ch1": 15.966536215809372
+      },
+      "fire_delta": {
+        "ch0": 1,
+        "ch1": 0
+      },
+      "worker_delta": {
+        "submitted": 1884,
+        "results": 1885,
+        "overflows": 0
+      },
+      "worker_alive_all_samples": true,
+      "worker_max_sampled_queue": {
+        "request_queue": 1,
+        "result_queue": 1
+      },
+      "over_100ms_delta": 0,
+      "worker_lifetime_max_ms": 29.320771001948742,
+      "optic_blocked_samples": 0,
+      "channels_enabled": {
+        "upper": true,
+        "lower": true
+      },
+      "settings": {
+        "common_mode_enabled": false,
+        "common_mode_require_pair": false,
+        "common_mode_same_lag": false,
+        "common_mode_strength": 100.0,
+        "common_mode_balance": 1.0,
+        "common_mode_radius": 0,
+        "common_mode_min_snr": 1.5,
+        "common_mode_residual_threshold": 100.0,
+        "smooth_mode": 3,
+        "confirm_phase_gate": 10,
+        "tag_filter_slot1": "",
+        "tag_filter_slot2": "",
+        "tag_filter_slot3": "",
+        "filter_casino": false,
+        "filter_barkhausen": false,
+        "filter_microwire": false,
+        "filter_paper": false,
+        "noise_divisions": 6,
+        "noise_guard_radius": 40,
+        "noise_skip_parts": 1,
+        "peak_index_min": 20,
+        "base_width_max": 24,
+        "base_width_enabled": true,
+        "peak_index_max": 80,
+        "barkhausen_radius": 24,
+        "barkhausen_frac": 0.22,
+        "barkhausen_min_width": 4,
+        "barkhausen_max_span": 140,
+        "barkhausen_min_product_level": 800000,
+        "barkhausen_max_product_level": 20000000,
+        "barkhausen_max_total_fraction": 0.82,
+        "barkhausen_all_quarter_frac": 0.45,
+        "phase_max_shift": 12,
+        "phase_shift_penalty": 0.02,
+        "mark_window_start_frac": 0.05,
+        "mark_window_end_frac": 0.95,
+        "mark_gap": 21,
+        "mark_gap_tol": 7,
+        "mark_second_frac": 0.18,
+        "mark_valley_frac": 0.7,
+        "mark_multi_max_humps": 3,
+        "locality_max_outside_peaks": 1,
+        "locality_outside_peak_frac": 0.35,
+        "noise_window_s": 5.0,
+        "ratio_noise_max_u16": 10.0,
+        "auto_floor_u16": 10.0,
+        "auto_slope": 4.0
+      },
+      "confirmed_events": [
+        {
+          "observed_epoch": 1790782222.5615325,
+          "channel": 0,
+          "counter_delta": 1,
+          "snapshot": {
+            "seq": 1,
+            "timestamp": 1790782222.4031773,
+            "level": 161644,
+            "trigger": 76090,
+            "threshold_passed": true,
+            "noise_ref": 29547.0,
+            "noise_avg": 26827.70731707317,
+            "snr_avg": 2.71120274270503,
+            "instant_snr": 5.470741530443023,
+            "instant_ratio_required": 2.836259167732262,
+            "noise_window_s": 5.0,
+            "effective_ratio": 2.8362468361795594,
+            "auto_threshold": false,
+            "auto_floor_u16": 10.0,
+            "auto_slope": 4.0,
+            "manual_ratio": 2.836259167732262,
+            "peak_index": 53,
+            "peak_index_min": 20,
+            "peak_index_max": 80,
+            "peak_position_ok": true,
+            "base_width": {
+              "valid": true,
+              "left": 45,
+              "right": 60,
+              "width": 15,
+              "left_kind": "minimum",
+              "right_kind": "minimum",
+              "reason": "measured",
+              "enabled": true,
+              "limit": 24,
+              "ok": true
+            },
+            "detector_frame_id": 61785,
+            "noise_quarter": 2,
+            "quarter_noises": [
+              161644.0,
+              68747.0,
+              29547.0,
+              5796.0,
+              9550.0,
+              61019.0
+            ],
+            "noise_segment": 2,
+            "noise_segments": [
+              161644.0,
+              68747.0,
+              29547.0,
+              5796.0,
+              9550.0,
+              61019.0
+            ],
+            "noise_divisions": 6,
+            "noise_guard_radius": 40,
+            "noise_skip_parts": 1,
+            "confirm_peaks": [
+              48,
+              55,
+              55,
+              53
+            ],
+            "confirm_source_sequences": [
+              30900,
+              30901,
+              30902,
+              30903
+            ],
+            "confirm_count": 4,
+            "confirm_required": 4,
+            "confirm_phase_gate": 10,
+            "confirm_phase_span": 7,
+            "confirm_step_reason": "continued",
+            "instant_noise_ok": true,
+            "instant_required": 83802.94962898514,
+            "common_mode": {
+              "enabled": false,
+              "applied": false,
+              "blocked": false,
+              "synchronized": false,
+              "reason": "disabled",
+              "pair_reason": "missing_phase_metadata"
+            },
+            "shape_filter_active": false,
+            "shape_ok": true,
+            "display_scale": 16384.250003814755
+          },
+          "optic_gate": true,
+          "sound_output": true
+        }
+      ],
+      "limitations": "API sampling does not record every detector decision or establish physical tag passages. Lifetime latency maximum is not the observation-window maximum. Output state is sampled after the event."
+    }
+  }
+}

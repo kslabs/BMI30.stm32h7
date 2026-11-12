@@ -1,0 +1,11 @@
+{
+  "frozen": true,
+  "source_normalized_LF_sha256": "9bf180dfe4919f57e5c4d7021245a44e1c82ffe1bca3cc82eb74343400c82350",
+  "candidate_file_bytes_sha256": "ec373f37a9231196ff77aad61a7be312b8f8f9b5ee46ca1f411e6cb58fca53fe",
+  "candidate_normalized_LF_sha256": "ec373f37a9231196ff77aad61a7be312b8f8f9b5ee46ca1f411e6cb58fca53fe",
+  "tests": {
+    "run": 6,
+    "passed": 6
+  },
+  "scope": "Only claim/release helpers and Supervisor.tick pending-job ownership; main and other Supervisor methods AST-identical. No live execution/deployment by child."
+}

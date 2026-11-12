@@ -1,0 +1,45 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import {Window} from '../../.tmp/language-20261016/node_modules/happy-dom/lib/index.js';
+const source=await fs.readFile(process.argv[2] || new URL('group_ui.js',import.meta.url),'utf8');
+const window=new Window({url:'http://bmi30.test/portal'});
+window.document.body.innerHTML='<label data-group-transport-label></label><select data-group-transport>'+['wifi','bluetooth','both','off'].map(v=>`<option value="${v}">${v}</option>`).join('')+'</select><small data-group-transport-hint></small><span data-group-transport-result></span>';
+let language='en',requests=[];
+window.BMI30I18n={get language(){return language;}};
+window._groupSetText=(el,v)=>{el.textContent=v;};
+window.eval(source);
+let revision=0;
+window.fetch=async(url,options)=>{
+  requests.push([url,JSON.parse(options.body)]);
+  const body=JSON.parse(options.body);
+  assert.equal(body.revision,'r'+revision);
+  revision++;
+  return {ok:true,json:async()=>({ok:true,service_transports:{mode:body.mode,revision:'r'+revision,allowed:[],active:[]}})};
+};
+window._groupFast={available:true,service_transports:{mode:'both',revision:'r0',allowed:['wifi','bluetooth'],active:['wifi']}};
+window._groupRefreshTransport();
+const select=window.document.querySelector('select');
+assert.equal(select.value,'both');assert.equal(select.disabled,false);
+assert.equal(window._groupLocalChannel(),'Local · Wi-Fi');
+window._groupFast.service_transports.active=['wifi','bluetooth'];
+assert.equal(window._groupLocalChannel(),'Local · Wi-Fi + Bluetooth');
+window._groupFast.service_transports.active=[];
+assert.match(window._groupLocalChannel(),/No peer link/);
+for(const mode of ['wifi','bluetooth','off','both']) {
+  assert.equal(await window._groupSetTransport(mode),true);
+  assert.equal(select.value,mode);assert.equal(select.disabled,false);
+}
+assert.equal(requests.length,4);
+assert.ok(requests.every(([url])=>url==='/api/group-service-transports'));
+window._groupFast.service_transports.mode='off';assert.equal(window._groupLocalChannel(),'Local · Service off');
+language='ru';window._groupRefreshTransport();
+assert.equal(window.document.querySelector('label').textContent,'Служебная связь этого прибора');
+assert.equal(select.options[3].textContent,'Выключено');
+language='en';window._groupRefreshTransport();assert.equal(select.options[3].textContent,'Off');
+window.fetch=async()=>{throw new Error('timeout');};
+assert.equal(await window._groupSetTransport('wifi'),false);
+assert.equal(select.value,'off','failed save must not claim selected mode changed');
+window._groupFast.available=false;window._groupRefreshTransport();assert.equal(select.disabled,true);
+assert.equal(window._groupLocalChannel(),'Local · Service unavailable');
+await window.happyDOM.abort();
+console.log('PASS: four modes, actual local channels, EN/RU, persisted revision, failed save and offline availability');

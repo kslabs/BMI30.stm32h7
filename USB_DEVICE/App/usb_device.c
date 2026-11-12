@@ -21,6 +21,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "usb_device.h"
+#include "usb_vendor_app.h"
 #include "usbd_core.h"
 #include "usbd_desc.h"
 #include "usbd_cdc.h"
@@ -64,6 +65,7 @@ USBD_HandleTypeDef hUsbDeviceHS;
   */
 void MX_USB_DEVICE_Init(void)
 {
+  vnd_host_session_boot_init();
   /* USER CODE BEGIN USB_DEVICE_Init_PreTreatment */
 
   /* USER CODE END USB_DEVICE_Init_PreTreatment */

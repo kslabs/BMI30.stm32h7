@@ -1,0 +1,41 @@
+{
+  "AP_IPv4": "10.187.143.1",
+  "Access_AP_reactivations": 0,
+  "Access_STA_failures": 0,
+  "Access_committed": true,
+  "Access_sample_count": 88,
+  "Access_sha256": "bd1a0974917b5af9b62ff5fe5a8772554ee32e2c412c31c7091d3348418f511d",
+  "Access_unleased_observed_seconds": 180.17231956100295,
+  "Access_version": "0.1.1",
+  "Core_Portal_NetworkManager_network_service_not_restarted": true,
+  "DNS_STA_failures": 0,
+  "DNS_committed": true,
+  "DNS_file_sha256": {
+    "90-bmi30-captive-portal.conf": "60ba8d5a42898254a6f14c5c47bfa76f92d9a3791a24792a5229aa2dfbfb1028",
+    "91-bmi30-captive-detection.conf": "1688f44279ca0c72e92082d3dbfc6aacc5dfe1165a589bade0cc22fa0bd36423"
+  },
+  "DNS_one_planned_AP_activation": true,
+  "DNS_rollback_timer_inactive": true,
+  "DNS_sample_count": 45,
+  "DNS_unleased_observed_seconds": 92.2277100210049,
+  "DNS_unplanned_AP_reactivations": 0,
+  "Ethernet_configuration_or_activation_changed": false,
+  "Hub_HTTPS_Portal_Core_verified": true,
+  "USB_updated": false,
+  "board": "S07",
+  "canonical_aliases_OS_probes_and_public_upstream_verified": true,
+  "date": "2026-11-06",
+  "detector_settings_or_DC_background_changed": false,
+  "evidence_sha256": {
+    "Access_observation": "68e4ddcf020cf44c85d55df821a2305b96989c800fce293479501b43d6f900ee",
+    "Access_postcommit_status": "4f2d5c7c47d8c9c7027f5aa3f365d943cf801d09a6ba76e7ac08e349dff261fc",
+    "DNS_observation": "6a6778af9b113db0d2eb990e2de2fa22618af5c3ab2d77837accfa6be72ed135",
+    "DNS_postcommit_status": "d60bdb0d4214462dc6fc41a99f6827698f686d06e799ff557e1e93116841bb69"
+  },
+  "full_RPi_update_applied": false,
+  "native_IPv4": "192.168.0.153",
+  "network_and_installer_source_owners_updated": false,
+  "non_AP_dnsmasq_process_unchanged": true,
+  "ok": true,
+  "schema": 1
+}

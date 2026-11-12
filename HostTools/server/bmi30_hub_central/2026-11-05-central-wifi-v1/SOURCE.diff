@@ -1,0 +1,538 @@
+--- a/app/bmi30hub/main.py
++++ b/app/bmi30hub/main.py
+@@ -23,6 +23,7 @@
+ from .config import Settings, load_settings
+ from .db import Database, utcnow
+ from .firmware import FirmwareStorage, build_firmware_router
++from .central_store import CentralStore, build_central_router, system_scope_resolver
+ from .key_client import KeyClientError, call_key_manager
+ from .legacy_auth import (
+     LEGACY_PASSWORD_SENTINEL,
+@@ -59,6 +60,7 @@
+ TEMPLATES = Jinja2Templates(directory=str(PACKAGE_ROOT / "templates"))
+ MONITOR = DeviceMonitor(SETTINGS, DB)
+ FIRMWARE_STORAGE = FirmwareStorage(SETTINGS, DB)
++CENTRAL_STORE = CentralStore(SETTINGS.root)
+ LEGACY_AUTH = LegacyMqttAuthenticator(
+     SETTINGS.legacy_mqtt_host,
+     SETTINGS.legacy_mqtt_port,
+@@ -831,6 +833,7 @@
+ @asynccontextmanager
+ async def lifespan(app: FastAPI):
+     FIRMWARE_STORAGE.ensure_layout()
++    CENTRAL_STORE.initialize_optional()
+     monitor_task = asyncio.create_task(MONITOR.run(), name="bmi30-device-monitor")
+     try:
+         yield
+@@ -852,6 +855,7 @@
+     root_path=PATH_PREFIX,
+ )
+ app.include_router(build_firmware_router(FIRMWARE_STORAGE))
++app.include_router(build_central_router(CENTRAL_STORE, FIRMWARE_STORAGE.authenticate_device, system_scope_resolver(DB), require_https=True, enable_captures=False))
+ @app.middleware("http")
+ async def security_middleware(request: Request, call_next):
+     if request.url.path.startswith("/api/v1/agent/"):
+--- /dev/null
++++ b/app/bmi30hub/central_store.py
+@@ -0,0 +1,501 @@
++"""Additive Hub storage. Approved-device auth is supplied by existing firmware storage.
++
++No device tokens, WiFi PSKs or request bodies are logged. One authoritative
++credentials file; captures are owner-only, append/commit, never auto-deleted.
++"""
++from __future__ import annotations
++import base64
++from contextlib import contextmanager
++from dataclasses import dataclass
++from datetime import datetime,timezone
++import errno
++import functools
++import hashlib
++import json
++import logging
++import math
++import os
++from pathlib import Path
++import re
++import shutil
++import stat
++import time
++from typing import Callable
++import uuid
++
++from cryptography.hazmat.primitives.ciphers.aead import AESGCM
++from fastapi import APIRouter,Request
++from fastapi.concurrency import run_in_threadpool
++from fastapi.responses import JSONResponse,StreamingResponse
++
++MAX_JSON=65536
++MAX_CHUNK=1024*1024
++MAX_CATALOG=1024
++SHA=re.compile(r'^[0-9a-f]{64}$')
++DEVICE=re.compile(r'^BMI30-[A-F0-9]{16}$')
++SESSION=re.compile(r'^[0-9a-f]{32}$')
++RECORD_FIELDS={'ssid','psk','security','origin','revision','updated'}
++LOGGER=logging.getLogger('bmi30hub.central')
++
++
++class StoreError(RuntimeError):
++    def __init__(self,status:int,code:str):
++        super().__init__(code);self.status=status;self.code=code
++
++
++def check(ok,code='invalid_input',status=400):
++    if not ok:raise StoreError(status,code)
++
++
++def integer(value,minimum=0,maximum=2**53-1):
++    check(type(value)is int and minimum<=value<=maximum);return value
++
++
++def encoded(value):return json.dumps(value,ensure_ascii=False,separators=(',',':'),sort_keys=True,allow_nan=False).encode('utf-8')
++
++
++def make_empty_catalog(key:bytes):
++    check(isinstance(key,bytes)and len(key)==32,'wifi_key_invalid',503)
++    return {'schema':2,'key_id':hashlib.sha256(key).hexdigest(),'scopes':{}}
++
++
++def decode(data):
++    def pairs(rows):
++        d={}
++        for key,value in rows:
++            check(key not in d,'duplicate_json_key');d[key]=value
++        return d
++    def finite(value):
++        number=float(value)
++        if not math.isfinite(number):raise ValueError()
++        return number
++    try:return json.loads(data,object_pairs_hook=pairs,parse_float=finite,parse_constant=lambda value:(_ for _ in()).throw(ValueError()))
++    except (ValueError,UnicodeError):raise StoreError(400,'invalid_json')from None
++
++
++def safe(path:Path):
++    for node in (path,*path.parents):check(not node.is_symlink(),'unsafe_storage_path',503)
++    return path
++
++
++def mkdir(path:Path):
++    safe(path);path.mkdir(mode=0o700,parents=True,exist_ok=True)
++    check(path.is_dir(),'unsafe_storage_path',503)
++
++
++def fsync_dir(path):
++    if os.name=='nt':return
++    fd=os.open(path,os.O_RDONLY|os.O_DIRECTORY)
++    try:os.fsync(fd)
++    finally:os.close(fd)
++
++
++def atomic(path:Path,data:bytes):
++    safe(path);temp=path.with_name('.'+path.name+'.'+uuid.uuid4().hex+'.part')
++    fd=os.open(temp,os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
++    try:
++        with os.fdopen(fd,'wb')as f:f.write(data);f.flush();os.fsync(f.fileno())
++        os.chmod(temp,0o600);os.replace(temp,path);fsync_dir(path.parent)
++    finally:temp.unlink(missing_ok=True)
++
++
++def read_json(path:Path,limit=4*1024*1024):
++    safe(path);check(path.is_file()and path.stat().st_size<=limit,'storage_integrity',503)
++    with path.open('rb')as f:data=f.read(limit+1)
++    check(len(data)<=limit,'storage_integrity',503)
++    try:return decode(data)
++    except StoreError:raise StoreError(503,'storage_integrity')from None
++
++
++@contextmanager
++def locked(path:Path):
++    safe(path);fd=os.open(path,os.O_RDWR|os.O_CREAT|getattr(os,'O_NOFOLLOW',0),0o600)
++    f=os.fdopen(fd,'r+b');held=False
++    try:
++        if os.fstat(fd).st_size==0:f.write(b'0');f.flush()
++        until=time.monotonic()+5
++        while True:
++            try:
++                if os.name=='nt':
++                    import msvcrt
++                    f.seek(0);msvcrt.locking(fd,msvcrt.LK_NBLCK,1)
++                else:
++                    import fcntl
++                    fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
++                held=True;break
++            except (BlockingIOError,OSError):
++                if time.monotonic()>=until:raise StoreError(503,'storage_busy')from None
++                time.sleep(.02)
++        yield
++    finally:
++        if held:
++            if os.name=='nt':
++                import msvcrt
++                f.seek(0);msvcrt.locking(fd,msvcrt.LK_UNLCK,1)
++            else:
++                import fcntl
++                fcntl.flock(fd,fcntl.LOCK_UN)
++        f.close()
++
++
++@dataclass(frozen=True)
++class Limits:
++    capture_bytes:int=1024**3
++    device_bytes:int=8*1024**3
++    total_bytes:int=32*1024**3
++    min_free_bytes:int=256*1024**2
++    sessions:int=1024
++    device_sessions:int=128
++
++
++class CentralStore:
++    def __init__(self,root:Path,limits:Limits|None=None):
++        self.root=Path(root);self.network=self.root/'data/network';self.captures=self.root/'data/captures'
++        self.catalog=self.network/'credentials.json';self.key=self.root/'secrets/wifi-catalog.key'
++        self.wifi_lock=self.network/'.credentials.lock';self.capture_lock=self.captures/'.captures.lock'
++        self.limits=limits or Limits()
++
++    def ensure_layout(self):
++        for p in(self.network,self.captures,self.key.parent):mkdir(p)
++        with locked(self.wifi_lock):
++            if not self.key.exists():
++                check(not self.catalog.exists(),'wifi_key_missing',503)
++                fd=os.open(safe(self.key),os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
++                with os.fdopen(fd,'wb')as f:f.write(AESGCM.generate_key(bit_length=256));f.flush();os.fsync(f.fileno())
++                fsync_dir(self.key.parent)
++            secret=self._key_bytes()
++            if not self.catalog.exists():atomic(self.catalog,encoded(make_empty_catalog(secret)))
++            self._catalog()
++
++    def initialize_optional(self):
++        try:self.ensure_layout();return True
++        except Exception:
++            LOGGER.error('Central WiFi storage unavailable; existing Hub services remain enabled')
++            return False
++
++    def init_only(self):
++        for p in(self.network,self.captures,self.key.parent):mkdir(p)
++        with locked(self.wifi_lock):
++            check(not self.key.exists()and not self.catalog.exists(),'already_initialized',409)
++            secret=AESGCM.generate_key(bit_length=256)
++            fd=os.open(safe(self.key),os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
++            with os.fdopen(fd,'wb')as f:f.write(secret);f.flush();os.fsync(f.fileno())
++            fsync_dir(self.key.parent)
++            fd=os.open(safe(self.catalog),os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
++            with os.fdopen(fd,'wb')as f:f.write(encoded(make_empty_catalog(secret)));f.flush();os.fsync(f.fileno())
++            fsync_dir(self.catalog.parent);d,crypto=self._catalog()
++            return {'ok':True,'initialized':True,'scope_count':len(d['scopes']),'key_exists':True,
++              'catalog_sha256':hashlib.sha256(self.catalog.read_bytes()).hexdigest()}
++
++    def _key_bytes(self):
++        safe(self.key);s=self.key.stat()
++        check(stat.S_ISREG(s.st_mode)and s.st_size==32,'wifi_key_invalid',503)
++        if os.name!='nt':check(stat.S_IMODE(s.st_mode)==0o600 and s.st_uid==os.geteuid(),'wifi_key_permissions',503)
++        data=self.key.read_bytes();check(len(data)==32,'wifi_key_invalid',503)
++        return data
++
++    def _catalog(self):
++        d=read_json(self.catalog)
++        check(d.get('schema')==2 and isinstance(d.get('scopes'),dict)and len(d['scopes'])<=256,'storage_integrity',503)
++        for name,group in d['scopes'].items():
++            check(bool(re.fullmatch(r'system:[1-9][0-9]{0,15}',name))and isinstance(group,dict)
++              and type(group.get('revision'))is int and 0<=group['revision']<2**53
++              and isinstance(group.get('records'),dict)and isinstance(group.get('provenance'),dict),'storage_integrity',503)
++        check(sum(len(g['records'])for g in d['scopes'].values())<=MAX_CATALOG,'storage_integrity',503)
++        # ONE immutable byte snapshot for key_id validation AND AESGCM. Never
++        # read key again between binding check and encrypting a new scope.
++        secret=self._key_bytes()
++        check(d.get('key_id')==hashlib.sha256(secret).hexdigest(),'wifi_key_binding',503)
++        return d,AESGCM(secret)
++
++    def _plain(self,scope,key,item,crypto):
++        try:
++            public={k:item[k]for k in RECORD_FIELDS if k!='psk'}
++            check(key=='wifi:'+public['ssid'],'storage_integrity',503)
++            envelope=item['psk'];check(envelope.get('algorithm')=='AES-256-GCM','wifi_integrity',503)
++            nonce=base64.b64decode(envelope['nonce'],validate=True);check(len(nonce)==12,'wifi_integrity',503)
++            secret=crypto.decrypt(nonce,base64.b64decode(envelope['ciphertext'],validate=True),encoded({'scope':scope,'key':key,**public})).decode('utf-8')
++            return {**public,'psk':secret}
++        except StoreError:raise
++        except Exception:raise StoreError(503,'wifi_integrity')from None
++
++    @staticmethod
++    def _scope(scope):check(isinstance(scope,str)and bool(re.fullmatch(r'system:[1-9][0-9]{0,15}',scope)),'system_scope_required',403)
++
++    def wifi_catalog(self,scope):
++        self._scope(scope)
++        with locked(self.wifi_lock):
++            document,crypto=self._catalog();d=document['scopes'].get(scope,{'revision':0,'records':{},'provenance':{}})
++            return {'ok':True,'scope':scope,'revision':d['revision'],'records':{k:self._plain(scope,k,v,crypto)for k,v in d['records'].items()},
++              'provenance':d['provenance'],'verification_note':'Client-reported provenance; NM timestamps do not verify a password'}
++
++    def wifi_merge(self,owner,scope,body):
++        self._scope(scope)
++        check(isinstance(body,dict)and set(body)<= {'expected_revision','records','provenance','explicit_replacements'},'invalid_wifi_request')
++        incoming=body.get('records');check(isinstance(incoming,dict)and 1<=len(incoming)<=32,'invalid_wifi_records')
++        provenance=body.get('provenance',{});check(isinstance(provenance,dict)and set(provenance)<=set(incoming),'invalid_provenance')
++        explicit=body.get('explicit_replacements',[])
++        check(isinstance(explicit,list)and len(explicit)<=32 and all(isinstance(k,str)and k in incoming for k in explicit),'invalid_replacement_choice')
++        cleaned={}
++        for key,record in incoming.items():
++            check(isinstance(key,str)and key.startswith('wifi:')and isinstance(record,dict)and set(record)==RECORD_FIELDS,'invalid_wifi_record')
++            ssid=record['ssid'];psk=record['psk'];security=record['security']
++            try:check(isinstance(ssid,str)and 1<=len(ssid.encode('utf-8'))<=32 and '\0'not in ssid and key=='wifi:'+ssid,'invalid_ssid')
++            except UnicodeError:raise StoreError(400,'invalid_ssid')from None
++            check(isinstance(psk,str)and security in('open','wpa-psk','sae'),'invalid_wifi_security')
++            try:n=len(psk.encode('utf-8'))
++            except UnicodeError:raise StoreError(400,'invalid_wifi_security')from None
++            valid=(security=='open'and psk=='')or(security=='wpa-psk'and(8<=n<=63 or bool(re.fullmatch('[0-9a-fA-F]{64}',psk))))or(security=='sae'and 1<=n<=63)
++            check(valid and '\0'not in psk,'invalid_wifi_security')
++            integer(record['revision'],1)
++            check(isinstance(record['origin'],str)and bool(re.fullmatch('BMI30-[A-F0-9]{9,16}',record['origin'])),'invalid_origin')
++            check(type(record['updated'])in(int,float)and math.isfinite(record['updated'])and record['updated']>=0,'invalid_updated')
++            source=provenance.get(key,{'source':'nm_saved_profile','verification':'unverified'})
++            check(isinstance(source,dict)and set(source)<= {'source','verification','client_observed_at'},'invalid_provenance')
++            check(source.get('source')in('nm_saved_profile','operator_entry','active_station_server_reachable')and source.get('verification')in('unverified','client_reported_connected'),'invalid_provenance')
++            check(source['verification']!='client_reported_connected'or source['source']=='active_station_server_reachable','invalid_provenance')
++            if 'client_observed_at'in source:check(type(source['client_observed_at'])in(int,float)and math.isfinite(source['client_observed_at'])and source['client_observed_at']>=0,'invalid_provenance')
++            if source['verification']=='client_reported_connected':check('client_observed_at'in source and time.time()-60<=source['client_observed_at']<=time.time()+30,'stale_verification')
++            cleaned[key]=(record,source)
++        with locked(self.wifi_lock):
++            document,crypto=self._catalog();d=document['scopes'].get(scope,{'revision':0,'records':{},'provenance':{}});expected=body.get('expected_revision')
++            if expected is not None:integer(expected)
++            check(expected is None or expected==d['revision'],'revision_conflict',409)
++            changes=[];same=0
++            for key,(record,source)in cleaned.items():
++                old=self._plain(scope,key,d['records'][key],crypto)if key in d['records']else None
++                unchanged=old and all(old[k]==record[k]for k in('ssid','psk','security'))
++                upgrade=unchanged and source['verification']=='client_reported_connected'and d['provenance'].get(key,{}).get('verification')!='client_reported_connected'
++                if unchanged and not upgrade:same+=1;continue
++                check(old is None or expected==d['revision'],'revision_conflict',409)
++                check(old is None or unchanged or key in explicit or source['verification']=='client_reported_connected','credential_choice_required',409)
++                changes.append((key,record,source,old is None))
++            check(sum(len(g['records'])for g in document['scopes'].values())+sum(key not in d['records']for key in incoming)<=MAX_CATALOG,'wifi_catalog_full',507)
++            check(scope in document['scopes']or len(document['scopes'])<256,'wifi_catalog_full',507)
++            if changes:
++                revision=integer(d['revision']+1,1)
++                for key,record,source,new in changes:
++                    public={k:record[k]for k in('ssid','security')};public.update(origin=owner,revision=revision,updated=time.time())
++                    nonce=os.urandom(12);cipher=crypto.encrypt(nonce,record['psk'].encode(),encoded({'scope':scope,'key':key,**public}))
++                    d['records'][key]={**public,'psk':{'algorithm':'AES-256-GCM','nonce':base64.b64encode(nonce).decode(),'ciphertext':base64.b64encode(cipher).decode()}}
++                    d['provenance'][key]={**source,'reported_by':owner,'client_record_origin':record['origin'],
++                      'client_record_revision':record['revision'],'client_record_updated':record['updated'],'server_received_at':public['updated']}
++                d['revision']=revision;document['scopes'][scope]=d;atomic(self.catalog,encoded(document))
++            return {'ok':True,'scope':scope,'revision':d['revision'],'added':sum(new for key,r,s,new in changes),
++              'updated':sum(not new for key,r,s,new in changes),'unchanged':same,'count':len(d['records'])}
++
++    def _session(self,capture_id,owner):
++        check(isinstance(capture_id,str)and bool(SESSION.fullmatch(capture_id)),'invalid_capture_id')
++        p=safe(self.captures/capture_id/'manifest.json');check(p.exists(),'capture_not_found',404)
++        d=read_json(p);check(d.get('owner')==owner,'capture_not_found',404)
++        check(d.get('id')==capture_id and isinstance(d.get('chunks'),list),'storage_integrity',503)
++        return p,d
++
++    def _all_sessions(self):
++        result=[]
++        for p in self.captures.iterdir():
++            if p.name.startswith('.'):continue
++            check(bool(SESSION.fullmatch(p.name))and p.is_dir()and not p.is_symlink(),'storage_integrity',503)
++            d=read_json(p/'manifest.json');d['chunks_count']=len(d['chunks']);del d['chunks'];result.append(d)
++            check(len(result)<=self.limits.sessions,'capture_session_quota',507)
++        return result
++
++    def _free(self,extra=0):check(shutil.disk_usage(self.captures).free>=self.limits.min_free_bytes+extra,'capture_storage_full',507)
++
++    @staticmethod
++    def _view(d):
++        count=d['chunks_count']if'chunks_count'in d else len(d['chunks'])
++        return {'ok':True,'capture_id':d['id'],'client_session_id':d['client_session_id'],'next_sequence':count,
++          'bytes':d['bytes'],'max_bytes':d['max_bytes'],'committed':d['committed'],'sha256':d.get('sha256'),
++          'chunks':count,'metadata':d['metadata'],'created_at':d['created_at']}
++
++    def create_capture(self,owner,body):
++        check(isinstance(body,dict)and set(body)== {'client_session_id','max_bytes','metadata'},'invalid_capture_request')
++        client=body['client_session_id'];check(isinstance(client,str)and bool(SESSION.fullmatch(client)),'invalid_client_session')
++        maximum=integer(body['max_bytes'],1,self.limits.capture_bytes);meta=body['metadata']
++        allowed={'tag','channel','distance_cm','operator_protocol','description','format','software_version','physical_serial','stm_uid','mode','averaging','sample_rate_hz'}
++        check(isinstance(meta,dict)and set(meta)<=allowed and len(encoded(meta))<=4096,'invalid_capture_metadata')
++        for value in meta.values():check(type(value)in(str,int,float,bool,type(None))and(not isinstance(value,str)or len(value)<=1024),'invalid_capture_metadata')
++        with locked(self.capture_lock):
++            rows=self._all_sessions()
++            for d in rows:
++                if d['client_session_id']==client:
++                    check(d['owner']==owner and d['max_bytes']==maximum and d['metadata']==meta,'capture_session_conflict',409)
++                    return self._view(d)
++            own=[r for r in rows if r['owner']==owner]
++            check(len(rows)<self.limits.sessions and len(own)<self.limits.device_sessions,'capture_session_quota',507)
++            reserved=lambda r:r['bytes']if r['committed']else r['max_bytes']
++            check(sum(map(reserved,rows))+maximum<=self.limits.total_bytes and sum(map(reserved,own))+maximum<=self.limits.device_bytes,'capture_storage_quota',507)
++            self._free();capture_id=uuid.uuid4().hex;p=self.captures/('.new-'+capture_id);mkdir(p)
++            d={'schema':1,'id':capture_id,'client_session_id':client,'owner':owner,'created_at':time.time(),
++              'max_bytes':maximum,'metadata':meta,'bytes':0,'chunks':[],'committed':False}
++            atomic(p/'manifest.json',encoded(d));os.replace(p,self.captures/capture_id);fsync_dir(self.captures);return self._view(d)
++
++    def list_captures(self,owner):
++        with locked(self.capture_lock):return {'ok':True,'captures':[self._view(d)for d in self._all_sessions()if d['owner']==owner]}
++
++    def capture_status(self,owner,capture_id):
++        with locked(self.capture_lock):return self._view(self._session(capture_id,owner)[1])
++
++    def _data(self,p,d):
++        path=safe(p.with_name('data.bin'));fd=os.open(path,os.O_RDWR|os.O_CREAT|getattr(os,'O_NOFOLLOW',0),0o600)
++        f=os.fdopen(fd,'r+b');size=os.fstat(fd).st_size
++        if size<d['bytes']:f.close();raise StoreError(503,'capture_integrity')
++        if size>d['bytes']:f.truncate(d['bytes']);f.flush();os.fsync(fd)
++        return f
++
++    def put_chunk(self,owner,capture_id,sequence,payload,sha256):
++        integer(sequence,0,16383);check(isinstance(payload,bytes)and 1<=len(payload)<=MAX_CHUNK,'invalid_chunk_size',413)
++        check(isinstance(sha256,str)and bool(SHA.fullmatch(sha256)),'invalid_chunk_digest')
++        check(hashlib.sha256(payload).hexdigest()==sha256,'chunk_digest_mismatch')
++        with locked(self.capture_lock):
++            p,d=self._session(capture_id,owner);check(sequence<=len(d['chunks']),'chunk_out_of_order',409)
++            duplicate=sequence<len(d['chunks'])
++            if duplicate:
++                old=d['chunks'][sequence];check(old=={'bytes':len(payload),'sha256':sha256},'chunk_conflict',409)
++                with self._data(p,d)as f:
++                    f.seek(sum(r['bytes']for r in d['chunks'][:sequence]))
++                    check(hashlib.sha256(f.read(len(payload))).hexdigest()==sha256,'capture_integrity',503)
++            else:
++                check(not d['committed'],'capture_already_committed',409)
++                check(d['bytes']+len(payload)<=d['max_bytes'],'capture_size_quota',507);self._free(len(payload))
++                with self._data(p,d)as f:f.seek(d['bytes']);f.write(payload);f.flush();os.fsync(f.fileno())
++                d['chunks'].append({'bytes':len(payload),'sha256':sha256});d['bytes']+=len(payload);atomic(p,encoded(d))
++            return {'ok':True,'capture_id':capture_id,'sequence':sequence,'sha256':sha256,'bytes':len(payload),
++              'total_bytes':d['bytes'],'next_sequence':len(d['chunks']),'durable':True,'committed':d['committed']}
++
++    def commit_capture(self,owner,capture_id,body):
++        check(isinstance(body,dict)and set(body)== {'chunks','bytes','sha256'},'invalid_commit')
++        integer(body['chunks'],1,16384);integer(body['bytes'],1,self.limits.capture_bytes)
++        check(isinstance(body['sha256'],str)and bool(SHA.fullmatch(body['sha256'])),'invalid_commit')
++        with locked(self.capture_lock):
++            p,d=self._session(capture_id,owner)
++            check(body['chunks']==len(d['chunks'])and body['bytes']==d['bytes'],'capture_totals_mismatch',409)
++            if d['committed']:check(body['sha256']==d['sha256'],'capture_commit_conflict',409)
++            else:
++                total=hashlib.sha256()
++                with self._data(p,d)as f:
++                    for row in d['chunks']:
++                        block=f.read(row['bytes']);check(len(block)==row['bytes']and hashlib.sha256(block).hexdigest()==row['sha256'],'capture_integrity',503);total.update(block)
++                check(total.hexdigest()==body['sha256'],'capture_digest_mismatch')
++                d.update(committed=True,sha256=body['sha256'],committed_at=time.time());atomic(p,encoded(d))
++            return {**self._view(d),'durable':True}
++
++    def download(self,owner,capture_id):
++        with locked(self.capture_lock):
++            p,d=self._session(capture_id,owner);check(d['committed'],'capture_not_committed',409)
++            path=safe(p.with_name('data.bin'));check(path.stat().st_size==d['bytes'],'capture_integrity',503)
++            return path,self._view(d)
++
++
++async def bounded_body(request,maximum):
++    length=request.headers.get('content-length')
++    if length is not None:
++        try:check(0<=int(length)<=maximum,'request_too_large',413)
++        except ValueError:raise StoreError(400,'invalid_content_length')from None
++    result=bytearray()
++    async for block in request.stream():
++        check(len(result)+len(block)<=maximum,'request_too_large',413);result.extend(block)
++    return bytes(result)
++
++
++def endpoint(func):
++    @functools.wraps(func)
++    async def wrapped(*args,**kwargs):
++        try:
++            result=await func(*args,**kwargs)
++            return JSONResponse(result,headers={'Cache-Control':'no-store'})if isinstance(result,dict)else result
++        except StoreError as exc:return JSONResponse({'ok':False,'code':exc.code},status_code=exc.status,headers={'Cache-Control':'no-store'})
++        except OSError as exc:
++            full=exc.errno in(errno.ENOSPC,errno.EDQUOT)
++            return JSONResponse({'ok':False,'code':'storage_full'if full else'storage_unavailable'},status_code=507 if full else 503,headers={'Cache-Control':'no-store'})
++        except Exception:return JSONResponse({'ok':False,'code':'storage_unavailable'},status_code=503,headers={'Cache-Control':'no-store'})
++    return wrapped
++
++
++def system_scope_resolver(database):
++    def resolve(owner):
++        row=database.fetchone('SELECT d.state,d.system_id,s.active AS system_active FROM devices d LEFT JOIN systems s ON s.id=d.system_id WHERE d.device_id=?',(owner,))
++        check(row is not None and row['state']=='approved'and type(row['system_id'])is int and row['system_id']>0 and row['system_active']==1,'system_scope_required',403)
++        return 'system:'+str(row['system_id'])
++    return resolve
++
++
++def build_central_router(store:CentralStore,authenticate_device:Callable[[str],str],resolve_scope:Callable[[str],str],require_https=True,enable_captures=False):
++    router=APIRouter()
++    async def auth(request):
++        check(not request.url.query,'query_not_allowed')
++        check(not require_https or request.url.scheme=='https','https_required',426)
++        header=request.headers.get('authorization','');check(header[:7].lower()=='bearer ','authentication_required',401)
++        try:owner=await run_in_threadpool(authenticate_device,header[7:].strip())
++        except Exception as exc:
++            status=getattr(exc,'status_code',401);raise StoreError(status if status in(401,403)else 503,'authentication_failed')from None
++        check(isinstance(owner,str)and bool(DEVICE.fullmatch(owner)),'authentication_failed',403);return owner
++
++    async def scoped(request):
++        owner=await auth(request);scope=await run_in_threadpool(resolve_scope,owner);store._scope(scope);return owner,scope
++
++    @router.get('/api/v1/wifi/catalog')
++    @endpoint
++    async def wifi_get(request:Request):
++        owner,scope=await scoped(request);return JSONResponse(await run_in_threadpool(store.wifi_catalog,scope),headers={'Cache-Control':'no-store'})
++
++    @router.post('/api/v1/wifi/catalog/merge')
++    @endpoint
++    async def wifi_merge(request:Request):
++        owner,scope=await scoped(request);body=decode(await bounded_body(request,MAX_JSON))
++        return await run_in_threadpool(store.wifi_merge,owner,scope,body)
++
++    if not enable_captures:return router
++
++    @router.get('/api/v1/captures')
++    @endpoint
++    async def capture_list(request:Request):return await run_in_threadpool(store.list_captures,await auth(request))
++
++    @router.post('/api/v1/captures')
++    @endpoint
++    async def capture_create(request:Request):
++        owner=await auth(request);return await run_in_threadpool(store.create_capture,owner,decode(await bounded_body(request,MAX_JSON)))
++
++    @router.get('/api/v1/captures/{capture_id}')
++    @endpoint
++    async def capture_status(request:Request,capture_id:str):return await run_in_threadpool(store.capture_status,await auth(request),capture_id)
++
++    @router.put('/api/v1/captures/{capture_id}/chunks/{sequence}')
++    @endpoint
++    async def capture_chunk(request:Request,capture_id:str,sequence:int):
++        owner=await auth(request);payload=await bounded_body(request,MAX_CHUNK)
++        return await run_in_threadpool(store.put_chunk,owner,capture_id,sequence,payload,request.headers.get('x-chunk-sha256',''))
++
++    @router.post('/api/v1/captures/{capture_id}/commit')
++    @endpoint
++    async def capture_commit(request:Request,capture_id:str):
++        owner=await auth(request);return await run_in_threadpool(store.commit_capture,owner,capture_id,decode(await bounded_body(request,MAX_JSON)))
++
++    @router.get('/api/v1/captures/{capture_id}/download')
++    @endpoint
++    async def capture_download(request:Request,capture_id:str):
++        owner=await auth(request);path,view=await run_in_threadpool(store.download,owner,capture_id)
++        def blocks():
++            with safe(path).open('rb')as f:
++                while True:
++                    block=f.read(MAX_CHUNK)
++                    if not block:break
++                    yield block
++        return StreamingResponse(blocks(),media_type='application/octet-stream',headers={'Cache-Control':'no-store',
++          'Content-Length':str(view['bytes']),'X-Content-SHA256':view['sha256'],'ETag':'"'+view['sha256']+'"',
++          'Content-Disposition':'attachment; filename="'+capture_id+'.bin"'})
++    return router
++
++
++if __name__=='__main__':
++    import argparse
++    parser=argparse.ArgumentParser(description='Init-only central catalog; never reset an existing key/catalog')
++    parser.add_argument('--root',required=True,type=Path);parser.add_argument('--init-only',action='store_true',required=True)
++    args=parser.parse_args()
++    try:
++        check(os.name=='posix'and os.geteuid()==10001 and os.getegid()==10002,'hub_service_identity_required',403)
++        check(args.root==Path('/var/lib/bmi30hub'),'canonical_root_required',400)
++        print(json.dumps(CentralStore(args.root).init_only()))
++    except StoreError as exc:print(json.dumps({'ok':False,'code':exc.code}));raise SystemExit(1)
++    except OSError:print(json.dumps({'ok':False,'code':'storage_unavailable'}));raise SystemExit(1)

@@ -40,7 +40,35 @@
 #endif
 
 // Прототипы функций
+typedef struct {
+    uint32_t service_calls;
+    uint32_t budget_skips;
+    uint32_t render_changed_rows;
+    uint32_t row_jobs;
+    uint32_t rows_completed;
+    uint32_t dma_starts;
+    uint32_t dma_start_failures;
+    uint32_t dma_timeouts;
+    uint32_t render_max_cycles;
+    uint32_t service_max_cycles;
+    uint32_t dma_age_max_ms;
+    uint32_t spi_state;
+    uint32_t spi_error;
+    uint32_t dma_error;
+    uint32_t phase;
+    uint32_t row;
+    uint32_t waiting;
+    uint32_t fault;
+    uint32_t scene_render_max_cycles;
+} lcd_background_diag_t;
+extern volatile lcd_background_diag_t g_lcd_background_diag;
+/* Foreground only, called after acquisition/control work. At most one small
+   DMA phase starts; may_start=0 still permits completion housekeeping. */
+void LCD_BackgroundService(uint32_t now_ms, uint8_t may_start);
+
 void LCD_Init(void);
+/* True only after a valid first frame, DISPON completion and500ms visible hold. */
+uint8_t LCD_BootScreenReady(uint32_t now_ms);
 void LCD_Clear(uint16_t color);
 void LCD_DrawPoint(uint16_t x, uint16_t y, uint16_t color);
 void LCD_ShowChar(uint16_t x, uint16_t y, uint8_t num, uint8_t size, uint16_t color, uint16_t back_color);

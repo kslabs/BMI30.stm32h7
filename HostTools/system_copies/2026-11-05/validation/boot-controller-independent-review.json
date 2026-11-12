@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "created_at": 1793867474.9045572,
+  "status": "PASS_WITH_HARDWARE_LIMITS",
+  "source": {
+    "path": ".tmp\\emmc-usb-copies-20261105\\boot_control.py",
+    "sha256": "190822c6c387f2165f3d66a23349ab4cb6f6feef48a8c99c53e085a88dfdb977",
+    "bytes": 25541
+  },
+  "review_only": true,
+  "live_actions_by_reviewer": false,
+  "scope": [
+    "Positive sameCM5 and source/result pins",
+    "Correct device hierarchy and partition UUID checks; mixed media rejected",
+    "Prepare/read-only; persist local priorBootID before mailbox/reboot commit",
+    "Commit revalidates source and media, unchanged EEPROM hash",
+    "One-shot0xf41 is eMMC-first with USB fallback, actual media and DT verified afterwards",
+    "USB schedule requires current-boot eMMC proof",
+    "Boot verify checks newboot, positive STMrole+USB, learnednoise/history, progress and network/group"
+  ],
+  "remaining_blockers": [],
+  "limits": [
+    "No reboot executed by reviewer",
+    "No hardware one-shot acknowledgement or boot result independently observed",
+    "Retains approved USB fallback; not an eMMC-only boot-order claim"
+  ],
+  "primary_sources": [
+    "https://github.com/raspberrypi/documentation/blob/master/documentation/asciidoc/computers/config_txt/boot.adoc#set_reboot_order",
+    "https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#BOOT_ORDER"
+  ]
+}

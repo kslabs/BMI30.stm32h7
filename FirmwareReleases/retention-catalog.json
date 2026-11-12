@@ -1,0 +1,1292 @@
+{
+  "as_of": "2026-11-12",
+  "rollback_since": "2026-10-12",
+  "archive_since": "2026-09-12",
+  "policy": "calendar_months",
+  "rows": [
+    {
+      "release": "Publication/2026-11-04-M02",
+      "date": "2026-11-04",
+      "tier": "rollback",
+      "files": 3,
+      "path": "archives/rollback-releases/Publication/2026-11-04-M02"
+    },
+    {
+      "release": "Publication/2026-11-04-base-width-noise",
+      "date": "2026-11-04",
+      "tier": "rollback",
+      "files": 3,
+      "path": "archives/rollback-releases/Publication/2026-11-04-base-width-noise"
+    },
+    {
+      "release": "Publication/2026-11-05-base-width-noise-install",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 3,
+      "path": "archives/rollback-releases/Publication/2026-11-05-base-width-noise-install"
+    },
+    {
+      "release": "Publication/2026-11-05-emmc-usb-proofs",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 3,
+      "path": "archives/rollback-releases/Publication/2026-11-05-emmc-usb-proofs"
+    },
+    {
+      "release": "RaspberryPi/2026-09-29-1720",
+      "date": "2026-09-29",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-09-29-1720.zip",
+      "sha256": "b519ca421b2759fa54d1094cc97c5780f1b655e7a6c137636194b40ac70fbe11"
+    },
+    {
+      "release": "RaspberryPi/2026-09-30-1135",
+      "date": "2026-09-30",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-09-30-1135.zip",
+      "sha256": "137ff87f497c304f696c0788ce537c0e8d17097784d20e5230880270b6fbbdbf"
+    },
+    {
+      "release": "RaspberryPi/2026-09-30-1449",
+      "date": "2026-09-30",
+      "tier": "archive",
+      "files": 1,
+      "path": "archives/archive-releases/RaspberryPi/2026-09-30-1449.zip",
+      "sha256": "f8a428b8701ec7ca56c056004b316bc2a879713b90e89f62ff6fcd694c96f7c0"
+    },
+    {
+      "release": "RaspberryPi/2026-09-30-1627",
+      "date": "2026-09-30",
+      "tier": "archive",
+      "files": 2,
+      "path": "archives/archive-releases/RaspberryPi/2026-09-30-1627.zip",
+      "sha256": "ecb12ee1737813e62eba45f8f57bc99e0319d33b86e530fdf9fb8951d8b9f2e1"
+    },
+    {
+      "release": "RaspberryPi/2026-09-30-1650",
+      "date": "2026-09-30",
+      "tier": "archive",
+      "files": 2,
+      "path": "archives/archive-releases/RaspberryPi/2026-09-30-1650.zip",
+      "sha256": "3e347687b0df2d2dd9f9660d264508929f7be40a14d81618ba9b306358eeab6a"
+    },
+    {
+      "release": "RaspberryPi/2026-10-02-0948",
+      "date": "2026-10-02",
+      "tier": "archive",
+      "files": 5,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-02-0948.zip",
+      "sha256": "5b6893ed3d4fb6811e2e55752dedd46145c2bbe71d12c529db6eb3bf4af5cbaa"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-1340",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-1340.zip",
+      "sha256": "ea0d0b6457883864b540cc931221b6e21bf26e4dbba716e732f1b28a2d8a17bd"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-1359",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-1359.zip",
+      "sha256": "d7ba010124b75114bbb96aef005fd29323c454495313eef571ca8c1fb16516b0"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-1406",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-1406.zip",
+      "sha256": "fcc98efc8ae8e07d61fe5d613d6bc12bdab3cd3fe657753bcdd24e461d51a17d"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-1425",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-1425.zip",
+      "sha256": "1ed0206ddf0459b2eb522c6af0cd969f7e4754bde77178270d2bc840aa90efc0"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-1430",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-1430.zip",
+      "sha256": "24565543b1d7e64efb38eb7574bd7c9cf6a52dbafef22b8c637752914ec9587e"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-1520",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-1520.zip",
+      "sha256": "8e302c24c756e1b7a61c4653f522b0b5710b1502b71f3424f2c26fa0069edef0"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-1530",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-1530.zip",
+      "sha256": "6fafffe39eac912d0d1ccb034ece74873e88526e0230edd74b89a86cc9f23c59"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-1540",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-1540.zip",
+      "sha256": "5b2dde8715c1f2b948572d494bc50f7e89e284e1ce4a34d77a322ba2c3b59c02"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-1705",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-1705.zip",
+      "sha256": "0820302e40cc26d27605c8788feabf05100a9eb4eaec0181cc78e24bd7e858de"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-192357-server-transport",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-192357-server-transport.zip",
+      "sha256": "bc6651fc2c85b845894e83e3ca688d7433fae6ccc5a42a7bbb097d3d88f2d935"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-1930",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-1930.zip",
+      "sha256": "ec0ad9ac25c4e892f8da9324eccb9f34dffa83fb779820775c837a33850b5c5b"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-01",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-01.zip",
+      "sha256": "3b965a8b1e1d0559e7ec1b2c97f6a77c087806c047c5ca37573092ec3b997b93"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-02",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-02.zip",
+      "sha256": "c1fbea558fb883136d1a02e17616957fb08849d3f1a422807ce83ddc70055e73"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-03",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-03.zip",
+      "sha256": "8323cd6819fe0a013c9ec392e03cc34ab583742cdcdc59038a1b94fb4a1fb423"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-04",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-04.zip",
+      "sha256": "1d1a3acd7adef1dbfb8b003dcfd18e2802ed55170340793b27b79874fe74a94b"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-05",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-05.zip",
+      "sha256": "3a1d44da88c963592f779f2ec4cf4331f9289c253f37925fdd9b80ea460add13"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-06",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-06.zip",
+      "sha256": "81fd45923fce7c74b750d1d3d34d5bb5b025356f2f5ffe7feb2a8c070b776bd2"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-07",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-07.zip",
+      "sha256": "03973ef607a1909e0a4be35e69d66d7e014ea6abfe82131ad9b366b18dbb1fb9"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-08",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-08.zip",
+      "sha256": "ef53468088d40978a23f7ae34eef70210cd30299d51681fc880d02ede9202501"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-09",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-09.zip",
+      "sha256": "673f355a71a9c6d929b2071a6e4733445b25a8ddc13150814c5a1d10f6615549"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-10",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-10.zip",
+      "sha256": "6816aa922301dabd6dd406cdf2c90bb3bc8f268e76186ae994c5985a71e4dac3"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-11",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-11.zip",
+      "sha256": "50e399ac35f401047bedd2413b6d89ba551ea864649bbdd372538e2ba6e3dd34"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-12",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-12.zip",
+      "sha256": "91de05b3e2bae53b65af62690431fe6d2e144782bef02e92941dfaec26daee64"
+    },
+    {
+      "release": "RaspberryPi/2026-10-05-network-13",
+      "date": "2026-10-05",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-05-network-13.zip",
+      "sha256": "7c456d38cf3596bcae559910318249b49e54df98c57661439bb1d0bb716ba675"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1142",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1142.zip",
+      "sha256": "d61985f51e1ae268c3b5cc24648835e23cfb5e79eae464e07922b23f37da84fc"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1152",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1152.zip",
+      "sha256": "f3af3152a6824e69bd2e69cdbc60b1228149465b8cb44c9700b7bb7959fa641d"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1257",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1257.zip",
+      "sha256": "909e11f0471b01200e06626ab789a4b8f1164c0e7fcd41a0fecb170cb98e5824"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1337",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1337.zip",
+      "sha256": "58c15e5e5ec57153c5f65798cd945d8eeb10a7ed75fc11a660327be9ee483e87"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1341",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1341.zip",
+      "sha256": "39e02e690155c4f736ab5b9ef31ce1189097d4a95cb6dbaa4f5be3e37cd4313b"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1407",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 4,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1407.zip",
+      "sha256": "9f244dfc22ae946645855cc11120fd2e96095ac33f6925eb6f5eac77b8a4bd0b"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1439",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1439.zip",
+      "sha256": "a08ce7694609b17508b12756f83f07d544d9ee9e4d2206d49740974aaf57a662"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1446",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1446.zip",
+      "sha256": "1bbc5a33725d4065b73ac1b108e3671f74a55191cf1300e725e6be7adbaaf4e8"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1507",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 2,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1507.zip",
+      "sha256": "4c567cbc938e5ac1890c9b33c2f39211be5e9e437491b7589edb965f926cf6a5"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1520",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 2,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1520.zip",
+      "sha256": "bea23ac5bdbaf98e267441669a69f49359b3a2a8c4908227fa9ce06df2d7a100"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1527",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 2,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1527.zip",
+      "sha256": "72a2eba662a3c422a2b963e5330fdb5a5ca54bde3aa496896dc31b3c4da3a26d"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1549",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 2,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1549.zip",
+      "sha256": "f49a0566e2faeeff3b864e941ec5c2f10c4befdbdc5b3ccb1172646856f3c9ca"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1612",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 2,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1612.zip",
+      "sha256": "74224140247c89cd312f76e61143125b0100779bc5f10ad4ccb455e5a76b2277"
+    },
+    {
+      "release": "RaspberryPi/2026-10-06-1632",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 3,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-06-1632.zip",
+      "sha256": "ce4678451b9ca49ca146428b5a06180166cf250be2fdf07cca5172b9f902d82f"
+    },
+    {
+      "release": "RaspberryPi/2026-10-07-0959",
+      "date": "2026-10-07",
+      "tier": "archive",
+      "files": 9,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-07-0959.zip",
+      "sha256": "faa2d1a9e5bac94d9867bdc4854619347b5af7eda6a4861e0d8e37216257d097"
+    },
+    {
+      "release": "RaspberryPi/2026-10-08-1114",
+      "date": "2026-10-08",
+      "tier": "archive",
+      "files": 11,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-08-1114.zip",
+      "sha256": "60cea080e5316ab8859dc8f6482e0df5dba66bc8cd10457cb3480b494e7ed30f"
+    },
+    {
+      "release": "RaspberryPi/2026-10-08-1131",
+      "date": "2026-10-08",
+      "tier": "archive",
+      "files": 11,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-08-1131.zip",
+      "sha256": "4fff54e554711349169546fa38607c2547d5b9b3d9d2818f1316ad8ee7bb774d"
+    },
+    {
+      "release": "RaspberryPi/2026-10-08-1211",
+      "date": "2026-10-08",
+      "tier": "archive",
+      "files": 12,
+      "path": "archives/archive-releases/RaspberryPi/2026-10-08-1211.zip",
+      "sha256": "10ed61ba9207d24c7fb770d0e633087663f85a40a0a6b682e4eb64941588e1ee"
+    },
+    {
+      "release": "RaspberryPi/2026-10-13-1519",
+      "date": "2026-10-13",
+      "tier": "rollback",
+      "files": 4,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-13-1519"
+    },
+    {
+      "release": "RaspberryPi/2026-10-13-1534",
+      "date": "2026-10-13",
+      "tier": "rollback",
+      "files": 4,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-13-1534"
+    },
+    {
+      "release": "RaspberryPi/2026-10-13-1638",
+      "date": "2026-10-13",
+      "tier": "rollback",
+      "files": 2,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-13-1638"
+    },
+    {
+      "release": "RaspberryPi/2026-10-13-1802",
+      "date": "2026-10-13",
+      "tier": "rollback",
+      "files": 2,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-13-1802"
+    },
+    {
+      "release": "RaspberryPi/2026-10-14-1826",
+      "date": "2026-10-14",
+      "tier": "rollback",
+      "files": 3,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-14-1826"
+    },
+    {
+      "release": "RaspberryPi/2026-10-15-1455",
+      "date": "2026-10-15",
+      "tier": "rollback",
+      "files": 3,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-15-1455"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-0934",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 3,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-0934"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-0946",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 3,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-0946"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1048",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 2,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1048"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1051",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 2,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1051"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1055",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 2,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1055"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1155",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 2,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1155"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1238",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 2,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1238"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1316",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 2,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1316"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1319",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 2,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1319"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1334",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 2,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1334"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1359",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 2,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1359"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1525",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 11,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1525"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1605",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 20,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1605"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1712",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 23,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1712"
+    },
+    {
+      "release": "RaspberryPi/2026-10-16-1743",
+      "date": "2026-10-16",
+      "tier": "rollback",
+      "files": 26,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-16-1743"
+    },
+    {
+      "release": "RaspberryPi/2026-10-21-1336",
+      "date": "2026-10-21",
+      "tier": "rollback",
+      "files": 131,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-21-1336"
+    },
+    {
+      "release": "RaspberryPi/2026-10-21-1450",
+      "date": "2026-10-21",
+      "tier": "rollback",
+      "files": 131,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-21-1450"
+    },
+    {
+      "release": "RaspberryPi/2026-10-21-1455",
+      "date": "2026-10-21",
+      "tier": "rollback",
+      "files": 131,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-21-1455"
+    },
+    {
+      "release": "RaspberryPi/2026-10-21-1501",
+      "date": "2026-10-21",
+      "tier": "rollback",
+      "files": 131,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-21-1501"
+    },
+    {
+      "release": "RaspberryPi/2026-10-21-1812",
+      "date": "2026-10-21",
+      "tier": "rollback",
+      "files": 3,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-21-1812"
+    },
+    {
+      "release": "RaspberryPi/2026-10-21-1815",
+      "date": "2026-10-21",
+      "tier": "rollback",
+      "files": 2,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-21-1815"
+    },
+    {
+      "release": "RaspberryPi/2026-10-21-1819",
+      "date": "2026-10-21",
+      "tier": "rollback",
+      "files": 5,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-21-1819"
+    },
+    {
+      "release": "RaspberryPi/2026-10-23-1317",
+      "date": "2026-10-23",
+      "tier": "rollback",
+      "files": 5,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-23-1317"
+    },
+    {
+      "release": "RaspberryPi/2026-10-23-1332",
+      "date": "2026-10-23",
+      "tier": "rollback",
+      "files": 30,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-23-1332"
+    },
+    {
+      "release": "RaspberryPi/2026-10-23-1435",
+      "date": "2026-10-23",
+      "tier": "rollback",
+      "files": 26,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-23-1435"
+    },
+    {
+      "release": "RaspberryPi/2026-10-23-1514",
+      "date": "2026-10-23",
+      "tier": "rollback",
+      "files": 37,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-23-1514"
+    },
+    {
+      "release": "RaspberryPi/2026-10-23-clockless",
+      "date": "2026-10-23",
+      "tier": "rollback",
+      "files": 26,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-23-clockless"
+    },
+    {
+      "release": "RaspberryPi/2026-10-23-clockless-r2",
+      "date": "2026-10-23",
+      "tier": "rollback",
+      "files": 25,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-23-clockless-r2"
+    },
+    {
+      "release": "RaspberryPi/2026-10-23-clockless-r3",
+      "date": "2026-10-23",
+      "tier": "rollback",
+      "files": 36,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-23-clockless-r3"
+    },
+    {
+      "release": "RaspberryPi/2026-10-23-rpi-identity",
+      "date": "2026-10-23",
+      "tier": "rollback",
+      "files": 11,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-23-rpi-identity"
+    },
+    {
+      "release": "RaspberryPi/2026-10-23-service-transports",
+      "date": "2026-10-23",
+      "tier": "rollback",
+      "files": 27,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-23-service-transports"
+    },
+    {
+      "release": "RaspberryPi/2026-10-23-service-transports-r2",
+      "date": "2026-10-23",
+      "tier": "rollback",
+      "files": 27,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-23-service-transports-r2"
+    },
+    {
+      "release": "RaspberryPi/2026-10-27-123725",
+      "date": "2026-10-27",
+      "tier": "rollback",
+      "files": 65,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-27-123725"
+    },
+    {
+      "release": "RaspberryPi/2026-10-27-124051",
+      "date": "2026-10-27",
+      "tier": "rollback",
+      "files": 66,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-27-124051"
+    },
+    {
+      "release": "RaspberryPi/2026-10-27-131304",
+      "date": "2026-10-27",
+      "tier": "rollback",
+      "files": 66,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-27-131304"
+    },
+    {
+      "release": "RaspberryPi/2026-10-27-1330",
+      "date": "2026-10-27",
+      "tier": "rollback",
+      "files": 65,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-27-1330"
+    },
+    {
+      "release": "RaspberryPi/2026-10-27-133000",
+      "date": "2026-10-27",
+      "tier": "rollback",
+      "files": 66,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-27-133000"
+    },
+    {
+      "release": "RaspberryPi/2026-10-27-144021",
+      "date": "2026-10-27",
+      "tier": "rollback",
+      "files": 64,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-27-144021"
+    },
+    {
+      "release": "RaspberryPi/2026-10-27-144513",
+      "date": "2026-10-27",
+      "tier": "rollback",
+      "files": 64,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-27-144513"
+    },
+    {
+      "release": "RaspberryPi/2026-10-27-152521",
+      "date": "2026-10-27",
+      "tier": "rollback",
+      "files": 154,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-27-152521"
+    },
+    {
+      "release": "RaspberryPi/2026-10-27-163040",
+      "date": "2026-10-27",
+      "tier": "rollback",
+      "files": 149,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-27-163040"
+    },
+    {
+      "release": "RaspberryPi/2026-10-27-legacy-recovery-r1",
+      "date": "2026-10-27",
+      "tier": "rollback",
+      "files": 9,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-27-legacy-recovery-r1"
+    },
+    {
+      "release": "RaspberryPi/2026-10-27-offline-wifi-r1",
+      "date": "2026-10-27",
+      "tier": "rollback",
+      "files": 30,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-27-offline-wifi-r1"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-095527",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 64,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-095527"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-095836",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 64,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-095836"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-105350",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 72,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-105350"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-114544",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 72,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-114544"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-121320",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 74,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-121320"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-125538",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 76,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-125538"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-135047",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 91,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-135047"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-142027",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 95,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-142027"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-152928",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 184,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-152928"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-153432",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 185,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-153432"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-153913",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 188,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-153913"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-181307",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 194,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-181307"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-182635",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 185,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-182635"
+    },
+    {
+      "release": "RaspberryPi/2026-10-28-183427",
+      "date": "2026-10-28",
+      "tier": "rollback",
+      "files": 196,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-28-183427"
+    },
+    {
+      "release": "RaspberryPi/2026-10-29-084854",
+      "date": "2026-10-29",
+      "tier": "rollback",
+      "files": 209,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-29-084854"
+    },
+    {
+      "release": "RaspberryPi/2026-10-29-112719",
+      "date": "2026-10-29",
+      "tier": "rollback",
+      "files": 198,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-29-112719"
+    },
+    {
+      "release": "RaspberryPi/2026-10-29-121730",
+      "date": "2026-10-29",
+      "tier": "rollback",
+      "files": 184,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-29-121730"
+    },
+    {
+      "release": "RaspberryPi/2026-10-29-123717",
+      "date": "2026-10-29",
+      "tier": "rollback",
+      "files": 185,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-29-123717"
+    },
+    {
+      "release": "RaspberryPi/2026-10-29-125008",
+      "date": "2026-10-29",
+      "tier": "rollback",
+      "files": 200,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-29-125008"
+    },
+    {
+      "release": "RaspberryPi/2026-10-29-140401",
+      "date": "2026-10-29",
+      "tier": "rollback",
+      "files": 185,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-29-140401"
+    },
+    {
+      "release": "RaspberryPi/2026-10-29-140802",
+      "date": "2026-10-29",
+      "tier": "rollback",
+      "files": 185,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-29-140802"
+    },
+    {
+      "release": "RaspberryPi/2026-10-29-143408",
+      "date": "2026-10-29",
+      "tier": "rollback",
+      "files": 207,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-29-143408"
+    },
+    {
+      "release": "RaspberryPi/2026-10-29-164828",
+      "date": "2026-10-29",
+      "tier": "rollback",
+      "files": 196,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-29-164828"
+    },
+    {
+      "release": "RaspberryPi/2026-10-29-171220",
+      "date": "2026-10-29",
+      "tier": "rollback",
+      "files": 215,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-29-171220"
+    },
+    {
+      "release": "RaspberryPi/2026-10-30-082211",
+      "date": "2026-10-30",
+      "tier": "rollback",
+      "files": 194,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-30-082211"
+    },
+    {
+      "release": "RaspberryPi/2026-10-30-084653",
+      "date": "2026-10-30",
+      "tier": "rollback",
+      "files": 196,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-30-084653"
+    },
+    {
+      "release": "RaspberryPi/2026-10-30-085518",
+      "date": "2026-10-30",
+      "tier": "rollback",
+      "files": 206,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-30-085518"
+    },
+    {
+      "release": "RaspberryPi/2026-10-30-095430",
+      "date": "2026-10-30",
+      "tier": "rollback",
+      "files": 211,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-30-095430"
+    },
+    {
+      "release": "RaspberryPi/2026-10-30-112226",
+      "date": "2026-10-30",
+      "tier": "rollback",
+      "files": 214,
+      "path": "archives/rollback-releases/RaspberryPi/2026-10-30-112226"
+    },
+    {
+      "release": "RaspberryPi/2026-11-02-165154",
+      "date": "2026-11-02",
+      "tier": "rollback",
+      "files": 192,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-02-165154"
+    },
+    {
+      "release": "RaspberryPi/2026-11-02-170758",
+      "date": "2026-11-02",
+      "tier": "rollback",
+      "files": 192,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-02-170758"
+    },
+    {
+      "release": "RaspberryPi/2026-11-02-171116",
+      "date": "2026-11-02",
+      "tier": "rollback",
+      "files": 192,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-02-171116"
+    },
+    {
+      "release": "RaspberryPi/2026-11-02-171539",
+      "date": "2026-11-02",
+      "tier": "rollback",
+      "files": 192,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-02-171539"
+    },
+    {
+      "release": "RaspberryPi/2026-11-03-164249",
+      "date": "2026-11-03",
+      "tier": "rollback",
+      "files": 209,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-03-164249"
+    },
+    {
+      "release": "RaspberryPi/2026-11-03-164405",
+      "date": "2026-11-03",
+      "tier": "rollback",
+      "files": 192,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-03-164405"
+    },
+    {
+      "release": "RaspberryPi/2026-11-03-165508",
+      "date": "2026-11-03",
+      "tier": "rollback",
+      "files": 192,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-03-165508"
+    },
+    {
+      "release": "RaspberryPi/2026-11-03-172055",
+      "date": "2026-11-03",
+      "tier": "rollback",
+      "files": 192,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-03-172055"
+    },
+    {
+      "release": "RaspberryPi/2026-11-04-174324",
+      "date": "2026-11-04",
+      "tier": "rollback",
+      "files": 190,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-04-174324"
+    },
+    {
+      "release": "RaspberryPi/2026-11-04-174353",
+      "date": "2026-11-04",
+      "tier": "rollback",
+      "files": 193,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-04-174353"
+    },
+    {
+      "release": "RaspberryPi/2026-11-04-175044",
+      "date": "2026-11-04",
+      "tier": "rollback",
+      "files": 202,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-04-175044"
+    },
+    {
+      "release": "RaspberryPi/2026-11-04-185916-base-width-noise",
+      "date": "2026-11-04",
+      "tier": "rollback",
+      "files": 14,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-04-185916-base-width-noise"
+    },
+    {
+      "release": "RaspberryPi/2026-11-04-network-0.2.10",
+      "date": "2026-11-04",
+      "tier": "current",
+      "files": 66,
+      "path": "FirmwareReleases/RaspberryPi/2026-11-04-network-0.2.10"
+    },
+    {
+      "release": "RaspberryPi/2026-11-05-151543",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 236,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-05-151543"
+    },
+    {
+      "release": "RaspberryPi/2026-11-05-152235",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 253,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-05-152235"
+    },
+    {
+      "release": "RaspberryPi/2026-11-05-152420",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 259,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-05-152420"
+    },
+    {
+      "release": "RaspberryPi/2026-11-05-161042",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 254,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-05-161042"
+    },
+    {
+      "release": "RaspberryPi/2026-11-05-161612",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 285,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-05-161612"
+    },
+    {
+      "release": "RaspberryPi/2026-11-05-193821",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 266,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-05-193821"
+    },
+    {
+      "release": "RaspberryPi/2026-11-05-195058",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 266,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-05-195058"
+    },
+    {
+      "release": "RaspberryPi/2026-11-05-195900",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 266,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-05-195900"
+    },
+    {
+      "release": "RaspberryPi/2026-11-05-195925",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 282,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-05-195925"
+    },
+    {
+      "release": "RaspberryPi/2026-11-05-base-width-noise-install",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 12,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-05-base-width-noise-install"
+    },
+    {
+      "release": "RaspberryPi/2026-11-06-005933",
+      "date": "2026-11-06",
+      "tier": "rollback",
+      "files": 50,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-06-005933"
+    },
+    {
+      "release": "RaspberryPi/2026-11-06-094934",
+      "date": "2026-11-06",
+      "tier": "rollback",
+      "files": 3,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-06-094934"
+    },
+    {
+      "release": "RaspberryPi/2026-11-06-123518",
+      "date": "2026-11-06",
+      "tier": "rollback",
+      "files": 4,
+      "path": "archives/rollback-releases/RaspberryPi/2026-11-06-123518"
+    },
+    {
+      "release": "RaspberryPi/2026-11-06-151000",
+      "date": "2026-11-06",
+      "tier": "current",
+      "files": 9,
+      "path": "FirmwareReleases/RaspberryPi/2026-11-06-151000"
+    },
+    {
+      "release": "STM32/1.2.44",
+      "date": "2026-08-29",
+      "tier": "delete",
+      "files": 2
+    },
+    {
+      "release": "STM32/1.2.53-r5",
+      "date": "2026-09-29",
+      "tier": "archive",
+      "files": 8,
+      "path": "archives/archive-releases/STM32/1.2.53-r5.zip",
+      "sha256": "f0746235ae659abfcb476ee13444c6866226257c72654fb9a3df695ad8514aaa"
+    },
+    {
+      "release": "STM32/1.2.53-r6-roi200",
+      "date": "2026-11-03",
+      "tier": "rollback",
+      "files": 4,
+      "path": "archives/rollback-releases/STM32/1.2.53-r6-roi200"
+    },
+    {
+      "release": "STM32/1.2.53-r7-avg2-roi200",
+      "date": "2026-11-03",
+      "tier": "rollback",
+      "files": 4,
+      "path": "archives/rollback-releases/STM32/1.2.53-r7-avg2-roi200"
+    },
+    {
+      "release": "STM32/1.2.53-r8-lcd-dma",
+      "date": "2026-11-03",
+      "tier": "rollback",
+      "files": 4,
+      "path": "archives/rollback-releases/STM32/1.2.53-r8-lcd-dma"
+    },
+    {
+      "release": "STM32/1.2.53-r9-avg-fifo",
+      "date": "2026-11-03",
+      "tier": "rollback",
+      "files": 20,
+      "path": "archives/rollback-releases/STM32/1.2.53-r9-avg-fifo"
+    },
+    {
+      "release": "STM32/1.2.54",
+      "date": "2026-10-06",
+      "tier": "archive",
+      "files": 7,
+      "path": "archives/archive-releases/STM32/1.2.54.zip",
+      "sha256": "5b9eda8c1310d44141eb1dc94f6b6279371c614d6ddc3e5ab50a1b9052a83c9e"
+    },
+    {
+      "release": "STM32/1.2.55",
+      "date": "2026-10-07",
+      "tier": "archive",
+      "files": 16,
+      "path": "archives/archive-releases/STM32/1.2.55.zip",
+      "sha256": "39c77edfc6293db9be213f0b32dfe84b34da26e3a545b144588c854b3273028c"
+    },
+    {
+      "release": "STM32/1.2.56",
+      "date": "2026-10-12",
+      "tier": "rollback",
+      "files": 5,
+      "path": "archives/rollback-releases/STM32/1.2.56"
+    },
+    {
+      "release": "STM32/1.2.57-casino-fifo-phase",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 23,
+      "path": "archives/rollback-releases/STM32/1.2.57-casino-fifo-phase"
+    },
+    {
+      "release": "STM32/1.2.59-host-tx-lcd",
+      "date": "2026-11-06",
+      "tier": "current",
+      "files": 23,
+      "path": "FirmwareReleases/STM32/1.2.59-host-tx-lcd"
+    },
+    {
+      "release": "UniversalUSB/2026-11-05-202952",
+      "date": "2026-11-05",
+      "tier": "rollback",
+      "files": 18,
+      "path": "archives/rollback-releases/UniversalUSB/2026-11-05-202952"
+    },
+    {
+      "release": "UniversalUSB/2026-11-06-005934",
+      "date": "2026-11-06",
+      "tier": "rollback",
+      "files": 15,
+      "path": "archives/rollback-releases/UniversalUSB/2026-11-06-005934"
+    },
+    {
+      "release": "UniversalUSB/2026-11-06-094935",
+      "date": "2026-11-06",
+      "tier": "rollback",
+      "files": 3,
+      "path": "archives/rollback-releases/UniversalUSB/2026-11-06-094935"
+    },
+    {
+      "release": "UniversalUSB/2026-11-06-123519",
+      "date": "2026-11-06",
+      "tier": "current",
+      "files": 4,
+      "path": "FirmwareReleases/UniversalUSB/2026-11-06-123519"
+    },
+    {
+      "release": "XM125/0.1.0",
+      "date": "2026-10-09",
+      "tier": "archive",
+      "files": 27,
+      "path": "archives/archive-releases/XM125/0.1.0.zip",
+      "sha256": "66085dcba30d7ff786d164965b11ebff5419871ae3c2f12873ebf90591b8b51f"
+    },
+    {
+      "release": "XM125/0.1.1",
+      "date": "2026-10-09",
+      "tier": "archive",
+      "files": 27,
+      "path": "archives/archive-releases/XM125/0.1.1.zip",
+      "sha256": "179dbb2ec9c09e28d740544acdfdea3b8d81c71cff82dd331e20b0361dc85c49"
+    },
+    {
+      "release": "XM125/0.1.2",
+      "date": "2026-10-12",
+      "tier": "current",
+      "files": 33,
+      "path": "FirmwareReleases/XM125/0.1.2"
+    }
+  ],
+  "counts": {
+    "rollback": 116,
+    "archive": 53,
+    "current": 5,
+    "delete": 1
+  },
+  "remote_scope": "GitHub stores retained Git snapshots via rollback/ and archive/ tags; local release payloads stay local."
+}

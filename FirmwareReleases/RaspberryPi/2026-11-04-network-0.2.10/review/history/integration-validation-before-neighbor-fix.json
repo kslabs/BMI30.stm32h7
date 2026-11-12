@@ -1,0 +1,49 @@
+{
+  "frozen": true,
+  "local_only": true,
+  "files": {
+    "network.py": {
+      "path": ".tmp\\m02-network-disappearance-20261104\\candidate\\network.py",
+      "file_bytes_sha256": "50a82441ffc883e302cb1e376661d507fbbd63c2a1ec29f13d2fd0133c51cea6",
+      "normalized_LF_sha256": "50a82441ffc883e302cb1e376661d507fbbd63c2a1ec29f13d2fd0133c51cea6",
+      "CRLF_pairs": 0
+    },
+    "service_m02.py": {
+      "path": ".tmp\\m02-network-disappearance-20261104\\candidate\\service.py",
+      "file_bytes_sha256": "564688eef956907bf0fe6b743eda48b376b9cac68bd21bb190f5d3240130d18d",
+      "normalized_LF_sha256": "4baa0817e2591a5add12150d0c615fe1f57a836b5c0eb5602d2b9a12fca5c51b",
+      "CRLF_pairs": 1266
+    },
+    "service_s07.py": {
+      "path": ".tmp\\m02-network-disappearance-20261104\\candidate\\service_s07.py",
+      "file_bytes_sha256": "ad9fa72bb1b0579c47372d2687d9cdd6d1a4a2b678e9f7b3215edac33e6fb125",
+      "normalized_LF_sha256": "0891fe223accb259e374d3d377143a205edf83a1c03719aa1efdcb7c22ffc135",
+      "CRLF_pairs": 1266
+    },
+    "policy.py": {
+      "path": "HostTools\\bmi30_network\\policy.py",
+      "file_bytes_sha256": "00a473f01c4bbcb97e039e4231d0a98622ab8d9bb98a58eee722fdac322a7af0",
+      "normalized_LF_sha256": "00a473f01c4bbcb97e039e4231d0a98622ab8d9bb98a58eee722fdac322a7af0",
+      "CRLF_pairs": 0
+    },
+    "cohesion.py": {
+      "path": "HostTools\\bmi30_network\\cohesion.py",
+      "file_bytes_sha256": "8ca452ce2e5893889e75494cff94d575b6df377563ccc760cbee7d34179cbb04",
+      "normalized_LF_sha256": "8ca452ce2e5893889e75494cff94d575b6df377563ccc760cbee7d34179cbb04",
+      "CRLF_pairs": 0
+    }
+  },
+  "validation": {
+    "network_policy_cohesion_tests": {
+      "run": 63,
+      "passed": 62,
+      "skipped": 1,
+      "skip_reason": "Windows lacks Linux target cryptography dependency"
+    },
+    "exact_active_service_AST_tests": {
+      "run": 7,
+      "passed": 7
+    }
+  },
+  "scope": "Network0.2.10 only; no Core/STM32/service deployment performed by this child."
+}

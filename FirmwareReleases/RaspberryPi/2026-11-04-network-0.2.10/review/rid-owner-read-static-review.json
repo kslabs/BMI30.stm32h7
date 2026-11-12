@@ -1,0 +1,82 @@
+{
+  "format": "m02-rid-owner-read-static-review-v1",
+  "no_live_actions": true,
+  "active_core_source_sha_matches_runtime_evidence": true,
+  "active_engine_sha_matches_runtime_evidence": true,
+  "sources": [
+    {
+      "path": "FirmwareReleases\\RaspberryPi\\2026-10-30-112226\\review\\bundle\\project\\host\\BMI30.001.py.2026-10-23-1514",
+      "sha256": "e9462f0973b8c29b8988e7bf6a9be92122d3e1baa20bef97a2a94fd877612f50"
+    },
+    {
+      "path": "FirmwareReleases\\RaspberryPi\\2026-10-30-112226\\review\\bundle\\project\\host\\BMI30.200.py.2026-10-23-1514",
+      "sha256": "30bf9ca1f23bf0c325ccd17923c0bd4e971015a93828edd86888c2eb32edb0df"
+    },
+    {
+      "path": "FirmwareReleases\\RaspberryPi\\2026-10-30-112226\\review\\bundle\\project\\host\\usb_vendor\\usb_stream.py",
+      "sha256": "aafe8faa0d04824e0374a784d7ed58b819a63b8d5fa117b8eb967700cbcc8945"
+    },
+    {
+      "path": "FirmwareReleases\\RaspberryPi\\2026-10-30-112226\\review\\bundle\\project\\hotspot_info_server.py",
+      "sha256": "c8ee02649d76a97266fd394ac780ed12d1ec9cfd3e49b6705cd80b69e7210fc6"
+    }
+  ],
+  "request": {
+    "method": "POST",
+    "url": "http://127.0.0.1:8765/api/command",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "json": {
+      "action": "rs485_ident",
+      "params": {
+        "request_scan": false,
+        "device_ids": [
+          2,
+          7
+        ]
+      }
+    },
+    "client_timeout_s": 25,
+    "core_submit_timeout_s": 20
+  },
+  "mutations_excluded_by_omission": [
+    "local_ip",
+    "rpi_id"
+  ],
+  "portal_refresh_wrapper_not_read_only": "Portal wrapper adds local_ip/rpi_id and publishes them; bypass it for this read-only request.",
+  "response": {
+    "ok": "submission accepted, not a proof of fresh RID",
+    "refresh_started": true,
+    "scan_requested": false,
+    "rs485_ident": "old cache is returned immediately while daemon refresh thread runs"
+  },
+  "completion": {
+    "method": "GET",
+    "url": "http://127.0.0.1:8765/api/status",
+    "field": "rs485_ident",
+    "require": "map.updated_at advanced AND each selected row host_updated_at advanced; require current authoritative presence/recent/node identity flags independently",
+    "partial_read_limitation": "Non-authoritative merge preserves older peer rows; global updated_at alone does not prove peer refresh."
+  },
+  "wire_read": {
+    "owner": "existing Core-owned stream; never open second USB handle",
+    "request_type": "0xC0 USB IN",
+    "request": "CMD_GET_RS485_IDENT=0x40",
+    "local_selector": "0xff",
+    "peer_selector": 7,
+    "normal_reads": 2,
+    "local_failure_reads_up_to": 3,
+    "per_transfer_timeout_ms": 250,
+    "lock": "nonblocking identity poll lock prevents overlapping identity scans; shared EP0 RLock serializes control requests",
+    "timing_limit": "Shared EP0 lock acquisition has no own deadline;250ms is transfer timeout, not total completion SLA.",
+    "no_mode_DC_threshold_or_restart_commands": true
+  },
+  "periodic_proposal": {
+    "minimum_interval_s": 30,
+    "trigger": "selected peer or local row missing/stale, not only map updated_at",
+    "node_ids": "only current known2/7 cohort; never fallback to all32 selectors",
+    "failure": "leave cohort/majority conservatively unavailable; do not clear failure using ok/refresh_started or stale cached row",
+    "writes": "no settings commands or request_scan, no Core/STM restart"
+  },
+  "limitation": "USB module source fingerprint is captured from matching local bundle; a separate fresh runtime module hash was not supplied. Exact active Core command support is confirmed by runtime Core SHA."
+}

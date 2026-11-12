@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-02",
+  "calibration": "T33_S10_CALIBRATION_20261002.json",
+  "connected": true,
+  "reported_battery_percent": 95,
+  "external_antenna_selected": true,
+  "active_root": "/dev/sda2",
+  "controlled_button_series": {
+    "expected": 9,
+    "received": 9,
+    "user_confirmed_order": true,
+    "disconnects": 0
+  },
+  "logger_startup_check": {
+    "ready": true,
+    "normal_end": true,
+    "sample_count": 51,
+    "errors": [],
+    "same_core_pid": true,
+    "human_counts": {
+      "hit": 0,
+      "miss": 0,
+      "unlabelled": 0
+    }
+  },
+  "health_observation": {
+    "complete": true,
+    "same_core_pid": true,
+    "request_errors": 0,
+    "stream_delta": {
+      "rx_cnt_ch0": 464,
+      "rx_cnt_ch1": 464,
+      "seq_gap_ch0": 0,
+      "seq_gap_ch1": 0,
+      "crc_bad": 0,
+      "magic_bad": 0,
+      "host_rx_ack_fail": 0
+    },
+    "worker_delta": {
+      "submitted": 928,
+      "results": 928,
+      "overflows": 0
+    },
+    "received_fps": {
+      "ch0": 15.998759874885259,
+      "ch1": 15.998759874885259
+    },
+    "over_100ms_delta": 1
+  },
+  "physical_tag_pass_test_performed": false,
+  "temporary_recorders_running": false,
+  "next_step": "User-marked tag passes; center=start, up=hit, down=miss. Left/right not calibrated or used."
+}

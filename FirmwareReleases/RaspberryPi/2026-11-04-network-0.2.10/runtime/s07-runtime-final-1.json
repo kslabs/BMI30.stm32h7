@@ -1,0 +1,956 @@
+{
+  "at": 1793809685.0118153,
+  "host": "BMI30-C9775FBAE",
+  "root": "/dev/mmcblk0p2",
+  "core_pid": 704918,
+  "core_start_ticks": "1170105",
+  "core_sources": {
+    "BMI30_CORE_PATH": {
+      "path": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.001.py.2026-11-03-172055",
+      "sha256": "bbc522278981ce530e8e261df2d9bc456761b82ea4d45c0267bb52aeff5b562e"
+    },
+    "BMI30_ENGINE_SOURCE": {
+      "path": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-11-03-172055",
+      "sha256": "02c8b7ceb354464b04f5bf3f8437a27be7b19c411f91a3477d0da22f12637bfd"
+    }
+  },
+  "runtime_env_sha256": "9ce28bd9100473e75899b38f885e213233831c6915f054b08f49aeb30f9c3ac3",
+  "core_config_sha256": "cba7553b0b1d6453b165fabfdf1e8afbcbae1f2bbbf61ef4cc3943d60019788f",
+  "mode": {
+    "selected": 6,
+    "stream_mode": 2,
+    "view_mode": 0,
+    "base_buf_len": 200,
+    "freq_hz": 200,
+    "desired_freq": 200,
+    "avg_n": 8,
+    "rpi_avg_n": 12,
+    "det_ratio": 1.6
+  },
+  "connection": {
+    "connected": true,
+    "connecting": false,
+    "disconnected": false,
+    "last_frame_age_s": 0.0013489723205566406
+  },
+  "stream_stats": {
+    "rx_cnt_ch0": 4541185,
+    "rx_cnt_ch1": 4541184,
+    "seq_gap_ch0": 3,
+    "seq_gap_ch1": 3,
+    "seq_dup_ch0": 1,
+    "seq_dup_ch1": 1,
+    "crc_bad": 0,
+    "magic_bad": 0,
+    "host_rx_ack_fail": 0,
+    "queues": {
+      "stereo_q": 0,
+      "qA": 0,
+      "qB": 0,
+      "bufA": 0,
+      "bufB": 0
+    },
+    "last_crc_bad_info": null
+  },
+  "worker": {
+    "mode": "process",
+    "enabled": true,
+    "alive": true,
+    "request_queue": 7,
+    "result_queue": 0,
+    "submitted": 23306,
+    "results": 23298,
+    "overflows": 0,
+    "latency": {
+      "worker_ms": 75.02894999925047,
+      "delivery_ms": 4.530557009275071,
+      "total_ms": 79.55950700852554,
+      "samples": 8619066,
+      "max_total_ms": 276.5283460030332,
+      "over_100ms": 4829
+    },
+    "input_policy": "averaged_sensitive_branch_with_raw_leave_one_out_guard",
+    "fresh_pairs": {
+      "pairs": [
+        11653,
+        11653
+      ],
+      "same_phase_rejected": [
+        0,
+        0
+      ],
+      "sequence_discontinuities": [
+        0,
+        0
+      ],
+      "depth": 12,
+      "window_counts": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    "dispatch": "pipe_ready",
+    "source_seq0": 4362193,
+    "source_seq1": 4362193
+  },
+  "portal_identity": {
+    "hostname": "BMI30-C9775FBAE",
+    "code": "S07",
+    "stm32_uid96": "333635343032511300090040"
+  },
+  "network_pid": 2517149,
+  "access_pid": 2493873,
+  "network": {
+    "automatic": false,
+    "bluetooth": {
+      "enabled": true,
+      "error": "",
+      "mode": "classic-bredr",
+      "nominal_channels": 79,
+      "peers": [],
+      "state": "listening"
+    },
+    "candidates": [
+      {
+        "bssid": "70:4f:57:da:0c:53",
+        "channel": 2,
+        "cohesion_group_size": 2,
+        "cohesion_hold_lan": null,
+        "cohesion_lan_key": null,
+        "cohesion_majority": false,
+        "cohesion_majority_key": null,
+        "cohesion_reason": "candidate LAN unknown",
+        "cohesion_votes": 0,
+        "cost": 56.04,
+        "freq": 2417,
+        "kind": "direct",
+        "parent": null,
+        "path": [
+          "BMI30-C9775FBAE"
+        ],
+        "security": "WPA1 WPA2",
+        "signal": 77,
+        "ssid": "VINETA-EL 2,4GHz"
+      },
+      {
+        "bssid": "70:4f:57:da:0c:52",
+        "channel": 36,
+        "cohesion_group_size": 2,
+        "cohesion_hold_lan": null,
+        "cohesion_lan_key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+        "cohesion_majority": false,
+        "cohesion_majority_key": null,
+        "cohesion_reason": "no strict majority for candidate LAN",
+        "cohesion_votes": 1,
+        "cost": 70.29,
+        "freq": 5180,
+        "kind": "direct",
+        "parent": null,
+        "path": [
+          "BMI30-C9775FBAE"
+        ],
+        "security": "WPA1 WPA2",
+        "signal": 56,
+        "ssid": "VINETA-EL 5GHz"
+      },
+      {
+        "bssid": "8a:a2:9e:8e:fb:3d",
+        "channel": 36,
+        "cohesion_group_size": 2,
+        "cohesion_hold_lan": null,
+        "cohesion_lan_key": null,
+        "cohesion_majority": false,
+        "cohesion_majority_key": null,
+        "cohesion_reason": "candidate LAN unknown",
+        "cohesion_votes": 0,
+        "cost": 141.95999999999998,
+        "freq": 5180,
+        "kind": "relay",
+        "parent": "BMI30-E29805C7C",
+        "path": [
+          "BMI30-C9775FBAE",
+          "BMI30-E29805C7C"
+        ],
+        "security": "WPA1",
+        "signal": 69,
+        "ssid": "BMI30-E29805C7C"
+      }
+    ],
+    "checked_age_s": 8.667234620996169,
+    "checked_at": 1793809676.3267522,
+    "checked_mono": 96631.773219327,
+    "clock_mode": "monotonic-v2",
+    "coordinator": "BMI30-E29805C7C",
+    "history": [],
+    "last_attempt_at": 1793809676.3268032,
+    "last_attempt_mono": 96628.264932863,
+    "legacy_recovery": {
+      "active": {
+        "attempt_limit": null,
+        "attempts": 0,
+        "authenticated": false,
+        "confirmed_wifi": 0,
+        "continuous_search": true,
+        "enabled": false,
+        "retry_interval_s": 600,
+        "scan_interval_s": 65,
+        "stage": "standby"
+      },
+      "confirmed_count": 0,
+      "enabled": false,
+      "future_timestamp_conflicts": 0,
+      "last_seen_age_s": null,
+      "mode": "active-and-passive-v1",
+      "offered_count": 0,
+      "requests": 0,
+      "stage": "waiting-for-target",
+      "target_id": "BMI30-27448D72B"
+    },
+    "local": {
+      "addresses": [
+        "10.43.0.1",
+        "192.168.0.153",
+        "10.187.143.1"
+      ],
+      "ap": {
+        "address": "10.187.143.1/24",
+        "available": true,
+        "bssid": "2e:cf:67:50:12:42",
+        "ssid": "BMI30-C9775FBAE"
+      },
+      "ap_uuid": "694f3d77-f81a-4377-ae3f-9949fc9c6b87",
+      "boot": "bc7a7bebca1344639c3fd3617f4ef226",
+      "broadcasts": [
+        "10.43.0.255",
+        "192.168.0.255",
+        "10.187.143.255"
+      ],
+      "bssid": "70:4f:57:da:0c:52",
+      "clients": 0,
+      "code": "S07",
+      "cohesion": {
+        "age_s": 44.11725068092346,
+        "available": true,
+        "member_short_ids": [
+          "5F295F47B",
+          "8CC938B79"
+        ],
+        "own_short_id": "8CC938B79",
+        "reason": "fresh complete local RID",
+        "version": 1
+      },
+      "cost": 70.29,
+      "freq": 5180,
+      "gateway": "192.168.0.1",
+      "id": "BMI30-C9775FBAE",
+      "iface": "wlan0",
+      "internet": {
+        "checks": 2,
+        "loss": 0.0,
+        "ok": true,
+        "rtt_ms": 122.9
+      },
+      "issued": 1793809673.2015038,
+      "parent": null,
+      "path": [
+        "BMI30-C9775FBAE"
+      ],
+      "role": "slave",
+      "root_lan": {
+        "age_s": 0.0,
+        "cidr": "192.168.0.0/24",
+        "gateway_ip": "192.168.0.1",
+        "gateway_mac": "70:4f:57:da:0c:53",
+        "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+        "source": "direct",
+        "source_id": "BMI30-C9775FBAE",
+        "version": 1
+      },
+      "rs485_id": 7,
+      "rssi_dbm": -64,
+      "seq": 5,
+      "signal": 56,
+      "ssid": "VINETA-EL 5GHz",
+      "station_uuid": "65797328-02d2-4ba5-903c-c8f82a6166d3",
+      "stm32_uid96": "333635343032511300090040",
+      "uplink": "wifi",
+      "visible": [
+        {
+          "bssid": "70:4f:57:da:0c:53",
+          "channel": 2,
+          "freq": 2417,
+          "security": "WPA1 WPA2",
+          "signal": 77,
+          "ssid": "VINETA-EL 2,4GHz"
+        },
+        {
+          "bssid": "72:4f:57:da:0c:53",
+          "channel": 2,
+          "freq": 2417,
+          "security": "WPA1 WPA2",
+          "signal": 74,
+          "ssid": "VINETA-meeting-guest 2,4GHz"
+        },
+        {
+          "bssid": "8a:a2:9e:8e:fb:3d",
+          "channel": 36,
+          "freq": 5180,
+          "security": "WPA1",
+          "signal": 69,
+          "ssid": "BMI30-E29805C7C"
+        },
+        {
+          "bssid": "72:4f:57:da:0c:52",
+          "channel": 36,
+          "freq": 5180,
+          "security": "WPA1 WPA2",
+          "signal": 62,
+          "ssid": "VINETA-meeting-guest 5GHz"
+        },
+        {
+          "bssid": "70:4f:57:da:0c:52",
+          "channel": 36,
+          "freq": 5180,
+          "security": "WPA1 WPA2",
+          "signal": 56,
+          "ssid": "VINETA-EL 5GHz"
+        },
+        {
+          "bssid": "3a:22:e2:fd:57:98",
+          "channel": 6,
+          "freq": 2437,
+          "security": "WPA2",
+          "signal": 49,
+          "ssid": "DIRECT-98-HP M15 LaserJet"
+        },
+        {
+          "bssid": "e8:65:d4:85:f1:40",
+          "channel": 1,
+          "freq": 2412,
+          "security": "WPA1 WPA2",
+          "signal": 44,
+          "ssid": "VinetaBMI 2,4GHz"
+        },
+        {
+          "bssid": "b4:b0:24:b9:d8:7c",
+          "channel": 1,
+          "freq": 2412,
+          "security": "WPA2",
+          "signal": 42,
+          "ssid": "VinetaBMI 2,4GHz_EXT"
+        }
+      ]
+    },
+    "nodes": [
+      {
+        "addresses": [
+          "10.43.0.1",
+          "192.168.0.153",
+          "10.187.143.1"
+        ],
+        "age_s": 3.1242426249955315,
+        "ap": {
+          "address": "10.187.143.1/24",
+          "available": true,
+          "bssid": "2e:cf:67:50:12:42",
+          "ssid": "BMI30-C9775FBAE"
+        },
+        "ap_uuid": "694f3d77-f81a-4377-ae3f-9949fc9c6b87",
+        "boot": "bc7a7bebca1344639c3fd3617f4ef226",
+        "broadcasts": [
+          "10.43.0.255",
+          "192.168.0.255",
+          "10.187.143.255"
+        ],
+        "bssid": "70:4f:57:da:0c:52",
+        "clients": 0,
+        "code": "S07",
+        "cohesion": {
+          "age_s": 44.11725068092346,
+          "available": true,
+          "member_short_ids": [
+            "5F295F47B",
+            "8CC938B79"
+          ],
+          "own_short_id": "8CC938B79",
+          "reason": "fresh complete local RID",
+          "version": 1
+        },
+        "cost": 70.29,
+        "freq": 5180,
+        "gateway": "192.168.0.1",
+        "id": "BMI30-C9775FBAE",
+        "iface": "wlan0",
+        "internet": {
+          "checks": 2,
+          "loss": 0.0,
+          "ok": true,
+          "rtt_ms": 122.9
+        },
+        "issued": 1793809673.2015038,
+        "parent": null,
+        "path": [
+          "BMI30-C9775FBAE"
+        ],
+        "role": "slave",
+        "root_lan": {
+          "age_s": 0.0,
+          "cidr": "192.168.0.0/24",
+          "gateway_ip": "192.168.0.1",
+          "gateway_mac": "70:4f:57:da:0c:53",
+          "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+          "source": "direct",
+          "source_id": "BMI30-C9775FBAE",
+          "version": 1
+        },
+        "rs485_id": 7,
+        "rssi_dbm": -64,
+        "seq": 5,
+        "signal": 56,
+        "ssid": "VINETA-EL 5GHz",
+        "station_uuid": "65797328-02d2-4ba5-903c-c8f82a6166d3",
+        "stm32_uid96": "333635343032511300090040",
+        "uplink": "wifi",
+        "visible": [
+          {
+            "bssid": "70:4f:57:da:0c:53",
+            "channel": 2,
+            "freq": 2417,
+            "security": "WPA1 WPA2",
+            "signal": 77,
+            "ssid": "VINETA-EL 2,4GHz"
+          },
+          {
+            "bssid": "72:4f:57:da:0c:53",
+            "channel": 2,
+            "freq": 2417,
+            "security": "WPA1 WPA2",
+            "signal": 74,
+            "ssid": "VINETA-meeting-guest 2,4GHz"
+          },
+          {
+            "bssid": "8a:a2:9e:8e:fb:3d",
+            "channel": 36,
+            "freq": 5180,
+            "security": "WPA1",
+            "signal": 69,
+            "ssid": "BMI30-E29805C7C"
+          },
+          {
+            "bssid": "72:4f:57:da:0c:52",
+            "channel": 36,
+            "freq": 5180,
+            "security": "WPA1 WPA2",
+            "signal": 62,
+            "ssid": "VINETA-meeting-guest 5GHz"
+          },
+          {
+            "bssid": "70:4f:57:da:0c:52",
+            "channel": 36,
+            "freq": 5180,
+            "security": "WPA1 WPA2",
+            "signal": 56,
+            "ssid": "VINETA-EL 5GHz"
+          },
+          {
+            "bssid": "3a:22:e2:fd:57:98",
+            "channel": 6,
+            "freq": 2437,
+            "security": "WPA2",
+            "signal": 49,
+            "ssid": "DIRECT-98-HP M15 LaserJet"
+          },
+          {
+            "bssid": "e8:65:d4:85:f1:40",
+            "channel": 1,
+            "freq": 2412,
+            "security": "WPA1 WPA2",
+            "signal": 44,
+            "ssid": "VinetaBMI 2,4GHz"
+          },
+          {
+            "bssid": "b4:b0:24:b9:d8:7c",
+            "channel": 1,
+            "freq": 2412,
+            "security": "WPA2",
+            "signal": 42,
+            "ssid": "VinetaBMI 2,4GHz_EXT"
+          }
+        ]
+      },
+      {
+        "addresses": [
+          "10.43.0.1",
+          "192.168.0.154",
+          "10.42.0.1"
+        ],
+        "age_s": 9.301102482000715,
+        "ap": {
+          "address": "10.42.0.1/24",
+          "available": true,
+          "bssid": "8a:a2:9e:8e:fb:3d",
+          "ssid": "BMI30-E29805C7C"
+        },
+        "ap_uuid": "f450d1bb-efbc-5e76-a6d2-9d4e8e4c18d3",
+        "boot": "b0f93313044e41f89762df338794ff61",
+        "broadcasts": [
+          "10.43.0.255",
+          "192.168.0.255",
+          "10.42.0.255"
+        ],
+        "bssid": "70:4f:57:da:0c:52",
+        "clients": 0,
+        "code": "M02",
+        "cohesion": {
+          "age_s": 41.39563727378845,
+          "available": true,
+          "member_short_ids": [
+            "5F295F47B",
+            "8CC938B79"
+          ],
+          "own_short_id": "5F295F47B",
+          "reason": "fresh complete local RID",
+          "version": 1
+        },
+        "cost": 75.21,
+        "freq": 5180,
+        "gateway": "192.168.0.1",
+        "id": "BMI30-E29805C7C",
+        "iface": "wlan0",
+        "internet": {
+          "checks": 2,
+          "loss": 0.0,
+          "ok": true,
+          "rtt_ms": 84.6
+        },
+        "issued": 1793809667.0294023,
+        "parent": null,
+        "path": [
+          "BMI30-E29805C7C"
+        ],
+        "role": "master",
+        "root_lan": {
+          "age_s": 0.0,
+          "cidr": "192.168.0.0/24",
+          "gateway_ip": "192.168.0.1",
+          "gateway_mac": "70:4f:57:da:0c:53",
+          "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+          "source": "direct",
+          "source_id": "BMI30-E29805C7C",
+          "version": 1
+        },
+        "rs485_id": 2,
+        "rssi_dbm": -71,
+        "seq": 20,
+        "signal": 49,
+        "ssid": "VINETA-EL 5GHz",
+        "station_uuid": "4fb57a9c-8cfe-47a9-8f8d-5bb5f97c2c14",
+        "stm32_uid96": "3336353430325113000C002A",
+        "uplink": "wifi",
+        "visible": [
+          {
+            "bssid": "70:4f:57:da:0c:53",
+            "channel": 2,
+            "freq": 2417,
+            "security": "WPA1 WPA2",
+            "signal": 82,
+            "ssid": "VINETA-EL 2,4GHz"
+          },
+          {
+            "bssid": "72:4f:57:da:0c:53",
+            "channel": 2,
+            "freq": 2417,
+            "security": "WPA1 WPA2",
+            "signal": 77,
+            "ssid": "VINETA-meeting-guest 2,4GHz"
+          },
+          {
+            "bssid": "2e:cf:67:50:12:42",
+            "channel": 36,
+            "freq": 5180,
+            "security": "WPA2",
+            "signal": 70,
+            "ssid": "BMI30-C9775FBAE"
+          },
+          {
+            "bssid": "e8:65:d4:85:f1:40",
+            "channel": 1,
+            "freq": 2412,
+            "security": "WPA1 WPA2",
+            "signal": 69,
+            "ssid": "VinetaBMI 2,4GHz"
+          },
+          {
+            "bssid": "72:4f:57:da:0c:52",
+            "channel": 36,
+            "freq": 5180,
+            "security": "WPA1 WPA2",
+            "signal": 50,
+            "ssid": "VINETA-meeting-guest 5GHz"
+          },
+          {
+            "bssid": "70:4f:57:da:0c:52",
+            "channel": 36,
+            "freq": 5180,
+            "security": "WPA1 WPA2",
+            "signal": 49,
+            "ssid": "VINETA-EL 5GHz"
+          },
+          {
+            "bssid": "3a:22:e2:fd:57:98",
+            "channel": 6,
+            "freq": 2437,
+            "security": "WPA2",
+            "signal": 47,
+            "ssid": "DIRECT-98-HP M15 LaserJet"
+          },
+          {
+            "bssid": "b4:b0:24:b9:d8:7c",
+            "channel": 1,
+            "freq": 2412,
+            "security": "WPA2",
+            "signal": 42,
+            "ssid": "VinetaBMI 2,4GHz_EXT"
+          },
+          {
+            "bssid": "d0:d3:e0:1d:fa:e4",
+            "channel": 11,
+            "freq": 2462,
+            "security": "WPA2",
+            "signal": 34,
+            "ssid": "PTerm"
+          }
+        ]
+      }
+    ],
+    "note": "Estimated route cost; 5 GHz preferred at usable signal; up to 4 nodes per route.",
+    "routing_error_type": "",
+    "routing_tick_ok": true,
+    "service_transports": {
+      "active": [
+        "wifi"
+      ],
+      "allowed": [
+        "wifi",
+        "bluetooth"
+      ],
+      "error": "",
+      "mode": "both",
+      "revision": "initial"
+    },
+    "stale": false,
+    "status": "online",
+    "version": "0.2.10"
+  },
+  "source_sha256": {
+    "service.py": "0891fe223accb259e374d3d377143a205edf83a1c03719aa1efdcb7c22ffc135",
+    "network.py": "b1e838f90a3fe22cfe38343d3fd57f1cd8ca55f8763cbc63149a506a1f26072f",
+    "policy.py": "00a473f01c4bbcb97e039e4231d0a98622ab8d9bb98a58eee722fdac322a7af0",
+    "cohesion.py": "8ca452ce2e5893889e75494cff94d575b6df377563ccc760cbee7d34179cbb04",
+    "access.py": "ec373f37a9231196ff77aad61a7be312b8f8f9b5ee46ca1f411e6cb58fca53fe",
+    "access_policy.py": "adc2fe2093d0a2e868883cb36039d856f7fbbdd7367a43cc415a53855165faab"
+  },
+  "addresses": [
+    {
+      "ifindex": 1,
+      "ifname": "lo",
+      "flags": [
+        "LOOPBACK",
+        "UP",
+        "LOWER_UP"
+      ],
+      "mtu": 65536,
+      "qdisc": "noqueue",
+      "operstate": "UNKNOWN",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "127.0.0.1",
+          "prefixlen": 8,
+          "scope": "host",
+          "label": "lo",
+          "valid_life_time": 4294967295,
+          "preferred_life_time": 4294967295
+        }
+      ]
+    },
+    {
+      "ifindex": 2,
+      "ifname": "eth0",
+      "flags": [
+        "NO-CARRIER",
+        "BROADCAST",
+        "MULTICAST",
+        "UP"
+      ],
+      "mtu": 1500,
+      "qdisc": "pfifo_fast",
+      "operstate": "DOWN",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "10.43.0.1",
+          "prefixlen": 24,
+          "broadcast": "10.43.0.255",
+          "scope": "global",
+          "noprefixroute": true,
+          "label": "eth0",
+          "valid_life_time": 4294967295,
+          "preferred_life_time": 4294967295
+        }
+      ]
+    },
+    {
+      "ifindex": 3,
+      "ifname": "wlan0",
+      "flags": [
+        "BROADCAST",
+        "MULTICAST",
+        "UP",
+        "LOWER_UP"
+      ],
+      "mtu": 1500,
+      "qdisc": "pfifo_fast",
+      "operstate": "UP",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "192.168.0.153",
+          "prefixlen": 24,
+          "broadcast": "192.168.0.255",
+          "scope": "global",
+          "dynamic": true,
+          "noprefixroute": true,
+          "label": "wlan0",
+          "valid_life_time": 5483,
+          "preferred_life_time": 5483
+        }
+      ]
+    },
+    {
+      "ifindex": 4,
+      "ifname": "wlan0ap",
+      "flags": [
+        "BROADCAST",
+        "MULTICAST",
+        "UP",
+        "LOWER_UP"
+      ],
+      "mtu": 1500,
+      "qdisc": "pfifo_fast",
+      "operstate": "UP",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "10.187.143.1",
+          "prefixlen": 24,
+          "broadcast": "10.187.143.255",
+          "scope": "global",
+          "noprefixroute": true,
+          "label": "wlan0ap",
+          "valid_life_time": 4294967295,
+          "preferred_life_time": 4294967295
+        }
+      ]
+    }
+  ],
+  "group": {
+    "checked_at": 1793809684.822274,
+    "checked_mono": 96640.268740595,
+    "clock_mode": "monotonic-v2",
+    "local_id": "BMI30-C9775FBAE",
+    "nodes": [
+      {
+        "available": true,
+        "sync": {
+          "role": "slave",
+          "assigned_role": "slave",
+          "device_id": 7,
+          "local_node_id": 7,
+          "device_id_assigned": true,
+          "code": "S07",
+          "sync_seen_mask": 132
+        },
+        "stm32_uid96": "333635343032511300090040",
+        "stm32_short_id": "8CC938B79",
+        "sensors": {
+          "optic_active": false,
+          "optic_indication_allow": true,
+          "detadc1": false,
+          "detadc2": false,
+          "tx_enabled": true,
+          "online": true
+        },
+        "optic": {
+          "reaction_enabled": false,
+          "neighbor_reaction_enabled": false,
+          "neighbor_device_id": null,
+          "reaction_local_active": false,
+          "reaction_neighbor_active": true,
+          "led_pattern_actual": null,
+          "led_pattern_actual_age_s": null,
+          "led_event": "",
+          "led_pattern_selected": 0,
+          "led_pattern_selected_source": "commanded",
+          "led_indication_enabled": true,
+          "led_output_active": false
+        },
+        "hold_ds": 30,
+        "neighbors": [
+          {
+            "node_id": 2,
+            "label": "M02",
+            "master": true
+          }
+        ],
+        "cache_age_s": 0.0,
+        "relay": {
+          "enabled": true,
+          "saved_enabled": true,
+          "pc1": 0,
+          "active": false,
+          "available": true,
+          "duration_ms": 500,
+          "test_enabled": false,
+          "sequence": 84505,
+          "age_s": 0.5338382829941111,
+          "observed_at": 1793809684.2868125
+        },
+        "sound": {
+          "active": false
+        },
+        "fault": false,
+        "sensor_event_at": 1793809680.134622,
+        "sensor_event_seq": 6068,
+        "sensor_event_boot": "6d6ca0bb93724940a0910c729b28efd9",
+        "kind": "group-v1",
+        "id": "BMI30-C9775FBAE",
+        "issued": 1793809684.8206053,
+        "boot": "5d9b9f635991454a89820c176fc30ffd",
+        "seq": 220,
+        "bluetooth_address": "2C:CF:67:F0:12:43",
+        "via": [],
+        "address": null,
+        "age_s": 4.549999721348286e-05,
+        "transport": "local"
+      },
+      {
+        "available": true,
+        "bluetooth_address": "88:A2:9E:2E:FB:3E",
+        "boot": "6cef7ed98d2b4327b2d4f089c6540ac7",
+        "cache_age_s": 0.0,
+        "fault": false,
+        "hold_ds": 30,
+        "id": "BMI30-E29805C7C",
+        "issued": 1793809684.763385,
+        "kind": "group-v1",
+        "neighbors": [
+          {
+            "label": "S07",
+            "master": false,
+            "node_id": 7
+          }
+        ],
+        "optic": {
+          "led_event": "",
+          "led_indication_enabled": true,
+          "led_output_active": false,
+          "led_pattern_actual": null,
+          "led_pattern_actual_age_s": null,
+          "led_pattern_selected": 0,
+          "led_pattern_selected_source": "commanded",
+          "neighbor_device_id": null,
+          "neighbor_reaction_enabled": false,
+          "reaction_enabled": false,
+          "reaction_local_active": true,
+          "reaction_neighbor_active": false
+        },
+        "relay": {
+          "active": false,
+          "age_s": 0.5600314960029209,
+          "available": true,
+          "duration_ms": 1000,
+          "enabled": true,
+          "observed_at": 1793809684.7550745,
+          "pc1": 0,
+          "saved_enabled": true,
+          "sequence": 95997,
+          "test_enabled": false
+        },
+        "sensor_event_at": 1793809678.6242108,
+        "sensor_event_boot": "a774551f54304e28bfe4636848cc3526",
+        "sensor_event_seq": 4672,
+        "sensors": {
+          "detadc1": false,
+          "detadc2": false,
+          "online": true,
+          "optic_active": true,
+          "optic_indication_allow": true,
+          "tx_enabled": true
+        },
+        "seq": 896,
+        "sound": {
+          "active": false
+        },
+        "stm32_short_id": "5F295F47B",
+        "stm32_uid96": "3336353430325113000C002A",
+        "sync": {
+          "assigned_role": "master",
+          "code": "M02",
+          "device_id": 2,
+          "device_id_assigned": true,
+          "local_node_id": 2,
+          "role": "master",
+          "sync_seen_mask": 132
+        },
+        "via": [
+          "BMI30-E29805C7C"
+        ],
+        "address": "192.168.0.154",
+        "age_s": 0.5517208660021424,
+        "transport": "wifi"
+      }
+    ],
+    "available": true,
+    "service_transports": {
+      "mode": "both",
+      "revision": "initial",
+      "allowed": [
+        "wifi",
+        "bluetooth"
+      ],
+      "error": "",
+      "active": [
+        "wifi"
+      ]
+    }
+  },
+  "access_status": {
+    "version": "0.1.0",
+    "checked_at": 1793809683.0310955,
+    "status": "ready",
+    "ap": true,
+    "dns": true,
+    "dhcp_process": true,
+    "portal": true,
+    "clients": 0,
+    "offline_mode": false,
+    "power": "shared-radio",
+    "adaptive_power": true,
+    "portal_url": "http://10.187.143.1/",
+    "last_action": null,
+    "button": "short-press-recovery",
+    "pending": false
+  },
+  "maintenance_busy": false
+}

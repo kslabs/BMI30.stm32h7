@@ -1,0 +1,238 @@
+{
+  "schema": 1,
+  "kind": "narrow-SOURCE-only-role-ownership-audit",
+  "date": "2026-11-06",
+  "policy": "Roles are NEVER transferred between devices. Each STM32 retains its own role; Raspberry reads that STM32. Unknown replacement is not assigned old M04 role.",
+  "scope": {
+    "native_release": "2026-11-06-094934",
+    "native_archive_sha256": "4fec6efe749c1a9983ede40851c1d58f7c50065b047e8eb106115df2b4e07f08",
+    "APP_release": "2026-11-06-094935",
+    "APP_archive_sha256": "843f967f2c6d480cb3e8106e655775b3fed9c7053a4ea7dfef182271dee1d57c",
+    "active_Core_and_Engine": "185916, byteexact production sources",
+    "actual_device_calls": 0,
+    "firmware_source_edits": 0,
+    "registry_helper_rerun_or_apply": false
+  },
+  "conclusion": {
+    "automatic_donor_or_cached_role_replay_found": false,
+    "STM_own_NVM_preserved_by_reviewed_flash_paths": true,
+    "explicit_operator_role_assignment_paths_still_present": true,
+    "role_is_not_hardware_write_protected": true,
+    "unknown_replacement_role_or_update_verified": false,
+    "blockers_in_examined_automatic_update_boot_paths": []
+  },
+  "RPi_paths": [
+    {
+      "path": "native archive: Documents/host/bmi30_split_bundles/2026-11-06-094934/project/host/BMI30.001.py.2026-11-04-185916",
+      "functions": [
+        {
+          "name": "_read_device_state_cache",
+          "line": 811
+        },
+        {
+          "name": "_sync_status_snapshot",
+          "line": 828
+        },
+        {
+          "name": "ScopeApi._execute explicit sync_role/sync_mode branch",
+          "line": 1706
+        }
+      ],
+      "finding": "Role/status is derived from the USB event cache. The only active-Core call to scope._send_sync_mode is explicit command dispatch, line1718. No config-load/startup/update call was found."
+    },
+    {
+      "path": "same archive project/host/BMI30.200.py.2026-11-04-185916",
+      "functions": [
+        {
+          "name": "_send_sync_mode",
+          "line": 20583
+        },
+        {
+          "name": "_cycle_sync_mode",
+          "line": 20621
+        },
+        {
+          "name": "_current_role",
+          "line": 6991
+        }
+      ],
+      "finding": "_send_sync_mode emits CMD_SET_SYNC_MODE0x1D plus current8-byte timestamp and persists role via firmware. Engine has no automatic call to this method. _cycle_sync_mode changes ADC channel commutation, not Master/Slave role. BMI30_ROLE defaultmaster in _current_role is used only for a fault-log label (call7093), not a role command."
+    },
+    {
+      "path": "same archive project/host/usb_vendor/usb_stream.py",
+      "sha256": "aafe8faa0d04824e0374a784d7ed58b819a63b8d5fa117b8eb967700cbcc8945",
+      "function": "USBStream event0x11 decode",
+      "line": 2971,
+      "finding": "Decodes own STM sync_state raw_mode/assigned_role/role_persisted/node ID into cache; decoding does not send a role command."
+    },
+    {
+      "path": "same archive project/hotspot_info_server.py",
+      "functions": [
+        {
+          "name": "_parse_group_sync_assignment",
+          "line": 3890
+        },
+        {
+          "name": "apply_group_sync_mode_to_core",
+          "line": 3904
+        },
+        {
+          "name": "do_POST explicit role/group handlers",
+          "lines": [
+            15629,
+            15659
+          ]
+        },
+        {
+          "name": "apply_bmi30_group_command",
+          "line": 15983
+        }
+      ],
+      "finding": "Manual Portal/local/group UI can explicitly assign a role through Core POST. These calls originate from do_POST/user change handler, not periodic GET/startup/update or donor backup replay. This is an intentional writable operator interface, not a read-only-role guarantee."
+    },
+    {
+      "path": "same archive project/utilities/bmi30_runtime_policy.py",
+      "sha256": "0b57705b4a50eb117808d7def34b8ef335aa87fb3e7e058e8365d1dcfafe6e94",
+      "functions": [
+        "fresh_config",
+        "prepare",
+        "rollback"
+      ],
+      "finding": "New-version factory seeds only detector preferences8/12/sel6; removes known sync_mode/ui_sync_mode preferences. Same-version/recovery restores local own state. No hardware/serial role command exists in this policy. Standard switcher/server updater/full component do not synthesize STM role assignment."
+    },
+    {
+      "path": "same archive project/host/bmi30_usb_recovery/usb_recovery_stm32.py",
+      "sha256": "95057eeab7d12fce87a36692f3e4a6123f09a3632b1f19ad9592e4742679a9e6",
+      "finding": "Read-supported-parameters helper only; no OUT/reset/claim/flash commands. Its role/node fields are observations."
+    }
+  ],
+  "USB_bootstrap_paths": [
+    {
+      "path": ".tmp/universal-usb-v2-20261105/phase2-inputs-v5/candidate/runtime_identity.py",
+      "sha256": "e780614105dada4405541df28b77647e809edd0ba5fcf98eb94709f381a90b4c",
+      "functions": [
+        {
+          "name": "OWN_FILES allowlist",
+          "lines": [
+            20,
+            24
+          ]
+        },
+        {
+          "name": "read_owned_identity",
+          "lines": [
+            153,
+            213
+          ]
+        },
+        {
+          "name": "factory_defaults",
+          "lines": [
+            215,
+            228
+          ]
+        },
+        {
+          "name": "identity_plan",
+          "lines": [
+            241,
+            274
+          ]
+        },
+        {
+          "name": "generated external commands",
+          "lines": [
+            275,
+            280
+          ]
+        }
+      ],
+      "finding": "Own physicalCM5/hostname/Agent binding checked before own identity import; allowlist excludes STM role/device cache. factory_defaults recursively rejects role/sync_role/device_id/uid/master_uid keys. Generated commands onlySSH/TLS/xrdp key work. Explicit authority string: STM32 only; absent MCU means no known role."
+    },
+    {
+      "path": ".tmp/universal-usb-v2-20261105/phase2-inputs-v5/candidate/owned_emmc_reader.py",
+      "sha256": "4a46e1ed13c9984fd0344657d2d2cb68d0245fab89ca6e2514e6356e4a65701d",
+      "lines": [
+        66,
+        85
+      ],
+      "finding": "Fresh physical/boot/closure guard and own read-only noload eMMC import; no role/NVM replay or MCU command."
+    }
+  ],
+  "STM_paths": {
+    "formal_archive": "FirmwareReleases/STM32/1.2.57-casino-fifo-phase/BMI30-STM32-1.2.57-casino-fifo-phase-sources.tar.gz",
+    "formal_archive_sha256": "27bb4b56da07695c2ae6f2ed2ed602fc5e3e7ffc179c0d4f122d4bc1a29b394d",
+    "sources": [
+      {
+        "member": "project/USB_DEVICE/App/usb_vendor_app.c",
+        "sha256": "7325d23f0366a3e98ff16c643e43a6fd2501a10d13e9105f0fb8823a69f2345d",
+        "functions": [
+          {
+            "name": "vnd_rs485_role_meta_restore",
+            "lines": [
+              1243,
+              1303
+            ]
+          },
+          {
+            "name": "vnd_dc_load_once",
+            "lines": [
+              1888,
+              1956
+            ]
+          },
+          {
+            "name": "VND_CMD_SET_SYNC_MODE handler",
+            "line": 8587
+          },
+          {
+            "name": "vnd_dc_boot_recovery_erase_if_requested",
+            "line": 1126
+          }
+        ],
+        "finding": "Boot restores the latest CRC-valid own sector role. A separately explicit timestamped Master/Slave host command remains accepted and calls rs485_role_assign_*_from_host. Separate fault-recovery .noinit cookie path (cookie1036, setter1048–1056, handler1126) can erase the reserved settings sector. This is own fault recovery, not donor role replay."
+      },
+      {
+        "member": "project/Core/Src/main.c",
+        "sha256": "a472437e5f7822b69088dca08461a73ac5ae5cd72a899ded9496d867003d4e0f",
+        "functions": [
+          {
+            "name": "rs485_role_persist_import",
+            "lines": [
+              3102,
+              3184
+            ]
+          },
+          {
+            "name": "host role assignment dirty/immediate persistence request",
+            "line": 3030
+          }
+        ],
+        "finding": "Restores own saved role/node and clears dirty/pending state; explicit host assignments request persistence."
+      }
+    ],
+    "reviewed_flash_helpers": [
+      {
+        "path": ".tmp/m04-update-as-s07-20261105/flash_m04_normal.py",
+        "current_source_sha256": "f40df4e67302438d2aaca228f669cd1cc36de3de0f3a06fee83fed6a7370d028"
+      },
+      {
+        "path": ".tmp/s07-stm57-update-20261105/flash_s07_normal.py",
+        "current_source_sha256": "121bf4ccf1de1aafdce28f779666ef97f4cba553d660c88b52749dbb1c472383"
+      }
+    ],
+    "flash_functions": [
+      "validate_inputs",
+      "Flash.command",
+      "verify_environment"
+    ],
+    "flash_finding": "Fresh own backup is bound to exact physicalCM5/probe/STM UID. Only326648B target57 at0x08000000 or sameboard896KiB application rollback permitted, both below sector7 at0x080e0000. Own128KiBsector7 and option bytes compared byteexact before/after/reset. Historical master4/slave7 checks are eligibility guards for those known boards, never replacement defaults. Current source hashes are not substituted for historical executed-receipt hashes."
+  },
+  "material_limits": [
+    "Do not claim STM firmware never writes or erases its settings sector on every boot: explicit host role assignment persists it and a valid .noinit fault-recovery cookie can erase the reserved sector. Guarded flash workers require own-sector equality including after reset, so this separate case is detectable and is not a donor-role restore.",
+    "Core role display is cache-backed (default overall cache freshness300s). Cache-only display is not sufficient proof of current MCU identity/role after replacement or disconnect; fresh own STM UID and fresh sync event must establish the replacement role. No role write follows from this cache by the examined startup/update paths.",
+    "Explicit manual UI/Core/group role assignment is technically available. The permanent policy requires not using those commands to copy the removed device role onto a replacement.",
+    "No actual replacement identity, STM role, NVM, USB boot or online state was read by this audit. Hardware is off/on hold; oldM04 receives no operations.",
+    "This audit covers frozen094934/094935 paths and the specified guardedSTM workers; it does not authorize an arbitrary mass erase/fullflash or restoration of a foreign NVM backup."
+  ]
+}

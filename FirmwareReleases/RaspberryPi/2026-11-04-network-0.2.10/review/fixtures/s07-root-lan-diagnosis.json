@@ -1,0 +1,174 @@
+{
+  "local": {
+    "id": "BMI30-C9775FBAE",
+    "role": "slave",
+    "stm32_uid96": "333635343032511300090040",
+    "rs485_id": 7,
+    "code": "S07",
+    "ssid": "VINETA-EL 5GHz",
+    "bssid": "70:4f:57:da:0c:52",
+    "freq": 5180,
+    "rssi_dbm": -63,
+    "signal": 74,
+    "iface": "wlan0",
+    "uplink": "wifi",
+    "gateway": "192.168.0.1",
+    "addresses": [
+      "10.43.0.1",
+      "192.168.0.153",
+      "10.187.143.1"
+    ],
+    "broadcasts": [
+      "10.43.0.255",
+      "192.168.0.255",
+      "10.187.143.255"
+    ],
+    "ap": {
+      "ssid": "BMI30-C9775FBAE",
+      "bssid": "2e:cf:67:50:12:42",
+      "address": "10.187.143.1/24",
+      "available": true
+    },
+    "clients": 0,
+    "station_uuid": "65797328-02d2-4ba5-903c-c8f82a6166d3",
+    "ap_uuid": "694f3d77-f81a-4377-ae3f-9949fc9c6b87",
+    "internet": {
+      "ok": true,
+      "rtt_ms": 113.1,
+      "loss": 0.0,
+      "checks": 2
+    }
+  },
+  "addr_rows": [
+    {
+      "ifindex": 1,
+      "ifname": "lo",
+      "flags": [
+        "LOOPBACK",
+        "UP",
+        "LOWER_UP"
+      ],
+      "mtu": 65536,
+      "qdisc": "noqueue",
+      "operstate": "UNKNOWN",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "127.0.0.1",
+          "prefixlen": 8,
+          "scope": "host",
+          "label": "lo",
+          "valid_life_time": 4294967295,
+          "preferred_life_time": 4294967295
+        }
+      ]
+    },
+    {
+      "ifindex": 2,
+      "ifname": "eth0",
+      "flags": [
+        "NO-CARRIER",
+        "BROADCAST",
+        "MULTICAST",
+        "UP"
+      ],
+      "mtu": 1500,
+      "qdisc": "pfifo_fast",
+      "operstate": "DOWN",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "10.43.0.1",
+          "prefixlen": 24,
+          "broadcast": "10.43.0.255",
+          "scope": "global",
+          "noprefixroute": true,
+          "label": "eth0",
+          "valid_life_time": 4294967295,
+          "preferred_life_time": 4294967295
+        }
+      ]
+    },
+    {
+      "ifindex": 3,
+      "ifname": "wlan0",
+      "flags": [
+        "BROADCAST",
+        "MULTICAST",
+        "UP",
+        "LOWER_UP"
+      ],
+      "mtu": 1500,
+      "qdisc": "pfifo_fast",
+      "operstate": "UP",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "192.168.0.153",
+          "prefixlen": 24,
+          "broadcast": "192.168.0.255",
+          "scope": "global",
+          "dynamic": true,
+          "noprefixroute": true,
+          "label": "wlan0",
+          "valid_life_time": 6053,
+          "preferred_life_time": 6053
+        }
+      ]
+    },
+    {
+      "ifindex": 4,
+      "ifname": "wlan0ap",
+      "flags": [
+        "BROADCAST",
+        "MULTICAST",
+        "UP",
+        "LOWER_UP"
+      ],
+      "mtu": 1500,
+      "qdisc": "pfifo_fast",
+      "operstate": "UP",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "10.187.143.1",
+          "prefixlen": 24,
+          "broadcast": "10.187.143.255",
+          "scope": "global",
+          "noprefixroute": true,
+          "label": "wlan0ap",
+          "valid_life_time": 4294967295,
+          "preferred_life_time": 4294967295
+        }
+      ]
+    }
+  ],
+  "neighbor_rows": [
+    {
+      "dst": "192.168.0.1",
+      "lladdr": "70:4f:57:da:0c:53",
+      "state": [
+        "REACHABLE"
+      ]
+    }
+  ],
+  "result": {
+    "cohesion": {
+      "version": 1,
+      "available": false,
+      "own_short_id": "8CC938B79",
+      "member_short_ids": [],
+      "age_s": 0.0,
+      "reason": "RID identity, freshness or membership unverified"
+    },
+    "root_lan": null
+  }
+}

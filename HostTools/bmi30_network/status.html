@@ -1,0 +1,25 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>BMI30 — Device network</title><style>
+body{font:16px system-ui;background:#101820;color:#e6edf3;max-width:1200px;margin:32px auto;padding:0 20px}
+h1{font-size:26px}table{width:100%;border-collapse:collapse;margin:20px 0}td,th{text-align:left;padding:12px;border-bottom:1px solid #344454}
+th{color:#90afc4}.ok{color:#77d4a1}.bad{color:#ffa593}small{color:#a4b8c8}#error{color:#ffa593}svg{width:100%;height:300px;background:#15232f;border-radius:12px}
+text{fill:#e6edf3;font:13px system-ui}line{stroke:#537c97;stroke-width:2}circle{fill:#234d64;stroke:#77d4a1;stroke-width:2}
+</style></head><body><h1>BMI30 — Device network</h1><p id="summary">Loading…</p><p id="error"></p>
+<svg id="map" viewBox="0 0 1100 300" role="img" aria-label="Current device routes"></svg>
+<table><thead><tr><th>Device</th><th>Internet</th><th>Connection</th><th>Signal</th><th>HTTPS latency</th><th>Route</th></tr></thead><tbody id="nodes"></tbody></table>
+<p><small>Visible networks do not guarantee a two-way link. Route cost is an estimate.</small></p>
+<details><summary>Wi-Fi visibility</summary><pre id="visible"></pre></details>
+<details><summary>Recent switches</summary><pre id="history"></pre></details>
+<script>
+const el=id=>document.getElementById(id);const ns='http://www.w3.org/2000/svg';
+function svg(tag,attrs,text){let e=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));if(text)e.textContent=text;el('map').append(e)}
+async function update(){try{const r=await fetch('/status',{cache:'no-store'});if(!r.ok)throw Error(r.status);const s=await r.json();const nodes=s.nodes||[];
+el('summary').textContent=`Coordinator: ${s.coordinator||'Unknown'} · Devices: ${nodes.length} · Automatic selection: ${s.automatic?'Enabled':'Waiting / observing'} · ${s.checked_at?new Date(s.checked_at*1000).toLocaleTimeString():''}`;
+el('nodes').replaceChildren();el('map').replaceChildren();let pos={};nodes.forEach((n,i)=>pos[n.id]=[80+i*950/Math.max(1,nodes.length-1),n.parent?210:75]);
+nodes.forEach(n=>{if(n.parent&&pos[n.parent])svg('line',{x1:pos[n.id][0],y1:pos[n.id][1],x2:pos[n.parent][0],y2:pos[n.parent][1]})});
+nodes.forEach(n=>{let tr=document.createElement('tr');const online=!!n.internet?.ok;const values=[`${n.code||'?'} · ${n.id}`,typeof n.internet?.ok!=='boolean'?'Unknown':online?'Online':'No internet',`${n.ssid||n.iface||'—'} (${n.freq?Math.round(n.freq/100)/10+' GHz':n.uplink})`,n.uplink==='wifi'?`${n.signal}% / ${n.rssi_dbm} dBm`:'—',online?`${n.internet.rtt_ms} ms`:'—',(n.path||[]).join(' → ')||'—'];
+values.forEach((v,i)=>{let td=document.createElement('td');td.textContent=v;if([0,2,5].includes(i))td.setAttribute('translate','no');if(i===1)td.className=online?'ok':'bad';tr.append(td)});el('nodes').append(tr);
+svg('circle',{cx:pos[n.id][0],cy:pos[n.id][1],r:22});svg('text',{x:pos[n.id][0],y:pos[n.id][1]+5,'text-anchor':'middle'},n.code||'?');svg('text',{x:pos[n.id][0],y:pos[n.id][1]+42,'text-anchor':'middle'},n.id.slice(-9));});
+el('visible').textContent=nodes.map(n=>`${n.code} ${n.id}:\n`+(n.visible||[]).filter(a=>a.ssid.startsWith('BMI30')).map(a=>`  ${a.ssid}: ${a.signal}%, ${a.freq} MHz`).join('\n')).join('\n\n');
+el('history').textContent=JSON.stringify(s.history||[],null,2);el('error').textContent='';}catch(e){el('error').textContent='Data unavailable: '+e.message;}}update();setInterval(update,10000);
+</script></body></html>

@@ -1,0 +1,434 @@
+{
+  "host": "BMI30-E29805C7C",
+  "now": 1793808259.7416816,
+  "local": {
+    "id": "BMI30-E29805C7C",
+    "role": "master",
+    "stm32_uid96": "3336353430325113000C002A",
+    "rs485_id": 2,
+    "code": "M02",
+    "ssid": "BMI30-C9775FBAE",
+    "bssid": "2e:cf:67:50:12:42",
+    "freq": 5180,
+    "rssi_dbm": -60,
+    "signal": 80,
+    "iface": "wlan0",
+    "uplink": "wifi",
+    "gateway": "10.187.143.1",
+    "addresses": [
+      "10.43.0.1",
+      "10.187.143.198"
+    ],
+    "broadcasts": [
+      "10.43.0.255",
+      "10.187.143.255"
+    ],
+    "ap": {
+      "ssid": "",
+      "bssid": "8a:a2:9e:8e:fb:3d",
+      "address": "10.42.0.1/24"
+    },
+    "clients": 0,
+    "station_uuid": "97d67fea-4a00-5c55-8e3f-bac0a10533a6",
+    "ap_uuid": "",
+    "internet": {
+      "ok": true,
+      "rtt_ms": 86.9,
+      "loss": 0.0,
+      "checks": 2
+    }
+  },
+  "core": {
+    "ok": true,
+    "stale": false,
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.0009639263153076172
+    },
+    "sync": {
+      "value": "master",
+      "role": "master",
+      "assigned_role": "master",
+      "role_persisted": true,
+      "device_id": 2,
+      "local_node_id": 2,
+      "device_id_assigned": true,
+      "sync_seen_mask": 132,
+      "code": "M02",
+      "source": "event-cache",
+      "device_responded": true
+    },
+    "rs485_ident": {
+      "authoritative": false,
+      "last_master_request_at": 1793793601.230586,
+      "last_master_request_iso": "2026-11-04T13:00:01+0100",
+      "local": {
+        "complete": true,
+        "device_id_assigned": true,
+        "flags": 1183,
+        "flags_hex": "0x049F",
+        "group_label": "5F295F47B/198",
+        "host_id": "5F295F47B",
+        "host_updated_at": 1793808257.954738,
+        "host_updated_iso": "2026-11-04T17:04:17+0100",
+        "ip": "10.187.143.198",
+        "ip4": [
+          10,
+          187,
+          143,
+          198
+        ],
+        "ip_last": "198",
+        "ip_valid": true,
+        "last_ms": 95244597,
+        "local": true,
+        "master": true,
+        "node_conflict": false,
+        "node_id": 2,
+        "node_id_matches_status": true,
+        "recent": true,
+        "requested_node_id": 255,
+        "role": "master",
+        "rpi_id": "",
+        "rpi_id_valid": false,
+        "rpi_number": null,
+        "rpi_number_valid": false,
+        "scan_active": false,
+        "seen_page_mask": 2097151,
+        "short_id": "5F295F47B",
+        "short_valid": true,
+        "version": 1,
+        "wire_format": "RID1"
+      },
+      "local_ip": "192.168.0.154",
+      "node_count": 2,
+      "node_list": [
+        {
+          "complete": true,
+          "device_id_assigned": true,
+          "flags": 1183,
+          "flags_hex": "0x049F",
+          "group_label": "5F295F47B/198",
+          "host_id": "5F295F47B",
+          "host_updated_at": 1793808257.954738,
+          "host_updated_iso": "2026-11-04T17:04:17+0100",
+          "ip": "10.187.143.198",
+          "ip4": [
+            10,
+            187,
+            143,
+            198
+          ],
+          "ip_last": "198",
+          "ip_valid": true,
+          "last_ms": 95244597,
+          "local": true,
+          "master": true,
+          "node_conflict": false,
+          "node_id": 2,
+          "node_id_matches_status": true,
+          "recent": true,
+          "requested_node_id": 255,
+          "role": "master",
+          "rpi_id": "",
+          "rpi_id_valid": false,
+          "rpi_number": null,
+          "rpi_number_valid": false,
+          "scan_active": false,
+          "seen_page_mask": 2097151,
+          "short_id": "5F295F47B",
+          "short_valid": true,
+          "version": 1,
+          "wire_format": "RID1"
+        },
+        {
+          "complete": true,
+          "device_id_assigned": true,
+          "flags": 1047,
+          "flags_hex": "0x0417",
+          "group_label": "8CC938B79/153",
+          "host_id": "8CC938B79",
+          "host_updated_at": 1793808257.9587135,
+          "host_updated_iso": "2026-11-04T17:04:17+0100",
+          "ip": "192.168.0.153",
+          "ip4": [
+            192,
+            168,
+            0,
+            153
+          ],
+          "ip_last": "153",
+          "ip_valid": true,
+          "last_ms": 95242414,
+          "local": false,
+          "master": false,
+          "node_conflict": false,
+          "node_id": 7,
+          "node_id_matches_status": true,
+          "recent": true,
+          "requested_node_id": 7,
+          "role": "slave",
+          "rpi_id": "",
+          "rpi_id_valid": false,
+          "rpi_number": null,
+          "rpi_number_valid": false,
+          "scan_active": false,
+          "seen_page_mask": 2097151,
+          "short_id": "8CC938B79",
+          "short_valid": true,
+          "version": 1,
+          "wire_format": "RID1"
+        }
+      ],
+      "nodes": {
+        "2": {
+          "complete": true,
+          "device_id_assigned": true,
+          "flags": 1183,
+          "flags_hex": "0x049F",
+          "group_label": "5F295F47B/198",
+          "host_id": "5F295F47B",
+          "host_updated_at": 1793808257.954738,
+          "host_updated_iso": "2026-11-04T17:04:17+0100",
+          "ip": "10.187.143.198",
+          "ip4": [
+            10,
+            187,
+            143,
+            198
+          ],
+          "ip_last": "198",
+          "ip_valid": true,
+          "last_ms": 95244597,
+          "local": true,
+          "master": true,
+          "node_conflict": false,
+          "node_id": 2,
+          "node_id_matches_status": true,
+          "recent": true,
+          "requested_node_id": 255,
+          "role": "master",
+          "rpi_id": "",
+          "rpi_id_valid": false,
+          "rpi_number": null,
+          "rpi_number_valid": false,
+          "scan_active": false,
+          "seen_page_mask": 2097151,
+          "short_id": "5F295F47B",
+          "short_valid": true,
+          "version": 1,
+          "wire_format": "RID1"
+        },
+        "7": {
+          "complete": true,
+          "device_id_assigned": true,
+          "flags": 1047,
+          "flags_hex": "0x0417",
+          "group_label": "8CC938B79/153",
+          "host_id": "8CC938B79",
+          "host_updated_at": 1793808257.9587135,
+          "host_updated_iso": "2026-11-04T17:04:17+0100",
+          "ip": "192.168.0.153",
+          "ip4": [
+            192,
+            168,
+            0,
+            153
+          ],
+          "ip_last": "153",
+          "ip_valid": true,
+          "last_ms": 95242414,
+          "local": false,
+          "master": false,
+          "node_conflict": false,
+          "node_id": 7,
+          "node_id_matches_status": true,
+          "recent": true,
+          "requested_node_id": 7,
+          "role": "slave",
+          "rpi_id": "",
+          "rpi_id_valid": false,
+          "rpi_number": null,
+          "rpi_number_valid": false,
+          "scan_active": false,
+          "seen_page_mask": 2097151,
+          "short_id": "8CC938B79",
+          "short_valid": true,
+          "version": 1,
+          "wire_format": "RID1"
+        }
+      },
+      "requested_scan": false,
+      "source": "ep0_rid1",
+      "updated_at": 1793808257.9587274,
+      "updated_iso": "2026-11-04T17:04:17+0100"
+    }
+  },
+  "addr_rows": [
+    {
+      "ifindex": 1,
+      "ifname": "lo",
+      "flags": [
+        "LOOPBACK",
+        "UP",
+        "LOWER_UP"
+      ],
+      "mtu": 65536,
+      "qdisc": "noqueue",
+      "operstate": "UNKNOWN",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "127.0.0.1",
+          "prefixlen": 8,
+          "scope": "host",
+          "label": "lo",
+          "valid_life_time": 4294967295,
+          "preferred_life_time": 4294967295
+        }
+      ]
+    },
+    {
+      "ifindex": 2,
+      "ifname": "eth0",
+      "flags": [
+        "NO-CARRIER",
+        "BROADCAST",
+        "MULTICAST",
+        "UP"
+      ],
+      "mtu": 1500,
+      "qdisc": "pfifo_fast",
+      "operstate": "DOWN",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "10.43.0.1",
+          "prefixlen": 24,
+          "broadcast": "10.43.0.255",
+          "scope": "global",
+          "noprefixroute": true,
+          "label": "eth0",
+          "valid_life_time": 4294967295,
+          "preferred_life_time": 4294967295
+        }
+      ]
+    },
+    {
+      "ifindex": 3,
+      "ifname": "wlan0",
+      "flags": [
+        "BROADCAST",
+        "MULTICAST",
+        "UP",
+        "LOWER_UP"
+      ],
+      "mtu": 1500,
+      "qdisc": "pfifo_fast",
+      "operstate": "UP",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "10.187.143.198",
+          "prefixlen": 24,
+          "broadcast": "10.187.143.255",
+          "scope": "global",
+          "dynamic": true,
+          "noprefixroute": true,
+          "label": "wlan0",
+          "valid_life_time": 2071,
+          "preferred_life_time": 2071
+        }
+      ]
+    }
+  ],
+  "neighbor_rows": [
+    {
+      "dst": "10.187.143.1",
+      "dev": "wlan0",
+      "lladdr": "2e:cf:67:50:12:42",
+      "state": [
+        "REACHABLE"
+      ]
+    }
+  ],
+  "visible": [
+    {
+      "ssid": "VINETA-EL 2,4GHz",
+      "bssid": "70:4f:57:da:0c:53",
+      "freq": 2417,
+      "channel": 2,
+      "signal": 77,
+      "security": "WPA1 WPA2"
+    },
+    {
+      "ssid": "VinetaBMI 2,4GHz",
+      "bssid": "e8:65:d4:85:f1:40",
+      "freq": 2412,
+      "channel": 1,
+      "signal": 74,
+      "security": "WPA1 WPA2"
+    },
+    {
+      "ssid": "VINETA-meeting-guest 2,4GHz",
+      "bssid": "72:4f:57:da:0c:53",
+      "freq": 2417,
+      "channel": 2,
+      "signal": 69,
+      "security": "WPA1 WPA2"
+    },
+    {
+      "ssid": "BMI30-C9775FBAE",
+      "bssid": "2e:cf:67:50:12:42",
+      "freq": 5180,
+      "channel": 36,
+      "signal": 63,
+      "security": "WPA2"
+    },
+    {
+      "ssid": "VINETA-EL 5GHz",
+      "bssid": "70:4f:57:da:0c:52",
+      "freq": 5180,
+      "channel": 36,
+      "signal": 45,
+      "security": "WPA1 WPA2"
+    },
+    {
+      "ssid": "VINETA-meeting-guest 5GHz",
+      "bssid": "72:4f:57:da:0c:52",
+      "freq": 5180,
+      "channel": 36,
+      "signal": 45,
+      "security": "WPA1 WPA2"
+    },
+    {
+      "ssid": "VinetaBMI 2,4GHz_EXT",
+      "bssid": "b4:b0:24:b9:d8:7c",
+      "freq": 2412,
+      "channel": 1,
+      "signal": 44,
+      "security": "WPA2"
+    },
+    {
+      "ssid": "DIRECT-98-HP M15 LaserJet",
+      "bssid": "3a:22:e2:fd:57:98",
+      "freq": 2437,
+      "channel": 6,
+      "signal": 40,
+      "security": "WPA2"
+    }
+  ],
+  "guard_source": "\"\"\"Independent full-system component transaction following the stock core update.\"\"\"\nimport argparse,configparser,contextlib,hashlib,importlib.util,ipaddress,json,os,pathlib,shlex,subprocess,time,uuid\nP=pathlib.Path\nSYSTEM_ROOT=P('/')\ndef system(name):return SYSTEM_ROOT/str(name).lstrip('/')\nDOCS=P('/home/techaid/Documents')\nSTATE_ROOT=P('/var/lib/bmi30-legacy-menu')\nBACKUPS=P('/var/backups/bmi30-full-network')\nUNITS=('bmi30-network.service','bmi30-channel-policy.service','bmi30-communication-recovery.service',\n       'bmi30-scope-rtc.service','bmi30-access.service','bmi30-wifi-watchdog.service')\nCHANNEL_POLICY='bmi30-channel-policy.service'\nCONNECTIVITY_URL='https://www.teiots.net/'\nCONNECTIVITY_CHECK_INTERVAL=10\nCONNECTIVITY_OUTAGE_GRACE=120\nCONNECTIVITY_UPDATE_WINDOW=900\nCONNECTIVITY_BOOT_WINDOW=300\n\ndef stop_runtime_units():\n # NetworkManager Requires this one-shot policy on newer installations.\n # Stopping it also stops NetworkManager. Its inactive code can be replaced\n # without interrupting the active policy; preserve the network itself.\n for unit in UNITS:\n  if unit!=CHANNEL_POLICY:run('systemctl','stop',unit,check=False)\n\ndef sha(path):return hashlib.sha256(P(path).read_bytes()).hexdigest()\ndef atomic(path,data,mode=0o600):\n path=P(path);path.parent.mkdir(parents=True,exist_ok=True)\n temp=path.with_name(path.name+'.'+uuid.uuid4().hex)\n with temp.open('wb') as f:f.write(data);f.flush();os.fsync(f.fileno())\n temp.chmod(mode);temp.replace(path)\ndef write(path,value):atomic(path,(json.dumps(value,indent=2)+'\\n').encode())\ndef env(path):\n return {k:shlex.split(v)[0] if shlex.split(v) else '' for line in path.read_text().splitlines()\n         if '=' in line and not line.startswith('#') for k,v in [line.split('=',1)]}\ndef active():return env(DOCS/'host/bmi30_split_active_version.env').get('BMI30_SPLIT_BUNDLE_ID')\ndef identity():return 'BMI30-'+system('/proc/device-tree/serial-number').read_text().strip('\\0\\n')[-9:].upper()\n\ndef require_compatible_hardware(manifest):\n spec=manifest.get('hardware_compatibility')\n if spec is None:\n  if identity() not in manifest.get('allowed_ids',[]):raise RuntimeError('Wrong CM5 cohort')\n  return\n if (spec.get('schema')!=1 or spec.get('software_contract')!='bmi30-split-v1'\n     or spec.get('models')!=['raspberrypi,5-compute-module']):\n  raise RuntimeError('Unsupported firmware compatibility contract')\n compatible=system('/proc/device-tree/compatible').read_bytes().split(b'\\0')\n if b'raspberrypi,5-compute-module' not in compatible:raise RuntimeError('Firmware requires a CM5')\n value=system('/proc/device-tree/serial-number').read_text().strip('\\0\\n').lower()\n if len(value)!=16 or any(c not in '0123456789abcdef' for c in value) or not int(value,16):\n  raise RuntimeError('Cannot identify the physical CM5')\n if not (DOCS/'host/bmi30_split_active_version.env').is_file():\n  raise RuntimeError('BMI30 split firmware runtime is not installed')\ndef boot_id():\n try:return system('/proc/sys/kernel/random/boot_id').read_text().strip()\n except OSError:return 'unknown'\ndef run(*args,check=True,timeout=35):\n r=subprocess.run(args,capture_output=True,text=True,timeout=timeout)\n if check and r.returncode:raise RuntimeError('System operation failed: '+args[0])\n return r.stdout.strip()\ndef load_module(path,name):\n spec=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m\n@contextlib.contextmanager\ndef firmware_idle():\n import fcntl\n with (DOCS/'.bmi30_cloud_sync/server_operation.lock').open('rb') as f:\n  fcntl.flock(f,fcntl.LOCK_SH|fcntl.LOCK_NB);yield\n@contextlib.contextmanager\ndef previous_component_locks(expected):\n import fcntl\n with contextlib.ExitStack() as stack:\n  for path in STATE_ROOT.glob('*/state.json'):\n   record=json.loads(path.read_text())\n   backup=record.get('backup')\n   if record.get('expected_id')!=expected or not backup:continue\n   target=P(backup).resolve()\n   if target.parent!=P('/var/backups/bmi30-network-recovery') or not (target/'lock').is_file():continue\n   stream=stack.enter_context((target/'lock').open('rb'))\n   fcntl.flock(stream,fcntl.LOCK_EX|fcntl.LOCK_NB)\n  yield\n\ndef protected():\n paths=[system('/etc/bmi30-network/config.json'),system('/etc/bmi30/portal_config.json'),DOCS/'host/bmi30_config.json',\n        DOCS/'host/bmi30_sel.json',system('/var/lib/bmi30-access/settings.json')]\n profiles=system('/etc/NetworkManager/system-connections')\n if profiles.is_dir():paths+=list(profiles.iterdir())\n return {str(p):sha(p) for p in paths if p.is_file()}\ndef protected_unchanged(before):\n for name,digest in before.items():\n  p=P(name)\n  if p.name=='bmi30_sel.json':continue  # The core refreshes only its timestamp.\n  if not p.is_file() or sha(p)!=digest:raise RuntimeError('A preserved setting changed')\n\ndef ap_profiles():\n result={}\n folder=system('/etc/NetworkManager/system-connections')\n if not folder.is_dir():return result\n for path in folder.iterdir():\n  if path.is_symlink() or not path.is_file() or path.stat().st_size>1048576:continue\n  cfg=configparser.ConfigParser(interpolation=None,strict=False)\n  try:cfg.read_string(path.read_text())\n  except (OSError,ValueError,configparser.Error):continue\n  mode=cfg.get('wifi','mode',fallback=cfg.get('802-11-wireless','mode',fallback=''))\n  if mode=='ap':result[path.name]=path\n return result\n\ndef save_ap_profiles(backup):\n records={}\n folder=system('/etc/NetworkManager/system-connections')\n before_names=[p.name for p in folder.iterdir()] if folder.is_dir() else []\n for name,path in ap_profiles().items():\n  st=path.stat();atomic(backup/'ap-profiles'/name,path.read_bytes())\n  records[name]={'sha256':sha(path),'uid':st.st_uid,'gid':st.st_gid,'mode':st.st_mode&0o777}\n return {'before_names':before_names,'profiles':records,\n         'interface_existed':system('/sys/class/net/wlan0ap').exists()}\n\ndef restore_ap_profiles(backup,record):\n folder=system('/etc/NetworkManager/system-connections')\n # Free the radio before reloading profiles or restoring the station. A new\n # AP on another channel can prevent NM from reconnecting the old uplink.\n if system('/sys/class/net/wlan0ap').exists():\n  run('nmcli','device','disconnect','wlan0ap',check=False)\n  if not record['interface_existed']:run('iw','dev','wlan0ap','del',check=False)\n for name,path in ap_profiles().items():\n  if name not in record['before_names']:path.unlink()\n for name,item in record['profiles'].items():\n  if P(name).name!=name:raise RuntimeError('Invalid saved AP profile path')\n  saved=backup/'ap-profiles'/name\n  if sha(saved)!=item['sha256']:raise RuntimeError('Saved AP profile checksum mismatch')\n  path=folder/name;atomic(path,saved.read_bytes(),item['mode']);os.chown(path,item['uid'],item['gid'])\n run('nmcli','connection','reload')\n\ndef station_identity():\n return {'uuid':run('nmcli','-g','GENERAL.CON-UUID','device','show','wlan0',check=False),\n         'address':run('nmcli','-g','IP4.ADDRESS','device','show','wlan0',check=False)}\n\ndef restore_station(expected):\n ident=str(expected.get('uuid') or '')\n if ident in ('','--'):return\n if str(uuid.UUID(ident))!=ident.lower():raise RuntimeError('Invalid saved station identity')\n current=station_identity()\n if current.get('uuid')==ident and current.get('address'):return\n run('nmcli','--wait','30','connection','up','uuid',ident,timeout=35)\n for _ in range(20):\n  current=station_identity()\n  if current.get('uuid')==ident and current.get('address'):return\n  time.sleep(.5)\n raise RuntimeError('Saved station did not reconnect')\n\ndef create_missing_hotspot(expected_station):\n # The private NM checkpoint keeps the current station recoverable even if\n # this worker is killed while adding a separate AP interface.\n import sys\n sys.path.insert(0,str(system('/opt/bmi30-network')))\n from network import Checkpoint\n checkpoint=Checkpoint(('wlan0',),timeout=150)\n try:\n  run('bash',str(system('/usr/local/bin/bmi30-hotspot.sh')),timeout=60)\n  if station_identity()!=expected_station:raise RuntimeError('Hotspot setup changed the active station')\n except BaseException as error:\n  # The caller must first remove the failed AP, then restore NM and explicitly\n  # reactivate the saved router profile even if NM checkpoint rollback fails.\n  error.checkpoint=checkpoint\n  raise\n return checkpoint\ndef committed(bundle):\n try:\n  r=json.loads((DOCS/'.bmi30_cloud_sync/server/last_transaction.json').read_text())\n  return active()==bundle and r.get('target',{}).get('FIRMWARE_BUNDLE_ID')==bundle\n except (OSError,ValueError):return False\ndef state_write(path,state):write(path,state)\n\ndef install_persistent_guard(path,state):\n name='bmi30-legacy-guard-'+state['bundle_id']+'.service'\n unit=system('/etc/systemd/system')/name\n text=('[Unit]\\nDescription=BMI30 independent update connection recovery\\n'\n       'After=local-fs.target NetworkManager.service\\nStartLimitIntervalSec=0\\n\\n'\n       '[Service]\\nType=simple\\nExecStart=/usr/bin/python3 '+str(path.parent/'guard.py')+' --state '+str(path)+'\\n'\n       'Restart=on-failure\\nRestartSec=3\\n\\n[Install]\\nWantedBy=multi-user.target\\n')\n data=text.encode();expected=hashlib.sha256(data).hexdigest()\n if unit.exists() and (unit.is_symlink() or sha(unit)!=expected):raise RuntimeError('Unexpected existing recovery service')\n atomic(unit,data,0o644);state['persistent_guard']={'unit':name,'sha256':expected};state_write(path,state)\n run('systemctl','daemon-reload');run('systemctl','enable',name);run('systemctl','start',name)\n\ndef retire_persistent_guard(state):\n saved=state.get('persistent_guard')\n if not saved:return\n name='bmi30-legacy-guard-'+state['bundle_id']+'.service'\n if saved.get('unit')!=name:raise RuntimeError('Unexpected recovery service identity')\n unit=system('/etc/systemd/system')/name\n if unit.exists():\n  if unit.is_symlink() or sha(unit)!=saved['sha256']:raise RuntimeError('Recovery service was changed')\n  run('systemctl','disable',name);unit.unlink();run('systemctl','daemon-reload')\ndef api(port,path='/api/status'):\n import urllib.request\n o=urllib.request.build_opener(urllib.request.ProxyHandler({}))\n with o.open('http://127.0.0.1:'+str(port)+path,timeout=3) as r:return json.load(r)\ndef server_probe(address=None):\n # Keep TLS hostname/certificate checks on both paths. A cached address is\n # accepted only after a successful ordinary HTTPS request in this transaction.\n args=['curl','--noproxy','*','--interface','wlan0','--proto','=https',\n       '--connect-timeout','3','--max-time','5','-s','-o','/dev/null',\n       '-w','%{http_code} %{remote_ip} %{exitcode}']\n if address:\n  try:\n   parsed=ipaddress.ip_address(address)\n   if parsed.is_unspecified or parsed.is_loopback or parsed.is_multicast or parsed.is_link_local or '%' in address:\n    raise ValueError('Invalid server address')\n  except ValueError:return {'ok':False,'reason':'invalid-cached-address'}\n  ip='['+str(parsed)+']' if parsed.version==6 else str(parsed)\n  args+=['--resolve','www.teiots.net:443:'+ip]\n try:\n  fields=run(*args,CONNECTIVITY_URL,timeout=7,check=False).split()\n  code=int(fields[0]) if fields and fields[0].isdigit() else 0\n  exit_code=int(fields[-1]) if len(fields)>=2 and fields[-1].isdigit() else None\n  result={'ok':200<=code<500 and exit_code in (None,0),'http_code':code,'curl_exit':exit_code}\n  if result['ok']:\n   result['reason']='reachable'\n   if len(fields)>=2:\n    try:result['address']=str(ipaddress.ip_address(fields[1]))\n    except ValueError:pass\n  else:\n   result['reason']={5:'proxy-dns-failed',6:'dns-failed',7:'connect-failed',28:'timeout',\n                     35:'tls-failed',51:'tls-verification-failed',60:'tls-verification-failed'}.get(exit_code,\n                     'http-error' if code else 'request-failed')\n  return result\n except subprocess.TimeoutExpired:return {'ok':False,'reason':'process-timeout'}\n except (OSError,RuntimeError):return {'ok':False,'reason':'probe-unavailable'}\n\ndef server_reachable(watch=None):\n primary=server_probe()\n if watch is None:return primary['ok']\n report={k:v for k,v in primary.items() if k!='address'}\n report['method']='dns-https'\n if primary['ok']:\n  if primary.get('address'):watch['verified_server_address']=primary['address']\n else:\n  saved=watch.get('verified_server_address')\n  if saved:\n   fallback=server_probe(saved)\n   report.update(ok=fallback['ok'],method='cached-ip-tls',primary_reason=primary['reason'],\n                 reason=fallback['reason'],fallback_http_code=fallback.get('http_code'),\n                 fallback_curl_exit=fallback.get('curl_exit'))\n watch['server_probe']=report\n return report['ok']\n\ndef arm_connectivity_watch(station):\n armed=bool(station.get('uuid') not in (None,'','--') and station.get('address'))\n watch={'schema':2,'armed':armed,'status':'monitoring' if armed else 'no-wifi-baseline',\n         'boot_id':boot_id(),'phase':'after-update','until_mono':time.monotonic()+CONNECTIVITY_UPDATE_WINDOW,\n         'next_check_mono':0,'outage_since_mono':None,'first_boot_pending':True,\n         'agent_required':run('systemctl','is-active','bmi30-agent.service',check=False)=='active'}\n if armed and not server_reachable(watch):raise RuntimeError('Cannot verify the original cloud route before changing the network')\n return watch\n\ndef connection_result(state,checks,ok,reason):\n observation={'ok':ok,'reason':reason,'checks':checks}\n state['connectivity_watch']['last_observation']=observation\n if not ok:state['connectivity_watch']['last_failed_observation']=observation\n return ok\n\ndef connection_healthy(state):\n checks={'station':None,'portal':None,'agent':None,'server':None};step='station'\n try:\n  station=station_identity()\n  checks['station']=bool(station.get('uuid') not in (None,'','--') and station.get('address'))\n  if not checks['station']:return connection_result(state,checks,False,'station-unavailable')\n  step='portal'\n  portal=api(80)\n  checks['portal']=(portal.get('hostname')==state['expected_id'] and portal.get('raspberry_firmware_version')==state['bundle_id']\n                   and portal.get('firmware_release',{}).get('portal_matches_release') is True)\n  if not checks['portal']:return connection_result(state,checks,False,'portal-identity-or-release-mismatch')\n  step='agent'\n  if state['connectivity_watch'].get('agent_required'):\n   checks['agent']=run('systemctl','is-active','bmi30-agent.service',check=False)=='active'\n   if not checks['agent']:return connection_result(state,checks,False,'agent-inactive')\n  # STM32 may be unplugged to insert USB; it is not a remote-path failure.\n  step='server';checks['server']=server_reachable(state['connectivity_watch'])\n  reason='healthy' if checks['server'] else 'server-'+state['connectivity_watch'].get('server_probe',{}).get('reason','unreachable')\n  return connection_result(state,checks,checks['server'],reason)\n except (OSError,ValueError,RuntimeError,subprocess.TimeoutExpired):\n  checks[step]=False\n  return connection_result(state,checks,False,step+'-probe-error')\n\ndef record_connection_sample(watch,now):\n sample={'at_mono':now,'phase':watch.get('phase'),'ok':watch.get('last_check_ok'),\n         'reason':watch.get('last_observation',{}).get('reason','unspecified')}\n history=watch.setdefault('history',[])\n if not history or any(sample.get(k)!=history[-1].get(k) for k in ('phase','ok','reason')):\n  history.append(sample);watch['history']=history[-32:]\n\ndef record_rollback_diagnostics(state,trigger):\n watch=state.get('connectivity_watch') or {}\n value={'schema':1,'bundle_id':state['bundle_id'],'expected_id':state['expected_id'],\n        'trigger':trigger,'phase':watch.get('phase'),'boot_id':boot_id(),\n        'last_observation':watch.get('last_observation'),\n        'last_failed_observation':watch.get('last_failed_observation'),\n        'server_probe':watch.get('server_probe'),'history':watch.get('history',[])[-8:]}\n state['rollback_diagnostics']=value\n try:write(system('/var/lib/bmi30-update-diagnostics/last-rollback.json'),value)\n except OSError:pass  # Recording a failure must never prevent recovery.\n print('BMI30 rollback diagnosis: '+json.dumps(value,sort_keys=True),flush=True)\n\ndef annotate_completed_rollback(state):\n # The previous portal only exposes message/error from the stock operation\n # file. Retain a short diagnosis there after the stock tool finishes, under\n # its own firmware lock; never overwrite a subsequent update or its progress.\n try:\n  with firmware_idle():\n   if active()==state['bundle_id']:return False\n   path=DOCS/'.bmi30_cloud_sync/portal_operation.json'\n   value=json.loads(path.read_text())\n   if value.get('action')!='rollback' or value.get('status')!='succeeded' or value.get('progress')!=100:return False\n   diagnosis=state.get('rollback_diagnostics') or {}\n   observation=diagnosis.get('last_observation') or {}\n   reason=str(observation.get('reason') or diagnosis.get('trigger') or 'unknown')[:80]\n   value['message']=('Automatic rollback completed. Failed release: '+state['bundle_id']+'. Check: '+reason)[:240]\n   write(path,value)\n   return True\n except (OSError,ValueError,RuntimeError,BlockingIOError):return False\n\ndef connectivity_step(state,now=None):\n watch=state.get('connectivity_watch') or {}\n if not watch.get('armed'):return False\n now=time.monotonic() if now is None else now;current_boot=boot_id()\n if watch['boot_id']!=current_boot:\n  if not watch.get('first_boot_pending'):return False\n  watch.update(boot_id=current_boot,phase='after-reboot',until_mono=now+CONNECTIVITY_BOOT_WINDOW,\n               next_check_mono=0,outage_since_mono=None,status='monitoring')\n if now<float(watch.get('next_check_mono',0)):return False\n if watch.get('status')=='passed':return False\n watch['next_check_mono']=now+CONNECTIVITY_CHECK_INTERVAL\n healthy=connection_healthy(state);watch['last_check_ok']=healthy\n record_connection_sample(watch,now)\n if healthy:\n  watch['outage_since_mono']=None\n  watch['status']='monitoring'\n  if now>=watch['until_mono']:\n   watch['status']='passed'\n   if watch['phase']=='after-reboot':watch['first_boot_pending']=False\n  return False\n if watch.get('outage_since_mono') is None:watch['outage_since_mono']=now\n if now-watch['outage_since_mono']<CONNECTIVITY_OUTAGE_GRACE:return False\n watch['status']='rollback-required';return True\n\ndef verify(version,core_pid):\n for _ in range(35):\n  try:\n   n=api(8791,'/status');c=api(8765);p=api(80)\n   if (n.get('version')==version and (n.get('local',{}).get('internet') or {}).get('ok')\n       and c.get('ok') and not c.get('stale') and c.get('connection',{}).get('connected')\n       and (c.get('detector',{}).get('worker') or {}).get('alive')\n       and run('systemctl','show','bmi30-core','-p','MainPID','--value')==core_pid):return\n  except Exception:pass\n  time.sleep(.5)\n raise RuntimeError('Full component did not pass runtime/Internet checks')\n\ndef restore_system(path,automatic=False):\n state=json.loads(P(path).read_text());expected=state['expected_id']\n if identity()!=expected:raise RuntimeError('Wrong CM5 for full rollback')\n if automatic and state.get('stage')=='committed':return False\n backup=P(state['backup']);portable=load_module(backup/'portable.py','saved_full_portable')\n # Another complete system update wins; never replace its files.\n for name,item in state['files'].items():\n  target=system(name)\n  actual=sha(target) if target.is_file() else None\n  if actual not in (item['before'],item['after']):\n   state.update(stage='superseded-by-another-update');state_write(path,state);return False\n stop_runtime_units()\n portable.restore(backup/'portable',root=SYSTEM_ROOT,restart=False)\n for name,record in state.get('extra',{}).items():\n  target=system(name)\n  if record['exists']:atomic(target,(backup/'extra'/name).read_bytes(),record.get('mode',0o600))\n  else:target.unlink(missing_ok=True)\n run('systemctl','start','NetworkManager.service',check=False)\n if state.get('ap_bootstrap'):restore_ap_profiles(backup,state['ap_bootstrap'])\n if state.get('station_before'):restore_station(state['station_before'])\n # A previous recovery guardian may have restored plain 0.1.13 while the\n # core changed. Returning to recovery3 restores its exact known two files.\n if active()=='2026-10-27-133000':\n  for name,digest in state.get('recovery3',{}).items():\n   source=backup/'recovery3'/name\n   if sha(source)!=digest:raise RuntimeError('Saved recovery3 checksum mismatch')\n   atomic(system('/opt/bmi30-network')/name,source.read_bytes(),0o644)\n run('systemctl','daemon-reload')\n for unit,record in state['units'].items():\n  if record['enabled']:run('systemctl','enable',unit,check=False)\n  else:run('systemctl','disable',unit,check=False)\n  if record['active']:run('systemctl','start',unit,check=False)\n  elif unit==CHANNEL_POLICY:\n   required=run('systemctl','show','NetworkManager.service','-p','Requires','--value',check=False).split()\n   if CHANNEL_POLICY not in required:run('systemctl','stop',unit,check=False)\n   else:state['channel_policy_kept_active_for_network']=True\n busy=system('/run/bmi30-access/busy')\n if busy.is_file() and busy.read_text()==state['busy_token']:busy.unlink()\n state.update(stage='rolled-back');state_write(path,state);retire_persistent_guard(state);return True\n\ndef apply(package):\n package=P(package);manifest=json.loads((package/'manifest.json').read_text());bundle=manifest['bundle_id']\n expected=identity()\n require_compatible_hardware(manifest)\n if not committed(bundle):raise RuntimeError('Stock firmware transaction not committed')\n for name,digest in manifest['payload_sha256'].items():\n  if sha(package/name)!=digest:raise RuntimeError('Full component checksum mismatch')\n portable=load_module(package/'portable.py','full_portable')\n assets=portable.validate(package/'payload')\n names=[name for name in assets if name!='home/techaid/Documents/hotspot_info_server.py']\n directory=STATE_ROOT/bundle;directory.mkdir(parents=True,exist_ok=True,mode=0o700)\n state_path=directory/'state.json'\n if state_path.exists():\n  state=json.loads(state_path.read_text())\n  if state.get('stage')=='committed':verify(manifest['network_version'],state['core_pid']);return\n  if state.get('stage') in ('prepared','applying'):raise RuntimeError('Previous full transaction pending')\n with firmware_idle(),previous_component_locks(expected):\n  if sha(system('/opt/bmi30-network/service.py')) not in manifest['allowed_service_sha256']:\n   raise RuntimeError('Unsupported existing network service')\n  before=protected();core=run('systemctl','show','bmi30-core','-p','MainPID','--value')\n  if not core.isdigit() or int(core)==0:raise RuntimeError('Detector is not running')\n  station_before=station_identity();connectivity_watch=arm_connectivity_watch(station_before)\n  backup=BACKUPS/(bundle+'-'+uuid.uuid4().hex);backup.mkdir(parents=True,mode=0o700)\n  atomic(backup/'portable.py',(package/'portable.py').read_bytes(),0o700)\n  atomic(directory/'guard.py',(package/'component.py').read_bytes(),0o700)\n  portable.snapshot(backup/'portable',root=SYSTEM_ROOT,names=names)\n  saved=json.loads((backup/'portable/snapshot.json').read_text())\n  units={unit:{'active':run('systemctl','is-active',unit,check=False)=='active',\n               'enabled':run('systemctl','is-enabled',unit,check=False)=='enabled'} for unit in UNITS}\n  state={'format':2,'kind':'full-system','expected_id':expected,'bundle_id':bundle,'backup':str(backup),\n         'network_version':manifest['network_version'],'stage':'prepared','deadline_mono':time.monotonic()+300,'boot_id':boot_id(),\n         'core_pid':core,'protected':before,'units':units,'busy_token':'bmi30-full-update:'+bundle,\n         'station_before':station_before,'connectivity_watch':connectivity_watch,\n         'files':{name:{'before':saved[name].get('sha256'),'after':assets[name]} for name in names},\n         'recovery3':manifest.get('recovery3',{})}\n  import ipaddress\n  ap_text=run('nmcli','-g','IP4.ADDRESS','dev','show','wlan0ap',check=False)\n  missing_ap=not ap_text.strip()\n  if missing_ap:\n   config=json.loads(system('/etc/bmi30-network/config.json').read_text())\n   # Use the existing network configuration, without inventing another subnet\n   # or changing the station's DHCP address or saved router credentials.\n   ap_text=config['ap_address']\n   state['ap_bootstrap']=save_ap_profiles(backup)\n   for name in state['ap_bootstrap']['profiles']:\n    before.pop(str(system('/etc/NetworkManager/system-connections')/name),None)\n  ap=ipaddress.IPv4Interface(ap_text.splitlines()[0])\n  if not ap.ip.is_private:raise RuntimeError('Unexpected hotspot address')\n  retained='var/lib/bmi30-access/retained-ap.json'\n  retained_data=(json.dumps({'cidr':str(ap)})+'\\n').encode()\n  local_dns='etc/NetworkManager/dnsmasq-shared.d/90-bmi30-captive-portal.conf'\n  dns_data=('# BMI30 service network: ordinary DNS is forwarded upstream.\\n'\n            'address=/bmi30.local/'+str(ap.ip)+'\\naddress=/'+expected.lower()+'.local/'+str(ap.ip)+'\\n').encode()\n  generated={retained:(retained_data,0o600),local_dns:(dns_data,0o644)}\n  state['extra']={}\n  for name,(data,mode) in generated.items():\n   target=system(name);state['extra'][name]={'exists':target.is_file(),'mode':target.stat().st_mode&0o777 if target.is_file() else mode}\n   if target.is_file():atomic(backup/'extra'/name,target.read_bytes())\n   state['files'][name]={'before':sha(target) if target.is_file() else None,'after':hashlib.sha256(data).hexdigest()}\n  rendered={}\n  dns='etc/NetworkManager/dnsmasq-shared.d/91-bmi30-captive-detection.conf'\n  if dns in assets:\n   rendered[dns]=(package/'payload/system'/dns).read_bytes().replace(b'10.42.0.1',str(ap.ip).encode())\n   state['files'][dns]['after']=hashlib.sha256(rendered[dns]).hexdigest()\n  for name,digest in state['recovery3'].items():atomic(backup/'recovery3'/name,(package/'recovery3'/name).read_bytes())\n  state_write(state_path,state)\n  install_persistent_guard(state_path,state)\n  busy=system('/run/bmi30-access/busy');busy.parent.mkdir(parents=True,exist_ok=True)\n  if busy.exists() and busy.read_text()!=state['busy_token']:raise RuntimeError('Another radio operation is running')\n  busy.write_text(state['busy_token'])\n  checkpoint=None\n  try:\n   state['stage']='applying';state_write(state_path,state)\n   stop_runtime_units()\n   busy.parent.mkdir(parents=True,exist_ok=True);busy.write_text(state['busy_token'])\n   for name in sorted(names,key=lambda name:name=='opt/bmi30-network/service.py'):\n    target=system(name);owner=target.stat() if target.exists() else None\n    if name in rendered:atomic(target,rendered[name],portable.ALLOWLIST[name])\n    else:portable.atomic_copy(package/'payload/system'/name,target,portable.ALLOWLIST[name],\n                              owner.st_uid if owner else 0,owner.st_gid if owner else 0)\n   for name,(data,mode) in generated.items():atomic(system(name),data,mode)\n   run('systemctl','daemon-reload')\n   if missing_ap:checkpoint=create_missing_hotspot(state['station_before'])\n   for unit_name,record in units.items():\n    if record['active'] or unit_name in ('bmi30-network.service','bmi30-access.service'):\n     run('systemctl','start',unit_name)\n   # Do not enable previously disabled services until their health is known.\n   verify(manifest['network_version'],core);protected_unchanged(before)\n   if missing_ap and station_identity()!=state['station_before']:raise RuntimeError('Station identity changed during system update')\n   if checkpoint:checkpoint.commit();checkpoint=None\n   for unit_name in ('bmi30-network.service','bmi30-access.service'):run('systemctl','enable',unit_name)\n   state['stage']='committed'\n   state['connectivity_watch']['until_mono']=time.monotonic()+CONNECTIVITY_UPDATE_WINDOW\n   state_write(state_path,state)\n  except BaseException as error:\n   checkpoint=checkpoint or getattr(error,'checkpoint',None)\n   try:\n    restore_system(state_path)\n   finally:\n    if checkpoint:\n     try:\n      if active()==bundle:checkpoint.rollback()\n      else:checkpoint.commit()\n     except Exception:pass\n     checkpoint=None\n    if active()==bundle:restore_station(state['station_before'])\n   raise\n  finally:\n   if busy.is_file() and busy.read_text()==state['busy_token']:busy.unlink()\n\ndef forward_full_update(state):\n current=active()\n if not current or current<=state['bundle_id']:return False\n try:\n  manifest=json.loads((DOCS/'host/bmi30_active_runtime/project/host/bmi30_full_update/manifest.json').read_text())\n  require_compatible_hardware(manifest)\n  return (manifest.get('bundle_id')==current and bool(manifest.get('network_version'))\n          and 'component.py' in manifest.get('payload_sha256',{}))\n except (OSError,ValueError,RuntimeError,AttributeError):return False\n\ndef guard(path):\n path=P(path)\n while True:\n  state=json.loads(path.read_text())\n  if identity()!=state['expected_id']:raise RuntimeError('Wrong CM5')\n  timed_out=state.get('stage') in ('prepared','applying') and (boot_id()!=state['boot_id'] or time.monotonic()>state['deadline_mono'])\n  if state.get('stage') in ('rolled-back','superseded-by-another-update'):return\n  if (not timed_out and state.get('stage') in ('prepared','applying')\n      and active()==state['bundle_id']):\n   # The durable transaction state owns maintenance. Keep the shared hint\n   # alive even after an access-service restart or a slow eMMC operation.\n   busy=system('/run/bmi30-access/busy')\n   if not busy.exists():\n    busy.parent.mkdir(parents=True,exist_ok=True);busy.write_text(state['busy_token']);busy.chmod(0o600)\n   elif busy.read_text()==state['busy_token']:os.utime(busy,None)\n  # A later full transaction owns activation and rollback. Remain alive so\n  # returning here retains this release's original system rollback path.\n  if not timed_out and forward_full_update(state):time.sleep(3);continue\n  lost_connection=False\n  if not timed_out and state.get('stage')=='committed' and active()==state['bundle_id']:\n   previous=json.dumps(state,sort_keys=True);lost_connection=connectivity_step(state)\n   if json.dumps(state,sort_keys=True)!=previous:state_write(path,state)\n  if active()!=state['bundle_id'] or timed_out or lost_connection:\n   if timed_out or lost_connection:\n    record_rollback_diagnostics(state,'activation-timeout' if timed_out else 'connection-loss')\n    state_write(path,state)\n   try:\n    with firmware_idle():restore_system(path)\n   except BlockingIOError:time.sleep(2);continue\n   if (timed_out or lost_connection) and active()==state['bundle_id']:\n    run('bash',str(DOCS/'utilities/server_firmware.sh'),'rollback',check=False,timeout=240)\n    annotate_completed_rollback(state)\n   return\n  time.sleep(3)\n\ndef main():\n parser=argparse.ArgumentParser();parser.add_argument('--apply',type=P);parser.add_argument('--state',type=P);args=parser.parse_args()\n if args.apply:\n  try:apply(args.apply)\n  except Exception:\n   # The new core remains reachable while the system component is restored.\n   # Invoke the normal saved-core rollback after releasing the firmware lock.\n   manifest=json.loads((args.apply/'manifest.json').read_text())\n   if active()==manifest['bundle_id']:\n    run('bash',str(DOCS/'utilities/server_firmware.sh'),'rollback',check=False,timeout=240)\n   raise\n else:guard(args.state)\n\nif __name__=='__main__':main()\n",
+  "guard_state_public": {
+    "bundle_id": "2026-10-30-112226",
+    "stage": "committed"
+  }
+}

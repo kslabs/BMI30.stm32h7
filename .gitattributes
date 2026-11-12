@@ -1,0 +1,23 @@
+# Побайтно закреплённые исходники: проверки выпуска учитывают окончания строк.
+/Core/** -text
+/USB_DEVICE/** -text
+/Drivers/BSP/ST7735/** -text
+/Middlewares/** -text
+# TinyUSB задаёт text=auto во вложенном файле; его frozen-тексты имеют CRLF.
+/Middlewares/TinyUSB/tinyusb/** eol=crlf
+/SDK/** -text
+/BuildSupport/** -text
+/Runtime/** -text
+/.cproject -text
+/.mxproject -text
+/.project -text
+/BMI30.stm32h7.ioc -text
+/makefile.defs -text
+/makefile.targets -text
+/STM32H723VGTX_FLASH.ld -text
+/STM32H723VGTX_RAM.ld -text
+/FirmwareReleases/** -text
+*.tar.gz binary
+*.zip binary
+*.bin binary
+*.elf binary

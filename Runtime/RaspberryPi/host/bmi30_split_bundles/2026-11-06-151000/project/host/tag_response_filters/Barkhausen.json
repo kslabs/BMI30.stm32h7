@@ -1,0 +1,8 @@
+{
+  "format": "bmi30-tag-response-filter-v1",
+  "name": "Barkhausen",
+  "algorithm": "barkhausen",
+  "parameters": {
+    "mark_window_end_frac": 0.95
+  }
+}

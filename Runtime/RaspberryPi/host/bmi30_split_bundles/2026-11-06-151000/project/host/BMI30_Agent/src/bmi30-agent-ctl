@@ -1,0 +1,56 @@
+#!/bin/bash
+set -euo pipefail
+AGENT=/opt/bmi30-agent/bmi30_agent.py
+
+usage() {
+    cat <<'EOF'
+Usage:
+  sudo bmi30-agent-ctl configure [--local-port PORT]
+  sudo bmi30-agent-ctl checkin
+  sudo bmi30-agent-ctl status
+  sudo bmi30-agent-ctl logs
+  sudo bmi30-agent-ctl restart
+  sudo bmi30-agent-ctl enable
+  sudo bmi30-agent-ctl disable
+EOF
+}
+
+command_name=${1:-}
+case "$command_name" in
+    configure)
+        shift
+        /usr/bin/python3 "$AGENT" configure "$@"
+        systemctl try-restart bmi30-agent.service
+        ;;
+    checkin)
+        /usr/bin/python3 "$AGENT" once
+        ;;
+    status)
+        /usr/bin/python3 "$AGENT" status
+        echo
+        systemctl --no-pager --full status bmi30-agent.service || true
+        echo
+        systemctl --no-pager --full status bmi30-tunnel.service || true
+        ;;
+    logs)
+        journalctl \
+            -u bmi30-agent.service \
+            -u bmi30-tunnel.service \
+            -n 200 --no-pager
+        ;;
+    restart)
+        systemctl restart bmi30-agent.service
+        ;;
+    enable)
+        /usr/bin/python3 "$AGENT" once-approved
+        systemctl enable --now bmi30-agent.service
+        ;;
+    disable)
+        systemctl disable --now bmi30-agent.service
+        systemctl stop bmi30-tunnel.service || true
+        ;;
+    *)
+        usage
+        exit 2
+        ;;
+esac

@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "scope": "Local AST/fault/guard tests only; author did not start copy or reboot",
+  "files_sha256": {
+    "clone_remote.py": "5c1272a3150776741cd2272aa23ec718d0d25ede7b106197a1a49106839a8d8a",
+    "test_clone_remote.py": "4a52d79c88fde6e8ea6397fdf6410d4214b54cbfe59f5b14cb1b33028b4296ea",
+    "control.py": "30c20d01f17dcf1fd98a26f5c4b222a438c01b4d818d1401305a164f4594fa69",
+    "test_control.py": "9f75a8d2503365ad94bbb7510fcff365e65b73d827bb30eade4e144f37017434",
+    "start_copy.py": "88b85b9a8b103dc04732bdaba7b1611af80a519fc780768efeb78679fe586439"
+  },
+  "worker_tests": {
+    "passed": 13,
+    "command": "py -3 -B .tmp/new-device-emmc-20261105/test_clone_remote.py"
+  },
+  "controller_tests": {
+    "passed": 12,
+    "command": "py -3 -B .tmp/new-device-emmc-20261105/test_control.py"
+  },
+  "limits": [
+    "Linux formatting/rsync/systemd and actual target boot not executed by this author",
+    "Personalizer independent review is maintained by peer agent",
+    "New Raspberry has no STM32: input/detection performance is not validated"
+  ],
+  "controller_delta": [
+    "Actual firmware DT boot-mode1 and FAT UUID case-insensitive proof",
+    "Actual target partition/filesystem pins before mailbox",
+    "Hash-bound personalization and config semantic proof",
+    "Fresh own STA/AP identity and explicit no-STM status",
+    "Collected systemd unit treated as inactive only with safe states",
+    "Copy and personalization proof persist separately from volatile status",
+    "fsync frozen plan/result/prior boot ID before reboot request"
+  ],
+  "start_guard_delta": {
+    "focused_tests_passed": 3,
+    "command": "py -3 -B .tmp/new-device-emmc-20261105/test_control.py BenchPlanGuardTests",
+    "scope": "Actual local and remote guard statements: current plan pass, malformed/newline bench public key refuse, wrong recovery feature version refuse",
+    "remote_regex_matches_local": true,
+    "worker_controller_unchanged": true
+  }
+}

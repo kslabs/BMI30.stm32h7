@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "read_only": true,
+  "actual_S07": {
+    "host": "BMI30-C9775FBAE",
+    "cm5": "abdd2dbc9775fbae",
+    "AP_BSSID": "2e:cf:67:50:12:42",
+    "STA_permanent": "Permanent address: 2c:cf:67:f0:12:42",
+    "fresh_checked_at": 1793873794.1660433
+  },
+  "new133": {
+    "host": "BMI30-01FA60500",
+    "cm5": "366b6f101fa60500",
+    "AP_BSSID": "2e:cf:67:50:12:2d",
+    "STA_permanent": "Permanent address: 2c:cf:67:f0:12:2d",
+    "new_eMMC_root_partuuid": "2da3faaa-02",
+    "checked_at": 1793873659.99451
+  },
+  "pre_copy_133_USB": {
+    "host": "BMI30-01FA60500",
+    "cm5": "366b6f101fa60500",
+    "AP_BSSID": "2e:cf:67:50:12:2d",
+    "checked_at": 1793871069.1391523
+  },
+  "gate_error": "Pre-copy AP belongs to same NEWphysicalCM5 onUSB, not actualS07 donor hardware",
+  "own_AP_differs_from_actual_S07": true,
+  "AP_preserved_across_newboard_media": true,
+  "hardware_MAC_change_required": false,
+  "files": {
+    "fresh_S07": "s07-actual-radio-mac-readonly.json",
+    "new133": "ap-mac-readonly-diagnosis.json"
+  }
+}

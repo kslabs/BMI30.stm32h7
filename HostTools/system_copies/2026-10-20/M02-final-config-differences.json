@@ -1,0 +1,119 @@
+{
+  "source_sha256": "1fdf75914f8e43b138ab5bb49e5d70e71f2287c8c14ff599d90001c5f208be32",
+  "active_sha256": "c8454c26e9adebb7d8378ebb5e35a43721c0ba5fcb15c2a1e1c802cb249da66c",
+  "active_modified_utc": "2026-10-20T11:44:57.452950+00:00",
+  "differences": [
+    {
+      "path": "/base_width_max",
+      "source": 23,
+      "current": 33
+    },
+    {
+      "path": "/dc_config/acquisition_settle_s",
+      "source": 15.0,
+      "current": 150.0
+    },
+    {
+      "path": "/dc_config/detect_settle_s",
+      "source": 15.0,
+      "current": 150.0
+    },
+    {
+      "path": "/dc_config/detection_settle_s",
+      "source": 10.0,
+      "current": 100.0
+    },
+    {
+      "path": "/dc_config/fast_settle_s",
+      "source": 10.0,
+      "current": 100.0
+    },
+    {
+      "path": "/dc_config/work_settle_s",
+      "source": 20.0,
+      "current": 200.0
+    },
+    {
+      "path": "/dc_config_updated_at",
+      "source": 1792417596,
+      "current": 1792496384
+    },
+    {
+      "path": "/det_confirm_count0",
+      "source": 6,
+      "current": 3
+    },
+    {
+      "path": "/det_confirm_count1",
+      "source": 6,
+      "current": 3
+    },
+    {
+      "path": "/lcd_role_overlay_updated_at",
+      "source": 1792417596,
+      "current": 1792496384
+    },
+    {
+      "path": "/noise_area_percent",
+      "source": 80,
+      "current": 65
+    },
+    {
+      "path": "/operation/updated_at",
+      "source": 1792417596,
+      "current": 1792496384
+    },
+    {
+      "path": "/peak_index_max",
+      "source": 184,
+      "current": 100
+    },
+    {
+      "path": "/peak_index_min",
+      "source": 66,
+      "current": 35
+    },
+    {
+      "path": "/sound_settings_updated_at",
+      "source": 1792417596,
+      "current": 1792496384
+    },
+    {
+      "path": "/tag_detection/base_width_max",
+      "source": 23,
+      "current": 33
+    },
+    {
+      "path": "/tag_detection/confirm0",
+      "source": 6,
+      "current": 3
+    },
+    {
+      "path": "/tag_detection/confirm1",
+      "source": 6,
+      "current": 3
+    },
+    {
+      "path": "/tag_detection/noise_area_percent",
+      "source": 80,
+      "current": 65
+    },
+    {
+      "path": "/tag_detection/peak_index_max",
+      "source": 184,
+      "current": 100
+    },
+    {
+      "path": "/tag_detection/peak_index_min",
+      "source": 66,
+      "current": 35
+    },
+    {
+      "path": "/tag_detection_updated_at",
+      "source": 1792416769,
+      "current": 1792496697
+    }
+  ],
+  "statistics_units": "",
+  "source_unmounted_after_check": true
+}

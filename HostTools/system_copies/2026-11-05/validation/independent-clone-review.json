@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "created_at_epoch": 1793866348.2560837,
+  "review": "own-board eMMC to pinned USB",
+  "status": "PASS_WITH_HARDWARE_LIMITS",
+  "source_stable_during_test": true,
+  "source": {
+    "path": "D:\\Users\\Admin\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\.tmp\\emmc-usb-copies-20261105\\clone_remote.py",
+    "bytes": 37493,
+    "sha256": "6f4a795f1b5c9907e84276dffd586e425a7fb277e54dd11337d555a599664670"
+  },
+  "test_source": {
+    "path": "D:\\Users\\Admin\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\.tmp\\emmc-usb-copies-20261105\\test_clone_remote.py",
+    "bytes": 20932,
+    "sha256": "44c56c02675c575adcca25d9d9ded50e7f104335a3fb04e14c9aeb2865dc7255"
+  },
+  "runner": {
+    "path": "D:\\Users\\Admin\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\.tmp\\emmc-usb-copies-20261105\\run_independent_review.py",
+    "bytes": 4022,
+    "sha256": "70c29b9232b5b7a538d690f3a28c62053db95d9f11e2af5e319009edf2d389d5"
+  },
+  "plans": {
+    "s07": {
+      "path": "D:\\Users\\Admin\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\.tmp\\emmc-usb-copies-20261105\\s07-plan.json",
+      "bytes": 1548,
+      "sha256": "b1e39ea9a1482174da37a77ba7393e9fc5028564da139855c678cf5661e44c8b"
+    },
+    "m02": {
+      "path": "D:\\Users\\Admin\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\.tmp\\emmc-usb-copies-20261105\\m02-plan.json",
+      "bytes": 1548,
+      "sha256": "5a2dda5c5429418cacb4a8eae5358629db5b3add26ae0442023ff7f93480d19c"
+    }
+  },
+  "tests_run": 31,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "test_output": "test_missing_erase_authorization_rejected_before_write (independent_clone_tests.GuardTests.test_missing_erase_authorization_rejected_before_write) ... ok\ntest_mounted_child_rejected_before_write (independent_clone_tests.GuardTests.test_mounted_child_rejected_before_write) ... ok\ntest_open_descriptor_must_still_be_pinned_block_device (independent_clone_tests.GuardTests.test_open_descriptor_must_still_be_pinned_block_device) ... ok\ntest_owned_mount_only_is_allowed (independent_clone_tests.GuardTests.test_owned_mount_only_is_allowed) ... ok\ntest_readonly_child_rejected_before_write (independent_clone_tests.GuardTests.test_readonly_child_rejected_before_write) ... ok\ntest_second_usb_rejected_before_write (independent_clone_tests.GuardTests.test_second_usb_rejected_before_write) ... ok\ntest_source_reboot_rejected_before_write (independent_clone_tests.GuardTests.test_source_reboot_rejected_before_write) ... ok\ntest_usb_attachment_pins_rejected_before_write (independent_clone_tests.GuardTests.test_usb_attachment_pins_rejected_before_write) ... ok\ntest_usb_root_rejected_before_write (independent_clone_tests.GuardTests.test_usb_root_rejected_before_write) ... ok\ntest_valid_fresh_plan_guard (independent_clone_tests.GuardTests.test_valid_fresh_plan_guard) ... ok\ntest_wrong_cm5_rejected_before_write (independent_clone_tests.GuardTests.test_wrong_cm5_rejected_before_write) ... ok\ntest_wrong_plan_source_rejected_before_write (independent_clone_tests.GuardTests.test_wrong_plan_source_rejected_before_write) ... ok\ntest_wrong_source_boot_rejected_before_write (independent_clone_tests.GuardTests.test_wrong_source_boot_rejected_before_write) ... ok\ntest_wrong_source_partuuid_rejected_before_write (independent_clone_tests.GuardTests.test_wrong_source_partuuid_rejected_before_write) ... ok\ntest_absolute_symlinks_resolve_inside_clone_not_live_source (independent_clone_tests.LocalSemanticTests.test_absolute_symlinks_resolve_inside_clone_not_live_source) ... ok\ntest_actual_execute_root_verify_precedes_boot_activation (independent_clone_tests.LocalSemanticTests.test_actual_execute_root_verify_precedes_boot_activation) ... ok\ntest_boot_stage_failure_cannot_activate_kernel (independent_clone_tests.LocalSemanticTests.test_boot_stage_failure_cannot_activate_kernel) ... ok\ntest_boot_stage_rewrites_root_and_publishes_executables_last (independent_clone_tests.LocalSemanticTests.test_boot_stage_rewrites_root_and_publishes_executables_last) ... ok\ntest_both_real_jobids_accepted_and_traversal_refused (independent_clone_tests.LocalSemanticTests.test_both_real_jobids_accepted_and_traversal_refused) ... ok\ntest_bulk_excludes_keep_own_docs_tmp_and_backups (independent_clone_tests.LocalSemanticTests.test_bulk_excludes_keep_own_docs_tmp_and_backups) ... ok\ntest_cleanup_absent_busy_reclaims_before_restart (independent_clone_tests.LocalSemanticTests.test_cleanup_absent_busy_reclaims_before_restart) ... ok\ntest_cleanup_does_not_touch_live_worker (independent_clone_tests.LocalSemanticTests.test_cleanup_does_not_touch_live_worker) ... ok\ntest_cleanup_foreign_busy_does_not_restart_or_release (independent_clone_tests.LocalSemanticTests.test_cleanup_foreign_busy_does_not_restart_or_release) ... ok\ntest_cleanup_missing_owner_refuses_restart (independent_clone_tests.LocalSemanticTests.test_cleanup_missing_owner_refuses_restart) ... ok\ntest_cleanup_owned_busy_restarts_then_releases (independent_clone_tests.LocalSemanticTests.test_cleanup_owned_busy_restarts_then_releases) ... ok\ntest_diskseq_serialization_matches_plan_integer (independent_clone_tests.LocalSemanticTests.test_diskseq_serialization_matches_plan_integer) ... ok\ntest_fstab_rewrite_changes_copied_root_only (independent_clone_tests.LocalSemanticTests.test_fstab_rewrite_changes_copied_root_only) ... ok\ntest_partial_resume_retains_only_failed_unit_and_owner_after_close (independent_clone_tests.LocalSemanticTests.test_partial_resume_retains_only_failed_unit_and_owner_after_close) ... ok\ntest_resume_foreign_owner_does_not_start_services (independent_clone_tests.LocalSemanticTests.test_resume_foreign_owner_does_not_start_services) ... ok\ntest_resume_without_lease_keeps_owner_proof_and_does_not_start (independent_clone_tests.LocalSemanticTests.test_resume_without_lease_keeps_owner_proof_and_does_not_start) ... ok\ntest_root_sync_direction_and_final_pass_disallows_vanished_files (independent_clone_tests.LocalSemanticTests.test_root_sync_direction_and_final_pass_disallows_vanished_files) ... ok\n\n----------------------------------------------------------------------\nRan 31 tests in 0.120s\n\nOK\n",
+  "device_actions": [],
+  "module_execution": "actual production AST definitions; no import-time main",
+  "coverage": [
+    "Source hostname/CM5/boot-id/native eMMC root and boot PARTUUID checks",
+    "USB explicit erase permission, serial/model/size/transport/MAJ:MIN/diskseq and open descriptor checks",
+    "Wrong source/root USB/mounted child/read-only child/second USB rejected by first execute guard before writes",
+    "Real S07/M02 plan job IDs, diskseq serialization regression",
+    "Root verification and sync before boot activation, staged cmdline references new USB PARTUUID",
+    "Kernel/firmware publication last, boot-copy/checksum/pre-kernel-sync failure cannot activate kernel",
+    "Only copied fstab rewritten; absolute copied-root symlinks never resolve into live host",
+    "Own Documents .tmp/backups are not excluded; root rsync direction fixed and final vanished-file error disallowed",
+    "Cleanup own/absent/foreign busy, live-worker refusal, lost lease and partial restart preserve owner proof"
+  ],
+  "fixed_review_findings": [
+    "Draft plan job IDs rejected by old regex; diskseq int/string mismatch",
+    "Draft boot copy preceded root verification; staged activation now follows verification and root flush",
+    "Draft cleanup could restart with foreign lease and lose owner evidence after partial restart"
+  ],
+  "remaining_blockers": [],
+  "limits": [
+    "Local Windows CPU tests with mocked Linux identity, commands, maintenance helpers and filesystem metadata where required",
+    "Actual guard/cleanup/boot-staging functions executed, but not real sfdisk/mkfs/rsync/systemd/mount/fcntl or USB hardware",
+    "No physical USB boot, power-loss test or complete byte-for-byte root snapshot proof",
+    "Worker explicitly reports boot_tested=false and source_runtime_reverified=false; root must perform separate runtime postcheck",
+    "Full live root continues to change outside paused application services; verification covers selected critical trees and fingerprints"
+  ]
+}

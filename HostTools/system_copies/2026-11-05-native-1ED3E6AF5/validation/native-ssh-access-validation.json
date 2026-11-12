@@ -1,0 +1,66 @@
+{
+  "ok": true,
+  "scope": "Local encrypted-backup inspection, public trust export and helper preparation only; no device calls or installer/append execution.",
+  "host": "BMI30-1ED3E6AF5",
+  "cm5": "0d6b7531ed3e6af5",
+  "cid": "150100424a5444345203123049047b00",
+  "native_root_partuuid": "e1b5c915-02",
+  "backup_manifest_sha256": "2aa4c46124698785b5fa66b1880383b61ffc5b491d5aada605e97d5081607fb4",
+  "native_authorized_keys": "absent",
+  "append_existing_bench_public_key_required": true,
+  "native_ssh_directory": {
+    "gid": 1000,
+    "kind": "directory",
+    "mode": 448,
+    "uid": 1000
+  },
+  "native_host_ed25519_fingerprint": "SHA256:z1XKxwrGDdFL48kX90dxa6TMrfMlvyVusOQDGFpgCEA",
+  "bench_public_key_fingerprint": "SHA256:0+YaTTew6dyUcVKgofup/vMZNb4NC82hpLHdglHxx+U",
+  "known_hosts_alias": "bmi30-1ed3e6af5-native",
+  "known_hosts_provenance": "Public host key from sealed own M04 eMMC settings snapshot bound to physical CM5/CID; DPAPI decrypted only in memory.",
+  "tests": {
+    "source_executed_append_ownership": 6,
+    "postboot_config_comparison": 7,
+    "failures": 0,
+    "hardware_tests": 0
+  },
+  "cases": [
+    "Absent authorized_keys creates only existing bench PUBLIC key with native UID/GID and0600",
+    "Existing authorized rows preserved byte-for-byte; no truncation/replacement",
+    "Repeated append is idempotent",
+    "Changed native authorized_keys is refused",
+    "Foreign maintenance owner prevents writes",
+    "Maintenance released after injected append failure"
+  ],
+  "test_limits": "Linux ownership/flock/directory fsync isolated for Windows fixture; actual production append/ownership control flow executed. Device/media/install proof guards reviewed statically and require parent execution.",
+  "helper_guards": [
+    "Exact CM5/hostname/CID/source USB root+boot and source bootID",
+    "Exact completed installer/plan/runner pins, successful cleanup, inactive unit PID0",
+    "Own native root mount PARTUUID and own configuration90530 SHA",
+    "Own native host public AND private key hashes preserved; ED25519 fingerprint fixed",
+    "Native account/home/.ssh ownership and modes; fixed existing bench public fingerprint",
+    "Token+inode maintenance ownership; fd/path inode check before append"
+  ],
+  "files": {
+    "native_ssh_access.py": "544ec4d7d020756c020953b1c30817549c2e45a98dde23f72e028371de0192c4",
+    "native-ssh-access-spec.json": "582f185d28a7c65d060a59fb82c0ebdb92b59b878d3c43349e06252b78eca4eb",
+    "native_known_hosts": "94016ce5fbdef46281c51ec4be4ffa8392a491d49f792357840b736fba69b39c",
+    "native-ssh-access-baseline.json": "eb9688118caad1378cc67792b2d98e12d030c9d6b9cd53cfde51b037416451b3",
+    "test_native_ssh_access.py": "d0c8edcd56de167e74e0234f0f90fba432ba92e8552afefe26a96ee9bdf74f6d",
+    "m04_native_remote.py": "278b927c6b3580d0be82278c95b17faff23aa3034e0d8a4b52e18711df983faa",
+    "compare_m04_native_config.py": "e092bd62e86573560ec72cbb1ef99e23a215aa0c3b84786a66861e7f7b7bad17"
+  },
+  "unchanged_by_helper": [
+    "SSH host keys",
+    "existing authorized rows",
+    "source USB files",
+    "NM/AP state",
+    "services",
+    "boot order"
+  ],
+  "limitations": [
+    "No native SSH connection or boot proof before parent invocation/reboot.",
+    "No active sshd authentication override was found in archived snippets; effective sshd configuration was not executed offline.",
+    "Native hotspot unit/wants/ExecStart paths are read-only output, not an AP activation action."
+  ]
+}

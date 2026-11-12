@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "scope": "Local-only AST and fixture tests; no remote execution by author",
+  "controller_sha256": "b69fc12f4985900cc8f3c373cb7d14c4a9aae0d7309768f6224ef4cd15092cdb",
+  "test_sha256": "0374ed858f04a24cfdc39da3a40e1e4e6398be1385a30531f3bbf4271532c066",
+  "command": "py -3 -B .tmp/emmc-usb-copies-20261105/test_boot_control.py",
+  "tests": 15,
+  "passed": 15,
+  "main_ast": "PASS",
+  "remote_ast": "PASS",
+  "guards": [
+    "Exact host/CM5/final copy/source/env binding; whole-config semantic hash from bound independent source proof",
+    "Source runtime proof required before eMMC-first one-shot boot",
+    "fsync prior boot ID locally before reboot mutation",
+    "Explicit lsblk --tree + NAME and same-medium root/boot/PARTUUID/UUID/USB serial/size",
+    "Mailbox acknowledgement and unchanged persistent EEPROM config",
+    "New boot ID and DT boot mode proof",
+    "Bounded Core worker/channel/noise/role and network/group observation"
+  ],
+  "limits": [
+    "Linux hardware/systemd/mailbox semantics not executed by author",
+    "No actual USB/eMMC boot yet verified by this report",
+    "No physical Casino sensitivity or false-alarm improvement claim"
+  ],
+  "canonical_config": {
+    "sort_keys": true,
+    "separators": [
+      ",",
+      ":"
+    ],
+    "ensure_ascii": false,
+    "encoding": "utf-8",
+    "allow_nan": false,
+    "duplicate_keys": "reject",
+    "current_bytes_recorded_separately": true,
+    "copied_bytes_pin_preserved": true
+  }
+}

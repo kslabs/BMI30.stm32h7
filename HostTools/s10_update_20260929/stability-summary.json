@@ -1,0 +1,242 @@
+{
+  "COM27": {
+    "duration_s": 130.42,
+    "samples": 24,
+    "adc_frames_hz": 400.2913663548536,
+    "phase_sample_peak_us": 0.9527272727272728,
+    "increments": {
+      "unlocked_count": 0,
+      "phase_flip": 0,
+      "phase_restart": 0,
+      "adc_fault_count": 0,
+      "adc_gap_over10ms": 0,
+      "usb_recovery": 0,
+      "uart_errors": 1,
+      "sync_errors": 0,
+      "adc_overflow_drop": 52206
+    },
+    "node_count": 5,
+    "node": 13,
+    "final_rx_phase": {
+      "label": "COM27",
+      "uptime_ms": 12948429,
+      "frames": 494718,
+      "phase": [
+        180,
+        180
+      ],
+      "valid": [
+        true,
+        true
+      ],
+      "quality": [
+        98,
+        72
+      ],
+      "angle": [
+        -177.79,
+        -137.28
+      ],
+      "roi_clip": [
+        0.0,
+        0.0
+      ],
+      "tx": 0,
+      "enabled": true
+    },
+    "streaming": 1,
+    "pass": true
+  },
+  "COM28": {
+    "duration_s": 130.358,
+    "samples": 24,
+    "adc_frames_hz": 400.29764187851913,
+    "phase_sample_peak_us": 0.49454545454545457,
+    "increments": {
+      "unlocked_count": 0,
+      "phase_flip": 0,
+      "phase_restart": 0,
+      "adc_fault_count": 0,
+      "adc_gap_over10ms": 0,
+      "usb_recovery": 0,
+      "uart_errors": 2,
+      "sync_errors": 0,
+      "adc_overflow_drop": 1369
+    },
+    "node_count": 5,
+    "node": 11,
+    "final_rx_phase": {
+      "label": "COM28",
+      "uptime_ms": 12927922,
+      "frames": 493380,
+      "phase": [
+        0,
+        0
+      ],
+      "valid": [
+        true,
+        true
+      ],
+      "quality": [
+        80,
+        88
+      ],
+      "angle": [
+        -35.5,
+        -26.68
+      ],
+      "roi_clip": [
+        0.0,
+        0.0
+      ],
+      "tx": 0,
+      "enabled": true
+    },
+    "streaming": 1,
+    "pass": true
+  },
+  "COM11": {
+    "duration_s": 130.258,
+    "samples": 24,
+    "adc_frames_hz": 400.2901933086643,
+    "phase_sample_peak_us": 0.9054545454545454,
+    "increments": {
+      "unlocked_count": 0,
+      "phase_flip": 0,
+      "phase_restart": 0,
+      "adc_fault_count": 0,
+      "adc_gap_over10ms": 0,
+      "usb_recovery": 0,
+      "uart_errors": 2,
+      "sync_errors": 0,
+      "adc_overflow_drop": 1378
+    },
+    "node_count": 5,
+    "node": 12,
+    "final_rx_phase": {
+      "label": "COM11",
+      "uptime_ms": 12906975,
+      "frames": 492671,
+      "phase": [
+        180,
+        180
+      ],
+      "valid": [
+        true,
+        true
+      ],
+      "quality": [
+        95,
+        98
+      ],
+      "angle": [
+        -166.61,
+        -177.03
+      ],
+      "roi_clip": [
+        0.024,
+        0.0
+      ],
+      "tx": 0,
+      "enabled": true
+    },
+    "streaming": 1,
+    "pass": true
+  },
+  "COM32": {
+    "duration_s": 130.379,
+    "samples": 24,
+    "adc_frames_hz": 400.29452595893514,
+    "phase_sample_peak_us": 0.0,
+    "increments": {
+      "unlocked_count": 0,
+      "phase_flip": 0,
+      "phase_restart": 0,
+      "adc_fault_count": 0,
+      "adc_gap_over10ms": 0,
+      "usb_recovery": 0,
+      "uart_errors": 11,
+      "sync_errors": 0,
+      "adc_overflow_drop": 1465
+    },
+    "node_count": 5,
+    "node": 1,
+    "final_rx_phase": {
+      "label": "COM32",
+      "uptime_ms": 12969274,
+      "frames": 494975,
+      "phase": [
+        0,
+        0
+      ],
+      "valid": [
+        true,
+        true
+      ],
+      "quality": [
+        97,
+        81
+      ],
+      "angle": [
+        -8.02,
+        -34.37
+      ],
+      "roi_clip": [
+        0.0,
+        0.0
+      ],
+      "tx": 0,
+      "enabled": true
+    },
+    "streaming": 1,
+    "pass": true
+  },
+  "COM18": {
+    "duration_s": 130.377,
+    "samples": 24,
+    "adc_frames_hz": 400.2929964641002,
+    "phase_sample_peak_us": 0.9636363636363636,
+    "increments": {
+      "unlocked_count": 0,
+      "phase_flip": 0,
+      "phase_restart": 0,
+      "adc_fault_count": 0,
+      "adc_gap_over10ms": 0,
+      "usb_recovery": 0,
+      "uart_errors": 1,
+      "sync_errors": 0,
+      "adc_overflow_drop": 1455
+    },
+    "node_count": 5,
+    "node": 10,
+    "final_rx_phase": {
+      "label": "COM18",
+      "uptime_ms": 618948,
+      "frames": 23433,
+      "phase": [
+        180,
+        180
+      ],
+      "valid": [
+        true,
+        true
+      ],
+      "quality": [
+        71,
+        36
+      ],
+      "angle": [
+        136.46,
+        111.84
+      ],
+      "roi_clip": [
+        0.0,
+        0.0
+      ],
+      "tx": 0,
+      "enabled": true
+    },
+    "streaming": 1,
+    "pass": true
+  }
+}

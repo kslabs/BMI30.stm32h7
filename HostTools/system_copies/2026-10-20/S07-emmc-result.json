@@ -1,0 +1,52 @@
+{
+  "board": "S07",
+  "target": "emmc",
+  "version": "2026-10-16-1743",
+  "root_checksum_parity": true,
+  "boot_checksum_parity": true,
+  "critical_hashes_verified": 93,
+  "identity_hashes_verified": 31,
+  "source_defaults_sha256": "1fdf75914f8e43b138ab5bb49e5d70e71f2287c8c14ff599d90001c5f208be32",
+  "root_partuuid": "9049b4cd-02",
+  "boot_partuuid": "9049b4cd-01",
+  "python_dependencies": "1.24.2 1.2.1-2 0.13.1",
+  "rtc_dependencies": "1.14.0 3.13.3 16.1.0",
+  "source_services_uninterrupted": true,
+  "boot_tested": true,
+  "root_fsck": {
+    "rc": 0,
+    "output": "Pass 1: Checking inodes, blocks, and sizes\nPass 2: Checking directory structure\nPass 3: Checking directory connectivity\nPass 4: Checking reference counts\nPass 5: Checking group summary information\nrootfs: 259448/1875968 files (0.1% non-contiguous), 3182519/7501824 blocks",
+    "error": "e2fsck 1.47.0 (5-Feb-2023)"
+  },
+  "boot_fsck": {
+    "rc": 0,
+    "output": "fsck.fat 4.2 (2021-01-31)\n/dev/mmcblk0p1: 431 files, 20086/130812 clusters",
+    "error": ""
+  },
+  "boot_verification": {
+    "board": "S07",
+    "root": "/dev/mmcblk0p2",
+    "boot_mode": 1,
+    "version": "2026-10-16-1743",
+    "engine_sha256_verified": true,
+    "source_defaults_sha256": "1fdf75914f8e43b138ab5bb49e5d70e71f2287c8c14ff599d90001c5f208be32",
+    "hardware_role": "S07",
+    "role_preserved": true,
+    "worker_results_advanced": 268,
+    "worker_overflow_delta": 0,
+    "stream_delta": {
+      "rx_cnt_ch0": 137,
+      "rx_cnt_ch1": 137,
+      "seq_gap_ch0": 0,
+      "seq_gap_ch1": 0,
+      "seq_dup_ch0": 0,
+      "seq_dup_ch1": 0,
+      "crc_bad": 0,
+      "magic_bad": 0,
+      "host_rx_ack_fail": 0
+    },
+    "https": 200,
+    "bootloader_permanent_unchanged": true,
+    "boot_tested": true
+  }
+}

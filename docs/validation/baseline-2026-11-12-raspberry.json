@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "version": "2026-11-06-151000",
+  "archive_sha256": "129555be6524ee69f036516d2d03de086a5ab71d6c74cfb9a5e5dfccc03f8ba8",
+  "regular_files_verified": 173,
+  "bundle_checksums_verified": 158,
+  "active_components": {
+    "core": "project/host/BMI30.001.py.2026-11-06-111748",
+    "engine": "project/host/BMI30.200.py.2026-11-04-185916",
+    "gui": "project/host/BMI30.GUI.001.py.2026-09-30-1650"
+  },
+  "preserved_nested_bundle_id": "2026-11-05-195925",
+  "files_changed": false,
+  "device_or_network_access": false
+}

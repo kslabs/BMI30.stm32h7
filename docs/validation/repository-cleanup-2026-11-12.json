@@ -1,0 +1,13 @@
+{
+  "as_of": "2026-11-12",
+  "state": "local_verified_before_publication",
+  "stm32_binary_matches_release": true,
+  "fresh_git_checkout_project_files_verified": 1090,
+  "fresh_git_checkout_sdk_inputs_verified": 226,
+  "raspberry_files_verified": 173,
+  "raspberry_bundle_checksums_verified": 158,
+  "retained_release_files_verified": 11531,
+  "retention": {"current": 5, "rollback": 116, "archive": 53, "delete": 1},
+  "archive_zip_files_verified": 53,
+  "device_operations": false
+}

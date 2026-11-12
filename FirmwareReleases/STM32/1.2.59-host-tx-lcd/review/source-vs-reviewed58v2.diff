@@ -1,0 +1,200 @@
+--- reviewed58v2/Core/Inc/build_info.h
++++ candidate59/Core/Inc/build_info.h
+@@ -8,9 +8,9 @@
+ // Семантическая версия прошивки
+ #define FW_VERSION_MAJOR 1
+ #define FW_VERSION_MINOR 2
+-#define FW_VERSION_PATCH 58  // Independent host TX lease; own role/NVM unchanged
++#define FW_VERSION_PATCH 59  // Valid LCD boot frame; host TX lease preserved
+ 
+-#define FW_VERSION_STR  "1.2.58-host-tx-lease"
++#define FW_VERSION_STR  "1.2.59-host-tx-lcd"
+ 
+ // Опционально: можно переопределить через ключ компиляции -DGIT_HASH="..."
+ #ifndef GIT_HASH
+--- reviewed58v2/Core/Src/main.c
++++ candidate59/Core/Src/main.c
+@@ -10818,8 +10818,8 @@
+ 
+   {
+   uint32_t lcd_now = HAL_GetTick();
+-  /* Lowest-priority LCD: render into RAM, then one nonblocking SPI4 DMA phase. */
+-  {
++  /* Lowest-priority LCD; retain known boot scene until first frame+visible hold. */
++  if(LCD_BootScreenReady(lcd_now)){
+     static uint32_t last_lcd_ms = 0;
+     static uint8_t lcd_first_update = 1;
+     extern uint8_t vnd_is_streaming(void);
+@@ -10845,8 +10845,9 @@
+     }
+   }
+ 
+-  extern volatile uint8_t vnd_tx_kick;
+-  LCD_BackgroundService(lcd_now, (uint8_t)(vnd_tx_kick == 0u));
++  /* High-priority foreground work has run. A sticky USB kick is not a budget.
++     The LCD service itself permits only one nonblocking DMA start per ms. */
++  LCD_BackgroundService(lcd_now, 1u);
+   }
+ 
+   /* Подсчёт длительности итерации */
+--- reviewed58v2/Drivers/BSP/ST7735/lcd.c
++++ candidate59/Drivers/BSP/ST7735/lcd.c
+@@ -10,6 +10,12 @@
+ #define LCD_DMA_TIMEOUT_MS 100u
+ #define LCD_DMA_PHASES 6u
+ #define LCD_ROW_BYTES (2u * LCD_W)
++/* Reuse initialized and transfer_started_ms: no extra RAM or framebuffer. */
++#define LCD_BOOT_ROWS 1u
++#define LCD_BOOT_ON_PENDING 2u
++#define LCD_BOOT_HOLD 3u
++#define LCD_RUNNING 4u
++#define LCD_BOOT_VISIBLE_MS 500u
+ 
+ typedef struct {
+     uint16_t pixels[LCD_H][LCD_W];
+@@ -41,6 +47,23 @@
+ uint8_t lcd_ready = 0u;
+ 
+ static inline uint32_t lcd_cycles(void) { return DWT->CYCCNT; }
++static inline uint8_t lcd_render_allowed(void)
++{
++    /* State0 is the private synchronous boot-scene render inside LCD_Init,
++       before USB is started. No later IRQ/status render may alter that scene. */
++    return (uint8_t)(lcd_ready &&
++                    (lcd_bg.initialized == 0u || lcd_bg.initialized == LCD_RUNNING));
++}
++
++uint8_t LCD_BootScreenReady(uint32_t now_ms)
++{
++    if (g_lcd_background_diag.fault) return 0u;
++    if (lcd_bg.initialized == LCD_BOOT_HOLD &&
++        (uint32_t)(now_ms - lcd_bg.transfer_started_ms) >= LCD_BOOT_VISIBLE_MS) {
++        lcd_bg.initialized = LCD_RUNNING;
++    }
++    return (uint8_t)(lcd_bg.initialized == LCD_RUNNING);
++}
+ static inline void lcd_note_render(uint32_t started)
+ {
+     uint32_t cycles = lcd_cycles() - started;
+@@ -94,10 +117,14 @@
+     HAL_NVIC_SetPriority(SPI4_IRQn, 15u, 0u);
+     HAL_NVIC_ClearPendingIRQ(DMA2_Stream0_IRQn);
+     HAL_NVIC_ClearPendingIRQ(SPI4_IRQn);
+-    lcd_bg.initialized = 1u;
++    /* Render only facts known before the host starts; never guess TX/role. */
++    lcd_ready = 1u;
++    LCD_ShowString_Size(10u, 12u, "BMI30", 16u, WHITE, BLACK);
++    LCD_ShowString_Size(10u, 34u, "STM32 1.2.59", 12u, WHITE, BLACK);
++    LCD_ShowString_Size(10u, 52u, "Starting...", 12u, WHITE, BLACK);
++    lcd_bg.initialized = LCD_BOOT_ROWS;
+     HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+     HAL_NVIC_EnableIRQ(SPI4_IRQn);
+-    lcd_ready = 1u;
+ }
+ 
+ void DMA2_Stream0_IRQHandler(void)
+@@ -123,6 +150,7 @@
+     g_lcd_background_diag.row = lcd_bg.row;
+     g_lcd_background_diag.waiting = lcd_bg.waiting;
+     if(!lcd_bg.initialized) goto done;
++    if(lcd_bg.initialized == LCD_BOOT_HOLD && !LCD_BootScreenReady(now_ms)) goto done;
+ 
+     if(lcd_bg.waiting){
+         uint32_t age = now_ms - lcd_bg.transfer_started_ms;
+@@ -141,6 +169,13 @@
+         if(hspi4.ErrorCode != HAL_SPI_ERROR_NONE || g_lcd_background_diag.fault){
+             LCD_CS_HIGH();
+             if(!g_lcd_background_diag.fault) lcd_fault(4u);
++            goto done;
++        }
++        if(lcd_bg.initialized == LCD_BOOT_ON_PENDING && lcd_bg.phase == LCD_DMA_PHASES){
++            /* The sole DISPON byte has physically completed without error. */
++            lcd_bg.initialized = LCD_BOOT_HOLD;
++            lcd_bg.transfer_started_ms = now_ms;
++            LCD_CS_HIGH();
+             goto done;
+         }
+         lcd_bg.phase++;
+@@ -155,6 +190,11 @@
+             lcd_bg.cursor = (uint16_t)((lcd_bg.row + 1u) % LCD_H);
+             lcd_bg.active = 0u;
+             g_lcd_background_diag.rows_completed++;
++            /* Every row started dirty and rendering is frozen during boot;
++               cursor order therefore proves one complete known GRAM pass. */
++            if(lcd_bg.initialized == LCD_BOOT_ROWS &&
++               g_lcd_background_diag.rows_completed == LCD_H)
++                lcd_bg.initialized = LCD_BOOT_ON_PENDING;
+             LCD_CS_HIGH();
+             goto done;
+         }
+@@ -165,7 +205,11 @@
+     if((int32_t)(now_ms - lcd_bg.next_start_ms) < 0) goto done;
+     if(hspi4.State != HAL_SPI_STATE_READY) goto done;
+ 
+-    if(!lcd_bg.active){
++    if(lcd_bg.initialized == LCD_BOOT_ON_PENDING){
++        /* Same one-start-per-tick/budget rule as rows, never blocking SPI. */
++        lcd_bg.phase = LCD_DMA_PHASES;
++        LCD_CS_LOW();
++    } else if(!lcd_bg.active){
+         uint16_t i;
+         for(i = 0u; i < LCD_H; i++){
+             uint16_t row = (uint16_t)((lcd_bg.cursor + i) % LCD_H);
+@@ -203,6 +247,8 @@
+         }
+         case 4u:
+             LCD_RS_LOW(); lcd_tx_row[0] = ST7735_RAMWR; break;
++        case LCD_DMA_PHASES:
++            LCD_RS_LOW(); lcd_tx_row[0] = ST7735_DISPON; break;
+         default:
+             LCD_RS_HIGH();
+             lcd_bg.copied_generation = lcd_bg.generation[lcd_bg.row];
+@@ -246,7 +292,7 @@
+ void __attribute__((optimize("O2"))) LCD_DrawPoint(uint16_t x, uint16_t y,
+                                                  uint16_t color)
+ {
+-    if(!lcd_ready || x >= LCD_W || y >= LCD_H) return;
++    if(!lcd_render_allowed() || x >= LCD_W || y >= LCD_H) return;
+     if(lcd_bg.pixels[y][x] != color){
+         lcd_bg.pixels[y][x] = color;
+         lcd_changed_row(y);
+@@ -258,7 +304,7 @@
+                                                 uint16_t color)
+ {
+     uint32_t started = lcd_cycles();
+-    if(!lcd_ready || x >= LCD_W || y >= LCD_H || !w || !h) return;
++    if(!lcd_render_allowed() || x >= LCD_W || y >= LCD_H || !w || !h) return;
+     if(w > LCD_W - x) w = (uint16_t)(LCD_W - x);
+     if(h > LCD_H - y) h = (uint16_t)(LCD_H - y);
+     for(uint16_t row = y; row < y+h; row++){
+@@ -280,7 +326,7 @@
+     uint8_t num, uint8_t size, uint16_t color, uint16_t back_color)
+ {
+     uint32_t started = lcd_cycles();
+-    if(!lcd_ready || x >= LCD_W || y >= LCD_H || num < ' ' ||
++    if(!lcd_render_allowed() || x >= LCD_W || y >= LCD_H || num < ' ' ||
+        (uint8_t)(num-' ') >= 159u || (size != 12u && size != 16u)) return;
+     uint8_t glyph = (uint8_t)(num-' ');
+     uint16_t width = (size == 12u) ? 6u : 8u;
+--- reviewed58v2/Drivers/BSP/ST7735/lcd.h
++++ candidate59/Drivers/BSP/ST7735/lcd.h
+@@ -67,6 +67,8 @@
+ void LCD_BackgroundService(uint32_t now_ms, uint8_t may_start);
+ 
+ void LCD_Init(void);
++/* True only after a valid first frame, DISPON completion and500ms visible hold. */
++uint8_t LCD_BootScreenReady(uint32_t now_ms);
+ void LCD_Clear(uint16_t color);
+ void LCD_DrawPoint(uint16_t x, uint16_t y, uint16_t color);
+ void LCD_ShowChar(uint16_t x, uint16_t y, uint8_t num, uint8_t size, uint16_t color, uint16_t back_color);
+--- reviewed58v2/Drivers/BSP/ST7735/st7735.c
++++ candidate59/Drivers/BSP/ST7735/st7735.c
+@@ -150,7 +150,7 @@
+     HAL_Delay(10);
+ 
+     // 12: Display on
+-    ST7735_WriteCommand(ST7735_DISPON);
++    ST7735_WriteCommand(ST7735_DISPOFF); /* GRAM is not yet initialized. */
+     HAL_Delay(100);
+ 
+     LCD_CS_HIGH();

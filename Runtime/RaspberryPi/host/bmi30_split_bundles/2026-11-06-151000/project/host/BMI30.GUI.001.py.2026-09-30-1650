@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""Open the BMI30 web interface; no local GUI toolkit or USB connection."""
+from __future__ import annotations
+
+import os
+from urllib.parse import urlsplit
+import webbrowser
+
+
+def main() -> int:
+    url = str(os.getenv('BMI30_SERVICE_URL', 'http://127.0.0.1:8765')).rstrip('/')
+    parsed = urlsplit(url)
+    if parsed.scheme not in ('http', 'https') or not parsed.netloc:
+        raise ValueError('BMI30_SERVICE_URL must be an HTTP(S) URL')
+    print(f'BMI30 web interface: {url}', flush=True)
+    webbrowser.open(url, new=2)
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

@@ -1,0 +1,11 @@
+BMI30 Agent build: 0.2.7
+Build date: 2026-08-14
+Target: Raspberry Pi OS / Debian 12 with systemd, Python 3 and OpenSSH client
+Transport: system CA HTTPS to www.teiots.net/bmi30; SSH Ed25519 pin on port 2222
+Migration: legacy bmi30-reverse-tunnel removed; production uses bmi30-tunnel.service
+Version mapping: agent_version=Raspberry websplit; firmware_version=STM32 EVT1 FW_INFO; connector_version=0.2.7
+Identity: DEVICE_ID and check-in hostname come from the live CPU serial; bound_raspberry_serial and a file lock prevent cloned credentials from being reused
+Authorization: only a validated 409 hardware_identity_mismatch rotates BMI30 key/token and retries check-in once; 401 and other 409 responses preserve identity
+Retry: HTTP 401/409 is retried after 60 seconds plus up to 6 seconds of jitter
+Networking: local_ips comes from live status.interfaces with a live hostname -I compatibility fallback; loopback is excluded
+Sandbox: /var/backups/bmi30-agent is writable so cloned-flash credential rotation can complete under ProtectSystem=strict

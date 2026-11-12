@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "scope": "Independent static source review only; no live device action or hardware execution",
+  "reviewed_at": 1793879991.3237152,
+  "source": "native_ssh_access.py",
+  "sha256": "544ec4d7d020756c020953b1c30817549c2e45a98dde23f72e028371de0192c4",
+  "checks": [
+    "committed installer result and successful cleanup required",
+    "installer systemd unit inactive with MainPID and ControlPID zero",
+    "exact own CM5/CID/eMMC root PARTUUID and source USB boot identity",
+    "reviewed installer/runner/private-plan/spec and own native config hashes",
+    "own native ED25519 private/public key hashes preserved",
+    "own techaid account and safe directory/key-file metadata checked",
+    "maintenance lease acquired before append and released only by owner",
+    "existing authorized_keys bytes retained; only bench PUBLIC key appended",
+    "no mount/reboot/service restart/host-key write/source-USB write implementation",
+    "append descriptor dev/inode checked against current authorized_keys path before write"
+  ],
+  "limits": [
+    "Linux fcntl/fsync/mount behavior not executed by this reviewer",
+    "Native boot and SSH login remain root validation steps"
+  ],
+  "spec_sha256": "582f185d28a7c65d060a59fb82c0ebdb92b59b878d3c43349e06252b78eca4eb",
+  "critical_blockers": [],
+  "reported_focused_tests": {
+    "count": 6,
+    "status": "PASS",
+    "source": "algorithm_audit; not independently rerun here"
+  }
+}

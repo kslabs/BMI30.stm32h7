@@ -1,1197 +1,1466 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "Build (Debug)",
-			"type": "shell",
-			"command": "make",
-			"args": [
-				"-C",
-				"Debug",
-				"all"
-			],
-			"isBackground": false,
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Clean (Debug)",
-			"type": "shell",
-			"command": "make",
-			"args": [
-				"-C",
-				"Debug",
-				"clean"
-			],
-			"isBackground": false,
-			"group": "build"
-		},
-		{
-			"label": "Flash (OpenOCD)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/flash-openocd.ps1",
-				"-Elf",
-				"${workspaceFolder}/Debug/BMI30.stm32h7.elf"
-			],
-			"options": {
-				"cwd": "${workspaceFolder}"
-			},
-			"group": "build"
-		},
-		{
-			"label": "Serial: Start COM11 @115200",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/serial-monitor.ps1",
-				"-Port",
-				"COM11",
-				"-Baud",
-				"115200"
-			],
-			"isBackground": true,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated"
-			}
-		},
-		{
-			"label": "Serial: Stop",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/serial-monitor-stop.ps1"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "new"
-			}
-		},
-		{
-			"label": "Serial: VND_* monitor (COM11)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/serial-monitor.ps1",
-				"-Port",
-				"COM11",
-				"-Baud",
-				"115200",
-				"-FilterRegex",
-				"^\\[VND",
-				"-LogPath",
-				".vscode/vnd_tx.log"
-			],
-			"isBackground": true,
-			"problemMatcher": [],
-			"group": "none"
-		},
-		{
-			"label": "Serial: DC monitor (COM11)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/serial-monitor.ps1",
-				"-Port",
-				"COM11",
-				"-Baud",
-				"115200",
-				"-FilterRegex",
-				"^\\[DC\\]",
-				"-LogPath",
-				".vscode/dc.log"
-			],
-			"isBackground": true,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": { "reveal": "always", "panel": "dedicated" }
-		},
-		{
-			"label": "Serial: Monitor COM11 (raw)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/serial-monitor.ps1",
-				"-Port",
-				"COM11",
-				"-Baud",
-				"115200"
-			],
-			"isBackground": true,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated"
-			}
-		},
-		{
-			"label": "CDC: Verify VER (CDC COM)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/check-ver.ps1",
-				"-Port",
-				"${input:cdcPort}",
-				"-Baud",
-				"115200"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": { "reveal": "always", "panel": "shared" }
-		},
-		{
-			"label": "Serial: Monitor COM11 (raw to file)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/serial-monitor.ps1",
-				"-Port",
-				"COM11",
-				"-Baud",
-				"115200",
-				"-LogPath",
-				".vscode/serial_raw.log"
-			],
-			"isBackground": true,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated"
-			}
-		},
-		{
-			"label": "CDC: Send START (CDC COM)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/serial-send-to-port.ps1",
-				"-Port",
-				"${input:cdcPort}",
-				"-Hex",
-				"20"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "shared"
-			}
-		},
-		{
-			"label": "CDC: SET ASYNC=1 (CDC COM)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/serial-send-to-port.ps1",
-				"-Port",
-				"${input:cdcPort}",
-				"-Hex",
-				"18 01"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": { "reveal": "always", "panel": "shared" }
-		},
-		{
-			"label": "CDC: SET CHMODE A-only (CDC COM)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/serial-send-to-port.ps1",
-				"-Port",
-				"${input:cdcPort}",
-				"-Hex",
-				"19 00"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": { "reveal": "always", "panel": "shared" }
-		},
-		{
-			"label": "CDC: A-only + START (CDC COM)",
-			"dependsOn": [
-				"CDC: SET ASYNC=1 (CDC COM)",
-				"CDC: SET CHMODE A-only (CDC COM)",
-				"CDC: Send START (CDC COM)"
-			],
-			"dependsOrder": "sequence",
-			"group": "none"
-		},
-		{
-			"label": "Vendor USB: READ-ONLY via PyUSB",
-			"type": "shell",
-			"command": "py",
-			"args": [
-				"-3",
-				"HostTools/vendor_usb_read_only.py"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "shared"
-			}
-		},
-		{
-			"label": "CDC: Send STOP (CDC COM)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/serial-send-to-port.ps1",
-				"-Port",
-				"${input:cdcPort}",
-				"-Hex",
-				"21"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "shared"
-			}
-		},
-		{
-			"label": "CDC: Send GET_STATUS (CDC COM)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/serial-send-to-port.ps1",
-				"-Port",
-				"${input:cdcPort}",
-				"-Hex",
-				"30"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "shared"
-			}
-		},
-		{
-			"label": "Vendor USB: CTRL START (EP0)",
-			"type": "shell",
-			"command": "py",
-			"args": [
-				"-3",
-				"HostTools/vendor_ctrl_start_only.py",
-				"--async", "1",
-				"--chmode", "0",
-				"--full", "1",
-				"--profile", "2"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": { "reveal": "always", "panel": "shared" }
-		},
-		{
-			"label": "CTRL START + READ-ONLY",
-			"dependsOn": [
-				"Vendor USB: CTRL START (EP0)",
-				"Vendor USB: READ-ONLY via PyUSB"
-			],
-			"dependsOrder": "sequence",
-			"group": "none"
-		},
-		{
-			"label": "Host: CTRL START A-only (EP0)",
-			"type": "shell",
-			"command": "py",
-			"args": [
-				"-3",
-				"HostTools/vendor_ctrl_start_only.py",
-				"--async", "1",
-				"--chmode", "0",
-				"--full", "1",
-				"--profile", "2"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": { "reveal": "always", "panel": "shared" }
-		},
-		{
-			"label": "Host: Smoke test 120s",
-			"type": "shell",
-			"command": "py",
-			"args": [
-				"-3",
-				"HostTools/vendor_read_smoke.py",
-				"--secs", "120",
-				"--timeout", "300",
-				"--summary", "HostTools/host_smoke_summary.txt"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": { "reveal": "always", "panel": "shared" }
-		},
-		{
-			"label": "Run 2-min smoke (A-only)",
-			"dependsOn": [
-				"Host: CTRL START A-only (EP0)",
-				"Host: Smoke test 120s"
-			],
-			"dependsOrder": "sequence",
-			"group": "none"
-		},
-		{
-			"label": "Vendor USB: START via PyUSB",
-			"type": "shell",
-			"command": "py",
-			"args": [
-				"-3",
-				"HostTools/vendor_usb_start_only.py"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "shared"
-			}
-		},
-		{
-			"label": "Vendor USB: START+READ via PyUSB",
-			"type": "shell",
-			"command": "py",
-			"args": [
-				"-3",
-				"HostTools/vendor_usb_start_and_read.py"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "shared"
-			}
-		},
-		{
-			"label": "Host: Stream 60s (bulk STAT)",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/run-host-start-and-read.ps1",
-				"-ProfileId","0",
-				"-WindowSec","60",
-				"-StatusMode","bulk",
-				"-LogInterval","5.0",
-				"-AbortNoRxSec","20",
-				"-StartRetries","5",
-				"-StartCheckSec","3.5"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"}
-		},
-		{
-			"label": "Host: Stream 300s (ctrl STAT)",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/run-host-start-and-read.ps1",
-				"-ProfileId","0",
-				"-WindowSec","300",
-				"-StatusMode","ctrl",
-				"-LogInterval","5.0",
-				"-AbortNoRxSec","30",
-				"-StartRetries","6",
-				"-StartCheckSec","4.0"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"}
-		},
-		{
-			"label": "Host: Stream 30s (ctrl STAT)",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/run-host-start-and-read.ps1",
-				"-ProfileId","0",
-				"-WindowSec","30",
-				"-StatusMode","ctrl",
-				"-LogInterval","5.0",
-				"-AbortNoRxSec","10",
-				"-StartRetries","5",
-				"-StartCheckSec","3.5"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"}
-		},
-		{
-			"label": "Host: Verify LOSSLESS (seq) 60s",
-			"type": "shell",
-			"command": "py",
-			"args": [
-				"-3",
-				"HostTools/vendor_stream_read.py",
-				"--stream-mode","1",
-				"--chmode","2",
-				"--ab-strict",
-				"--seq-strict",
-				"--warmup-pairs","50",
-				"--status-interval","0",
-				"--secs","60",
-				"--quiet"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"}
-		},
-		{
-			"label": "Host: Verify LOSSLESS (seq) 10s",
-			"type": "shell",
-			"command": "py",
-			"args": [
-				"-3",
-				"HostTools/vendor_stream_read.py",
-				"--stream-mode","1",
-				"--chmode","2",
-				"--ab-strict",
-				"--seq-strict",
-				"--warmup-pairs","50",
-				"--status-interval","0",
-				"--secs","10",
-				"--quiet"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"}
-		},
-		{
-			"label": "Host: Verify LOSSLESS A-only (seq) 60s",
-			"type": "shell",
-			"command": "py",
-			"args": [
-				"-3",
-				"HostTools/vendor_stream_read.py",
-				"--verify","mono",
-				"--stream-mode","1",
-				"--chmode","0",
-				"--seq-strict",
-				"--warmup-pairs","200",
-				"--status-interval","0",
-				"--secs","60",
-				"--quiet"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"}
-		},
-		{
-			"label": "Host: Stream 30s (run #1)",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/run-host-start-and-read.ps1",
-				"-ProfileId","0",
-				"-WindowSec","30",
-				"-StatusMode","ctrl",
-				"-LogInterval","5.0",
-				"-AbortNoRxSec","10",
-				"-StartRetries","5",
-				"-StartCheckSec","3.5"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"}
-		},
-		{
-			"label": "Host: Stream 30s (run #2)",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/run-host-start-and-read.ps1",
-				"-ProfileId","0",
-				"-WindowSec","30",
-				"-StatusMode","ctrl",
-				"-LogInterval","5.0",
-				"-AbortNoRxSec","10",
-				"-StartRetries","5",
-				"-StartCheckSec","3.5"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"}
-		},
-		{
-			"label": "Host: Stream 30s (run #3)",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/run-host-start-and-read.ps1",
-				"-ProfileId","0",
-				"-WindowSec","30",
-				"-StatusMode","ctrl",
-				"-LogInterval","5.0",
-				"-AbortNoRxSec","10",
-				"-StartRetries","5",
-				"-StartCheckSec","3.5"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"}
-		},
-		{
-			"label": "Run 3x30s (ctrl STAT)",
-			"dependsOn": [
-				"Host: Stream 30s (run #1)",
-				"Host: Stream 30s (run #2)",
-				"Host: Stream 30s (run #3)"
-			],
-			"dependsOrder": "sequence",
-			"group": "none"
-		},
-		{
-			"label": "Run gated 3x30s (ctrl STAT)",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/run-3x30s-ctrl.ps1",
-				"-ProfileId","0",
-				"-WindowSec","30",
-				"-PauseBetweenSec","1.0",
-				"-StatusMode","ctrl"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"}
-		},
-			{
-				"label": "Run 3x5min host tests",
-				"type": "shell",
-				"command": "powershell",
-				"args": [
-					"-NoProfile",
-					"-ExecutionPolicy",
-					"Bypass",
-					"-File",
-					".vscode/run-3x5min-tests.ps1",
-					"-Runs", "3",
-					"-WindowSec", "300",
-					"-AbortNoRxSec", "20",
-					"-PauseBetweenRunsSec", "5",
-					"-ProfileId", "0",
-					"-StatusMode", "bulk"
-				],
-				"isBackground": false,
-				"group": "none",
-				"presentation": { "reveal": "always", "panel": "shared" }
-			},
-		{
-			"label": "Run full host test",
-			"dependsOn": [
-				"Serial: Monitor COM11 (raw)",
-				"Host: START+READ (robust)"
-			],
-			"dependsOrder": "sequence",
-			"group": "none"
-		},
-		{
-			"label": "Build+Flash+Run host",
-			"dependsOn": [
-				"Build (Debug)",
-				"Flash (OpenOCD)",
-				"Vendor USB: START+READ via PyUSB"
-			],
-			"dependsOrder": "sequence",
-			"group": "build",
-			"problemMatcher": [
-				"$gcc"
-			]
-		},
-		{
-			"label": "Build+Flash+Verify+3x5min",
-			"dependsOn": [
-				"Build (Debug)",
-				"Flash (OpenOCD)",
-				"CDC: Verify VER (CDC COM)",
-				"Run 3x5min host tests"
-			],
-			"dependsOrder": "sequence",
-			"group": "build"
-		},
-		{
-			"label": "Build+Flash",
-			"dependsOn": [
-				"Build (Debug)",
-				"Flash (OpenOCD)"
-			],
-			"dependsOrder": "sequence",
-			"group": "build",
-			"problemMatcher": [
-				"$gcc"
-			]
-		},
-		{
-			"label": "Build (GNU Make)",
-			"type": "shell",
-			"command": "make",
-			"args": [],
-			"isBackground": false,
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Build (Make Debug)",
-			"type": "shell",
-			"command": "make",
-			"args": [],
-			"isBackground": false,
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Rebuild + Flash + Run diag reader",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"& .vscode/make-task.ps1 -Target all; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; & .vscode/flash-openocd.ps1 -Elf '${workspaceFolder}/Debug/BMI30.stm32h7.elf'; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; py -3 '${workspaceFolder}/HostTools/vendor_enable_diag_and_read.py'"
-			],
-			"isBackground": false,
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Build+Flash (inline)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"& .vscode/make-task.ps1 -Target all; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; & .vscode/flash-openocd.ps1 -Elf '${workspaceFolder}/Debug/BMI30.stm32h7.elf'"
-			],
-			"isBackground": false,
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Rebuild Debug",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-Command",
-				"make -C Debug all"
-			],
-			"isBackground": false,
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Rebuild Debug (clean warnings)",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-Command",
-				"make -C Debug all"
-			],
-			"isBackground": false,
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Run host diag reader",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"py -3 '${workspaceFolder}/HostTools/vendor_enable_diag_and_read.py'"
-			],
-			"isBackground": false,
-			"group": "none"
-		},
-		{
-			"label": "Run quick status",
-			"type": "shell",
-			"command": ".\\quick_status.cmd",
-			"args": [],
-			"options": { "cwd": "${workspaceFolder}" },
-			"isBackground": false,
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated",
-				"clear": true
-			},
-			"group": "none"
-		},
-		{
-			"label": "Run quick status (30s)",
-			"type": "shell",
-			"command": ".\\quick_status.cmd",
-			"args": ["--secs", "30"],
-			"options": { "cwd": "${workspaceFolder}" },
-			"isBackground": false,
-			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "dedicated",
-				"clear": true
-			}
-		},
-		{
-			"label": "Catch stall: raw log + quick (30s)",
-			"dependsOn": [
-				"Serial: Monitor COM11 (raw to file)",
-				"Run quick status (30s)"
-			],
-			"dependsOrder": "sequence",
-			"group": "none"
-		},
-		{
-			"label": "Run diag via py launcher",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"py -3 '${workspaceFolder}/HostTools/vendor_enable_diag_and_read.py'"
-			],
-			"isBackground": false,
-			"group": "none"
-		},
-		{
-			"label": "USB: Reset sequence (soft→deep→bulk→port)",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"py -3 \"${workspaceFolder}/HostTools/device_reset_sequence.py\" --methods soft,deep,bulk,port --wait-gone 3.0 --wait-present 10.0 --retry 2 --verbose"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": { "reveal": "always", "panel": "shared" }
-		},
-		{
-			"label": "USB: Reset + Run GUI",
-			"dependsOn": [
-				"USB: Reset sequence (soft→deep→bulk→port)",
-				"Run GUI oscilloscope"
-			],
-			"dependsOrder": "sequence",
-			"group": "none"
-		},
-		{
-			"label": "Run GUI oscilloscope",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"py -3 '${workspaceFolder}/HostTools/gui_oscilloscope_optimized.py' --ns 0 --profile 0 --watchdog" 
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"},
-			"detail": "Optimized oscilloscope (4 lines: A_even/A_odd/B_even/B_odd)"
-		},
-		{
-			"label": "Run GUI oscilloscope (optimized)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"py -3 '${workspaceFolder}/HostTools/gui_oscilloscope_optimized.py' --ns 0 --profile 0 --watchdog" 
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"},
-			"detail": "Optimized version - better performance"
-		},
-		{
-			"label": "Run GUI oscilloscope (AVG_ROI mode=2)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"py -3 '${workspaceFolder}/HostTools/gui_oscilloscope_optimized.py' --profile 0 --stream-mode 2 --avg-n 20 --roi-start 280 --roi-len 200 --watchdog"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {"reveal": "always", "panel": "shared"},
-			"detail": "Oscilloscope in config=2: AVG_ROI (stream_mode=2), avg_n=20, ROI=280..480, paired mode"
-		},
-		{
-			"label": "USB: Reset + Run GUI (AVG_ROI mode=2)",
-			"dependsOn": [
-				"USB: Reset sequence (soft→deep→bulk→port)",
-				"Run GUI oscilloscope (AVG_ROI mode=2)"
-			],
-			"dependsOrder": "sequence",
-			"group": "none"
-		},
-		{
-			"label": "Locate GUI oscilloscope (path)",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"$f = Get-ChildItem -Path '${workspaceFolder}' -Recurse -Filter 'gui_oscilloscope.py' -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName; if ($f) { Write-Host \"Found:\" $f; Write-Host \"Run:\"; Write-Host (\"py -3 `\"$f`\" --ns 300\"); } else { Write-Host \"gui_oscilloscope.py not found under ${workspaceFolder}\" }"
-			],
-			"isBackground": false,
-			"group": "none",
-			"presentation": {
-				"reveal": "always",
-				"panel": "shared"
-			}
-		},
-		{
-			"label": "Build (make -C Debug all)",
-			"type": "shell",
-			"command": "make",
-			"args": [
-				"-C",
-				"Debug",
-				"all"
-			],
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Flash (OpenOCD mass erase + program + reset)",
-			"type": "shell",
-			"command": "make",
-			"args": [
-				"-C",
-				"Debug",
-				"flash_full"
-			],
-			"isBackground": false,
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Build BMI30 Debug (make)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"Set-Location '${workspaceFolder}/Debug'; if (Test-Path makefile) { make -j4 all } else { Write-Error 'makefile not found in Debug' }"
-			],
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build"
-		},
-		{
-			"label": "Flash BMI30 via STM32CubeProgrammer",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/flash-cubecli.ps1"
-			],
-			"isBackground": false,
-			"problemMatcher": [],
-			"group": "build"
-		},
-		{
-			"label": "Flash (SWD) STM32 via CubeProgrammer",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/flash-cubecli.ps1"
-			],
-			"isBackground": false
-		},
-		{
-			"label": "Flash (SWD) STM32 via CubeProgrammer - retry",
-			"type": "shell",
-			"command": "powershell",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/flash-cubecli.ps1"
-			],
-			"isBackground": false
-		},
-		{
-			"label": "Clone BMI30 repo from GitHub",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"$parent = Split-Path -Parent '${workspaceFolder}'; if(!(Test-Path $parent)) { New-Item -ItemType Directory -Path $parent | Out-Null }; Set-Location $parent; git clone https://github.com/kslabs/BMI30.stm32h7.git; Set-Location BMI30.stm32h7; Write-Host 'Cloned successfully to:' (Get-Location)"
-			],
-			"isBackground": false,
-			"group": "build",
-			"problemMatcher": []
-		},
-		{
-			"label": "Clone + Build + Flash",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"$target='${workspaceFolder}'; if(!(Test-Path $target)) { git clone https://github.com/kslabs/BMI30.stm32h7.git $target; Write-Host 'Cloned to' $target } else { Write-Host 'Directory exists, using existing repo' }; Set-Location $target; Write-Host 'Building...'; & .vscode/make-task.ps1 -Target all; if($LASTEXITCODE -ne 0) { Write-Error 'Build failed'; exit 1 }; Write-Host 'Flashing...'; & .vscode/flash-openocd.ps1 -Elf "$target/Debug/BMI30.stm32h7.elf"; if($LASTEXITCODE -eq 0) { Write-Host 'Clone + Build + Flash completed successfully!' } else { Write-Error 'Flash failed'; exit 1 }"
-			],
-			"isBackground": false,
-			"group": "build",
-			"problemMatcher": ["$gcc"]
-		},
-		{
-			"label": "BUILD+FLASH (auto-update time)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/build-and-flash-all.ps1"
-			],
-			"isBackground": false,
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			},
-			"problemMatcher": []
-		},
-		{
-			"label": "BUILD+FLASH (clean build)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/build-and-flash-all.ps1",
-				"-CleanBuild"
-			],
-			"isBackground": false,
-			"group": "build",
-			"problemMatcher": []
-		},
-		{
-			"label": "BUILD+FLASH SINGLE ST-LINK (auto-update time)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/build-and-flash.ps1"
-			],
-			"isBackground": false,
-			"group": "build",
-			"problemMatcher": []
-		},
-		{
-			"label": "BUILD+FLASH SINGLE ST-LINK (clean build)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/build-and-flash.ps1",
-				"-CleanBuild"
-			],
-			"isBackground": false,
-			"group": "build",
-			"problemMatcher": []
-		},
-		{
-			"label": "Flash ALL ST-LINK (CubeProgrammer)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/build-and-flash-all.ps1"
-			],
-			"isBackground": false,
-			"group": "build",
-			"problemMatcher": []
-		},
-		{
-			"label": "Flash ALL ST-LINK (clean build)",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				".vscode/build-and-flash-all.ps1",
-				"-CleanBuild"
-			],
-			"isBackground": false,
-			"group": "build",
-			"problemMatcher": []
-		}
-	],
-	"inputs": [
-		{
-			"id": "cdcPort",
-			"type": "promptString",
-			"description": "CDC COM port (не ST-LINK, посмотрите в Диспетчере устройств)",
-			"default": "COM11"
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "BMI30: verify STM32 baseline (offline)",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "${workspaceFolder}/scripts/build_stm32.py",
+        "--jobs",
+        "4"
+      ],
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "BMI30: auto-connect all boards",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/HostTools/bmi30_remote_ssh.ps1",
+        "-Mode",
+        "start"
+      ],
+      "runOptions": {
+        "runOn": "folderOpen",
+        "instanceLimit": 1
+      },
+      "isBackground": false,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "focus": false
+      }
+    },
+    {
+      "label": "BMI30: stop automatic connections",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/HostTools/bmi30_remote_ssh.ps1",
+        "-Mode",
+        "stop"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "BMI30: authorize this computer on new boards",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/HostTools/bmi30_remote_ssh.ps1",
+        "-Mode",
+        "enroll"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      }
+    },
+    {
+      "label": "Build (Debug)",
+      "type": "shell",
+      "command": "\"C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe\"",
+      "args": [
+        "-C",
+        "Debug",
+        "all"
+      ],
+      "isBackground": false,
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "Clean (Debug)",
+      "type": "shell",
+      "command": "\"C:\\Program Files (x86)\\GnuWin32\\bin\\make.exe\"",
+      "args": [
+        "-C",
+        "Debug",
+        "clean"
+      ],
+      "isBackground": false,
+      "group": "build"
+    },
+    {
+      "label": "VS Code: Update required extensions only",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/update-essential-extensions.ps1"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "VS Code: List required extensions",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/update-essential-extensions.ps1",
+        "-ListOnly"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Flash (OpenOCD)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/flash-openocd.ps1",
+        "-Elf",
+        "${workspaceFolder}/Debug/BMI30.stm32h7.elf"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build"
+    },
+    {
+      "label": "Serial: Start COM11 @115200",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/serial-monitor.ps1",
+        "-Port",
+        "COM11",
+        "-Baud",
+        "115200"
+      ],
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Serial: Stop",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/serial-monitor-stop.ps1"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Serial: VND_* monitor (COM11)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/serial-monitor.ps1",
+        "-Port",
+        "COM11",
+        "-Baud",
+        "115200",
+        "-FilterRegex",
+        "^\\[VND",
+        "-LogPath",
+        ".vscode/vnd_tx.log"
+      ],
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "none"
+    },
+    {
+      "label": "Serial: DC monitor (COM11)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/serial-monitor.ps1",
+        "-Port",
+        "COM11",
+        "-Baud",
+        "115200",
+        "-FilterRegex",
+        "^\\[DC\\]",
+        "-LogPath",
+        ".vscode/dc.log"
+      ],
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Serial: Monitor COM11 (raw)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/serial-monitor.ps1",
+        "-Port",
+        "COM11",
+        "-Baud",
+        "115200"
+      ],
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "CDC: Verify VER (CDC COM)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/check-ver.ps1",
+        "-Port",
+        "${input:cdcPort}",
+        "-Baud",
+        "115200"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Serial: Monitor COM11 (raw to file)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/serial-monitor.ps1",
+        "-Port",
+        "COM11",
+        "-Baud",
+        "115200",
+        "-LogPath",
+        ".vscode/serial_raw.log"
+      ],
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "CDC: Send START (CDC COM)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/serial-send-to-port.ps1",
+        "-Port",
+        "${input:cdcPort}",
+        "-Hex",
+        "20"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "CDC: SET ASYNC=1 (CDC COM)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/serial-send-to-port.ps1",
+        "-Port",
+        "${input:cdcPort}",
+        "-Hex",
+        "18 01"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "CDC: SET CHMODE A-only (CDC COM)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/serial-send-to-port.ps1",
+        "-Port",
+        "${input:cdcPort}",
+        "-Hex",
+        "19 00"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "CDC: A-only + START (CDC COM)",
+      "dependsOn": [
+        "CDC: SET ASYNC=1 (CDC COM)",
+        "CDC: SET CHMODE A-only (CDC COM)",
+        "CDC: Send START (CDC COM)"
+      ],
+      "dependsOrder": "sequence",
+      "group": "none"
+    },
+    {
+      "label": "Vendor USB: READ-ONLY via PyUSB",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "HostTools/vendor_usb_read_only.py"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "CDC: Send STOP (CDC COM)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/serial-send-to-port.ps1",
+        "-Port",
+        "${input:cdcPort}",
+        "-Hex",
+        "21"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "CDC: Send GET_STATUS (CDC COM)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/serial-send-to-port.ps1",
+        "-Port",
+        "${input:cdcPort}",
+        "-Hex",
+        "30"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Vendor USB: CTRL START (EP0)",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "HostTools/vendor_ctrl_start_only.py",
+        "--async",
+        "1",
+        "--chmode",
+        "0",
+        "--full",
+        "1",
+        "--profile",
+        "2"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "CTRL START + READ-ONLY",
+      "dependsOn": [
+        "Vendor USB: CTRL START (EP0)",
+        "Vendor USB: READ-ONLY via PyUSB"
+      ],
+      "dependsOrder": "sequence",
+      "group": "none"
+    },
+    {
+      "label": "Host: CTRL START A-only (EP0)",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "HostTools/vendor_ctrl_start_only.py",
+        "--async",
+        "1",
+        "--chmode",
+        "0",
+        "--full",
+        "1",
+        "--profile",
+        "2"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Host: Smoke test 120s",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "HostTools/vendor_read_smoke.py",
+        "--secs",
+        "120",
+        "--timeout",
+        "300",
+        "--summary",
+        "HostTools/host_smoke_summary.txt"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Run 2-min smoke (A-only)",
+      "dependsOn": [
+        "Host: CTRL START A-only (EP0)",
+        "Host: Smoke test 120s"
+      ],
+      "dependsOrder": "sequence",
+      "group": "none"
+    },
+    {
+      "label": "Vendor USB: START via PyUSB",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "HostTools/vendor_usb_start_only.py"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Vendor USB: START+READ via PyUSB",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "HostTools/vendor_usb_start_and_read.py"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Host: Stream 60s (bulk STAT)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/run-host-start-and-read.ps1",
+        "-ProfileId",
+        "0",
+        "-WindowSec",
+        "60",
+        "-StatusMode",
+        "bulk",
+        "-LogInterval",
+        "5.0",
+        "-AbortNoRxSec",
+        "20",
+        "-StartRetries",
+        "5",
+        "-StartCheckSec",
+        "3.5"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Host: Stream 300s (ctrl STAT)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/run-host-start-and-read.ps1",
+        "-ProfileId",
+        "0",
+        "-WindowSec",
+        "300",
+        "-StatusMode",
+        "ctrl",
+        "-LogInterval",
+        "5.0",
+        "-AbortNoRxSec",
+        "30",
+        "-StartRetries",
+        "6",
+        "-StartCheckSec",
+        "4.0"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Host: Stream 30s (ctrl STAT)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/run-host-start-and-read.ps1",
+        "-ProfileId",
+        "0",
+        "-WindowSec",
+        "30",
+        "-StatusMode",
+        "ctrl",
+        "-LogInterval",
+        "5.0",
+        "-AbortNoRxSec",
+        "10",
+        "-StartRetries",
+        "5",
+        "-StartCheckSec",
+        "3.5"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Host: Verify LOSSLESS (seq) 60s",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "HostTools/vendor_stream_read.py",
+        "--stream-mode",
+        "1",
+        "--chmode",
+        "2",
+        "--ab-strict",
+        "--seq-strict",
+        "--warmup-pairs",
+        "50",
+        "--status-interval",
+        "0",
+        "--secs",
+        "60",
+        "--quiet"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Host: Verify LOSSLESS (seq) 10s",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "HostTools/vendor_stream_read.py",
+        "--stream-mode",
+        "1",
+        "--chmode",
+        "2",
+        "--ab-strict",
+        "--seq-strict",
+        "--warmup-pairs",
+        "50",
+        "--status-interval",
+        "0",
+        "--secs",
+        "10",
+        "--quiet"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Host: Verify LOSSLESS A-only (seq) 60s",
+      "type": "shell",
+      "command": "py",
+      "args": [
+        "-3",
+        "HostTools/vendor_stream_read.py",
+        "--verify",
+        "mono",
+        "--stream-mode",
+        "1",
+        "--chmode",
+        "0",
+        "--seq-strict",
+        "--warmup-pairs",
+        "200",
+        "--status-interval",
+        "0",
+        "--secs",
+        "60",
+        "--quiet"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Host: Stream 30s (run #1)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/run-host-start-and-read.ps1",
+        "-ProfileId",
+        "0",
+        "-WindowSec",
+        "30",
+        "-StatusMode",
+        "ctrl",
+        "-LogInterval",
+        "5.0",
+        "-AbortNoRxSec",
+        "10",
+        "-StartRetries",
+        "5",
+        "-StartCheckSec",
+        "3.5"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Host: Stream 30s (run #2)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/run-host-start-and-read.ps1",
+        "-ProfileId",
+        "0",
+        "-WindowSec",
+        "30",
+        "-StatusMode",
+        "ctrl",
+        "-LogInterval",
+        "5.0",
+        "-AbortNoRxSec",
+        "10",
+        "-StartRetries",
+        "5",
+        "-StartCheckSec",
+        "3.5"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Host: Stream 30s (run #3)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/run-host-start-and-read.ps1",
+        "-ProfileId",
+        "0",
+        "-WindowSec",
+        "30",
+        "-StatusMode",
+        "ctrl",
+        "-LogInterval",
+        "5.0",
+        "-AbortNoRxSec",
+        "10",
+        "-StartRetries",
+        "5",
+        "-StartCheckSec",
+        "3.5"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Run 3x30s (ctrl STAT)",
+      "dependsOn": [
+        "Host: Stream 30s (run #1)",
+        "Host: Stream 30s (run #2)",
+        "Host: Stream 30s (run #3)"
+      ],
+      "dependsOrder": "sequence",
+      "group": "none"
+    },
+    {
+      "label": "Run gated 3x30s (ctrl STAT)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/run-3x30s-ctrl.ps1",
+        "-ProfileId",
+        "0",
+        "-WindowSec",
+        "30",
+        "-PauseBetweenSec",
+        "1.0",
+        "-StatusMode",
+        "ctrl"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Run 3x5min host tests",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/run-3x5min-tests.ps1",
+        "-Runs",
+        "3",
+        "-WindowSec",
+        "300",
+        "-AbortNoRxSec",
+        "20",
+        "-PauseBetweenRunsSec",
+        "5",
+        "-ProfileId",
+        "0",
+        "-StatusMode",
+        "bulk"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Run full host test",
+      "dependsOn": [
+        "Serial: Monitor COM11 (raw)",
+        "Host: START+READ (robust)"
+      ],
+      "dependsOrder": "sequence",
+      "group": "none"
+    },
+    {
+      "label": "Build+Flash+Run host",
+      "dependsOn": [
+        "Build (Debug)",
+        "Flash (OpenOCD)",
+        "Vendor USB: START+READ via PyUSB"
+      ],
+      "dependsOrder": "sequence",
+      "group": "build",
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "Build+Flash+Verify+3x5min",
+      "dependsOn": [
+        "Build (Debug)",
+        "Flash (OpenOCD)",
+        "CDC: Verify VER (CDC COM)",
+        "Run 3x5min host tests"
+      ],
+      "dependsOrder": "sequence",
+      "group": "build"
+    },
+    {
+      "label": "Build+Flash",
+      "dependsOn": [
+        "Build (Debug)",
+        "Flash (OpenOCD)"
+      ],
+      "dependsOrder": "sequence",
+      "group": "build",
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "Build (GNU Make)",
+      "type": "shell",
+      "command": "make",
+      "args": [],
+      "isBackground": false,
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "Build (Make Debug)",
+      "type": "shell",
+      "command": "make",
+      "args": [],
+      "isBackground": false,
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "Rebuild + Flash + Run diag reader",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "& .vscode/make-task.ps1 -Target all; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; & .vscode/flash-openocd.ps1 -Elf '${workspaceFolder}/Debug/BMI30.stm32h7.elf'; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; py -3 '${workspaceFolder}/HostTools/vendor_enable_diag_and_read.py'"
+      ],
+      "isBackground": false,
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "Build+Flash (inline)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "& .vscode/make-task.ps1 -Target all; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE }; & .vscode/flash-openocd.ps1 -Elf '${workspaceFolder}/Debug/BMI30.stm32h7.elf'"
+      ],
+      "isBackground": false,
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "Rebuild Debug",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "make -C Debug all"
+      ],
+      "isBackground": false,
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "Rebuild Debug (clean warnings)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "make -C Debug all"
+      ],
+      "isBackground": false,
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "Run host diag reader",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "py -3 '${workspaceFolder}/HostTools/vendor_enable_diag_and_read.py'"
+      ],
+      "isBackground": false,
+      "group": "none"
+    },
+    {
+      "label": "Run quick status",
+      "type": "shell",
+      "command": ".\\quick_status.cmd",
+      "args": [],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": false,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "group": "none"
+    },
+    {
+      "label": "Run quick status (30s)",
+      "type": "shell",
+      "command": ".\\quick_status.cmd",
+      "args": [
+        "--secs",
+        "30"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "Catch stall: raw log + quick (30s)",
+      "dependsOn": [
+        "Serial: Monitor COM11 (raw to file)",
+        "Run quick status (30s)"
+      ],
+      "dependsOrder": "sequence",
+      "group": "none"
+    },
+    {
+      "label": "Run diag via py launcher",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "py -3 '${workspaceFolder}/HostTools/vendor_enable_diag_and_read.py'"
+      ],
+      "isBackground": false,
+      "group": "none"
+    },
+    {
+      "label": "USB: Reset sequence (soft→deep→bulk→port)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "py -3 \"${workspaceFolder}/HostTools/device_reset_sequence.py\" --methods soft,deep,bulk,port --wait-gone 3.0 --wait-present 10.0 --retry 2 --verbose"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "USB: Reset + Run GUI",
+      "dependsOn": [
+        "USB: Reset sequence (soft→deep→bulk→port)",
+        "Run GUI oscilloscope"
+      ],
+      "dependsOrder": "sequence",
+      "group": "none"
+    },
+    {
+      "label": "Run GUI oscilloscope",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "py -3 '${workspaceFolder}/HostTools/gui_oscilloscope_optimized.py' --ns 0 --profile 0 --watchdog"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "detail": "Optimized oscilloscope (4 lines: A_even/A_odd/B_even/B_odd)"
+    },
+    {
+      "label": "Run GUI oscilloscope (optimized)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "py -3 '${workspaceFolder}/HostTools/gui_oscilloscope_optimized.py' --ns 0 --profile 0 --watchdog"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "detail": "Optimized version - better performance"
+    },
+    {
+      "label": "Run GUI oscilloscope (AVG_ROI mode=2)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "py -3 '${workspaceFolder}/HostTools/gui_oscilloscope_optimized.py' --profile 0 --stream-mode 2 --avg-n 20 --roi-start 280 --roi-len 200 --watchdog"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "detail": "Oscilloscope in config=2: AVG_ROI (stream_mode=2), avg_n=20, ROI=280..480, paired mode"
+    },
+    {
+      "label": "USB: Reset + Run GUI (AVG_ROI mode=2)",
+      "dependsOn": [
+        "USB: Reset sequence (soft→deep→bulk→port)",
+        "Run GUI oscilloscope (AVG_ROI mode=2)"
+      ],
+      "dependsOrder": "sequence",
+      "group": "none"
+    },
+    {
+      "label": "Locate GUI oscilloscope (path)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "$f = Get-ChildItem -Path '${workspaceFolder}' -Recurse -Filter 'gui_oscilloscope.py' -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName; if ($f) { Write-Host \"Found:\" $f; Write-Host \"Run:\"; Write-Host (\"py -3 `\"$f`\" --ns 300\"); } else { Write-Host \"gui_oscilloscope.py not found under ${workspaceFolder}\" }"
+      ],
+      "isBackground": false,
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Build (make -C Debug all)",
+      "type": "shell",
+      "command": "make",
+      "args": [
+        "-C",
+        "Debug",
+        "all"
+      ],
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "Flash (OpenOCD mass erase + program + reset)",
+      "type": "shell",
+      "command": "make",
+      "args": [
+        "-C",
+        "Debug",
+        "flash_full"
+      ],
+      "isBackground": false,
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "Build BMI30 Debug (make)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "Set-Location '${workspaceFolder}/Debug'; if (Test-Path makefile) { make -j4 all } else { Write-Error 'makefile not found in Debug' }"
+      ],
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build"
+    },
+    {
+      "label": "Flash BMI30 via STM32CubeProgrammer",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/flash-cubecli.ps1"
+      ],
+      "isBackground": false,
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "Flash (SWD) STM32 via CubeProgrammer",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/flash-cubecli.ps1"
+      ],
+      "isBackground": false
+    },
+    {
+      "label": "Flash (SWD) STM32 via CubeProgrammer - retry",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/flash-cubecli.ps1"
+      ],
+      "isBackground": false
+    },
+    {
+      "label": "Clone BMI30 repo from GitHub",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "$parent = Split-Path -Parent '${workspaceFolder}'; if(!(Test-Path $parent)) { New-Item -ItemType Directory -Path $parent | Out-Null }; Set-Location $parent; git clone https://github.com/kslabs/BMI30.stm32h7.git; Set-Location BMI30.stm32h7; Write-Host 'Cloned successfully to:' (Get-Location)"
+      ],
+      "isBackground": false,
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Clone + Build + Flash",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "$target='${workspaceFolder}'; if(!(Test-Path $target)) { git clone https://github.com/kslabs/BMI30.stm32h7.git $target; Write-Host 'Cloned to' $target } else { Write-Host 'Directory exists, using existing repo' }; Set-Location $target; Write-Host 'Building...'; & .vscode/make-task.ps1 -Target all; if($LASTEXITCODE -ne 0) { Write-Error 'Build failed'; exit 1 }; Write-Host 'Flashing...'; & .vscode/flash-openocd.ps1 -Elf \"$target/Debug/BMI30.stm32h7.elf\"; if($LASTEXITCODE -eq 0) { Write-Host 'Clone + Build + Flash completed successfully!' } else { Write-Error 'Flash failed'; exit 1 }"
+      ],
+      "isBackground": false,
+      "group": "build",
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "BUILD+FLASH (auto-update time)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/build-and-flash-all.ps1"
+      ],
+      "isBackground": false,
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "BUILD+FLASH (clean build)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/build-and-flash-all.ps1",
+        "-CleanBuild"
+      ],
+      "isBackground": false,
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "BUILD+FLASH SINGLE ST-LINK (auto-update time)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/build-and-flash.ps1"
+      ],
+      "isBackground": false,
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "BUILD+FLASH SINGLE ST-LINK (clean build)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/build-and-flash.ps1",
+        "-CleanBuild"
+      ],
+      "isBackground": false,
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Flash ALL ST-LINK (CubeProgrammer)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/build-and-flash-all.ps1"
+      ],
+      "isBackground": false,
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Flash ALL ST-LINK (clean build)",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".vscode/build-and-flash-all.ps1",
+        "-CleanBuild"
+      ],
+      "isBackground": false,
+      "group": "build",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "cdcPort",
+      "type": "promptString",
+      "description": "CDC COM port (не ST-LINK, посмотрите в Диспетчере устройств)",
+      "default": "COM11"
+    }
+  ]
 }
-

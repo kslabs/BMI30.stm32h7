@@ -1,0 +1,145 @@
+{
+  "status": "verified",
+  "verified_for": "pass_marking_center_up_down",
+  "date": "2026-10-02",
+  "hostname": "BMI30-D5EB8F26C",
+  "mac": "FF:24:01:26:A0:4A",
+  "button_gestures": {
+    "center": "tap",
+    "up": "y-",
+    "down": "y+"
+  },
+  "button_actions": {
+    "center": "start",
+    "up": "hit",
+    "down": "miss"
+  },
+  "user_confirmed_order": true,
+  "user_report": "Завершил и порядок соблюден.",
+  "sequence": [
+    "up",
+    "up",
+    "up",
+    "down",
+    "down",
+    "down",
+    "center",
+    "center",
+    "center"
+  ],
+  "expected_count": 9,
+  "received_count": 9,
+  "connection_changes_during_series": 0,
+  "source_file": ".tmp/tag-detection-20261002/T33-S10-input-01.jsonl",
+  "source_sha256": "2b2d097c8045eef68746b45f49b198decef03993631503def9c4600a8ba61c2b",
+  "first_gesture_epoch": 1790941933.7661169,
+  "last_gesture_epoch": 1790941949.4882255,
+  "capture_start_epoch": 1790941870.6697254,
+  "capture_end_epoch": 1790942054.3479238,
+  "gestures": [
+    {
+      "kind": "gesture",
+      "start_mono": 9771.601871,
+      "end_mono": 9771.752966,
+      "gesture": "y-",
+      "dx": 0,
+      "dy": -2400,
+      "excursion": 2400,
+      "device": "/dev/input/event6",
+      "observed_epoch": 1790941933.7661169
+    },
+    {
+      "kind": "gesture",
+      "start_mono": 9772.862288,
+      "end_mono": 9773.011872,
+      "gesture": "y-",
+      "dx": 0,
+      "dy": -2400,
+      "excursion": 2400,
+      "device": "/dev/input/event6",
+      "observed_epoch": 1790941935.0250819
+    },
+    {
+      "kind": "gesture",
+      "start_mono": 9774.511895,
+      "end_mono": 9774.661828,
+      "gesture": "y-",
+      "dx": 0,
+      "dy": -2400,
+      "excursion": 2400,
+      "device": "/dev/input/event6",
+      "observed_epoch": 1790941936.6749904
+    },
+    {
+      "kind": "gesture",
+      "start_mono": 9780.721971,
+      "end_mono": 9780.871977,
+      "gesture": "y+",
+      "dx": 0,
+      "dy": 2144,
+      "excursion": 2144,
+      "device": "/dev/input/event6",
+      "observed_epoch": 1790941942.8852158
+    },
+    {
+      "kind": "gesture",
+      "start_mono": 9781.892024,
+      "end_mono": 9782.041954,
+      "gesture": "y+",
+      "dx": 0,
+      "dy": 2144,
+      "excursion": 2144,
+      "device": "/dev/input/event6",
+      "observed_epoch": 1790941944.0551586
+    },
+    {
+      "kind": "gesture",
+      "start_mono": 9783.332037,
+      "end_mono": 9783.452034,
+      "gesture": "y+",
+      "dx": 0,
+      "dy": 2144,
+      "excursion": 2144,
+      "device": "/dev/input/event6",
+      "observed_epoch": 1790941945.465262
+    },
+    {
+      "kind": "gesture",
+      "start_mono": 9785.582035,
+      "end_mono": 9785.582573,
+      "gesture": "tap",
+      "dx": 0,
+      "dy": 0,
+      "excursion": 0,
+      "device": "/dev/input/event6",
+      "observed_epoch": 1790941947.5958946
+    },
+    {
+      "kind": "gesture",
+      "start_mono": 9786.542049,
+      "end_mono": 9786.542588,
+      "gesture": "tap",
+      "dx": 0,
+      "dy": 0,
+      "excursion": 0,
+      "device": "/dev/input/event6",
+      "observed_epoch": 1790941948.5558724
+    },
+    {
+      "kind": "gesture",
+      "start_mono": 9787.472124,
+      "end_mono": 9787.474578,
+      "gesture": "tap",
+      "dx": 0,
+      "dy": 0,
+      "excursion": 0,
+      "device": "/dev/input/event6",
+      "observed_epoch": 1790941949.4882255
+    }
+  ],
+  "uncalibrated_buttons": [
+    "left",
+    "right"
+  ],
+  "limitations": "Verified in one counted sequence; not a long-term radio reliability test. Left/right are unused for pass marks."
+}

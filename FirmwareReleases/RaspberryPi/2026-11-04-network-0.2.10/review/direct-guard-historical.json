@@ -1,0 +1,156 @@
+{
+  "status": "PASS",
+  "scope": "local candidate only; no network requests or device changes",
+  "source_match_before_edit": {
+    "canonical_original_sha256": "bd39c268316b1ca25b25e10e377f13a9baf8142f05c898e6ca05327c8f761ab3",
+    "captured_live_policy_text_stripped_equal": true,
+    "captured_live_policy_ast_equal": true,
+    "note": "Cached source differs in whitespace/trailing lines; hashes are recorded independently."
+  },
+  "regression_input": {
+    "local": {
+      "id": "BMI30-E29805C7C",
+      "uplink": "wifi",
+      "clients": 0,
+      "ssid": "VINETA-EL 2,4GHz",
+      "bssid": "70:4f:57:da:0c:53",
+      "parent": null,
+      "path": [
+        "BMI30-E29805C7C"
+      ],
+      "freq": 2417,
+      "signal": 65,
+      "cost": 69.06,
+      "internet": {
+        "ok": true
+      }
+    },
+    "candidates_sorted_by_cost": [
+      {
+        "kind": "direct",
+        "ssid": "VINETA-EL 2,4GHz",
+        "bssid": "70:4f:57:da:0c:53",
+        "freq": 2417,
+        "signal": 65,
+        "cost": 69.06
+      },
+      {
+        "kind": "direct",
+        "ssid": "VINETA-EL5GHz",
+        "bssid": "70:4f:57:da:0c:54",
+        "freq": 5180,
+        "signal": 54,
+        "cost": 70.81
+      },
+      {
+        "kind": "relay",
+        "ssid": "BMI30-C9775FBAE",
+        "bssid": "2e:cf:67:50:12:42",
+        "freq": 5180,
+        "signal": 74,
+        "cost": 125.95,
+        "parent": "BMI30-C9775FBAE"
+      }
+    ]
+  },
+  "before_fix": [
+    {
+      "monotonic": 1000,
+      "selection": null
+    },
+    {
+      "monotonic": 1016,
+      "selection": null
+    },
+    {
+      "monotonic": 1032,
+      "selection": {
+        "kind": "relay",
+        "ssid": "BMI30-C9775FBAE",
+        "bssid": "2e:cf:67:50:12:42",
+        "freq": 5180,
+        "signal": 74,
+        "cost": 125.95,
+        "parent": "BMI30-C9775FBAE"
+      }
+    }
+  ],
+  "candidate": [
+    {
+      "monotonic": 1000,
+      "selection": null
+    },
+    {
+      "monotonic": 1016,
+      "selection": null
+    },
+    {
+      "monotonic": 1032,
+      "selection": null
+    }
+  ],
+  "change_contract": {
+    "usable_direct": "internet.ok; wifi uplink; parent None; path [local.id]; external SSID (not BMI30); signal >=40",
+    "behavior": "Remove explicit relay choices before 5GHz preference while current direct is usable.",
+    "unchanged": [
+      "cost model",
+      "candidate authentication/path/loop guards",
+      "direct 5GHz band preference",
+      "300s dwell",
+      "3 confirmations",
+      "failure blacklist",
+      "AP client guard",
+      "weak direct or failed Internet fallback",
+      "service/network implementation"
+    ],
+    "limits": [
+      "This prevents the observed departure; it does not implement majority LAN selection.",
+      "signal 40 reuses the existing usable 5GHz exit level as a conservative direct-uplink floor.",
+      "No guarantee of peer-to-direct recovery or selection among multiple external LANs is added."
+    ]
+  },
+  "majority_cohesion_deferred": {
+    "reason": "policy inputs contain no authenticated same-RS485-group membership or root LAN fingerprint",
+    "existing_fields": [
+      "role",
+      "rs485_id",
+      "stm32_uid96",
+      "parent",
+      "path",
+      "ssid",
+      "bssid",
+      "gateway",
+      "addresses"
+    ],
+    "source_locations": [
+      "active_m02_network.py:193-229",
+      "active_m02_service.py:828-837",
+      "active_m02_service.py:963"
+    ],
+    "insufficient": [
+      "RS485 IDs are bus-local, not a group identity.",
+      "Direct peers in one LAN have different path[-1] device IDs.",
+      "Equal SSIDs may identify different LANs; 2.4/5GHz SSIDs may identify the same LAN.",
+      "WiFi/Bluetooth service group graph is not proof of membership in the same RS485 group."
+    ],
+    "next_contract": "Fresh authenticated physical-group membership plus upstream subnet/gateway L2 fingerprint; inherit via verified parent/path; prefer direct viable uplink; preserve fallback and hysteresis."
+  },
+  "tests": {
+    "run": 38,
+    "passed": 37,
+    "skipped": [
+      {
+        "test": "test_wrong_key_tampering_and_replay_rejected (test_network.ProtocolTests.test_wrong_key_tampering_and_replay_rejected)",
+        "reason": "Linux target supplies python3-cryptography"
+      }
+    ],
+    "failures": 0,
+    "errors": 0,
+    "log": "test_5ghz_upgrade_still_occurs_between_direct_uplinks (test_direct_uplink_policy.DirectUplinkPolicyTests.test_5ghz_upgrade_still_occurs_between_direct_uplinks) ... ok\ntest_current_direct_is_retained_even_when_scan_only_sees_relay (test_direct_uplink_policy.DirectUplinkPolicyTests.test_current_direct_is_retained_even_when_scan_only_sees_relay) ... ok\ntest_dwell_and_client_guards_still_apply_to_direct_band_upgrade (test_direct_uplink_policy.DirectUplinkPolicyTests.test_dwell_and_client_guards_still_apply_to_direct_band_upgrade) ... ok\ntest_existing_relay_is_not_misclassified_as_direct (test_direct_uplink_policy.DirectUplinkPolicyTests.test_existing_relay_is_not_misclassified_as_direct) ... ok\ntest_failed_direct_can_fall_back_despite_high_reception (test_direct_uplink_policy.DirectUplinkPolicyTests.test_failed_direct_can_fall_back_despite_high_reception) ... ok\ntest_observed_m02_does_not_leave_healthy_direct_for_5ghz_relay (test_direct_uplink_policy.DirectUplinkPolicyTests.test_observed_m02_does_not_leave_healthy_direct_for_5ghz_relay) ... ok\ntest_unknown_topology_is_not_assumed_to_be_a_proven_direct_uplink (test_direct_uplink_policy.DirectUplinkPolicyTests.test_unknown_topology_is_not_assumed_to_be_a_proven_direct_uplink) ... ok\ntest_usable_5ghz_direct_is_not_replaced_by_even_stronger_peer (test_direct_uplink_policy.DirectUplinkPolicyTests.test_usable_5ghz_direct_is_not_replaced_by_even_stronger_peer) ... ok\ntest_weak_direct_can_fall_back_to_relay (test_direct_uplink_policy.DirectUplinkPolicyTests.test_weak_direct_can_fall_back_to_relay) ... ok\ntest_captive_portal_not_internet (test_network.AdapterTests.test_captive_portal_not_internet) ... ok\ntest_failed_switch_rolls_back (test_network.AdapterTests.test_failed_switch_rolls_back) ... ok\ntest_nmcli_escaped_ssid (test_network.AdapterTests.test_nmcli_escaped_ssid) ... ok\ntest_5ghz_preferred_but_weak_signal_loses (test_network.PolicyTests.test_5ghz_preferred_but_weak_signal_loses) ... ok\ntest_failed_internet_can_failover_with_children (test_network.PolicyTests.test_failed_internet_can_failover_with_children) ... ok\ntest_healthy_ethernet_and_children_keep_connection (test_network.PolicyTests.test_healthy_ethernet_and_children_keep_connection) ... ok\ntest_hysteresis_dwell_and_blacklist (test_network.PolicyTests.test_hysteresis_dwell_and_blacklist) ... ok\ntest_master_priority_and_duplicate_bus_ids (test_network.PolicyTests.test_master_priority_and_duplicate_bus_ids) ... ok\ntest_peer_without_internet_never_gateway (test_network.PolicyTests.test_peer_without_internet_never_gateway) ... ok\ntest_relay_loop_and_hop_limit (test_network.PolicyTests.test_relay_loop_and_hop_limit) ... ok\ntest_relay_subnet_collision_rejected (test_network.PolicyTests.test_relay_subnet_collision_rejected) ... ok\ntest_subnets_do_not_overlap (test_network.PolicyTests.test_subnets_do_not_overlap) ... ok\ntest_expired_gossip_cannot_be_refreshed_by_relay (test_network.ProtocolTests.test_expired_gossip_cannot_be_refreshed_by_relay) ... ok\ntest_sequence_rollback_and_signature_tampering (test_network.ProtocolTests.test_sequence_rollback_and_signature_tampering) ... ok\ntest_wrong_key_tampering_and_replay_rejected (test_network.ProtocolTests.test_wrong_key_tampering_and_replay_rejected) ... skipped 'Linux target supplies python3-cryptography'\ntest_connected_ap_client_interrupts_pending_band_change (test_stability.StabilityTests.test_connected_ap_client_interrupts_pending_band_change) ... ok\ntest_failed_internet_can_leave_5ghz_and_preserves_confirmation (test_stability.StabilityTests.test_failed_internet_can_leave_5ghz_and_preserves_confirmation) ... ok\ntest_healthy_5ghz_stays_on_band_across_repeated_probes (test_stability.StabilityTests.test_healthy_5ghz_stays_on_band_across_repeated_probes) ... ok\ntest_signal_hysteresis_and_weak_5ghz_fallback (test_stability.StabilityTests.test_signal_hysteresis_and_weak_5ghz_fallback) ... ok\ntest_unknown_wan_does_not_create_an_improvement_during_latency_spikes (test_stability.StabilityTests.test_unknown_wan_does_not_create_an_improvement_during_latency_spikes) ... ok\ntest_usable_5ghz_returns_after_dwell_and_persistent_observation (test_stability.StabilityTests.test_usable_5ghz_returns_after_dwell_and_persistent_observation) ... ok\ntest_active_managed_connection_is_eligible_for_credential_distribution (test_profile_selection.ProfileSelection.test_active_managed_connection_is_eligible_for_credential_distribution) ... ok\ntest_active_secret_wins_even_when_old_duplicate_has_higher_priority (test_profile_selection.ProfileSelection.test_active_secret_wins_even_when_old_duplicate_has_higher_priority) ... ok\ntest_verified_donor_seed_wins_over_inactive_recovered_duplicate (test_profile_selection.ProfileSelection.test_verified_donor_seed_wins_over_inactive_recovered_duplicate) ... ok\ntest_failed_current_station_uses_received_password (test_profile_selection.SharedRouterPassword.test_failed_current_station_uses_received_password) ... ok\ntest_local_saved_profile_remains_available_without_service_peer (test_profile_selection.SharedRouterPassword.test_local_saved_profile_remains_available_without_service_peer) ... ok\ntest_peer_password_is_used_instead_of_stored_wrong_password (test_profile_selection.SharedRouterPassword.test_peer_password_is_used_instead_of_stored_wrong_password) ... ok\ntest_stale_profile_cache_is_not_mistaken_for_working_station (test_profile_selection.SharedRouterPassword.test_stale_profile_cache_is_not_mistaken_for_working_station) ... ok\ntest_verified_current_station_password_wins_over_old_peer_record (test_profile_selection.SharedRouterPassword.test_verified_current_station_password_wins_over_old_peer_record) ... ok\n\n----------------------------------------------------------------------\nRan 38 tests in 0.006s\n\nOK (skipped=1)\n"
+  },
+  "sha256": {
+    "HostTools/bmi30_network/policy.py": "7981819974a7e89b673daf7b83bbebe2ff1294596c14c53d63d8791e10c314c3",
+    "HostTools/bmi30_network/test_direct_uplink_policy.py": "72176df65edb6a4f28047fe6592e7b3f820b92b96d9c3393484f496f7630b416",
+    ".tmp/m02-network-disappearance-20261104/active_m02_policy.py": "43b31acb4b214f427df72e86f6f3786216f42205cf1a2adf2b68c970108ff4ce"
+  }
+}

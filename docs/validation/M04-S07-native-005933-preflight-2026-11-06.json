@@ -1,0 +1,51 @@
+{
+  "Core_DC_restart_performed": false,
+  "boards": {
+    "M04": {
+      "archive_sha256": "afc66bad956e10e09c1dfb06dd178aad764ab99c113be34d893a62526ad03f89",
+      "board": "M04",
+      "boot_id": "c2173c2f-d588-43e0-86dc-36fdcee1b76a",
+      "central_preflight": {
+        "daemon_not_running": true,
+        "reserved_RAM_profiles": 0
+      },
+      "evidence_sha256": "c2bae411f36c2ab2fa0bcefaf4840ee9f7adfaaf7d3589adf87e7f521301e2f7",
+      "ok": true,
+      "preflight_only": true,
+      "protected_identity_file_count": 97,
+      "request_path": "/run/bmi30-common-m04-5d51dbebc2274ce6a18c31eff1f56c02/request.json",
+      "root_partuuid": "e1b5c915-02",
+      "stage": "/run/bmi30-common-m04-5d51dbebc2274ce6a18c31eff1f56c02",
+      "target_count": 164,
+      "timestamp_metadata_reference_count": 9,
+      "transaction": "319b0c98ff0e46f6b297b833fcad9873",
+      "version": "2026-11-06-005933",
+      "worker_sha256": "1aa7d0a5489c0a073ed9ffd7c7973bb0a52cf24a1681c448e9090c395ce5dfcf"
+    },
+    "S07": {
+      "archive_sha256": "afc66bad956e10e09c1dfb06dd178aad764ab99c113be34d893a62526ad03f89",
+      "board": "S07",
+      "boot_id": "c64ee473-bd26-4b5a-bac2-365e398322c8",
+      "central_preflight": {
+        "daemon_not_running": true,
+        "reserved_RAM_profiles": 0
+      },
+      "evidence_sha256": "d5205b09ebb0809ee9a2e44b6e2ae390b463e5d8b741c9d43e53cc5f9ce8375b",
+      "ok": true,
+      "preflight_only": true,
+      "protected_identity_file_count": 44,
+      "request_path": "/run/bmi30-common-s07-a6b60cd13b5f4c6aab920c1b9fad6231/request.json",
+      "root_partuuid": "58350b37-02",
+      "stage": "/run/bmi30-common-s07-a6b60cd13b5f4c6aab920c1b9fad6231",
+      "target_count": 164,
+      "timestamp_metadata_reference_count": 28,
+      "transaction": "7a4d51905e0a44779ee26eb01bd137ea",
+      "version": "2026-11-06-005933",
+      "worker_sha256": "9dc2090be82fcf7f91bc13a3f56b3b45fb4c0644e80b5567a3594420851703cb"
+    }
+  },
+  "date": "2026-11-06",
+  "installed": false,
+  "ok": true,
+  "schema": 1
+}

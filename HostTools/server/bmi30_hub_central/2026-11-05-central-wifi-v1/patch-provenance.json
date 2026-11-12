@@ -1,0 +1,10 @@
+{
+  "baseline_main_sha256": "d3eb53e4012c259772ba9b62a6a937150734a188a8c339a7c647dd4dc056bd9c",
+  "candidate_main_sha256": "751bbf23486dbc05cc5bb896d8e585d9384dd951b38453fd5fbcfe2d8767a89f",
+  "central_store_sha256": "410f2560fadd3ba1da3250c408555d68419d855d0aae35ad42c91df8e38c2b9a",
+  "exact_main_additions": 4,
+  "old_firmware_router_preserved": true,
+  "captures_enabled": false,
+  "new_external_server_dependencies": false,
+  "server_deployed": false
+}

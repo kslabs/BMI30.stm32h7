@@ -1,0 +1,627 @@
+{
+  "format": "network-0.2.10-final-runtime-audit-v1",
+  "status": "PASS_bounded_observation_with_intermittent_majority",
+  "boards": {
+    "m02": {
+      "hostname": "BMI30-E29805C7C",
+      "samples": [
+        {
+          "index": 1,
+          "at": 1793809684.9277368,
+          "network_snapshot_age_s": 12.045012712478638,
+          "core_pid": 770,
+          "network_pid": 2587892,
+          "access_pid": 2576287,
+          "mode_observed": {
+            "selected": 6,
+            "stream_mode": 2,
+            "view_mode": 0,
+            "base_buf_len": 200,
+            "freq_hz": 200,
+            "desired_freq": 200,
+            "avg_n": 8,
+            "rpi_avg_n": 12,
+            "det_ratio": 1.9
+          },
+          "core_config_sha256_observed_not_guarded": "0e52cf2d4c0e98802cc37d7b18f348d1548169ab4baf3cad5447975bcfb8341b",
+          "SSID": "VINETA-EL 5GHz",
+          "root_lan": {
+            "age_s": 0.0,
+            "cidr": "192.168.0.0/24",
+            "gateway_ip": "192.168.0.1",
+            "gateway_mac": "70:4f:57:da:0c:53",
+            "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+            "source": "direct",
+            "source_id": "BMI30-E29805C7C",
+            "version": 1
+          },
+          "AP_address": "10.42.0.1/24",
+          "local_group": {
+            "age_s": 41.39563727378845,
+            "available": true,
+            "member_short_ids": [
+              "5F295F47B",
+              "8CC938B79"
+            ],
+            "own_short_id": "5F295F47B",
+            "reason": "fresh complete local RID",
+            "version": 1
+          },
+          "peers": [
+            {
+              "id": "BMI30-C9775FBAE",
+              "available": true,
+              "effective_group_age_s": 42.851269791746745,
+              "source_membership_accepted": true
+            }
+          ],
+          "majority_BSSIDs": [
+            "70:4f:57:da:0c:52"
+          ],
+          "majority_matches_exact_source_recomputation": true,
+          "absence_reason": null,
+          "rx0": 4389249,
+          "rx1": 4389249,
+          "seq_gap0": 1971,
+          "seq_gap1": 2018,
+          "guards": {
+            "Core_PID_unchanged": true,
+            "Core_start_ticks_unchanged": true,
+            "Core_sources_unchanged": true,
+            "runtime_env_unchanged": true,
+            "access_policy_source_unchanged": true
+          },
+          "installed_module_hashes_match_payload": {
+            "service.py": true,
+            "network.py": true,
+            "policy.py": true,
+            "cohesion.py": true,
+            "access.py": true
+          }
+        },
+        {
+          "index": 2,
+          "at": 1793809715.6704853,
+          "network_snapshot_age_s": 0.2911808490753174,
+          "core_pid": 770,
+          "network_pid": 2587892,
+          "access_pid": 2576287,
+          "mode_observed": {
+            "selected": 6,
+            "stream_mode": 2,
+            "view_mode": 0,
+            "base_buf_len": 200,
+            "freq_hz": 200,
+            "desired_freq": 200,
+            "avg_n": 8,
+            "rpi_avg_n": 12,
+            "det_ratio": 1.9
+          },
+          "core_config_sha256_observed_not_guarded": "a37a6298362043c03337cada370e9c60a1a7998062af2f95fc0256f2c2c6b208",
+          "SSID": "VINETA-EL 5GHz",
+          "root_lan": {
+            "age_s": 0.0,
+            "cidr": "192.168.0.0/24",
+            "gateway_ip": "192.168.0.1",
+            "gateway_mac": "70:4f:57:da:0c:53",
+            "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+            "source": "direct",
+            "source_id": "BMI30-E29805C7C",
+            "version": 1
+          },
+          "AP_address": "10.42.0.1/24",
+          "local_group": {
+            "age_s": 42.94487905502319,
+            "available": true,
+            "member_short_ids": [
+              "5F295F47B",
+              "8CC938B79"
+            ],
+            "own_short_id": "5F295F47B",
+            "reason": "fresh complete local RID",
+            "version": 1
+          },
+          "peers": [
+            {
+              "id": "BMI30-C9775FBAE",
+              "available": true,
+              "effective_group_age_s": 42.30890917040233,
+              "source_membership_accepted": true
+            }
+          ],
+          "majority_BSSIDs": [
+            "70:4f:57:da:0c:52"
+          ],
+          "majority_matches_exact_source_recomputation": true,
+          "absence_reason": null,
+          "rx0": 4390712,
+          "rx1": 4390712,
+          "seq_gap0": 1971,
+          "seq_gap1": 2018,
+          "guards": {
+            "Core_PID_unchanged": true,
+            "Core_start_ticks_unchanged": true,
+            "Core_sources_unchanged": true,
+            "runtime_env_unchanged": true,
+            "access_policy_source_unchanged": true
+          },
+          "installed_module_hashes_match_payload": {
+            "service.py": true,
+            "network.py": true,
+            "policy.py": true,
+            "cohesion.py": true,
+            "access.py": true
+          }
+        },
+        {
+          "index": 3,
+          "at": 1793809746.2974856,
+          "network_snapshot_age_s": 8.807006597518921,
+          "core_pid": 770,
+          "network_pid": 2587892,
+          "access_pid": 2576287,
+          "mode_observed": {
+            "selected": 6,
+            "stream_mode": 2,
+            "view_mode": 0,
+            "base_buf_len": 200,
+            "freq_hz": 200,
+            "desired_freq": 200,
+            "avg_n": 8,
+            "rpi_avg_n": 12,
+            "det_ratio": 1.9
+          },
+          "core_config_sha256_observed_not_guarded": "a37a6298362043c03337cada370e9c60a1a7998062af2f95fc0256f2c2c6b208",
+          "SSID": "VINETA-EL 5GHz",
+          "root_lan": {
+            "age_s": 0.0,
+            "cidr": "192.168.0.0/24",
+            "gateway_ip": "192.168.0.1",
+            "gateway_mac": "70:4f:57:da:0c:53",
+            "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+            "source": "direct",
+            "source_id": "BMI30-E29805C7C",
+            "version": 1
+          },
+          "AP_address": "10.42.0.1/24",
+          "local_group": {
+            "age_s": 22.95833468437195,
+            "available": true,
+            "member_short_ids": [
+              "5F295F47B",
+              "8CC938B79"
+            ],
+            "own_short_id": "5F295F47B",
+            "reason": "fresh complete local RID",
+            "version": 1
+          },
+          "peers": [
+            {
+              "id": "BMI30-C9775FBAE",
+              "available": true,
+              "effective_group_age_s": 63.274967626522994,
+              "source_membership_accepted": false
+            }
+          ],
+          "majority_BSSIDs": [],
+          "majority_matches_exact_source_recomputation": true,
+          "absence_reason": "Peer group age plus advertisement age exceeds the 45s cutoff.",
+          "rx0": 4392177,
+          "rx1": 4392177,
+          "seq_gap0": 1971,
+          "seq_gap1": 2018,
+          "guards": {
+            "Core_PID_unchanged": true,
+            "Core_start_ticks_unchanged": true,
+            "Core_sources_unchanged": true,
+            "runtime_env_unchanged": true,
+            "access_policy_source_unchanged": true
+          },
+          "installed_module_hashes_match_payload": {
+            "service.py": true,
+            "network.py": true,
+            "policy.py": true,
+            "cohesion.py": true,
+            "access.py": true
+          }
+        },
+        {
+          "index": 4,
+          "at": 1793809776.9336512,
+          "network_snapshot_age_s": 17.4262752532959,
+          "core_pid": 770,
+          "network_pid": 2587892,
+          "access_pid": 2576287,
+          "mode_observed": {
+            "selected": 6,
+            "stream_mode": 2,
+            "view_mode": 0,
+            "base_buf_len": 200,
+            "freq_hz": 200,
+            "desired_freq": 200,
+            "avg_n": 8,
+            "rpi_avg_n": 12,
+            "det_ratio": 1.9
+          },
+          "core_config_sha256_observed_not_guarded": "a37a6298362043c03337cada370e9c60a1a7998062af2f95fc0256f2c2c6b208",
+          "SSID": "VINETA-EL 5GHz",
+          "root_lan": {
+            "age_s": 0.0,
+            "cidr": "192.168.0.0/24",
+            "gateway_ip": "192.168.0.1",
+            "gateway_mac": "70:4f:57:da:0c:53",
+            "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+            "source": "direct",
+            "source_id": "BMI30-E29805C7C",
+            "version": 1
+          },
+          "AP_address": "10.42.0.1/24",
+          "local_group": {
+            "age_s": 0.0,
+            "available": false,
+            "member_short_ids": [],
+            "own_short_id": "5F295F47B",
+            "reason": "RID identity, freshness or membership unverified",
+            "version": 1
+          },
+          "peers": [
+            {
+              "id": "BMI30-C9775FBAE",
+              "available": true,
+              "effective_group_age_s": 42.85000061572646,
+              "source_membership_accepted": true
+            }
+          ],
+          "majority_BSSIDs": [],
+          "majority_matches_exact_source_recomputation": true,
+          "absence_reason": "Local RID validation unavailable; raw RID is not in this sample, so exact failing predicate is not established.",
+          "rx0": 4393647,
+          "rx1": 4393647,
+          "seq_gap0": 1971,
+          "seq_gap1": 2018,
+          "guards": {
+            "Core_PID_unchanged": true,
+            "Core_start_ticks_unchanged": true,
+            "Core_sources_unchanged": true,
+            "runtime_env_unchanged": true,
+            "access_policy_source_unchanged": true
+          },
+          "installed_module_hashes_match_payload": {
+            "service.py": true,
+            "network.py": true,
+            "policy.py": true,
+            "cohesion.py": true,
+            "access.py": true
+          }
+        }
+      ],
+      "span_s": 92.00591444969177,
+      "all_direct_same_LAN": true,
+      "stable_network_and_access_PIDs": true,
+      "new_frames_ch0": 4398,
+      "new_frames_ch1": 4398,
+      "new_stream_sequence_gaps": 0,
+      "majority_visible_samples": 2,
+      "sample_count": 4,
+      "all_frozen_source_and_Core_lifetime_guards_passed": true
+    },
+    "s07": {
+      "hostname": "BMI30-C9775FBAE",
+      "samples": [
+        {
+          "index": 1,
+          "at": 1793809685.0118153,
+          "network_snapshot_age_s": 8.685063123703003,
+          "core_pid": 704918,
+          "network_pid": 2517149,
+          "access_pid": 2493873,
+          "mode_observed": {
+            "selected": 6,
+            "stream_mode": 2,
+            "view_mode": 0,
+            "base_buf_len": 200,
+            "freq_hz": 200,
+            "desired_freq": 200,
+            "avg_n": 8,
+            "rpi_avg_n": 12,
+            "det_ratio": 1.6
+          },
+          "core_config_sha256_observed_not_guarded": "cba7553b0b1d6453b165fabfdf1e8afbcbae1f2bbbf61ef4cc3943d60019788f",
+          "SSID": "VINETA-EL 5GHz",
+          "root_lan": {
+            "age_s": 0.0,
+            "cidr": "192.168.0.0/24",
+            "gateway_ip": "192.168.0.1",
+            "gateway_mac": "70:4f:57:da:0c:53",
+            "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+            "source": "direct",
+            "source_id": "BMI30-C9775FBAE",
+            "version": 1
+          },
+          "AP_address": "10.187.143.1/24",
+          "local_group": {
+            "age_s": 44.11725068092346,
+            "available": true,
+            "member_short_ids": [
+              "5F295F47B",
+              "8CC938B79"
+            ],
+            "own_short_id": "8CC938B79",
+            "reason": "fresh complete local RID",
+            "version": 1
+          },
+          "peers": [
+            {
+              "id": "BMI30-E29805C7C",
+              "available": true,
+              "effective_group_age_s": 50.69673975578917,
+              "source_membership_accepted": false
+            }
+          ],
+          "majority_BSSIDs": [],
+          "majority_matches_exact_source_recomputation": true,
+          "absence_reason": "Peer group age plus advertisement age exceeds the 45s cutoff.",
+          "rx0": 4541185,
+          "rx1": 4541184,
+          "seq_gap0": 3,
+          "seq_gap1": 3,
+          "guards": {
+            "Core_PID_unchanged": true,
+            "Core_start_ticks_unchanged": true,
+            "Core_sources_unchanged": true,
+            "runtime_env_unchanged": true,
+            "access_policy_source_unchanged": true
+          },
+          "installed_module_hashes_match_payload": {
+            "service.py": true,
+            "network.py": true,
+            "policy.py": true,
+            "cohesion.py": true,
+            "access.py": true
+          }
+        },
+        {
+          "index": 2,
+          "at": 1793809715.6625776,
+          "network_snapshot_age_s": 16.167730808258057,
+          "core_pid": 704918,
+          "network_pid": 2517149,
+          "access_pid": 2493873,
+          "mode_observed": {
+            "selected": 6,
+            "stream_mode": 2,
+            "view_mode": 0,
+            "base_buf_len": 200,
+            "freq_hz": 200,
+            "desired_freq": 200,
+            "avg_n": 8,
+            "rpi_avg_n": 12,
+            "det_ratio": 1.6
+          },
+          "core_config_sha256_observed_not_guarded": "b262e85b7b0c2740467532bb3b561de036a1763f458c745c353bfe73cb3d0780",
+          "SSID": "VINETA-EL 5GHz",
+          "root_lan": {
+            "age_s": 0.0,
+            "cidr": "192.168.0.0/24",
+            "gateway_ip": "192.168.0.1",
+            "gateway_mac": "70:4f:57:da:0c:53",
+            "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+            "source": "direct",
+            "source_id": "BMI30-C9775FBAE",
+            "version": 1
+          },
+          "AP_address": "10.187.143.1/24",
+          "local_group": {
+            "age_s": 21.501619577407837,
+            "available": true,
+            "member_short_ids": [
+              "5F295F47B",
+              "8CC938B79"
+            ],
+            "own_short_id": "8CC938B79",
+            "reason": "fresh complete local RID",
+            "version": 1
+          },
+          "peers": [
+            {
+              "id": "BMI30-E29805C7C",
+              "available": true,
+              "effective_group_age_s": 32.568572830277844,
+              "source_membership_accepted": true
+            }
+          ],
+          "majority_BSSIDs": [
+            "70:4f:57:da:0c:52"
+          ],
+          "majority_matches_exact_source_recomputation": true,
+          "absence_reason": null,
+          "rx0": 4542719,
+          "rx1": 4542718,
+          "seq_gap0": 3,
+          "seq_gap1": 3,
+          "guards": {
+            "Core_PID_unchanged": true,
+            "Core_start_ticks_unchanged": true,
+            "Core_sources_unchanged": true,
+            "runtime_env_unchanged": true,
+            "access_policy_source_unchanged": true
+          },
+          "installed_module_hashes_match_payload": {
+            "service.py": true,
+            "network.py": true,
+            "policy.py": true,
+            "cohesion.py": true,
+            "access.py": true
+          }
+        },
+        {
+          "index": 3,
+          "at": 1793809746.2795942,
+          "network_snapshot_age_s": 0.9927406311035156,
+          "core_pid": 704918,
+          "network_pid": 2517149,
+          "access_pid": 2493873,
+          "mode_observed": {
+            "selected": 6,
+            "stream_mode": 2,
+            "view_mode": 0,
+            "base_buf_len": 200,
+            "freq_hz": 200,
+            "desired_freq": 200,
+            "avg_n": 8,
+            "rpi_avg_n": 12,
+            "det_ratio": 1.6
+          },
+          "core_config_sha256_observed_not_guarded": "b262e85b7b0c2740467532bb3b561de036a1763f458c745c353bfe73cb3d0780",
+          "SSID": "VINETA-EL 5GHz",
+          "root_lan": {
+            "age_s": 0.0,
+            "cidr": "192.168.0.0/24",
+            "gateway_ip": "192.168.0.1",
+            "gateway_mac": "70:4f:57:da:0c:53",
+            "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+            "source": "direct",
+            "source_id": "BMI30-C9775FBAE",
+            "version": 1
+          },
+          "AP_address": "10.187.143.1/24",
+          "local_group": {
+            "age_s": 22.76349115371704,
+            "available": true,
+            "member_short_ids": [
+              "5F295F47B",
+              "8CC938B79"
+            ],
+            "own_short_id": "8CC938B79",
+            "reason": "fresh complete local RID",
+            "version": 1
+          },
+          "peers": [
+            {
+              "id": "BMI30-E29805C7C",
+              "available": true,
+              "effective_group_age_s": 35.4569689303753,
+              "source_membership_accepted": true
+            }
+          ],
+          "majority_BSSIDs": [
+            "70:4f:57:da:0c:52"
+          ],
+          "majority_matches_exact_source_recomputation": true,
+          "absence_reason": null,
+          "rx0": 4544250,
+          "rx1": 4544249,
+          "seq_gap0": 3,
+          "seq_gap1": 3,
+          "guards": {
+            "Core_PID_unchanged": true,
+            "Core_start_ticks_unchanged": true,
+            "Core_sources_unchanged": true,
+            "runtime_env_unchanged": true,
+            "access_policy_source_unchanged": true
+          },
+          "installed_module_hashes_match_payload": {
+            "service.py": true,
+            "network.py": true,
+            "policy.py": true,
+            "cohesion.py": true,
+            "access.py": true
+          }
+        },
+        {
+          "index": 4,
+          "at": 1793809776.94838,
+          "network_snapshot_age_s": 8.524560928344727,
+          "core_pid": 704918,
+          "network_pid": 2517149,
+          "access_pid": 2493873,
+          "mode_observed": {
+            "selected": 6,
+            "stream_mode": 2,
+            "view_mode": 0,
+            "base_buf_len": 200,
+            "freq_hz": 200,
+            "desired_freq": 200,
+            "avg_n": 8,
+            "rpi_avg_n": 12,
+            "det_ratio": 1.6
+          },
+          "core_config_sha256_observed_not_guarded": "b262e85b7b0c2740467532bb3b561de036a1763f458c745c353bfe73cb3d0780",
+          "SSID": "VINETA-EL 5GHz",
+          "root_lan": {
+            "age_s": 0.0,
+            "cidr": "192.168.0.0/24",
+            "gateway_ip": "192.168.0.1",
+            "gateway_mac": "70:4f:57:da:0c:53",
+            "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+            "source": "direct",
+            "source_id": "BMI30-C9775FBAE",
+            "version": 1
+          },
+          "AP_address": "10.187.143.1/24",
+          "local_group": {
+            "age_s": 0.0,
+            "available": false,
+            "member_short_ids": [],
+            "own_short_id": "8CC938B79",
+            "reason": "RID identity, freshness or membership unverified",
+            "version": 1
+          },
+          "peers": [
+            {
+              "id": "BMI30-E29805C7C",
+              "available": false,
+              "effective_group_age_s": 13.15537903898803,
+              "source_membership_accepted": false
+            }
+          ],
+          "majority_BSSIDs": [],
+          "majority_matches_exact_source_recomputation": true,
+          "absence_reason": "Local RID validation unavailable; raw RID is not in this sample, so exact failing predicate is not established.",
+          "rx0": 4545785,
+          "rx1": 4545784,
+          "seq_gap0": 3,
+          "seq_gap1": 3,
+          "guards": {
+            "Core_PID_unchanged": true,
+            "Core_start_ticks_unchanged": true,
+            "Core_sources_unchanged": true,
+            "runtime_env_unchanged": true,
+            "access_policy_source_unchanged": true
+          },
+          "installed_module_hashes_match_payload": {
+            "service.py": true,
+            "network.py": true,
+            "policy.py": true,
+            "cohesion.py": true,
+            "access.py": true
+          }
+        }
+      ],
+      "span_s": 91.93656468391418,
+      "all_direct_same_LAN": true,
+      "stable_network_and_access_PIDs": true,
+      "new_frames_ch0": 4600,
+      "new_frames_ch1": 4600,
+      "new_stream_sequence_gaps": 0,
+      "majority_visible_samples": 2,
+      "sample_count": 4,
+      "all_frozen_source_and_Core_lifetime_guards_passed": true
+    }
+  },
+  "all_eight_majority_results_match_exact_frozen_source": true,
+  "allowed_concurrent_user_changes": "The user manually changed averaging/detector settings during network work. Full Core configuration SHA and detector settings are observed, not treated as immutable guards. No AVG write is attributed to the network patch or owner RID reads.",
+  "what_is_proven": [
+    "Exact five module payload hashes installed on positively identified M02/S07.",
+    "Both directly use the same home upstream LAN in all four samples over about92s.",
+    "Core process lifetimes, Core/engine files, runtime env and access_policy source match prechange guards.",
+    "Network/access process IDs stable; frame counters advance; stream seq-gap counters do not increase during this interval.",
+    "Recorded majority decisions exactly match the frozen helper, including conservative missing evidence."
+  ],
+  "limits": [
+    "Majority is present in2/4 samples per board, not continuously; stale peer age and later unavailable local RID conservatively suppress voting.",
+    "The exact failing RID predicate in sample4 is unknown because full raw Core RID was not captured in that monitor record.",
+    "No live forced failover/return scenario, long duration load test, or physical Casino detection qualification is proved by this monitor.",
+    "This evidence belongs to the completed network-only stage. A later user-authorized STM32/Raspberry upgrade is a separate transaction."
+  ]
+}

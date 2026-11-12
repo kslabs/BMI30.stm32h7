@@ -1,0 +1,78 @@
+{
+  "status": "native_booted_app_running_utilities_pending",
+  "boot_tested": true,
+  "board": "M04",
+  "host": "BMI30-1ED3E6AF5",
+  "physical_cm5": "0d6b7531ed3e6af5",
+  "emmc_cid": "150100424a5444345203123049047b00",
+  "native_boot_id": "c2173c2f-d588-43e0-86dc-36fdcee1b76a",
+  "previous_source_boot_id": "7a435f61-b5d7-4cfe-a14f-a119044e1650",
+  "root": {
+    "device": "/dev/mmcblk0p2",
+    "partuuid": "e1b5c915-02",
+    "filesystem_uuid": "15253693-d0e7-4f2c-8287-477554a3d10c"
+  },
+  "boot": {
+    "device": "/dev/mmcblk0p1",
+    "partuuid": "e1b5c915-01",
+    "filesystem_uuid": "5451-E267"
+  },
+  "firmware_boot_mode": 1,
+  "persistent_EEPROM_config_unchanged": true,
+  "persistent_EEPROM_config_sha256": "5916730c7e1aae1e2dafa1e543ea1d52873fbfec0091ae2bc1fa191b1ed3d67a",
+  "active_source_version": "2026-11-04-185916",
+  "base_bundle": "2026-11-04-175044",
+  "four_production_file_hashes": {
+    "BMI30.001.py.2026-11-04-185916": "cb7415fda8ec8f996b061c9fe37fc032d3db2dec17916c1dc0e7924c7c5cacee",
+    "BMI30.200.py.2026-11-04-185916": "d5905f22c629b6b915f656958e236b48de28288c720a537f1781df954a0d74a6",
+    "bmi30_common_mode.py": "9d0b58edd1c81d217777df6fc6954e2592c36f1f93c51717c5f7a45bd1a1270e",
+    "bmi30_dual_detector.py": "166f1f6ed1e55267462ab18232ed4d4746c3feeb6638b3c65e9ab3f16143c08d"
+  },
+  "verification_source_sha256": "a196b606e0e1b961625356cf0e809685bdccfe78920d994b3795497d1ce1c502",
+  "canonical_verifier_last_result": {
+    "ok": false,
+    "action": "verify",
+    "checked_at": 1793885672.8213322,
+    "boot_id": "c2173c2f-d588-43e0-86dc-36fdcee1b76a",
+    "error_type": "RuntimeError",
+    "reason": "Source USB is mounted"
+  },
+  "passed_before_the_mount_precondition": [
+    "new bootID",
+    "own eMMC root and boot",
+    "firmware boot mode1",
+    "unchanged EEPROM hash",
+    "all four source hashes",
+    "fresh Core and correct running engine",
+    "own portal identity",
+    "fresh network and Internet",
+    "portal active",
+    "RDP daemon and listener"
+  ],
+  "Core": {
+    "code": 0,
+    "stdout": "ExecMainStatus=0\nActiveState=active\nSubState=running",
+    "stderr": ""
+  },
+  "RTC": {
+    "code": 0,
+    "stdout": "ExecMainStatus=0\nActiveState=active\nSubState=running",
+    "stderr": ""
+  },
+  "USB": {
+    "attached": true,
+    "serial": "25072913740186",
+    "boot_partition": {
+      "device": "/dev/sda1",
+      "partuuid": "d6e578d8-01",
+      "desktop_mount": "/media/techaid/BMI30BOOT"
+    },
+    "root_partition": {
+      "device": "/dev/sda2",
+      "partuuid": "d6e578d8-02",
+      "desktop_mount": "/media/techaid/BMI30ROOT"
+    },
+    "is_running_system_medium": false
+  },
+  "scope": "Existing strict native-route evidence only. A mounted secondary USB does not contradict positively identified eMMC root/boot."
+}

@@ -1,0 +1,40 @@
+Language	Мова	Idioma	Sprache	Jazyk	言語	Langue	Idioma	语言	Lingua	Язык
+Interface language	Мова інтерфейсу	Idioma de la interfaz	Sprache der Benutzeroberfläche	Jazyk rozhraní	表示言語	Langue de l’interface	Idioma da interface	界面语言	Lingua dell’interfaccia	Язык интерфейса
+About Device	Про пристрій	Acerca del dispositivo	Geräteinformationen	O zařízení	デバイス情報	À propos de l’appareil	Sobre o dispositivo	设备信息	Informazioni sul dispositivo	Об устройстве
+Tag Detection	Виявлення міток	Detección de etiquetas	Tag-Erkennung	Detekce štítků	タグ検出	Détection des étiquettes	Deteção de etiquetas	标签检测	Rilevamento etichette	Обнаружение меток
+Operating Mode	Режим роботи	Modo de funcionamiento	Betriebsmodus	Provozní režim	動作モード	Mode de fonctionnement	Modo de funcionamento	工作模式	Modalità operativa	Режим работы
+Oscilloscope	Осцилограф	Osciloscopio	Oszilloskop	Osciloskop	オシロスコープ	Oscilloscope	Osciloscópio	示波器	Oscilloscopio	Осциллограф
+Communication	Зв’язок	Comunicación	Kommunikation	Komunikace	通信	Communication	Comunicação	通信	Comunicazione	Связь
+Settings	Налаштування	Ajustes	Einstellungen	Nastavení	設定	Paramètres	Definições	设置	Impostazioni	Настройки
+Indication	Індикація	Indicación	Anzeige	Indikace	表示	Indication	Indicação	指示	Indicazione	Индикация
+Group of Devices	Група пристроїв	Grupo de dispositivos	Gerätegruppe	Skupina zařízení	デバイスグループ	Groupe d’appareils	Grupo de dispositivos	设备组	Gruppo di dispositivi	Группа устройств
+Upper Channel	Верхній канал	Canal superior	Oberer Kanal	Horní kanál	上側チャネル	Canal supérieur	Canal superior	上通道	Canale superiore	Верхний канал
+Lower Channel	Нижній канал	Canal inferior	Unterer Kanal	Dolní kanál	下側チャネル	Canal inférieur	Canal inferior	下通道	Canale inferiore	Нижний канал
+Upper	Верхній	Superior	Oben	Horní	上側	Supérieur	Superior	上	Superiore	Верхний
+Lower	Нижній	Inferior	Unten	Dolní	下側	Inférieur	Inferior	下	Inferiore	Нижний
+Noise measurement area	Область вимірювання шуму	Área de medición del ruido	Bereich der Rauschmessung	Oblast měření šumu	ノイズ測定範囲	Zone de mesure du bruit	Área de medição do ruído	噪声测量范围	Area di misura del rumore	Область измерения шума
+Noise history window	Вікно історії шуму	Ventana del historial de ruido	Zeitfenster der Rauschhistorie	Časové okno historie šumu	ノイズ履歴の時間窓	Fenêtre temporelle du bruit	Janela do histórico de ruído	噪声历史时间窗	Finestra temporale del rumore	Окно истории шума
+Noise estimator	Оцінка шуму	Estimación del ruido	Rauschschätzung	Odhad šumu	ノイズ推定	Estimation du bruit	Estimativa do ruído	噪声估计	Stima del rumore	Оценка шума
+Noise	Шум	Ruido	Rauschen	Šum	ノイズ	Bruit	Ruído	噪声	Rumore	Шум
+NOISE	ШУМ	RUIDO	RAUSCHEN	ŠUM	ノイズ	BRUIT	RUÍDO	噪声	RUMORE	ШУМ
+Signal	Сигнал	Señal	Signal	Signál	信号	Signal	Sinal	信号	Segnale	Сигнал
+Threshold	Поріг	Umbral	Schwelle	Práh	しきい値	Seuil	Limiar	阈值	Soglia	Порог
+Working zone	Робоча зона	Zona de trabajo	Arbeitsbereich	Pracovní oblast	動作範囲	Zone de travail	Zona de trabalho	工作区域	Zona di lavoro	Рабочая зона
+DETECT	ДЕТЕКЦІЯ	DETECCIÓN	ERKENNUNG	DETEKCE	検出	DÉTECTION	DETEÇÃO	检测	RILEVAMENTO	ДЕТЕКЦИЯ
+BASE	ОСНОВА	BASE	BASIS	ZÁKLADNA	基底	BASE	BASE	基底	BASE	ОСНОВАНИЕ
+THR	ПОРІГ	UMBRAL	SCHWELLE	PRÁH	しきい値	SEUIL	LIMIAR	阈值	SOGLIA	ПОРОГ
+AMP	АМПЛ	AMPL	AMPL	AMPL	振幅	AMPL	AMPL	幅度	AMPL	АМПЛ
+Save	Зберегти	Guardar	Speichern	Uložit	保存	Enregistrer	Guardar	保存	Salva	Сохранить
+Close	Закрити	Cerrar	Schließen	Zavřít	閉じる	Fermer	Fechar	关闭	Chiudi	Закрыть
+Off	Вимк.	Desactivado	Aus	Vypnuto	オフ	Désactivé	Desligado	关闭	Disattivato	Выкл.
+On	Увімк.	Activado	Ein	Zapnuto	オン	Activé	Ligado	开启	Attivato	Вкл.
+Enabled	Увімкнено	Habilitado	Aktiviert	Povoleno	有効	Activé	Ativado	已启用	Abilitato	Включено
+Disabled	Вимкнено	Deshabilitado	Deaktiviert	Zakázáno	無効	Désactivé	Desativado	已禁用	Disabilitato	Выключено
+Connected	Підключено	Conectado	Verbunden	Připojeno	接続済み	Connecté	Ligado	已连接	Connesso	Подключено
+Disconnected	Відключено	Desconectado	Getrennt	Odpojeno	未接続	Déconnecté	Desligado	未连接	Disconnesso	Отключено
+Waiting for data	Очікування даних	Esperando datos	Warten auf Daten	Čekání na data	データ待機中	En attente de données	A aguardar dados	等待数据	In attesa di dati	Ожидание данных
+Tag	Мітка	Etiqueta	Tag	Štítek	タグ	Étiquette	Etiqueta	标签	Etichetta	Метка
+False	Хибна детекція	Falsa detección	Fehlerkennung	Falešná detekce	誤検出	Fausse détection	Falsa deteção	误检	Falso rilevamento	Ложная детекция
+Samples	Відліки	Muestras	Abtastwerte	Vzorky	サンプル	Échantillons	Amostras	采样点	Campioni	Отсчёты
+start	початок	inicio	Anfang	začátek	開始	début	início	起点	inizio	начало
+end	кінець	fin	Ende	konec	終了	fin	fim	终点	fine	конец

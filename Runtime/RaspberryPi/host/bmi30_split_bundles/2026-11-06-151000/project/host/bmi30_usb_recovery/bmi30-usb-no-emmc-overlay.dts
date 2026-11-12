@@ -1,0 +1,13 @@
+/dts-v1/;
+/plugin/;
+
+/* CM5 emergency USB only. SDIO Wi-Fi at /axi/mmc@1100000 is unchanged. */
+/ {
+    compatible = "brcm,bcm2712";
+    fragment@0 {
+        target-path = "/soc@107c000000/mmc@fff000";
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+};

@@ -1,0 +1,196 @@
+Vendor USB host report (for firmware team)
+Date: 2025-09-15
+Host: RPi/Linux (libusb via PyUSB)
+Device: VID=0xCAFE PID=0x4001
+
+Firmware change (device-side, provided by FW team)
+- usbd_cdc_custom.c: In USBD_CDCVND_DataIn for VND_IN_EP, ZLP is disabled. Completion is detected on last DATA IN regardless of multiple-of-64 packet sizes. total_length is cleared, vnd_tx_busy reset, and USBD_VND_TxCplt() called immediately. Goal: remove rare FS/libusb stalls on RPi at exact 64B multiples and stabilize first A/B and STOP ACK.
+
+1) Detected configuration
+- cfg=1 with 3 interfaces
+- IF#0 cls=0x02 (CDC control)
+  EP 0x82 attr=3 maxpkt=8
+- IF#1 cls=0x0A (CDC data)
+  EP 0x01 attr=2 maxpkt=64
+  EP 0x81 attr=2 maxpkt=64
+- IF#2 cls=0xFF (Vendor)
+  EP OUT 0x03 attr=2 maxpkt=64
+  EP IN  0x83 attr=2 maxpkt=64
+
+2) Commands transmitted (Bulk OUT 0x03)
+- START  (0x20) — sent once
+- GET_STATUS (0x30) — sent once (in probe), and once after first pair attempt (in start_and_read)
+- STOP   (0x21) — sent once at end of each run
+
+3) Observed responses (Bulk IN 0x83)
+- No data received on 0x83 after START (multiple reads, 600–1000 ms timeouts)
+- No STAT received after GET_STATUS (Bulk OUT 0x30)
+- No STAT received after STOP (0x21)
+
+4) Raw host logs (verbatim)
+A) usb_vendor_probe.py
+cfg=1 with 3 interfaces
+IF#0 cls=0x02 alt=0
+  EP 0x82 attr=3 maxpkt=8
+IF#1 cls=0x0A alt=0
+  EP 0x01 attr=2 maxpkt=64
+  EP 0x81 attr=2 maxpkt=64
+IF#2 cls=0xFF alt=0
+  EP 0x03 attr=2 maxpkt=64
+  EP 0x83 attr=2 maxpkt=64
+
+[probe] trying START/GET_STATUS on each vendor IF...
+-- IF#2 outs=['0x3'] ins=['0x83']
+  [TX] START -> EP_OUT 0x03, n=1
+  [RX] EP 0x83 timeout 0: [Errno 110] Operation timed out
+  [RX] EP 0x83 timeout 1: [Errno 110] Operation timed out
+  [RX] EP 0x83 timeout 2: [Errno 110] Operation timed out
+  [TX] GET_STATUS on EP_OUT 0x03
+  [RX] after GET_STATUS 0x83 timeout: [Errno 110] Operation timed out
+
+B) vendor_usb_start_and_read.py
+[TX] START (0x20)
+[..] no immediate STAT: [Errno 110] Operation timed out
+[TX] STOP (0x21)
+[..] STOP STAT wait: [Errno 110] Operation timed out
+
+C) vendor_compliance_check.py
+[info] opened CAFE:4001 IF=2 EPs IN=0x83 OUT=0x3
+
+RESULT: FAIL
+ - GET_STATUS: no 'STAT'
+ - STOP: no 'STAT'
+ - no working frames to lock total_samples
+Notes:
+ * warning: test frame (flags=0x81,total=8) not observed; treating as optional
+
+5) Conclusion
+- Host sees correct Vendor interface and endpoints (OUT 0x03, IN 0x83)
+- Bulk OUT commands are delivered (n=1 bytes written)
+- Device returns no data on 0x83 (no STAT/TEST/A/B) under current firmware build
+
+6) Expected device UART log after START (for comparison)
+- [CMD] 0x20 len=1
+- [VND_TX] ep=0x83 len=64 head=53 54 41 54 … (ACK-STAT)
+- [VND_TX] ep=0x83 len=48 head=5A A5 01 80 … (TEST)
+- Repeating per pair:
+  - [VND_TX] ep=0x83 len=1856 head=5A A5 01 01 … (A)
+  - [VND_TX] ep=0x83 len=1856 head=5A A5 01 02 … (B)
+- GET_STATUS mid-stream: exactly one STAT between pairs
+- STOP: STAT, then stream stops
+
+7) Suggested firmware checks
+- Confirm DataOut (EP 0x03) re-arms USBD_LL_PrepareReceive() after every OUT
+- In task, on START: set status_ack_pending, then send STAT (permit_once), then TEST (48B), then A/B frames
+- Ensure all IN traffic uses EP 0x83 and lengths are exactly 64/48/1856 bytes respectively
+- GET_STATUS: always produce one STAT between pairs (gate via permit_once)
+- STOP: send STAT first; stop streaming only after TxCplt
+- Verify adc_stream_on_new_frames() kicks the task; STAT counters show dma_full growth
+
+  8) New host runs (2025-09-15)
+  A) HostTools/rpi_vendor_minimal.py
+    [HOST] START sent
+    [HOST_RX] len=112 type=STAT head=53 54 41 54
+    [HOST_RX] len=512 type=A head=5A A5 01 01
+    [HOST_RX] len=512 type=UNK head=00 00 00 00
+    [HOST_RX] len=512 type=UNK head=00 00 00 00
+    [HOST_RX] len=512 type=UNK head=00 00 00 00
+    [HOST_RX] len=512 type=UNK head=00 00 00 00
+    [HOST] STOP sent
+    Note: reading raw 512B USB packets; first chunk recognized as 'A'; following 3–4 chunks were zeros (unexpected vs 1856B frame continuation).
+
+  B) vendor_usb_start_and_read.py (pairs=3, timeout=800ms)
+    [open] CAFE:4001 IF#2 OUT=0x03 IN=0x83
+    [TX] START (0x20)
+    [RX] first IN len=64 head=00 00 00 00 …
+    [RX] A len=1856 seq=2 total=912
+    [TX] STOP (0x21)
+    [..] STOP STAT wait: [Errno 110] Operation timed out
+
+  C) vendor_usb_start_and_read.py (pairs=1, timeout=1200ms)
+    [open] CAFE:4001 IF#2 OUT=0x03 IN=0x83
+    [TX] START (0x20)
+    [RX] STAT len=64 head=53 54 41 54 01 00 00 00 20 00 00 00 00 00 00 00 …
+    [RX] TEST len=48 ver=1 flags=0x80 seq=0
+    [RX] A len=1856 seq=1 total=912
+    [RX] B len=1856 seq=1 total=912
+    [TX] GET_STATUS (0x30)
+    [TX] STOP (0x21)
+    [..] STOP STAT wait: [Errno 110] Operation timed out
+    Note: Excellent START→STAT→TEST→A/B observed. STAT for STOP not observed. STAT for GET_STATUS may have been gated but not delivered before STOP; separate GET_STATUS run recommended.
+
+9) New firmware check (2025-09-15, later build)
+A) vendor_usb_start_and_read.py (pairs=2, timeout=1200ms)
+  [open] CAFE:4001 IF#2 OUT=0x03 IN=0x83
+  [TX] START (0x20)
+  [RX] STAT len=64 … (ACK-START)
+  [RX] TEST len=48 …
+  [RX] A 1856 …
+  [RX] B 1856 …
+  [TX] GET_STATUS (0x30)
+  [TX] STOP (0x21)
+  [RX] STAT (STOP) len=64 …  — OK
+
+B) vendor_compliance_check.py
+  Run #1: FAIL — STOP: no 'STAT'; no working frames to lock; Notes: STAT mid-stream
+  Run #2: FAIL — STOP: no 'STAT'; no working frames to lock; Notes: test frame seen; STAT mid-stream
+  Comment: main script observes frames and STOP→STAT, but compliance tool didn’t lock frames (likely timing/reader differences); needs alignment or increased read window.
+
+10) Raspberry Pi test checklist (no‑ZLP build)
+- Dependencies
+  - sudo apt-get update && sudo apt-get install -y python3-pip libusb-1.0-0-dev
+  - pip3 install pyusb
+  - Optional udev rule (to avoid sudo): SUBSYSTEM=="usb", ATTR{idVendor}=="CAFE", ATTR{idProduct}=="4001", MODE="0666"; or run scripts with sudo
+- Connect and verify device (lsusb; run usb_vendor_probe.py to list EPs)
+- Start and read:
+  - sudo python3 vendor_usb_start_and_read.py --pairs 2
+  - Expect: STAT(64), TEST(48), then A(1856)/B(1856); GET_STATUS => exactly one STAT between A and B
+- STOP and ACK:
+  - sudo python3 vendor_stop_and_status_check.py --wait-stop-stat-s 2.0
+  - Expect: one STAT promptly on STOP; stream ends on TxCplt of this STAT (no ZLP)
+- Mid‑stream GET_STATUS (optional):
+  - Send after A before B; or rely on start_and_read doing it once after first pair
+
+11) Live verification after reconnect (2025‑09‑15)
+A) usb_vendor_probe.py
+cfg=1 with 3 interfaces
+IF#0 cls=0x02 alt=0
+  EP 0x82 attr=3 maxpkt=8
+IF#1 cls=0x0A alt=0
+  EP 0x01 attr=2 maxpkt=64
+  EP 0x81 attr=2 maxpkt=64
+IF#2 cls=0xFF alt=0
+  EP 0x03 attr=2 maxpkt=64
+  EP 0x83 attr=2 maxpkt=64
+
+[probe] trying START/GET_STATUS on each vendor IF...
+-- IF#2 outs=['0x3'] ins=['0x83']
+  [TX] START -> EP_OUT 0x03, n=1
+  [RX] from EP_IN 0x83 len=112 tag=STAT head=53 54 41 54 01 00 00 00 20 00 00 00 00 00 00 00 …
+  [RX] from EP_IN 0x83 len=2048 tag=DATA head=5A A5 01 01 01 00 00 00 35 84 09 00 90 03 00 00 …
+  [RX] from EP_IN 0x83 len=1664 tag=DATA head=00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 …
+  [TX] GET_STATUS on EP_OUT 0x03
+  [RX] after GET_STATUS from 0x83 len=64 tag=STAT head=53 54 41 54 01 00 90 03 40 07 01 00 00 00 00 00 …
+
+B) vendor_usb_start_and_read.py
+[open] CAFE:4001 IF#2 OUT=0x03 IN=0x83
+[TX] START (0x20)
+[RX] first IN len=64 head=5A A5 01 01 02 00 00 00 9F 86 09 00 90 03 00 00 …
+[RX] A len=1856 seq=2 total=912
+[RX] B len=1856 seq=2 total=912
+[TX] GET_STATUS (0x30)
+[RX] STAT (GET_STATUS) len=2048 head=53 54 41 54 01 00 90 03 40 07 01 00 01 00 00 00 …
+[TX] STOP (0x21)
+[RX] STAT (STOP) len=64 head=53 54 41 54 01 00 00 00 20 00 01 00 00 00 00 00 …
+
+C) vendor_compliance_check.py
+[info] opened CAFE:4001 IF=2 EPs IN=0x83 OUT=0x3
+[lock] total_samples=912
+[dbg] gate: size_locked=912 pairs_collected=1
+[ok] GET_STATUS len=3776 head=53 54 41 54 01 00 90 03 40 07 01 00 00 00 00 00 …
+[ok] STOP→STAT len=1920 head=53 54 41 54 01 00 00 00 20 00 01 00 00 00 00 00 …
+
+RESULT: PASS
+locked total_samples=912
+
+Note: STAT lengths >64B shown above are due to aggregated reads in host scripts; device sends STAT as 64B blocks, which may be coalesced by host reads. This is expected and does not affect protocol correctness.

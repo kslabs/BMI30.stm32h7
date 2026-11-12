@@ -24,6 +24,7 @@
 #include "usbd_def.h"
 #include "usbd_core.h"
 #include "usbd_cdc.h"
+#include "usb_vendor_app.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -207,6 +208,7 @@ static void PCD_ResetCallback(PCD_HandleTypeDef *hpcd)
 void HAL_PCD_ResetCallback(PCD_HandleTypeDef *hpcd)
 #endif /* USE_HAL_PCD_REGISTER_CALLBACKS */
 {
+  vnd_host_session_revoke();
   USBD_SpeedTypeDef speed = USBD_SPEED_FULL;
 
   if ( hpcd->Init.speed == PCD_SPEED_HIGH)
@@ -240,6 +242,7 @@ static void PCD_SuspendCallback(PCD_HandleTypeDef *hpcd)
 void HAL_PCD_SuspendCallback(PCD_HandleTypeDef *hpcd)
 #endif /* USE_HAL_PCD_REGISTER_CALLBACKS */
 {
+  vnd_host_session_revoke();
   /* Inform USB library that core enters in suspend Mode. */
   USBD_LL_Suspend((USBD_HandleTypeDef*)hpcd->pData);
   __HAL_PCD_GATE_PHYCLOCK(hpcd);
@@ -329,6 +332,7 @@ static void PCD_DisconnectCallback(PCD_HandleTypeDef *hpcd)
 void HAL_PCD_DisconnectCallback(PCD_HandleTypeDef *hpcd)
 #endif /* USE_HAL_PCD_REGISTER_CALLBACKS */
 {
+  vnd_host_session_revoke();
   USBD_LL_DevDisconnected((USBD_HandleTypeDef*)hpcd->pData);
   /* USER CODE BEGIN DISCONNECT_EVT */
   /* On disconnect, clear the timestamp so UI can show USB:-- */
@@ -421,6 +425,7 @@ USBD_StatusTypeDef USBD_LL_DeInit(USBD_HandleTypeDef *pdev)
   HAL_StatusTypeDef hal_status = HAL_OK;
   USBD_StatusTypeDef usb_status = USBD_OK;
 
+  vnd_host_session_revoke();
   hal_status = HAL_PCD_DeInit(pdev->pData);
 
   usb_status =  USBD_Get_USB_Status(hal_status);
@@ -455,6 +460,7 @@ USBD_StatusTypeDef USBD_LL_Stop(USBD_HandleTypeDef *pdev)
   HAL_StatusTypeDef hal_status = HAL_OK;
   USBD_StatusTypeDef usb_status = USBD_OK;
 
+  vnd_host_session_revoke();
   hal_status = HAL_PCD_Stop(pdev->pData);
 
   usb_status =  USBD_Get_USB_Status(hal_status);
@@ -728,6 +734,7 @@ void USB_LL_SetSoftDisconnect(uint8_t enable)
 {
   if (enable) {
     /* Остановка USB-периферии: хост воспринимает как временное отключение */
+    vnd_host_session_revoke();
     HAL_PCD_Stop(&hpcd_USB_OTG_HS);
     g_usb_softdisc_active = 1;
   } else {

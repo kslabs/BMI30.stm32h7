@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "compile_pass": true,
+  "device_calls": false,
+  "helper_sha256": "98a1b08959b1531d372affdc94adc10bfc3bd744b4af4950c6b0a07b526dd7ab",
+  "audit_sha256": "66b14882b7399f313d995097f4bc10a4109e6aa910371ecdddabf98d3a92c40d",
+  "plan_sha256": "9f9394ad781c7fc6d7cdda9292822d8a90735c7714bd7c16dbcb5cba735f3554",
+  "exact_source_file_scope_checks_passed": 4,
+  "checks": [
+    "Legitimate ancillary selectorhash drift accepted",
+    "Ancillaryselectorbytes unchanged by actual files() function",
+    "Changed approved publiccode rejected",
+    "Matching approved publiccode accepted"
+  ],
+  "scope": "Only public code under four approvedROOTS pinnedexactinstallhash; otherassets fingerprintcurrentbeforeafter andreport plannedhashdrift; never write anyfile",
+  "directories_pinned": 250,
+  "checked_at": 1793885635.365029
+}

@@ -1,0 +1,19 @@
+{
+  "format": "peer-deploy-runtime-transition-review-v1",
+  "helper_sha256": "fb9d89e21c3297b055a6acf2d9c6fee09667a8530cf237b7bca8107fd99c144c",
+  "syntax": "PASS",
+  "source_executed_transition_cases": 3,
+  "systemd_runtime_directory_removal_simulated": true,
+  "absent_parent_recreated_before_claim": true,
+  "foreign_owner_preserved": true,
+  "still_live_access_rejected": true,
+  "success_trace": [
+    "systemd_removed_runtime",
+    "mkdir",
+    "O_EXCL",
+    "write_own_token",
+    "refresh"
+  ],
+  "no_live_actions": true,
+  "limits": "Exact extracted transition executed with fake systemctl/path operations; Linux systemd behavior based on root-provided RuntimeDirectory metadata, not executed by reviewer"
+}

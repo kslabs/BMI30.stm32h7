@@ -49,7 +49,7 @@ def check_phase(state, expected, enabled=None):
         assert on == enabled, state
     assert int(state["pa1"]) == int(not (on and (s ^ expected[0]))), state
     assert int(state["pa2"]) == int(bool(on and (s ^ expected[1]))), state
-    assert int(state["pc7"]) == int(bool(on and s)), state
+    assert int(state["pc7"]) == int(bool(on and (s ^ expected[0]))), state
     assert state["adc_pause"] == "0", state
 
 
@@ -71,7 +71,7 @@ def exercise(board):
     tx_request = int(initial["tx_req"])
     version = board.command("VER", "VERSION ")
     baseline = board.command("SYNCSTATE", "SYNC_STATE ")
-    assert version["fw"] == "1.2.46", version
+    assert tuple(map(int, version["fw"].split('.'))) >= (1, 2, 56), version
     assert initial["stream"] == "1", "An existing USB stream is required for GPIO checks"
     expected = original[:]
     samples = []
@@ -87,6 +87,9 @@ def exercise(board):
                 check_phase(board.command("TXPH"), expected, enabled=1)
             levels_seen = set()
             for _ in range(12):
+                # UART replies can be an exact multiple of the marker period.
+                # Vary the poll delay so both half-cycles can be observed.
+                time.sleep(0.0013 + _ * 0.00037)
                 state = board.command("TXPH")
                 check_phase(state, expected, enabled=1)
                 levels_seen.add(int(state["marker_phase"]))

@@ -1,0 +1,285 @@
+{
+  "format": 1,
+  "created_at": 1793880209.2940795,
+  "physical_serial": "0d6b7531ed3e6af5",
+  "status": "native_booted_app_running_utilities_pending",
+  "state": "NATIVE_BOOT_CONFIRMED_APP_RUNNING_UTILITIES_NOT_UPDATED",
+  "boot_tested": true,
+  "files": {
+    "code-directory-permission-correction.json": {
+      "bytes": 899,
+      "sha256": "7e66148bb9890c3ae184d0619fd2a14ce10b7c2784b07ee192e29c9d27ece6ae"
+    },
+    "deployment-summary.json": {
+      "bytes": 3435,
+      "sha256": "23d594659d36df639953dad8c3051e4b6fe4e69a810c1de2a9b156f79aab2663"
+    },
+    "installation-complete.json": {
+      "bytes": 1107,
+      "sha256": "abac587d8b5e497c2b5ce274a3cc017f3bf0aaa7106e84dca982e0bdb71efc3d"
+    },
+    "installed-source-provenance.json": {
+      "bytes": 1066,
+      "sha256": "4dcec0fe10482e98ecee753f3a615e86b173cbab6bb66cd0e9ab59ccb01a88dd"
+    },
+    "native-boot-runtime-verification.json": {
+      "bytes": 2779,
+      "sha256": "4f44b99df899e5aaf8214f767b883ff5a18d1df6a17c2e46347a109aeb62a86c"
+    },
+    "native-runtime-physical-MCU.json": {
+      "bytes": 4322,
+      "sha256": "64fb49abaca3f43c9b9873c6829410b1b6105af8d86685a95d1ed16ee1634e22"
+    },
+    "network-own-AP-verification.json": {
+      "bytes": 975,
+      "sha256": "962cfd4aaf175aca0e293f4bc72b67e201386d04a77bc5f280fe16d6141a72e2"
+    },
+    "own-configuration-comparison.json": {
+      "bytes": 419,
+      "sha256": "efbeb6625856f9e7474a53de49a726cd68fced9c66903f77bfeb349f28354eb7"
+    },
+    "README_RU.md": {
+      "bytes": 6740,
+      "sha256": "131ced758f8a07457a14bc92f6e74686168e66caddb9c41ecdfa2e41ab16256e"
+    },
+    "ssh-access-prepared.json": {
+      "bytes": 462,
+      "sha256": "fb48f8271b32be88dd52f44188034a17a3ac2f238320e72fc2ebc141fb43800c"
+    },
+    "utilities-update-pending.json": {
+      "bytes": 1174,
+      "sha256": "6cc5d7f11afc62a66d165db79bd6b28afbfd47d6c286c6009f39c0898a6330b9"
+    },
+    "validation/native-code-permissions-v2-independent-review.json": {
+      "bytes": 966,
+      "sha256": "8f13ab11eb690bb257eb87b9b8abbd8139f4ec2baa2e99ad776ca15cc82b7bf8"
+    },
+    "validation/native-code-permissions-v2-local-validation.json": {
+      "bytes": 834,
+      "sha256": "1713eb5108187a1e148f3edbf028ab11b4311f085824f7391c5eee8c057884bc"
+    },
+    "validation/native-compatibility-review.json": {
+      "bytes": 4356,
+      "sha256": "23f8218b63f52a5bf3517b5c2b7d2aeed194f03119308bdf3d1b2914efd989c9"
+    },
+    "validation/native-install-independent-review.json": {
+      "bytes": 7033,
+      "sha256": "83cc7719c3ba66d70b0fbed5745406908d8962550f5554f1de08ffa5876f6dea"
+    },
+    "validation/native-marker-guard-validation.json": {
+      "bytes": 2254,
+      "sha256": "1ef0e3db752951b9504a2816111385c477a8e654696430a3355ddd612f2dbc05"
+    },
+    "validation/native-plan-delta-validation.json": {
+      "bytes": 1744,
+      "sha256": "c5f08384a7fbdc30931bc44b9b164d331de9c0e6635c71db583a737a412e9129"
+    },
+    "validation/native-ssh-access-independent-review.json": {
+      "bytes": 1440,
+      "sha256": "b8ad574403cefd83d6ff4f1f41015e71997b7d477e5e1bea08243c7b19381d5c"
+    },
+    "validation/native-ssh-access-validation.json": {
+      "bytes": 3465,
+      "sha256": "cce1e2b98b90b10963f9ae201bd30d4b30a7a50e050c530177817fa1b7e25570"
+    }
+  },
+  "source_evidence": {
+    "deployment-summary.json": {
+      "sources": [
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-boot-verify.json",
+          "source_sha256": "b7f9a8c1717c5430f89b8a016f0bcc70aa047f818853eb08863f74883e80eedd"
+        },
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-storage-runtime-inspection.json",
+          "source_sha256": "5e0e144afdeec3e06470aa58b666726b6013547fcd1fbb9d1e64240e5d1b8acf"
+        },
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-code-permission-repair-result.json",
+          "source_sha256": "804467b973fc005016f26a77ca1cb6c88acb8556d238c5a643560308d860b4f1"
+        },
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/m04-native-config-comparison.json",
+          "source_sha256": "0d91472652211e51f2f1bed7bff1dbe28d9c34cf987b4ab1d3621c6ac8a1283f"
+        },
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-stm-version-physical-source-readonly.json",
+          "source_sha256": "c6bc381a13b2726f150183e7894966cd6e6e5340215cfdc86cf69f32cc167088"
+        },
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-terminal-menu-code.json",
+          "source_sha256": "33a32f9955541f644b348a332abdc14860efec016c1f90792e29e686f690f5eb"
+        }
+      ],
+      "selection": "Curated existing proof only; no configuration, key or private-backup content."
+    },
+    "installation-complete.json": {
+      "source": ".tmp/m04-update-as-s07-20261105/native-install-watch.json",
+      "source_sha256": "5bb7692104612e4f616baf13db1d5398cd24b6ec0704adcb991b3e931bdd6611",
+      "selection": "sanitized structured fields; no configuration or key content"
+    },
+    "ssh-access-prepared.json": {
+      "source": ".tmp/m04-update-as-s07-20261105/native-ssh-access-result.json",
+      "source_sha256": "2b2278c6f6acdede58d832a38a94c052bfb1f2f7396c7c6bc08bec48229ed55b",
+      "selection": "sanitized structured fields; no configuration or key content"
+    },
+    "installed-source-provenance.json": {
+      "source": ".tmp/m04-update-as-s07-20261105/native-plan-delta-validation.json",
+      "source_sha256": "84885d6ae1de0eab802fe140f658fdf07bb56a5d83dd2db2f3577f2e440bbbee",
+      "selection": "sanitized structured fields; no configuration or key content"
+    },
+    "validation/native-compatibility-review.json": {
+      "source": ".tmp/m04-update-as-s07-20261105/native-RPi-compatibility-review.json",
+      "source_sha256": "2966f53b56e098b0fd5ffa20922407250f5181e04ed05f60612d20e1a11c6708",
+      "selection": "sanitized structured fields; no configuration or key content"
+    },
+    "validation/native-plan-delta-validation.json": {
+      "source": ".tmp/m04-update-as-s07-20261105/native-plan-delta-validation.json",
+      "source_sha256": "84885d6ae1de0eab802fe140f658fdf07bb56a5d83dd2db2f3577f2e440bbbee",
+      "selection": "sanitized structured fields; no configuration or key content"
+    },
+    "validation/native-install-independent-review.json": {
+      "source": ".tmp/m04-update-as-s07-20261105/native-install-independent-review.json",
+      "source_sha256": "fdf6988aef3613233bafe20f8d84cd4e907fed6749db5d34e1dfefd4b8bd80e1",
+      "selection": "sanitized structured fields; no configuration or key content"
+    },
+    "validation/native-marker-guard-validation.json": {
+      "source": ".tmp/m04-update-as-s07-20261105/native-marker-guard-validation.json",
+      "source_sha256": "aa746ca7905b6d6ddba542a6ec18e2837ec515fad557ed48f88d07ef69ce2372",
+      "selection": "sanitized structured fields; no configuration or key content"
+    },
+    "validation/native-ssh-access-validation.json": {
+      "source": ".tmp/m04-update-as-s07-20261105/native-ssh-access-validation.json",
+      "source_sha256": "851c903704058b8b893c32a2129c52f9afa7a682ad13d44f3a4ba84349083978",
+      "selection": "sanitized structured fields; no configuration or key content"
+    },
+    "validation/native-ssh-access-independent-review.json": {
+      "source": ".tmp/m04-update-as-s07-20261105/native-ssh-access-independent-review.json",
+      "source_sha256": "17163752cb68827327285cfb789a4a01b77d3591115e230c6a5fac15fd55a9b3",
+      "selection": "sanitized structured fields; no configuration or key content"
+    },
+    "native-boot-runtime-verification.json": {
+      "sources": [
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-boot-verify.json",
+          "source_sha256": "b7f9a8c1717c5430f89b8a016f0bcc70aa047f818853eb08863f74883e80eedd"
+        },
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-boot-before.json",
+          "source_sha256": "faf46ef5c949b372526a5fb3f11cb34ff98fd54b96d753ab66c76142db990613"
+        },
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-storage-runtime-inspection.json",
+          "source_sha256": "5e0e144afdeec3e06470aa58b666726b6013547fcd1fbb9d1e64240e5d1b8acf"
+        },
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native_boot_control.py",
+          "source_sha256": "a196b606e0e1b961625356cf0e809685bdccfe78920d994b3795497d1ce1c502"
+        },
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/m04-before-off.json",
+          "source_sha256": "c25bb2173d806173d0a4312ca83debd0faff97d716cface7f0923211ee68446c"
+        }
+      ],
+      "selection": "Curated existing proof only; no configuration, key or private-backup content."
+    },
+    "code-directory-permission-correction.json": {
+      "sources": [
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-code-permission-repair-result.json",
+          "source_sha256": "804467b973fc005016f26a77ca1cb6c88acb8556d238c5a643560308d860b4f1"
+        }
+      ],
+      "selection": "Curated existing proof only; no configuration, key or private-backup content."
+    },
+    "own-configuration-comparison.json": {
+      "sources": [
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/m04-native-config-comparison.json",
+          "source_sha256": "0d91472652211e51f2f1bed7bff1dbe28d9c34cf987b4ab1d3621c6ac8a1283f"
+        }
+      ],
+      "selection": "Curated existing proof only; no configuration, key or private-backup content."
+    },
+    "network-own-AP-verification.json": {
+      "sources": [
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-network-live-verification.json",
+          "source_sha256": "1775963fbda22822300ab0f5dfaab6b865ef55be217c69f219e0a1af26a0e6ab"
+        }
+      ],
+      "selection": "Curated existing proof only; no configuration, key or private-backup content."
+    },
+    "native-runtime-physical-MCU.json": {
+      "sources": [
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-stm-version-physical-source-readonly.json",
+          "source_sha256": "c6bc381a13b2726f150183e7894966cd6e6e5340215cfdc86cf69f32cc167088"
+        }
+      ],
+      "selection": "Curated existing proof only; no configuration, key or private-backup content."
+    },
+    "utilities-update-pending.json": {
+      "sources": [
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-terminal-menu-code.json",
+          "source_sha256": "33a32f9955541f644b348a332abdc14860efec016c1f90792e29e686f690f5eb"
+        },
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/s07-utilities-tree-readonly.json",
+          "source_sha256": "123cb9eb74004c08a04b91958700f19f7fcec0b395bf8a5e9493f8de7a7799cf"
+        }
+      ],
+      "selection": "Curated existing proof only; no configuration, key or private-backup content."
+    },
+    "validation/native-code-permissions-v2-local-validation.json": {
+      "sources": [
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-code-permissions-v2-local-validation.json",
+          "source_sha256": "9bd72d3ac1089444aee8674d51764796fcfa02e442a500ed0694ae336bb84970"
+        }
+      ],
+      "selection": "Curated existing proof only; no configuration, key or private-backup content."
+    },
+    "validation/native-code-permissions-v2-independent-review.json": {
+      "sources": [
+        {
+          "source": ".tmp/m04-update-as-s07-20261105/native-code-permissions-v2-independent-review.json",
+          "source_sha256": "e4cc0a9a9ea8d17d09e991db992244399230e68ea835407a0c68ec86bcebd63a"
+        }
+      ],
+      "selection": "Curated existing proof only; no configuration, key or private-backup content."
+    },
+    "README_RU.md": {
+      "sources": [],
+      "selection": "Curated existing proof only; no configuration, key or private-backup content."
+    }
+  },
+  "input_evidence_sha256": {
+    "native-install-watch.json": "5bb7692104612e4f616baf13db1d5398cd24b6ec0704adcb991b3e931bdd6611",
+    "native-ssh-access-result.json": "2b2278c6f6acdede58d832a38a94c052bfb1f2f7396c7c6bc08bec48229ed55b",
+    "m04-before-off.json": "c25bb2173d806173d0a4312ca83debd0faff97d716cface7f0923211ee68446c",
+    "native-plan-delta-validation.json": "84885d6ae1de0eab802fe140f658fdf07bb56a5d83dd2db2f3577f2e440bbbee",
+    "native-boot-verify.json": "b7f9a8c1717c5430f89b8a016f0bcc70aa047f818853eb08863f74883e80eedd",
+    "native-storage-runtime-inspection.json": "5e0e144afdeec3e06470aa58b666726b6013547fcd1fbb9d1e64240e5d1b8acf",
+    "native-code-permission-repair-result.json": "804467b973fc005016f26a77ca1cb6c88acb8556d238c5a643560308d860b4f1",
+    "m04-native-config-comparison.json": "0d91472652211e51f2f1bed7bff1dbe28d9c34cf987b4ab1d3621c6ac8a1283f",
+    "native-network-live-verification.json": "1775963fbda22822300ab0f5dfaab6b865ef55be217c69f219e0a1af26a0e6ab",
+    "native-stm-version-physical-source-readonly.json": "c6bc381a13b2726f150183e7894966cd6e6e5340215cfdc86cf69f32cc167088",
+    "native-terminal-menu-code.json": "33a32f9955541f644b348a332abdc14860efec016c1f90792e29e686f690f5eb",
+    "s07-utilities-tree-readonly.json": "123cb9eb74004c08a04b91958700f19f7fcec0b395bf8a5e9493f8de7a7799cf"
+  },
+  "secret_audit": {
+    "curated_allowlist_only": true,
+    "credential_or_key_content_included": false,
+    "SSH_fingerprints_only": true,
+    "private_backups_or_plan_included": false
+  },
+  "limits": [
+    "Native M04 boot and application run are verified, but the separate Utilities update and STM32 update remain pending.",
+    "USB is attached and separately desktop-mounted; it is not the running root/boot medium.",
+    "No physical tag/range qualification is claimed."
+  ],
+  "overall_M04_software_update_complete": false,
+  "updated_at": 1793886728.8435416
+}

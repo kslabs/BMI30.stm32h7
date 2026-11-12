@@ -1,0 +1,31 @@
+{
+  "Core_resumed": true,
+  "NVM_or_option_writes": false,
+  "application_byte_exact_readback": true,
+  "board": "S07",
+  "evidence_kind": "Root actual guarded transaction, sanitized projection",
+  "fresh_own_backup_inside_transaction": true,
+  "live_STM59_UID_role_and_worker_progress_checked_by_controller": true,
+  "option_fields_unchanged": true,
+  "own_NVM_byte_equal_through_first_reset_before_Core_resume": true,
+  "own_lease_released": true,
+  "own_role_after": {
+    "node_id": 7,
+    "role": "slave"
+  },
+  "own_role_before": {
+    "node_id": 7,
+    "role": "slave"
+  },
+  "own_role_preserved": true,
+  "physical_range_or_tag_probability_qualified": false,
+  "private_backup_or_trace_bytes_included": false,
+  "private_result_sha256": "984a9a9658dc2c8aaa26ea459ec17f30b04670b305322f4f33452faf1ab20b42",
+  "protected_services_unchanged": true,
+  "role_assigned_or_transferred": false,
+  "rollback_required": false,
+  "schema": 1,
+  "status": "STM59_APP_READBACK_OWN_STATE_RUNTIME_PASS",
+  "target_bytes": 327960,
+  "target_sha256": "6188b176ddebe196bcfde8631303f33e27287c3630af249a3d666ca2f1e0d02b"
+}

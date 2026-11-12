@@ -1,0 +1,270 @@
+{
+  "M01": {
+    "host": "BMI30-05AB38E6A",
+    "version": "2026-09-30-1627",
+    "hashes": {
+      "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2",
+      "host/BMI30.001.py.2026-09-30-1627": "aab252fc14e1c703f76a28d49e5c3a8bde60013a7ea62cbed505756dc009bd75",
+      "host/BMI30.200.py.2026-09-30-1627": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+      "host/BMI30.GUI.001.py.2026-09-30-1627": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95"
+    },
+    "settings": {
+      "base_width_enabled": true,
+      "base_width_max": 24
+    },
+    "other_settings_preserved": true,
+    "mode": 6,
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.028286457061767578
+    },
+    "fps": {
+      "a": 6.573172795780292,
+      "b": 6.573172795780292,
+      "a_even": 2.817074055334411,
+      "a_odd": 3.756098740445881,
+      "b_even": 2.817074055334411,
+      "b_odd": 3.756098740445881
+    },
+    "base_width": [
+      {
+        "valid": true,
+        "left": 43,
+        "right": 63,
+        "width": 20,
+        "left_kind": "minimum",
+        "right_kind": "minimum",
+        "reason": "measured",
+        "enabled": true,
+        "limit": 24,
+        "ok": true
+      },
+      {
+        "valid": true,
+        "left": 20,
+        "right": 34,
+        "width": 14,
+        "left_kind": "minimum",
+        "right_kind": "minimum",
+        "reason": "measured",
+        "enabled": true,
+        "limit": 24,
+        "ok": true
+      }
+    ],
+    "root": "/dev/mmcblk0p2"
+  },
+  "S10": {
+    "host": "BMI30-D5EB8F26C",
+    "version": "2026-09-30-1627",
+    "hashes": {
+      "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2",
+      "host/BMI30.001.py.2026-09-30-1627": "aab252fc14e1c703f76a28d49e5c3a8bde60013a7ea62cbed505756dc009bd75",
+      "host/BMI30.200.py.2026-09-30-1627": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+      "host/BMI30.GUI.001.py.2026-09-30-1627": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95"
+    },
+    "settings": {
+      "base_width_enabled": true,
+      "base_width_max": 24
+    },
+    "other_settings_preserved": true,
+    "mode": 6,
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.09603691101074219
+    },
+    "fps": {
+      "a": 20.12890487168565,
+      "b": 20.12890487168565,
+      "a_even": 11.502231355248941,
+      "a_odd": 8.626673516436705,
+      "b_even": 9.585192796040785,
+      "b_odd": 10.543712075644862
+    },
+    "base_width": [
+      {
+        "valid": false,
+        "left": null,
+        "right": 8,
+        "width": null,
+        "left_kind": "open_edge",
+        "right_kind": "minimum",
+        "reason": "open_edge",
+        "enabled": true,
+        "limit": 24,
+        "ok": false
+      },
+      {
+        "valid": false,
+        "left": null,
+        "right": 49,
+        "width": null,
+        "left_kind": "open_edge",
+        "right_kind": "minimum",
+        "reason": "open_edge",
+        "enabled": true,
+        "limit": 24,
+        "ok": false
+      }
+    ],
+    "root": "/dev/mmcblk0p2"
+  },
+  "S11": {
+    "host": "BMI30-D5507EDFC",
+    "version": "2026-09-30-1627",
+    "hashes": {
+      "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2",
+      "host/BMI30.001.py.2026-09-30-1627": "aab252fc14e1c703f76a28d49e5c3a8bde60013a7ea62cbed505756dc009bd75",
+      "host/BMI30.200.py.2026-09-30-1627": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+      "host/BMI30.GUI.001.py.2026-09-30-1627": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95"
+    },
+    "settings": {
+      "base_width_enabled": true,
+      "base_width_max": 24
+    },
+    "other_settings_preserved": true,
+    "mode": 6,
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.22989654541015625
+    },
+    "fps": {
+      "a": 6.503403307373733,
+      "b": 6.503403307373733,
+      "a_even": 3.7162304613564188,
+      "a_odd": 2.787172846017314,
+      "b_even": 3.7162304613564188,
+      "b_odd": 2.787172846017314
+    },
+    "base_width": [
+      null,
+      null
+    ],
+    "root": "/dev/mmcblk0p2"
+  },
+  "S12": {
+    "host": "BMI30-27448D72B",
+    "version": "2026-09-30-1627",
+    "hashes": {
+      "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2",
+      "host/BMI30.001.py.2026-09-30-1627": "aab252fc14e1c703f76a28d49e5c3a8bde60013a7ea62cbed505756dc009bd75",
+      "host/BMI30.200.py.2026-09-30-1627": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+      "host/BMI30.GUI.001.py.2026-09-30-1627": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95"
+    },
+    "settings": {
+      "base_width_enabled": true,
+      "base_width_max": 24
+    },
+    "other_settings_preserved": true,
+    "mode": 6,
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.18198561668395996
+    },
+    "fps": {
+      "a": 6.585437946536615,
+      "b": 6.585437946536615,
+      "a_even": 3.763107398020923,
+      "a_odd": 2.8223305485156924,
+      "b_even": 3.763107398020923,
+      "b_odd": 2.8223305485156924
+    },
+    "base_width": [
+      {
+        "valid": true,
+        "left": 39,
+        "right": 59,
+        "width": 20,
+        "left_kind": "minimum",
+        "right_kind": "minimum",
+        "reason": "measured",
+        "enabled": true,
+        "limit": 24,
+        "ok": true
+      },
+      {
+        "valid": true,
+        "left": 74,
+        "right": 100,
+        "width": 26,
+        "left_kind": "minimum",
+        "right_kind": "minimum",
+        "reason": "too_wide",
+        "enabled": true,
+        "limit": 24,
+        "ok": false
+      }
+    ],
+    "root": "/dev/mmcblk0p2"
+  },
+  "S13": {
+    "host": "BMI30-7AA5CED27",
+    "version": "2026-09-30-1627",
+    "hashes": {
+      "hotspot_info_server.py": "62964cea7cb398d909080092b43c2a67a92bf2b852f44a1888ba6bc86d8aa2b2",
+      "host/BMI30.001.py.2026-09-30-1627": "aab252fc14e1c703f76a28d49e5c3a8bde60013a7ea62cbed505756dc009bd75",
+      "host/BMI30.200.py.2026-09-30-1627": "b67344f50dfc09005c966bc9a428ac50b8ba3323938ebe5da75a721758d16a44",
+      "host/BMI30.GUI.001.py.2026-09-30-1627": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "host/bmi30_common_mode.py": "36763d82afe2d11629844f4a6f96b9b94a869b0147d0a47451b6c4a6ef1a0d95"
+    },
+    "settings": {
+      "base_width_enabled": true,
+      "base_width_max": 24
+    },
+    "other_settings_preserved": true,
+    "mode": 6,
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.016139984130859375
+    },
+    "fps": {
+      "a": 6.544930888416994,
+      "b": 6.544930888416994,
+      "a_even": 3.739960507666854,
+      "a_odd": 2.8049703807501403,
+      "b_even": 3.739960507666854,
+      "b_odd": 2.8049703807501403
+    },
+    "base_width": [
+      {
+        "valid": true,
+        "left": 78,
+        "right": 99,
+        "width": 21,
+        "left_kind": "minimum",
+        "right_kind": "minimum",
+        "reason": "measured",
+        "enabled": true,
+        "limit": 24,
+        "ok": true
+      },
+      {
+        "valid": true,
+        "left": 79,
+        "right": 102,
+        "width": 23,
+        "left_kind": "minimum",
+        "right_kind": "minimum",
+        "reason": "measured",
+        "enabled": true,
+        "limit": 24,
+        "ok": true
+      }
+    ],
+    "root": "/dev/mmcblk0p2"
+  }
+}

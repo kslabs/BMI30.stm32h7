@@ -1,0 +1,23 @@
+[Unit]
+Description=BMI30 public portal reverse SSH tunnel
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=techaid
+Group=techaid
+ExecStart=/usr/local/bin/bmi30-reverse-tunnel
+Restart=always
+RestartSec=10
+TimeoutStopSec=15
+KillSignal=SIGTERM
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

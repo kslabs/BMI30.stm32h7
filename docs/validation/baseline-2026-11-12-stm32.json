@@ -1,0 +1,24 @@
+{
+  "version": "1.2.59-host-tx-lcd",
+  "compiler": "arm-none-eabi-gcc.exe (GNU Tools for STM32 13.3.rel1.20240926-1715) 13.3.1 20240614",
+  "source_count": 66,
+  "binary_matches_pinned_release": true,
+  "flash_end_exclusive": "0x8050118",
+  "persistent_sector_in_elf": false,
+  "flashed": false,
+  "files": {
+    "BMI30-STM32-1.2.59-host-tx-lcd.bin": {
+      "sha256": "6188b176ddebe196bcfde8631303f33e27287c3630af249a3d666ca2f1e0d02b",
+      "bytes": 327960
+    },
+    "BMI30-STM32-1.2.59-host-tx-lcd.elf": {
+      "sha256": "2a76ab5f1ebeb8f367f76560037ff7a6688d7964b82bf7e6ae665ee95edb9089",
+      "bytes": 3194092
+    },
+    "BMI30-STM32-1.2.59-host-tx-lcd.map": {
+      "sha256": "744d0fbc5f4440b91f2a6e70ec476d2b99dac49eb4fba6f0413764e57d7d658d",
+      "bytes": 2847786
+    }
+  },
+  "elf_map_identity_limit": "DWARF and map contain absolute build paths; only BIN is pinned byte-for-byte."
+}

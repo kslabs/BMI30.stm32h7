@@ -1,0 +1,454 @@
+{
+  "format": "bmi30-network-targeted-overlay-v1",
+  "version": "0.2.10",
+  "artifact": "2026-11-04-network-0.2.10",
+  "assembled_at_utc": "2026-11-04T16:17:29.228637+00:00",
+  "scope": {
+    "boards": {
+      "M02": {
+        "hostname": "BMI30-E29805C7C",
+        "cm5_serial": "490df72e29805c7c"
+      },
+      "S07": {
+        "hostname": "BMI30-C9775FBAE",
+        "cm5_serial": "abdd2dbc9775fbae"
+      }
+    },
+    "installed_module_allowlist": [
+      "service.py",
+      "network.py",
+      "policy.py",
+      "cohesion.py",
+      "access.py"
+    ],
+    "services_in_scope": [
+      "bmi30-network",
+      "bmi30-access"
+    ],
+    "Core_STM32_or_detector_settings_changes": false,
+    "server_upload_performed_by_assembler": false,
+    "live_actions_performed_by_assembler": false
+  },
+  "artifact_kind": "Targeted overlay for the exact captured 0.2.9 installations; unchanged installed network dependencies remain prerequisites. Not a full Raspberry Pi image or fleet package.",
+  "payload_frozen": true,
+  "runtime_validation": "pending_root_runtime_evidence",
+  "deployment": {
+    "M02": {
+      "modules": {
+        "service.py": {
+          "payload": "payload/service.py",
+          "installed_path": "/opt/bmi30-network/service.py",
+          "prechange_sha256": "614b31786cbec0a9de03975f7f9559f62f01b9171f404f7204ab35843bc5d42f",
+          "candidate_normalized_LF_sha256": "4baa0817e2591a5add12150d0c615fe1f57a836b5c0eb5602d2b9a12fca5c51b"
+        },
+        "network.py": {
+          "payload": "payload/network.py",
+          "installed_path": "/opt/bmi30-network/network.py",
+          "prechange_sha256": "1432d28b36df3653531abd09b96f920cda64300d6dcec7f0f77ea3c752fe7a33",
+          "candidate_normalized_LF_sha256": "50a82441ffc883e302cb1e376661d507fbbd63c2a1ec29f13d2fd0133c51cea6"
+        },
+        "policy.py": {
+          "payload": "payload/policy.py",
+          "installed_path": "/opt/bmi30-network/policy.py",
+          "prechange_sha256": "bd39c268316b1ca25b25e10e377f13a9baf8142f05c898e6ca05327c8f761ab3",
+          "candidate_normalized_LF_sha256": "00a473f01c4bbcb97e039e4231d0a98622ab8d9bb98a58eee722fdac322a7af0"
+        },
+        "cohesion.py": {
+          "payload": "payload/cohesion.py",
+          "installed_path": "/opt/bmi30-network/cohesion.py",
+          "prechange_sha256": null,
+          "candidate_normalized_LF_sha256": "8ca452ce2e5893889e75494cff94d575b6df377563ccc760cbee7d34179cbb04"
+        },
+        "access.py": {
+          "payload": "payload/access.py",
+          "installed_path": "/opt/bmi30-network/access.py",
+          "prechange_sha256": "9bf180dfe4919f57e5c4d7021245a44e1c82ffe1bca3cc82eb74343400c82350",
+          "candidate_normalized_LF_sha256": "ec373f37a9231196ff77aad61a7be312b8f8f9b5ee46ca1f411e6cb58fca53fe"
+        }
+      },
+      "guard_constants_preserved": {
+        "BOUND_BUNDLE": "2026-10-30-112226",
+        "GUARD_SHA": "d15bb8ac554a4b9dd42e3a9501a029ed5c09f5a099c9a9e7041b00a77d57dccd"
+      },
+      "runtime_validation": "pending_root_runtime_evidence"
+    },
+    "S07": {
+      "modules": {
+        "service.py": {
+          "payload": "payload/service_s07.py",
+          "installed_path": "/opt/bmi30-network/service.py",
+          "prechange_sha256": "ba49506c6bfe7b7a72b7445c2ca02b62839ec52025eb3688730b91e95bf7f786",
+          "candidate_normalized_LF_sha256": "0891fe223accb259e374d3d377143a205edf83a1c03719aa1efdcb7c22ffc135"
+        },
+        "network.py": {
+          "payload": "payload/network.py",
+          "installed_path": "/opt/bmi30-network/network.py",
+          "prechange_sha256": "1432d28b36df3653531abd09b96f920cda64300d6dcec7f0f77ea3c752fe7a33",
+          "candidate_normalized_LF_sha256": "50a82441ffc883e302cb1e376661d507fbbd63c2a1ec29f13d2fd0133c51cea6"
+        },
+        "policy.py": {
+          "payload": "payload/policy.py",
+          "installed_path": "/opt/bmi30-network/policy.py",
+          "prechange_sha256": "bd39c268316b1ca25b25e10e377f13a9baf8142f05c898e6ca05327c8f761ab3",
+          "candidate_normalized_LF_sha256": "00a473f01c4bbcb97e039e4231d0a98622ab8d9bb98a58eee722fdac322a7af0"
+        },
+        "cohesion.py": {
+          "payload": "payload/cohesion.py",
+          "installed_path": "/opt/bmi30-network/cohesion.py",
+          "prechange_sha256": null,
+          "candidate_normalized_LF_sha256": "8ca452ce2e5893889e75494cff94d575b6df377563ccc760cbee7d34179cbb04"
+        },
+        "access.py": {
+          "payload": "payload/access.py",
+          "installed_path": "/opt/bmi30-network/access.py",
+          "prechange_sha256": "9bf180dfe4919f57e5c4d7021245a44e1c82ffe1bca3cc82eb74343400c82350",
+          "candidate_normalized_LF_sha256": "ec373f37a9231196ff77aad61a7be312b8f8f9b5ee46ca1f411e6cb58fca53fe"
+        }
+      },
+      "guard_constants_preserved": {
+        "BOUND_BUNDLE": "2026-10-30-085518",
+        "GUARD_SHA": "9c03c75ba74b12773b8df77c54619aa80f19fb00211498e97fe208c0ecf2bd20"
+      },
+      "runtime_validation": "pending_root_runtime_evidence"
+    }
+  },
+  "patch_apply_validation": {
+    "M02": {
+      "status": "PASS",
+      "module_count": 5,
+      "applied_in_isolated_workspace": true
+    },
+    "S07": {
+      "status": "PASS",
+      "module_count": 5,
+      "applied_in_isolated_workspace": true
+    }
+  },
+  "assembly_validation": {
+    "all_files_byte_verified": true,
+    "copied_payload_focused_tests": "review/packaged-focused-tests.json",
+    "cumulative_patch_module_hashes_match": true
+  },
+  "important_evidence_order": {
+    "initial_cohesion": "review/cohesion-initial-fixtures.json records deliberately rejected stale M02 RID.",
+    "later_coeval_cohesion": "review/cohesion-coeval-fixtures.json supersedes initial availability with exact contemporaneous fresh owner-RID evidence.",
+    "direct_guard_historical": "review/direct-guard-historical.json is an earlier narrower checkpoint, not the complete current policy.",
+    "access_review": "Use busy-ownership-static-review-v2.json; the superseded v1 inaccurate startup description is omitted."
+  },
+  "limitations": [
+    "No successful live activation, rollback acceptance, sustained runtime or physical detector result is claimed by this assembly.",
+    "Runtime evidence will be supplied separately by root and must be associated with this payload by normalized module SHA.",
+    "Broader repository tests are preserved as source/evidence; the copied focused subset runs standalone from payload.",
+    "No credentials, complete device configuration, environment files, SSH keys or private recovery helpers are included."
+  ],
+  "files": {
+    "payload/network.py": {
+      "bytes": 24366,
+      "sha256": "50a82441ffc883e302cb1e376661d507fbbd63c2a1ec29f13d2fd0133c51cea6",
+      "normalized_LF_sha256": "50a82441ffc883e302cb1e376661d507fbbd63c2a1ec29f13d2fd0133c51cea6",
+      "source": ".tmp/m02-network-disappearance-20261104/candidate/network.py",
+      "role": "candidate_runtime_module"
+    },
+    "payload/policy.py": {
+      "bytes": 8916,
+      "sha256": "00a473f01c4bbcb97e039e4231d0a98622ab8d9bb98a58eee722fdac322a7af0",
+      "normalized_LF_sha256": "00a473f01c4bbcb97e039e4231d0a98622ab8d9bb98a58eee722fdac322a7af0",
+      "source": "HostTools/bmi30_network/policy.py",
+      "role": "candidate_runtime_module"
+    },
+    "payload/cohesion.py": {
+      "bytes": 11352,
+      "sha256": "8ca452ce2e5893889e75494cff94d575b6df377563ccc760cbee7d34179cbb04",
+      "normalized_LF_sha256": "8ca452ce2e5893889e75494cff94d575b6df377563ccc760cbee7d34179cbb04",
+      "source": "HostTools/bmi30_network/cohesion.py",
+      "role": "candidate_runtime_module"
+    },
+    "payload/access.py": {
+      "bytes": 20274,
+      "sha256": "ec373f37a9231196ff77aad61a7be312b8f8f9b5ee46ca1f411e6cb58fca53fe",
+      "normalized_LF_sha256": "ec373f37a9231196ff77aad61a7be312b8f8f9b5ee46ca1f411e6cb58fca53fe",
+      "source": ".tmp/m02-network-disappearance-20261104/candidate/access.py",
+      "role": "candidate_runtime_module"
+    },
+    "payload/service.py": {
+      "bytes": 68797,
+      "sha256": "564688eef956907bf0fe6b743eda48b376b9cac68bd21bb190f5d3240130d18d",
+      "normalized_LF_sha256": "4baa0817e2591a5add12150d0c615fe1f57a836b5c0eb5602d2b9a12fca5c51b",
+      "source": ".tmp/m02-network-disappearance-20261104/candidate/service.py",
+      "role": "candidate_runtime_module"
+    },
+    "payload/service_s07.py": {
+      "bytes": 68797,
+      "sha256": "ad9fa72bb1b0579c47372d2687d9cdd6d1a4a2b678e9f7b3215edac33e6fb125",
+      "normalized_LF_sha256": "0891fe223accb259e374d3d377143a205edf83a1c03719aa1efdcb7c22ffc135",
+      "source": ".tmp/m02-network-disappearance-20261104/candidate/service_s07.py",
+      "role": "candidate_runtime_module"
+    },
+    "originals/M02/service.py": {
+      "bytes": 64791,
+      "sha256": "614b31786cbec0a9de03975f7f9559f62f01b9171f404f7204ab35843bc5d42f",
+      "normalized_LF_sha256": "614b31786cbec0a9de03975f7f9559f62f01b9171f404f7204ab35843bc5d42f",
+      "source": "exact source text verified against positively identified live SHA; access shared SHA verified on both boards",
+      "role": "prechange_source"
+    },
+    "originals/M02/network.py": {
+      "bytes": 16192,
+      "sha256": "1432d28b36df3653531abd09b96f920cda64300d6dcec7f0f77ea3c752fe7a33",
+      "normalized_LF_sha256": "1432d28b36df3653531abd09b96f920cda64300d6dcec7f0f77ea3c752fe7a33",
+      "source": "exact source text verified against positively identified live SHA; access shared SHA verified on both boards",
+      "role": "prechange_source"
+    },
+    "originals/M02/policy.py": {
+      "bytes": 6436,
+      "sha256": "bd39c268316b1ca25b25e10e377f13a9baf8142f05c898e6ca05327c8f761ab3",
+      "normalized_LF_sha256": "bd39c268316b1ca25b25e10e377f13a9baf8142f05c898e6ca05327c8f761ab3",
+      "source": "exact source text verified against positively identified live SHA; access shared SHA verified on both boards",
+      "role": "prechange_source"
+    },
+    "originals/M02/access.py": {
+      "bytes": 18545,
+      "sha256": "9bf180dfe4919f57e5c4d7021245a44e1c82ffe1bca3cc82eb74343400c82350",
+      "normalized_LF_sha256": "9bf180dfe4919f57e5c4d7021245a44e1c82ffe1bca3cc82eb74343400c82350",
+      "source": "exact source text verified against positively identified live SHA; access shared SHA verified on both boards",
+      "role": "prechange_source"
+    },
+    "originals/S07/service.py": {
+      "bytes": 64791,
+      "sha256": "ba49506c6bfe7b7a72b7445c2ca02b62839ec52025eb3688730b91e95bf7f786",
+      "normalized_LF_sha256": "ba49506c6bfe7b7a72b7445c2ca02b62839ec52025eb3688730b91e95bf7f786",
+      "source": "exact source text verified against positively identified live SHA; access shared SHA verified on both boards",
+      "role": "prechange_source"
+    },
+    "originals/S07/network.py": {
+      "bytes": 16192,
+      "sha256": "1432d28b36df3653531abd09b96f920cda64300d6dcec7f0f77ea3c752fe7a33",
+      "normalized_LF_sha256": "1432d28b36df3653531abd09b96f920cda64300d6dcec7f0f77ea3c752fe7a33",
+      "source": "exact source text verified against positively identified live SHA; access shared SHA verified on both boards",
+      "role": "prechange_source"
+    },
+    "originals/S07/policy.py": {
+      "bytes": 6436,
+      "sha256": "bd39c268316b1ca25b25e10e377f13a9baf8142f05c898e6ca05327c8f761ab3",
+      "normalized_LF_sha256": "bd39c268316b1ca25b25e10e377f13a9baf8142f05c898e6ca05327c8f761ab3",
+      "source": "exact source text verified against positively identified live SHA; access shared SHA verified on both boards",
+      "role": "prechange_source"
+    },
+    "originals/S07/access.py": {
+      "bytes": 18545,
+      "sha256": "9bf180dfe4919f57e5c4d7021245a44e1c82ffe1bca3cc82eb74343400c82350",
+      "normalized_LF_sha256": "9bf180dfe4919f57e5c4d7021245a44e1c82ffe1bca3cc82eb74343400c82350",
+      "source": "exact source text verified against positively identified live SHA; access shared SHA verified on both boards",
+      "role": "prechange_source"
+    },
+    "active_m02_service.py": {
+      "bytes": 64791,
+      "sha256": "614b31786cbec0a9de03975f7f9559f62f01b9171f404f7204ab35843bc5d42f",
+      "normalized_LF_sha256": "614b31786cbec0a9de03975f7f9559f62f01b9171f404f7204ab35843bc5d42f",
+      "source": "exact captured M02 original; compatibility path used by unchanged focused tests",
+      "role": "portable_test_baseline_alias_not_installed"
+    },
+    "active_m02_access.py": {
+      "bytes": 18545,
+      "sha256": "9bf180dfe4919f57e5c4d7021245a44e1c82ffe1bca3cc82eb74343400c82350",
+      "normalized_LF_sha256": "9bf180dfe4919f57e5c4d7021245a44e1c82ffe1bca3cc82eb74343400c82350",
+      "source": "exact captured M02 original; compatibility path used by unchanged focused tests",
+      "role": "portable_test_baseline_alias_not_installed"
+    },
+    "payload/test_cohesion.py": {
+      "bytes": 9315,
+      "sha256": "da63af0a8ca03ade6c79811821541b6151377ec06557b318b7b5eb78e009e66f",
+      "normalized_LF_sha256": "da63af0a8ca03ade6c79811821541b6151377ec06557b318b7b5eb78e009e66f",
+      "source": "HostTools/bmi30_network/test_cohesion.py",
+      "role": "portable_focused_test"
+    },
+    "payload/test_direct_uplink_policy.py": {
+      "bytes": 4125,
+      "sha256": "72176df65edb6a4f28047fe6592e7b3f820b92b96d9c3393484f496f7630b416",
+      "normalized_LF_sha256": "72176df65edb6a4f28047fe6592e7b3f820b92b96d9c3393484f496f7630b416",
+      "source": "HostTools/bmi30_network/test_direct_uplink_policy.py",
+      "role": "portable_focused_test"
+    },
+    "payload/test_owner_rid_refresh.py": {
+      "bytes": 4170,
+      "sha256": "6479ff6dce2b5c58cb85d79e26a7fe2a67df8d508faa43f0ccae684784fdf984",
+      "normalized_LF_sha256": "6479ff6dce2b5c58cb85d79e26a7fe2a67df8d508faa43f0ccae684784fdf984",
+      "source": "HostTools/bmi30_network/test_owner_rid_refresh.py",
+      "role": "portable_focused_test"
+    },
+    "payload/test_service_health.py": {
+      "bytes": 8748,
+      "sha256": "3b0b0f72aff38b7cd5955c23c39aa87e8a47c6ff16861b9eed595c0d096dde8f",
+      "normalized_LF_sha256": "3b0b0f72aff38b7cd5955c23c39aa87e8a47c6ff16861b9eed595c0d096dde8f",
+      "source": ".tmp/m02-network-disappearance-20261104/candidate/test_service_health.py",
+      "role": "portable_focused_test"
+    },
+    "payload/test_access_busy_ownership.py": {
+      "bytes": 4977,
+      "sha256": "847ce311ced6d8cc677dee128342f5b054f4928bb041da5ebee8a1e82fe7b546",
+      "normalized_LF_sha256": "847ce311ced6d8cc677dee128342f5b054f4928bb041da5ebee8a1e82fe7b546",
+      "source": ".tmp/m02-network-disappearance-20261104/candidate/test_access_busy_ownership.py",
+      "role": "portable_focused_test"
+    },
+    "review/repository-tests/test_network.py": {
+      "bytes": 6655,
+      "sha256": "e77f842d84b150d7b0c887ea361a5b01485aa18b359e5acc6e79d47f01fa2a68",
+      "normalized_LF_sha256": "e77f842d84b150d7b0c887ea361a5b01485aa18b359e5acc6e79d47f01fa2a68",
+      "source": "HostTools/bmi30_network/test_network.py",
+      "role": "broader_repository_test_source"
+    },
+    "review/repository-tests/test_stability.py": {
+      "bytes": 4198,
+      "sha256": "4783e313298f221c061b3c27c8dfe257c273ebc857df87696a1b73f9bd84f549",
+      "normalized_LF_sha256": "4783e313298f221c061b3c27c8dfe257c273ebc857df87696a1b73f9bd84f549",
+      "source": "HostTools/bmi30_network/test_stability.py",
+      "role": "broader_repository_test_source"
+    },
+    "review/repository-tests/test_profile_selection.py": {
+      "bytes": 3433,
+      "sha256": "3ddcf61ac50b5bb55c79f81baec250b7d35a2909bce5b71a0d2e04943ba15351",
+      "normalized_LF_sha256": "3ddcf61ac50b5bb55c79f81baec250b7d35a2909bce5b71a0d2e04943ba15351",
+      "source": "HostTools/bmi30_network/test_profile_selection.py",
+      "role": "broader_repository_test_source"
+    },
+    "review/integration-validation.json": {
+      "bytes": 2011,
+      "sha256": "3572b41c0f50294f2ddf5677dd339d5ee5c4189341d87d2ed720e2886472ace7",
+      "normalized_LF_sha256": "3572b41c0f50294f2ddf5677dd339d5ee5c4189341d87d2ed720e2886472ace7",
+      "source": ".tmp/m02-network-disappearance-20261104/candidate/validation-manifest.json",
+      "role": "local_validation_evidence"
+    },
+    "review/access-validation.json": {
+      "bytes": 547,
+      "sha256": "a0443dba7a37b84059a76a23de28fa6adbf71716a6d930c92040b57f49907b3d",
+      "normalized_LF_sha256": "a0443dba7a37b84059a76a23de28fa6adbf71716a6d930c92040b57f49907b3d",
+      "source": ".tmp/m02-network-disappearance-20261104/candidate/access-validation.json",
+      "role": "local_validation_evidence"
+    },
+    "review/cohesion-initial-fixtures.json": {
+      "bytes": 18572,
+      "sha256": "0162b3f7bef959affa5c6d3c4fecbd0dfdd3aadb4149b53ede5933fce3cebec0",
+      "normalized_LF_sha256": "ce43de1ad79ba3ec475f8eafa8c0c2ecf3f9ef61a0606b0ec42f59bd7da6a148",
+      "source": ".tmp/m02-network-disappearance-20261104/cohesion-review.json",
+      "role": "local_validation_evidence"
+    },
+    "review/cohesion-coeval-fixtures.json": {
+      "bytes": 9672,
+      "sha256": "b96072b5265eb6f2386afce01e277ec25bfbbc70ec8f666bac0b7001baaf9ef7",
+      "normalized_LF_sha256": "94b2237155b281e97d5fa38d525c816a1491768b6553904fa12e9536008368ef",
+      "source": ".tmp/m02-network-disappearance-20261104/cohesion-coeval-review.json",
+      "role": "local_validation_evidence"
+    },
+    "review/direct-guard-historical.json": {
+      "bytes": 10675,
+      "sha256": "9a7b4acbe2be03a9d84e52c66c8d86988059349ad0216f8adeb37f69b040b365",
+      "normalized_LF_sha256": "ab8c30821a57fffd25257b8c9f372a072b8569d7260677ce313b895d283abe6b",
+      "source": ".tmp/m02-network-disappearance-20261104/policy-direct-uplink-review.json",
+      "role": "local_validation_evidence"
+    },
+    "review/rid-owner-read-static-review.json": {
+      "bytes": 3692,
+      "sha256": "541e3e7312d71b0c315b5a4496f6d3d569dec9b22999702474b3061272bceaf7",
+      "normalized_LF_sha256": "ee94d83f9d24cc858e50661ec4ac6fac9a0fd7dd860710b6a1ef1c245b4854c5",
+      "source": ".tmp/m02-network-disappearance-20261104/rid-owner-read-static-review.json",
+      "role": "local_validation_evidence"
+    },
+    "review/busy-ownership-static-review-v2.json": {
+      "bytes": 2192,
+      "sha256": "4599c8f7da3b9b7798fa289ba13635f36f73418fca3584f0d3a6bd5529179b80",
+      "normalized_LF_sha256": "c5f66c7034046350fcffbcf9986e7aed4de570c8204ab5ccbc55cdc537547972",
+      "source": ".tmp/m02-network-disappearance-20261104/busy-ownership-static-review-v2.json",
+      "role": "local_validation_evidence"
+    },
+    "review/peer-access-ownership-review.json": {
+      "bytes": 552,
+      "sha256": "bfb6b09a2644326eae29e1f2c0f998da57205fe7176bec41586c9902565fdef0",
+      "normalized_LF_sha256": "3baf3c54026dee134a4def7126ec2de794b8bc8c6c0f87bdadafc7d334d1542f",
+      "source": ".tmp/m02-network-disappearance-20261104/peer-access-ownership-review.json",
+      "role": "local_validation_evidence"
+    },
+    "review/peer-deploy-five-local-review.json": {
+      "bytes": 636,
+      "sha256": "549fe5a444c9a7f2077ea63b9517dc9a0b11988f362f8c900a489e373547f865",
+      "normalized_LF_sha256": "914c76d4302241b8c48fa3594d3f4a54cb2045fb3f1cc27ba7e80ad084d406a9",
+      "source": ".tmp/m02-network-disappearance-20261104/peer-deploy-five-local-review.json",
+      "role": "local_validation_evidence"
+    },
+    "review/peer-deploy-runtime-transition-review.json": {
+      "bytes": 736,
+      "sha256": "c883d2ed55955c33b37f0d5d9e076534fb0728a77a9673bd278d192f7da2146b",
+      "normalized_LF_sha256": "064a375774b06448b191ec36a23dae3b709c80ee3ef24c015e5f965a9fb00e42",
+      "source": ".tmp/m02-network-disappearance-20261104/peer-deploy-runtime-transition-review.json",
+      "role": "local_validation_evidence"
+    },
+    "review/fixtures/m02-coeval.json": {
+      "bytes": 42856,
+      "sha256": "d3b7dfc450e140ece8cc2cc4302bb511cb2b7c3ef23e422fc97e4638ab8b292e",
+      "normalized_LF_sha256": "a51f93027fdb5f4d4646d95d0549d44b21256a5bc5a3066820415fc3a616563a",
+      "source": ".tmp/m02-network-disappearance-20261104/m02-cohesion-fixture-coeval.json",
+      "role": "local_validation_evidence"
+    },
+    "review/fixtures/s07-coeval.json": {
+      "bytes": 11668,
+      "sha256": "fb5aaeeef62303a77b41ba4007a7115c442d87ac9415b382a2104416d99ab276",
+      "normalized_LF_sha256": "aed51f8d8d749ce045e53f8c523a31106309e9a18f4c3e2bc6d66c7f2ae90e34",
+      "source": ".tmp/m02-network-disappearance-20261104/s07-cohesion-fixture-coeval.json",
+      "role": "local_validation_evidence"
+    },
+    "review/fixtures/m02-owner-read.json": {
+      "bytes": 11789,
+      "sha256": "b6c241ceb1a58232022f735eafe712e8998c018029b4d75f62ed57e730674b53",
+      "normalized_LF_sha256": "d056c32d5f9305da6f9cac4d1944b3b5f22de1cfd17deee187695b3aab52f0f5",
+      "source": ".tmp/m02-network-disappearance-20261104/m02-owner-rid-read.json",
+      "role": "local_validation_evidence"
+    },
+    "review/component-patches/network.patch": {
+      "bytes": 13852,
+      "sha256": "713bc6c4fc61e1d52471b40a6ddf998f334a62748262f191a467aefab57e4381",
+      "normalized_LF_sha256": "713bc6c4fc61e1d52471b40a6ddf998f334a62748262f191a467aefab57e4381",
+      "source": ".tmp/m02-network-disappearance-20261104/candidate/network.patch",
+      "role": "component_patch"
+    },
+    "review/component-patches/service-m02.patch": {
+      "bytes": 9356,
+      "sha256": "5be8328a4ff4cab695f5b932e85c4731b33261505f06a3c2eab55876d7195fcf",
+      "normalized_LF_sha256": "5be8328a4ff4cab695f5b932e85c4731b33261505f06a3c2eab55876d7195fcf",
+      "source": ".tmp/m02-network-disappearance-20261104/candidate/service-m02.patch",
+      "role": "component_patch"
+    },
+    "review/component-patches/service-s07.patch": {
+      "bytes": 9360,
+      "sha256": "38fada2fdc1d6af2205f67763ee540e2fd7806be9746cdbe37ba5f3383db4771",
+      "normalized_LF_sha256": "38fada2fdc1d6af2205f67763ee540e2fd7806be9746cdbe37ba5f3383db4771",
+      "source": ".tmp/m02-network-disappearance-20261104/candidate/service-s07.patch",
+      "role": "component_patch"
+    },
+    "review/component-patches/access-ownership.patch": {
+      "bytes": 3111,
+      "sha256": "729f062da3c14d44660daf003b7852c696fc5ab0db88c9129c938e6f395bcc8f",
+      "normalized_LF_sha256": "729f062da3c14d44660daf003b7852c696fc5ab0db88c9129c938e6f395bcc8f",
+      "source": ".tmp/m02-network-disappearance-20261104/candidate/access-ownership.patch",
+      "role": "component_patch"
+    },
+    "patches/M02.patch": {
+      "bytes": 42522,
+      "sha256": "13f90131a902a7b05324af43059f96d00e6d899f363cfb382157eb4156f12900",
+      "normalized_LF_sha256": "13f90131a902a7b05324af43059f96d00e6d899f363cfb382157eb4156f12900",
+      "source": "generated solely from exact captured originals and frozen candidate payload",
+      "role": "cumulative_board_patch"
+    },
+    "patches/S07.patch": {
+      "bytes": 42522,
+      "sha256": "b31a82cf6b45831808b94dd7fb0b6afced2e66cda8275e7245f4899371af8cbc",
+      "normalized_LF_sha256": "b31a82cf6b45831808b94dd7fb0b6afced2e66cda8275e7245f4899371af8cbc",
+      "source": "generated solely from exact captured originals and frozen candidate payload",
+      "role": "cumulative_board_patch"
+    },
+    "review/packaged-focused-tests.json": {
+      "bytes": 8544,
+      "sha256": "f6c9761199f2ca92025d5b6264c864d345026993078e7c4029e3169808e6a460",
+      "normalized_LF_sha256": "f6c9761199f2ca92025d5b6264c864d345026993078e7c4029e3169808e6a460",
+      "source": "executed against byte-identical copied payload",
+      "role": "package_validation"
+    }
+  }
+}

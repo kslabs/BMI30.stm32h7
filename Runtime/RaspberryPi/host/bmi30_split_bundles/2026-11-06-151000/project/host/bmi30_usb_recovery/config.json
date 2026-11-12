@@ -1,0 +1,7 @@
+{
+  "format": 2,
+  "mode": "portable-emergency",
+  "feature_version": "0.4.1",
+  "version": "2026-11-06-151000",
+  "internal_storage_on_usb_boot": "read-own-settings-if-available"
+}

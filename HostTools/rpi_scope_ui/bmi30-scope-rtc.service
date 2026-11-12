@@ -1,0 +1,22 @@
+[Unit]
+Description=BMI30 UDP oscilloscope display transport
+After=network.target bmi30-core.service
+
+[Service]
+User=techaid
+WorkingDirectory=/opt/bmi30-network
+ExecStart=/opt/bmi30-scope-rtc/bin/python /opt/bmi30-network/scope_rtc.py
+Restart=on-failure
+RestartSec=3
+Nice=10
+CPUQuota=25%
+MemoryMax=256M
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,112 @@
+{
+  "author_tests": 26,
+  "author_validation_ok": true,
+  "capture_readiness_qualified": false,
+  "captures_enabled": false,
+  "files": {
+    "API_CONTRACT.json": {
+      "bytes": 4908,
+      "sha256": "1a97d877b5a285e8d9e5cd4dd4034bac5c3656ea61b2cf84642c01c8803c95b5"
+    },
+    "DEPLOYMENT_RU.md": {
+      "bytes": 12005,
+      "sha256": "c15284bab4848670dfe67f658954559b08652c8a33c82275e03f7a2b1a1c74e7"
+    },
+    "README_RU.md": {
+      "bytes": 11012,
+      "sha256": "569f55d7d259238d7731157a9e7429799a15537a0e6f891b363c0b6e23a42bd7"
+    },
+    "SOURCE.diff": {
+      "bytes": 30612,
+      "sha256": "da55a7ee814505b6a52ad2e8c0a4be70085ef8fb6ce11c9ccb047d8720dce8d3"
+    },
+    "author-validation.json": {
+      "bytes": 6917,
+      "sha256": "f155ef3ad8937268b093c19305e0682262da82cfed9e90289e2331cf7abd2164"
+    },
+    "baseline/main.py": {
+      "bytes": 103907,
+      "sha256": "d3eb53e4012c259772ba9b62a6a937150734a188a8c339a7c647dd4dc056bd9c"
+    },
+    "build_patch.py": {
+      "bytes": 2550,
+      "sha256": "ba0280054fb098aedc9d70b6fcb10865dfbbf7976740af86c264009c8970bbf4"
+    },
+    "candidate/Dockerfile.central-wifi": {
+      "bytes": 445,
+      "sha256": "4507e4f2f7b48022e6a333f195bd5ddd4ad9c76ffa3708d492cef21d9ef1a017"
+    },
+    "candidate/bmi30hub/central_store.py": {
+      "bytes": 28616,
+      "sha256": "410f2560fadd3ba1da3250c408555d68419d855d0aae35ad42c91df8e38c2b9a"
+    },
+    "candidate/bmi30hub/main.py": {
+      "bytes": 104240,
+      "sha256": "751bbf23486dbc05cc5bb896d8e585d9384dd951b38453fd5fbcfe2d8767a89f"
+    },
+    "candidate/docker-compose.central-wifi.yml": {
+      "bytes": 94,
+      "sha256": "6cd2d9243dacef2c516563a2c41e982504d7a1af81c35360a7e95c0dfe629203"
+    },
+    "deployment-evidence/existing-compose-chain.json": {
+      "bytes": 1820,
+      "sha256": "e7a88946d3ee9f0f2421f9a1a2817aa798c18c699fb758fb17efab4e50ffdea9"
+    },
+    "independent-review.json": {
+      "bytes": 6277,
+      "sha256": "d6e485663cb8e36960c3c6527490603f4b475c41da2c06c2d65e119fc8de98da"
+    },
+    "patch-provenance.json": {
+      "bytes": 468,
+      "sha256": "7fd93850e36243e7a1cb69ca55f705c58d60c54fadd82460c2acae77eca08841"
+    },
+    "test_central_store.py": {
+      "bytes": 17393,
+      "sha256": "196c65d1a071c0fc9748e97c4061f8efc222a936da1f03920b0e6128d072edce"
+    },
+    "test_central_store_independent.py": {
+      "bytes": 12004,
+      "sha256": "cb092e32ff83ffefe7cd57aa2eb5c05ea9ed9828ab960fc6f8db8c437188a1b2"
+    },
+    "validate_candidate.py": {
+      "bytes": 2287,
+      "sha256": "3d4d2bdf147a27f0cbfde429333e5eae2b64c9a550413d0a411edc8d78cd03c4"
+    },
+    "validation/author-reviewed-snapshot.json": {
+      "bytes": 6917,
+      "sha256": "31901eabd6bced3c03d8acf1401d39f074d4eb80c2b0ba7ebc75c07a6ead56b7"
+    },
+    "validation/initializer-independent-review.json": {
+      "bytes": 1761,
+      "sha256": "9db7885cdf2abb1142d54975f43d624dfa5a399c39f80cc86f04926d93c09f7b"
+    },
+    "validation/server-catalog-created.json": {
+      "bytes": 438,
+      "sha256": "29ed156c71d72995771683ba67b15b41bb1c0ab62553c469ac1de5e090985e4c"
+    }
+  },
+  "independent_reference_aliases": {
+    "author-validation.json": "validation/author-reviewed-snapshot.json"
+  },
+  "independent_review_complete": true,
+  "independent_tests": 12,
+  "independent_validation_ok": true,
+  "new_external_server_dependencies": false,
+  "private_files_included": false,
+  "release": "2026-11-05-central-wifi-v1",
+  "schema": 1,
+  "scope": "reviewed additive Hub r36 WiFi source patch",
+  "scope_policy": "existing active Hub system assignment; no global approved-device fallback",
+  "server_api_activated": false,
+  "server_catalog_preparation": {
+    "catalog": "/var/lib/bmi30hub/data/network/credentials.json",
+    "catalog_sha256": "22b35eb5fc74dfd2564640fd2a8a2adffe51bd72d7e3177c42c3f31e0fab7038",
+    "key_exists": true,
+    "private_modes_verified": true,
+    "scope_count": 0,
+    "server_fsync_not_claimed": true
+  },
+  "server_deployed": false,
+  "server_empty_catalog_initialized": true,
+  "source_prepared_for_stage": true
+}

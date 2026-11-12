@@ -1,0 +1,1413 @@
+{
+  "format": "bmi30-stm32-offline-build-v1",
+  "version": "1.2.59-host-tx-lcd",
+  "git_hash": "host-tx-lcd",
+  "cube_h7_version": "1.12.1",
+  "compiler_required_fragment": "GNU Tools for STM32 13.3.rel1.20240926-1715) 13.3.1 20240614",
+  "artifact_name": "BMI30-STM32-1.2.59-host-tx-lcd",
+  "source_count": 66,
+  "source_order": "Exact original r5 map LOAD order, retained by verified r9 compile-results",
+  "sources": [
+    {
+      "name": "USB_DEVICE/Target/usbd_conf.c",
+      "root": "project",
+      "path": "USB_DEVICE/Target/usbd_conf.c",
+      "sha256": "6fca9eade0ec5186ac47adb939f8ff9216e4bc10fea872f21a6fb4bb3f169909",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "USB_DEVICE/App/usb_device.c",
+      "root": "project",
+      "path": "USB_DEVICE/App/usb_device.c",
+      "sha256": "c3b03600942b05178738569ed118b04226163f5cfcf6107830aeab5d41792c12",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "USB_DEVICE/App/usb_vendor_app.c",
+      "root": "project",
+      "path": "USB_DEVICE/App/usb_vendor_app.c",
+      "sha256": "271ed0316b820ab82aa000609315584519bb3bee4cb476fb09f54c3bde4202ff",
+      "language": "c",
+      "extra_flags": [
+        "-Werror=implicit-function-declaration"
+      ]
+    },
+    {
+      "name": "USB_DEVICE/App/usbd_cdc_custom.c",
+      "root": "project",
+      "path": "USB_DEVICE/App/usbd_cdc_custom.c",
+      "sha256": "15c697dd306701516657ac84fb353a88e2b97e017f0aba27cad24bd31ee54dd5",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "USB_DEVICE/App/usbd_cdc_if.c",
+      "root": "project",
+      "path": "USB_DEVICE/App/usbd_cdc_if.c",
+      "sha256": "bce29dc4ea336425ae8ac45bdb23a8712d8e5c993c1e1b6ee53c5f7c696c4c42",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "USB_DEVICE/App/usbd_desc.c",
+      "root": "project",
+      "path": "USB_DEVICE/App/usbd_desc.c",
+      "sha256": "23ab3251d67ee5fde55ed3ccec427f42f5845b25a9685365568cf12f3036e395",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Middlewares/USB_Device_Library/usbd_cdc.c",
+      "root": "cube_h7",
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c",
+      "sha256": "794a6d0df08fc2b777678b99013f61d0a9c93f5fbeacfaa3466c0feeaa9ada39",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Middlewares/USB_Device_Library/usbd_core.c",
+      "root": "cube_h7",
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_core.c",
+      "sha256": "4cb3e3487e2cb6b474ea632fc5d4b1da6e58b5e4d8f6302495d87c5bd17f8c1a",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Middlewares/USB_Device_Library/usbd_ctlreq.c",
+      "root": "cube_h7",
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c",
+      "sha256": "5f1c211ed991e074589c82bc52571357a268f36776111d99a85539df53fd80f0",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Middlewares/USB_Device_Library/usbd_ioreq.c",
+      "root": "cube_h7",
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c",
+      "sha256": "26fab50d3392b6a2b05acf1e08b8c809e0bd98c010cbf32690f158c95f715760",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c",
+      "sha256": "3e46894e1870c682b6362c0536d5a5ded6cf5541f54559e5cc591e90352f0bfc",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_adc.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c",
+      "sha256": "f816ffa452a24e62b8c3cf681f5658bbf1a383327022fbeb7faf5c7815a9f85c",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_adc_ex.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c",
+      "sha256": "d6e09ac1293ae3d20806fa04b9abd162144c6b6fc57c4e8d87c11b97c71ba0b6",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_cortex.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_cortex.c",
+      "sha256": "9df95c02feab163763ac752c17c07f0a10f6bd7d303f659e950dd8b6b4cce2c9",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_dac.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dac.c",
+      "sha256": "dfe2bc417a9e97333669bf55cf6bb5f67ddb92979b680483155a97b96d18d7b8",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_dac_ex.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dac_ex.c",
+      "sha256": "15dd23c0f5a45e946003380583dfb5921709b13f537db4f44248894f4ba9e1d8",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_dma.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma.c",
+      "sha256": "e1b72f89360c46185e557e9ae3ad9c0b36978130dbf010ac54a089a850a9d2cf",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_dma_ex.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_dma_ex.c",
+      "sha256": "a8bc1642a339acba8aaa7be9101854ab36319efcf2a3ba299760451af31585d1",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_exti.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c",
+      "sha256": "90865afce1c097a4760b197f1c23f602edab2cfd75f19c1d56a14f02e5042411",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_flash.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash.c",
+      "sha256": "f5d7fae3a1dce51e81c099a48a39c2076ee79932a7d369a76a2dd1d5b0e8103f",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_flash_ex.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_flash_ex.c",
+      "sha256": "aea2f7cf88a97ff6e9eb6afd542ee9aa1f1be2946db834625df176f2a383497f",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_gpio.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_gpio.c",
+      "sha256": "e8cb800d746479f9b768e6845dfd2c84867a0b264101afb21f5ad799e3a65ae2",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_hsem.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_hsem.c",
+      "sha256": "9878195481869a883edb4c2c4e5f62b7f5764ffbb517bd38a2fae4e2150f8eb0",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_i2c.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c.c",
+      "sha256": "c627ab3ee0f7d2989ffaa9e078ebda279b8be1b16a98362b51e804e63c8346e4",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_i2c_ex.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_i2c_ex.c",
+      "sha256": "a6c182468b914f37b8f74e2d3ba0f8d4d6cbf59efe3bf99d9739007a1d7f37d5",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_iwdg.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_iwdg.c",
+      "sha256": "d1888de61e2c808611905653738a3341eaad160eae46cc1a79a2e57ac00cde4a",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_mdma.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_mdma.c",
+      "sha256": "674d7a273d208509e2941cb88d9419f549cbdfd35d4aa81b2da135bf1c1a30ad",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_pcd.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd.c",
+      "sha256": "f1c48624654428a73a196bcd83b7b8477a0b6cebb1a229088090982f957823fa",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_pcd_ex.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pcd_ex.c",
+      "sha256": "b824518dee8baf4c19feab85b2951e25031808760ddf8fab31c6797770fbeffd",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_pwr.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr.c",
+      "sha256": "87dc25ff1b0a58773eeed5a87de133167cfe4306bf54aa884889a61d8a5bd7f4",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_pwr_ex.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c",
+      "sha256": "15469705b458ee696d3ca241ea85ec371c2463a5ac629ab9078d2912dab19c8c",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_rcc.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc.c",
+      "sha256": "99c51eaf3e01a9040e3080b2d0f537fd546e63792b571f74fc39bdc481d82116",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_rcc_ex.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_rcc_ex.c",
+      "sha256": "ba3ffa42989a60a93e8de7f148cde4fa22c6853223d00d5d9954ad370c6012fe",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_spi.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_spi.c",
+      "sha256": "862a531faa657484a7af61412387f146587e4430cbfdcf104749f48683ab419c",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_spi_ex.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_spi_ex.c",
+      "sha256": "d7262bb17d9c4949ff4be52cb287ab823415ea59019ed89a4750d6c5c1997988",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_tim.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c",
+      "sha256": "a629504942e13c443324ebf9efa301a003ce2880c57b7aeb59bff5a643ec829f",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_tim_ex.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim_ex.c",
+      "sha256": "f00d3730972ebc50ced69c9c40bfb2d5e2bbc2026e33818bc97cf2048dc47837",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c",
+      "sha256": "24be6acbe1eaad088184086efb3a4ce309e00e90ceeeecbf3e112b8ec23bb429",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_hal_uart_ex.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c",
+      "sha256": "ef3ee8fb9ea24163b9ed0b0e6078bba36b071de3ff9af16a7914df634e0bb191",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/STM32H7xx_HAL_Driver/stm32h7xx_ll_usb.c",
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_ll_usb.c",
+      "sha256": "e18900b0d91d79d8eea02d60eec865ea0eada440a053354c81b709c33f5e890a",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/BSP/ST7735/board.c",
+      "root": "project",
+      "path": "Drivers/BSP/ST7735/board.c",
+      "sha256": "8602b627f858263d5a112de655415a3dc82dc43377ce8ea0850f4511a4119f40",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/BSP/ST7735/font.c",
+      "root": "project",
+      "path": "Drivers/BSP/ST7735/font.c",
+      "sha256": "49fd7be8389035cd69e424ae23d5462c346d5b3c89089fd6e3ebc3e3caea7ac1",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/BSP/ST7735/lcd.c",
+      "root": "project",
+      "path": "Drivers/BSP/ST7735/lcd.c",
+      "sha256": "9afffc55da957311fecbe6601fa176daf0bf875c00d8126f43bd654807396128",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Drivers/BSP/ST7735/st7735.c",
+      "root": "project",
+      "path": "Drivers/BSP/ST7735/st7735.c",
+      "sha256": "4733b36b8a7363efdfc083a9626d04711b0e2756dab2cf2b4a6c7f7fe98419d6",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Startup/startup_stm32h723vgtx.s",
+      "root": "project",
+      "path": "Core/Startup/startup_stm32h723vgtx.s",
+      "sha256": "161cb4b6ededcf5d10c8e8dd1eb8343ccc2a1586b9c5aa0f389760956c569d9f",
+      "language": "assembler",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/adc_stream.c",
+      "root": "project",
+      "path": "Core/Src/adc_stream.c",
+      "sha256": "0de2e81244a3249ed3d8ca2165dbebe10f9a080dbc71f718e6d8321e69f8fcc9",
+      "language": "c",
+      "extra_flags": [
+        "-Werror=implicit-function-declaration"
+      ]
+    },
+    {
+      "name": "Core/Src/main.c",
+      "root": "project",
+      "path": "Core/Src/main.c",
+      "sha256": "cfc97aa6dbcdf85349c7a223fa77654466bbd4abbb3934621ed7569e904d0ae1",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/build_info.c",
+      "root": "project",
+      "path": "Core/Src/build_info.c",
+      "sha256": "df0f7292f89d9b348cbb018cfd6349bf994b54c4977051095f500e5da7edc36f",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/spi2_fix.c",
+      "root": "project",
+      "path": "Core/Src/spi2_fix.c",
+      "sha256": "7e133db80375a2538ab32b12ab16a198134366a39e5464156b233ba9a416183f",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/stm32h7xx_hal_msp.c",
+      "root": "project",
+      "path": "Core/Src/stm32h7xx_hal_msp.c",
+      "sha256": "ef80fdb853e6f42323124058d27ed7530a42fbcf3f3eae2f880e02e45933f1d9",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/stm32h7xx_it.c",
+      "root": "project",
+      "path": "Core/Src/stm32h7xx_it.c",
+      "sha256": "2e746a325d4bfc2c61415dafa27f274de428a984a0f57a498015fd9ede1c6058",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/syscalls.c",
+      "root": "project",
+      "path": "Core/Src/syscalls.c",
+      "sha256": "4aacd6493a2b9608e452310bf9e18f1c5d0a545b4f30cc1426d6a36c96faba1f",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/sysmem.c",
+      "root": "project",
+      "path": "Core/Src/sysmem.c",
+      "sha256": "e00be9ce9b834538f99984b02a5c6e3a1d10b50d763013fba0afdda9996a6887",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/system_stm32h7xx.c",
+      "root": "project",
+      "path": "Core/Src/system_stm32h7xx.c",
+      "sha256": "346b935238c0f9fbf484381c83ccbd266ef1ec86ddc23712804bf1ed4d2d69bb",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/tinyusb_all.c",
+      "root": "project",
+      "path": "Core/Src/tinyusb_all.c",
+      "sha256": "b6dfcaf931e7dba1ac83f4fc7335aa8817ea3672c449abc79572fa8c476e71bf",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/tinyusb_stubs.c",
+      "root": "project",
+      "path": "Core/Src/tinyusb_stubs.c",
+      "sha256": "9b6ded7d7760202376e5793b7570aa4810a50d6b3340e57d5f1cd481833f469f",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/usb_cdc_ll_st.c",
+      "root": "project",
+      "path": "Core/Src/usb_cdc_ll_st.c",
+      "sha256": "1620d001707e8196f153071de7e89fb92e7dd5cfcc2225e17761987883d712f0",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/usb_cdc_proto.c",
+      "root": "project",
+      "path": "Core/Src/usb_cdc_proto.c",
+      "sha256": "f5235c69eeada7d318b91448e1ab964033078e7306de07a347e4c5aebdf3ad09",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/usb_descriptors.c",
+      "root": "project",
+      "path": "Core/Src/usb_descriptors.c",
+      "sha256": "997fcc1afe339041ccac485847baa685ebf26931aaac1f469f3ff16a9b5f1608",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/usb_descriptors_tusb.c",
+      "root": "project",
+      "path": "Core/Src/usb_descriptors_tusb.c",
+      "sha256": "7bb82a68f8066d5cb5af7b54da4a035967f9b4079c184e1a45d5eed28cc4ca09",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/usb_stream.c",
+      "root": "project",
+      "path": "Core/Src/usb_stream.c",
+      "sha256": "f07c0f136046bd8e0b40c4e89472ff949eccf8449d4c8874e5d3d9e347d91331",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/usb_tinyusb_bridge.c",
+      "root": "project",
+      "path": "Core/Src/usb_tinyusb_bridge.c",
+      "sha256": "490bf979844a38dcfeb40ac47fc771f620363ffac42836ed2b36bffd64ab3823",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/usbd_cdc.c",
+      "root": "project",
+      "path": "Core/Src/usbd_cdc.c",
+      "sha256": "e0d0c5236b042fa9d5f319913ccb59299963da4afd9085e032392b62ce312d00",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/ws2812_spi.c",
+      "root": "project",
+      "path": "Core/Src/ws2812_spi.c",
+      "sha256": "cf772d197677c0c73358ed05cc40b54432b93ebfc4083b184b169f9f6b2760ca",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/vnd_testgen.c",
+      "root": "project",
+      "path": "Core/Src/vnd_testgen.c",
+      "sha256": "975f02924d688f194fb0fb441da62e0846350019858d12b199e878b3d45aa696",
+      "language": "c",
+      "extra_flags": []
+    },
+    {
+      "name": "Core/Src/rx_phase_detector.c",
+      "root": "project",
+      "path": "Core/Src/rx_phase_detector.c",
+      "sha256": "b834605dbd2610bd64f2adc7e6569b7c7bad2d7307edf3f25f13154b1db88cf2",
+      "language": "c",
+      "extra_flags": []
+    }
+  ],
+  "common_flags": [
+    "-mcpu=cortex-m7",
+    "-g3",
+    "-DDEBUG",
+    "--specs=nano.specs",
+    "-mfpu=fpv5-d16",
+    "-mfloat-abi=hard",
+    "-mthumb"
+  ],
+  "c_flags": [
+    "-std=gnu11",
+    "-DUSE_PWR_LDO_SUPPLY",
+    "-DUSE_HAL_DRIVER",
+    "-DSTM32H723xx",
+    "-DGIT_HASH=\"host-tx-lcd\"",
+    "-O0",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-Wall",
+    "-Wextra",
+    "-fstack-usage"
+  ],
+  "includes": [
+    {
+      "root": "output",
+      "path": "include"
+    },
+    {
+      "root": "project",
+      "path": "Core/Inc"
+    },
+    {
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc"
+    },
+    {
+      "root": "cube_h7",
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/Legacy"
+    },
+    {
+      "root": "cube_h7",
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include"
+    },
+    {
+      "root": "cube_h7",
+      "path": "Drivers/CMSIS/Include"
+    },
+    {
+      "root": "project",
+      "path": "Drivers/BSP/ST7735"
+    },
+    {
+      "root": "project",
+      "path": "USB_DEVICE/App"
+    },
+    {
+      "root": "project",
+      "path": "USB_DEVICE/Target"
+    },
+    {
+      "root": "cube_h7",
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Core/Inc"
+    },
+    {
+      "root": "cube_h7",
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc"
+    }
+  ],
+  "sdk_headers": [
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h723xx.h",
+      "sha256": "19086af8741f4aab5c6aecc895bc98d997a752dc28b1cc74d059b03717005259"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h725xx.h",
+      "sha256": "b97cc59a64e19c83b8c37be723af9bced158d1acb5eff369c8d8f08278319cbd"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h730xx.h",
+      "sha256": "5ccf797539eac2a790cb5186c4d4d0a7c1260749b1aaa29a5ffd05ced9b130d2"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h730xxq.h",
+      "sha256": "6df845e58faf1f84ef61e0512ee28d999938c27f5084477c14b3aa1debe39b53"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h733xx.h",
+      "sha256": "22e02bb5b7eeb60c7540051a4e6a4e15487bad1c909aa2b012cf7226aab26c48"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h735xx.h",
+      "sha256": "23840e17cad90476c07e87e709482d31a03b735af62da42059425c09cd95bd18"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h742xx.h",
+      "sha256": "014160ebd2de1378a515c5be81a93b98ff4a3b036536d72486374834064e21d8"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h743xx.h",
+      "sha256": "b9463dc0f4316851b411469d08a6f275062fc7324397d3d0a09edfb58cab2df1"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h745xg.h",
+      "sha256": "dfc70861349823dd7e4bb6e5eff014c3969278a25287d6e8e5abf57f6f071ad8"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h745xx.h",
+      "sha256": "6a0e1bc01bde08eeafdf8a6e301e71e22b63803a2c8b194ca69c43cec185b6a7"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h747xg.h",
+      "sha256": "d296ed718f05b36900a019c8e96ddbc1a8358340c9d983a2e25152fe9a536d9d"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h747xx.h",
+      "sha256": "07675267559bfc8ef162a932f937488289a45b6f007fa5476c53fbd5b6d4c199"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h750xx.h",
+      "sha256": "7caed5502c7b277eb53f8f4af40ff7f26ffccfc6b7648e6223dab869382d1a20"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h753xx.h",
+      "sha256": "2ecc821785b069e543db6e98bbb1c4b4abbe0647948ee66e53562e878cfddd93"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h755xx.h",
+      "sha256": "3f6110c90f6762d489ad8eee957325783262f4b5b63d57f42ecf80af4792fd0d"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h757xx.h",
+      "sha256": "8d42fd068715850effef649c580bbd86466a7d32b9c0a84799edc3ae923b9174"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h7a3xx.h",
+      "sha256": "2fa890aa889111c6052e608d6dccd66d9c6f7b935c4989b0a7ae836c4cb6659e"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h7a3xxq.h",
+      "sha256": "09a8bc2f55f5a0873ac01dd8f322315903fe59f79b8f5a6004df7b0ccdd26461"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h7b0xx.h",
+      "sha256": "e38d202a38af7addf15bfb438f07316e4e3fbabc7da5a1115832af90684a9a0c"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h7b0xxq.h",
+      "sha256": "0160908798eea2d5994610a9ce1753e0b1fcdc5678f26d99b31505dc7395f950"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h7b3xx.h",
+      "sha256": "fc6a0ba77b41c42e5d684f9b3d2ab7b1391c85aae6a7b368d68c2113f0fa7d45"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h7b3xxq.h",
+      "sha256": "e01444023ef0ac6b6081fc1eda1fd6ee7b4ef22c466e1fc3eb0b9a978955230c"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h7xx.h",
+      "sha256": "9bad4fffca7a09b179e6be9d55204eff634cda7e2cec620a79002f6f4d0e0bcf"
+    },
+    {
+      "path": "Drivers/CMSIS/Device/ST/STM32H7xx/Include/system_stm32h7xx.h",
+      "sha256": "edbd2ae253530241ca82470fde1db4de1b0ba856590d69b17d3342b952c1fcba"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_armcc.h",
+      "sha256": "5a80286d68d0b4478895a222da683c8ca561d3bcf6392aaaea225d4a117c843e"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_armclang.h",
+      "sha256": "e24f4bd1548b94e0ad424f4f13f59a4db4ca5aad7b644d10a893a330775d3003"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_armclang_ltm.h",
+      "sha256": "e8f040e9ef61e466cc751677ab3c413a463cb74d1fc33fb6dfd94225bd93c8c1"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_compiler.h",
+      "sha256": "b51963d271c1571ca3463654c76aa7ea50c4eac5d0a2710df10414ac64d9e0f8"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_gcc.h",
+      "sha256": "1fba3e120e5c0a439e0982bd37fae04bd033dbd14187428214462a1707c56252"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_iccarm.h",
+      "sha256": "820bcd68b0a92f97abf5cdde6413e5e842fb286e0514be2c1be1547bb2dd2e7d"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/cmsis_version.h",
+      "sha256": "1b2c47a90e9ae741c8fd4d0f323495327b25ff5d555a6c7afd6749a65ba1bb8e"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_armv81mml.h",
+      "sha256": "b4bc83a6ff10fd2fb7e4c0abefdbd447eb7f78f3db898ca9aac5676307e2b862"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_armv8mbl.h",
+      "sha256": "74b92c994af7355e222b45a0342754840b7221b611ef95bd206345879cc2caaa"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_armv8mml.h",
+      "sha256": "77255f30508cf0d225f8b72207e28bf81353f8b353e8b120132c6db7e9bead9e"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm0.h",
+      "sha256": "52e8826259be4fcb10d0de2d3655c24d52436e54cd1509f3beb1a31a45524f38"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm0plus.h",
+      "sha256": "36e9aec815eef944241e5fed7085845346de6bcb5ba30561f956356b393ba5f0"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm1.h",
+      "sha256": "944bf0c4f940eef30a632cd99d5dcfe8270e8a8431eb98c0f081bcf4f61f728e"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm23.h",
+      "sha256": "f04d3e5f385b0ff219a75f6648acabf7debb779a72f0628573b64dac5ad49fdc"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm3.h",
+      "sha256": "0191499015f3af7b37ce83092df29d1d63dbba9fa5f31b6d2341a2e850b20cb4"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm33.h",
+      "sha256": "3566c5bf835091b1cc46baf6e9b6ce94d83dd0885e0db122f43e901e9326945a"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm35p.h",
+      "sha256": "1f6da4c033261293acb8f0a7da42a0e9b6ab392c9462cc26f5e3e35d4db4e2d3"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm4.h",
+      "sha256": "53d609b900c262650fcaf5a48eabd0fa299c3ac4d1426eb0f20e2aab053f8abb"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_cm7.h",
+      "sha256": "34d91327a5f1b251c54fa6bb532d9f5ec0423bf3b7f2b679c8f7b3df95af0fc8"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_sc000.h",
+      "sha256": "cc9037b32401824436d251de860799fcdbab3cf69e2321438c8f446f3f342526"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/core_sc300.h",
+      "sha256": "e6a78d85b3ca77e35dc512e32e535028a46e156adab8629360fa4b7fe6731827"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/mpu_armv7.h",
+      "sha256": "c9ad7cc99ba0481365550ae997c63cde9732d067d9ec0de28b0d6ac39280656d"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/mpu_armv8.h",
+      "sha256": "53f9e848af62ea8704f463992e4d65c7c79fc72cfd8fab6fa14adc73478b0afd"
+    },
+    {
+      "path": "Drivers/CMSIS/Include/tz_context.h",
+      "sha256": "45565c8cb04c653aabaf3cceddfc848b6a0de28c20d4f7e3d475a992c7eee788"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h",
+      "sha256": "7fff96faed90c81364225132389b1865f67ceac8e65381b60459264c4136ee6e"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/Legacy/stm32h7xx_hal_eth_ex_legacy.h",
+      "sha256": "591cf7a79e136981c76c13fccbcb601342f25b3cf70ee6b4e1f01af7830599ce"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/Legacy/stm32h7xx_hal_eth_legacy.h",
+      "sha256": "90fc2109e5c5b1a4326e01e19392d35e20e2d0c94d2bfd8f49d43cc282c3003e"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32_assert_template.h",
+      "sha256": "40ea5235c7bc594d752ecee3dcd54ebadfd041d6cf3ff7035dddd4fb34f619f1"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h",
+      "sha256": "97aeb9e9e0c3acde0c91d025e89c7972b9ad13ab3cb735d40ad852dc395f6980"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_adc.h",
+      "sha256": "7a67f8a941d0d6e1803a2d59e3f4134c1e863f62142a2ff42b35a1761b1b42b0"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_adc_ex.h",
+      "sha256": "5f54fbf0716a5aabe1fab44acaa65553bbc96538038bdb629e7a203cffad6332"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_cec.h",
+      "sha256": "d52cb1a778fbf8d794383f607a1679aa07e508f1024849afdff69825fe3e0cbb"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_comp.h",
+      "sha256": "37f211ffda843c29bf8428d2317c7310ed574efcb6bc2af2e538b177e7e3f504"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_conf_template.h",
+      "sha256": "78f808e304aeba6cd41f9b83ce32c942409f26770bb9dac65beabb4a8e8e3226"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_cordic.h",
+      "sha256": "1882081dc2973efec765b21fb888c415c4a60b6c399a78ca7fdcdf8093890a06"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_cortex.h",
+      "sha256": "8b61853cb8eb65dabf5181e9f4a2effb3be70974800f6ddc38ae62f0310e78ae"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_crc.h",
+      "sha256": "c3a1453e889a69283cb1c552a3a128ce444c841fc712d5181e1bf8562342521b"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_crc_ex.h",
+      "sha256": "323d7e0714db795ab4dc04aacb0db36ab30158b9f75800ae3d3d1b19fd418205"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_cryp.h",
+      "sha256": "42e114b62c86d688c2b0a67a96f07f5c0b68c805f181b4e20c43845064398cf7"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_cryp_ex.h",
+      "sha256": "b9bfc4087d50ed6f40610b93c60d919c57b1f133c75c0a4c1489470f2a5ab58c"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dac.h",
+      "sha256": "2440c30b119be1a39f869c3c347034162b51a8fdce1f0ea126e0ec4cf0227670"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dac_ex.h",
+      "sha256": "e5c1d6f24a98406f2762eaf9d30fc80c82a4e83ca5d0b730241f6b5eafed51d3"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dcmi.h",
+      "sha256": "99906552f4055a5f82e8e429b581118fe7efa7eedbebdf450d2c6937868d0157"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_def.h",
+      "sha256": "f7e6ad2cff1b770393ad76961fbb220bef0a52593e9035746e7961137061ebfc"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dfsdm.h",
+      "sha256": "d2a91299fda3ef87546e7370833957a54dd6c5f53c8e612896b7660d6d71019b"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dfsdm_ex.h",
+      "sha256": "707a46a0130eb40aeb140526f815612790fd68c7e1c8c16cd2e6928200318b54"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dma.h",
+      "sha256": "564d6d26015155743f4990a354d26124d5d434673813c75df5da9572e4ac2eae"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dma2d.h",
+      "sha256": "fc14976cf957e33c5f47b21c9666c491aff833fc4e46dc6e0c50e12bb3075311"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dma_ex.h",
+      "sha256": "bc906d5cf9ed149185aa77a80a793e50aa4b2c7e0606f88df1a4b8900a8a26fa"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dsi.h",
+      "sha256": "94f3c09a08d57d8253b0b681f1d47c4b2b403b4b744e453c1e0d1c72361a866f"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_dts.h",
+      "sha256": "29ba726f6f6199574c2812e66d05e716b18be69013d2284b32563ef4ac2224a5"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_eth.h",
+      "sha256": "069499c7c3e56e4e23b728269c1433569c71b144b3407c7ff010aa2a3c4147cb"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_eth_ex.h",
+      "sha256": "b8e1e779a4ae5dc61a25c38c8f8ff969f7d6bf2d44ebbacdc15a0091c1dd517d"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_exti.h",
+      "sha256": "24a13bdf1e9010068e8bb123c28421f4e009c86ab949ca5df86a7065a96f0498"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_fdcan.h",
+      "sha256": "a50c2a825716267483c905d8689bf387f8314f37e56999dee05ea7b77f3d02c4"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_flash.h",
+      "sha256": "96340bb9572f6c53554323795b3aa8c86962d14b0596dab550322f34dfccba7c"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_flash_ex.h",
+      "sha256": "a5634068e887b72f39c9f18816d5ca4534b1c0103c9847db5067dd866fa42ba6"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_fmac.h",
+      "sha256": "a37f9c42038545898f39a680040e9f7d3f8e6628c0f63f6068d6e58e451c2dac"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_gfxmmu.h",
+      "sha256": "f1348d68428313841694fc670b8b869550fa4b866641ff994b6e12d6ab2876da"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_gpio.h",
+      "sha256": "75c7e634ec0b5fa2ad6ef90b9b010a4dbac1cdd9876daf80cab2253774c092bb"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_gpio_ex.h",
+      "sha256": "81b441ab0ef72718230fc3b259a120c57e253018863d9aa9e50f4f6456c866f3"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_hash.h",
+      "sha256": "53963c99bb67a8446044e5a4b2a937d96f969b16987ae775a7ef31332295bece"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_hash_ex.h",
+      "sha256": "e79386f45b6fb41eaa3febc976bacbaf3ca3e765aebc62255160014daf587b28"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_hcd.h",
+      "sha256": "43c2f8af017d9f73ed05332c95b5febec6c36bfc349be51464daf38e5bbfcffb"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_hrtim.h",
+      "sha256": "9ca6b5df2e31613c807d6153b21fe6ffbbab619c5bf344dca1b23ab3edf62196"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_hsem.h",
+      "sha256": "9375fc3023cde3f3ccf0a77a21d571d63acbe47f23149c2f226972cecdffdc6f"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_i2c.h",
+      "sha256": "6741b4870c9e870e3293996b968419b7edbd2c3477183e44663086ec6f069398"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_i2c_ex.h",
+      "sha256": "445dcca6512f91fa60903605c52f19c2792e3d00e6eba9db3a234901a9dd8c40"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_i2s.h",
+      "sha256": "1ad9732556fb59c937bf517efd927935f0a576aba173f68224f0cc01b03d7ffa"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_i2s_ex.h",
+      "sha256": "ed0355cb7a45f27d154edc3786ca443da44aaf87ef2a558c34e3eb7403a1c88b"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_irda.h",
+      "sha256": "e385f949662ca727b494e98ca5ca8825b1b4795ed4505ac5b1f9c931a6cda83a"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_irda_ex.h",
+      "sha256": "85df7d5e68946cc506f50462bb51cb4c0e29e74aa89cb7e22802d2d0e579d0ac"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_iwdg.h",
+      "sha256": "ae8490b6c1243af8f35707c591f304337d0bf626fc0eabf912e411c16ba91f3a"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_jpeg.h",
+      "sha256": "557515d80f7e5279f94d33867306c9c5da72eca2442fbacfaa6d607f1e0c6c55"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_lptim.h",
+      "sha256": "18cf625e20a14181356fda3f25de883b6fea48a7ddeb382bdf932e7eb2cc5da3"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_ltdc.h",
+      "sha256": "6c1a411e473f0be96e13dba7452b00b58216a677396c2f8479ea5008540d88a6"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_ltdc_ex.h",
+      "sha256": "6bc066b9f844ef1b34e5dd8bd990d40c67f48540bd23fcd2b6604e9dd8f173d9"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_mdios.h",
+      "sha256": "d6e274d6c6ab098f043ccdd7a77790a3f4e970a1498eb8423d22c1b9676594ad"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_mdma.h",
+      "sha256": "580b7f7d97482fe435f5c3c4086f017a090ba186201db2af7c68567094e868e8"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_mmc.h",
+      "sha256": "c1a42ebc248a35d1226c7315d81fdc4799a8ecec275c41a335367ed86f9d7e29"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_mmc_ex.h",
+      "sha256": "282581181319dc8b279726964d67d54d5a8bd263e11080d9c2808745e8ef6a31"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_nand.h",
+      "sha256": "979c78372ea7352846ca837d38fc9cfbcf2b0cdaffc612bc1f326f29fd5b2637"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_nor.h",
+      "sha256": "1b87f8a6670e13934ad35f86beb0f8d42c3f742185ebd36c6172f40710c99721"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_opamp.h",
+      "sha256": "0be07eca579e38cc2d25f52715206625c84edf3828fc7f9e5dd205693759a25f"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_opamp_ex.h",
+      "sha256": "0c1752c6bf195f15e9859ef92dbcfae8f8300f44fa81aa914cf5eed9cdb5f7e7"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_ospi.h",
+      "sha256": "78dd9724ec8aeb7c2ba8cda49452970617551d4289f7a65005441dd2f285260d"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_otfdec.h",
+      "sha256": "44c616996c8f2bbdf5a6c0e83667cd3c6419a9e342b0c43f2f19b5dfe4aa16ce"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd.h",
+      "sha256": "70f865192e52b3d001a4ea32e0e95dd06fc449ac393fe8ab2a51b730a64c3824"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pcd_ex.h",
+      "sha256": "b063cfb05de32e8c0b573edd1231eae3f27e6e7cd5e57508346ee7b4c0763726"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pssi.h",
+      "sha256": "2e69ee80f7755bb54712e6b7a6adb5f7fe09965d18f453e08b83efd83eb1975a"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pwr.h",
+      "sha256": "65a883328691a724d5163403e5e7db38d5a1e8ec11f7bdcf5620329bf779cdfa"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_pwr_ex.h",
+      "sha256": "76ec9d62421667db5a499309f50c8145d086d76b5529a7ece37331fe5de05842"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_qspi.h",
+      "sha256": "abb4b879b017c3d5dad4373349aa7569b41c49c0b2ed9e4737abf1e6b0851f00"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_ramecc.h",
+      "sha256": "c5101ba7471d61a9113b6755f160a35b02b73a0e0ca996c0c8373215e5b4b50d"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc.h",
+      "sha256": "27c198869e9a02d059427189d0897130172c10d64a8c993cb57ee9231ebd44cf"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rcc_ex.h",
+      "sha256": "cbebc9c87db8acada7da2fd06994a998528d447960ec62737fd65cace4fd34bf"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rng.h",
+      "sha256": "c654e6f78fd00005c31850394ca5e54f599fcd13c305b9f2c245da715b2ffc0a"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rng_ex.h",
+      "sha256": "f18e0447462136f618f876b6879848360e71f48d35bc5895198382b5eef4709b"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rtc.h",
+      "sha256": "f8b426491500fcce0f598278f386a609fe60e1ce259e273daca986acee4eb50a"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_rtc_ex.h",
+      "sha256": "93d19c4b601eb35dfe3a54028d9564517d0989af87c447f6b82a98235764224b"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sai.h",
+      "sha256": "94a9b1caac7f8b8ec5e61569ecface0b5ed023968db307f121b46816b5945dc2"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sai_ex.h",
+      "sha256": "2bd44f51ba6dff79f62d71c48a6a0414a93bbf3c9e9d26b8f67ece498e1432b9"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sd.h",
+      "sha256": "281216df932d67a3598b067479d3a4dedf478ccfc54914e1d0af9cfd38405784"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sd_ex.h",
+      "sha256": "cb3118ec6cdeea6892a49f60a552ac88ed02dad465215503ca5d569d0c4bee92"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sdio.h",
+      "sha256": "e3054b885a20e004af17da16a4293187643956d2492ed13b0e01eb37a1445ef8"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sdram.h",
+      "sha256": "7f4bd8c16fe9c0f0cccd96b9abd752226e53b7a3cfd5c843ceebc2da8a67086d"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_smartcard.h",
+      "sha256": "adabf5b992a75e27a24bd7d7985af7219dbffc52958beaf40fd9208fbd134b44"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_smartcard_ex.h",
+      "sha256": "aece05ecab5740f09cd4b30cf258a164f8b6142445140189ae06d5a447e1550a"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_smbus.h",
+      "sha256": "05dee75273774c513fa94842cf63ea93f06fe030fce7728d8f5761f6b22c5a40"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_smbus_ex.h",
+      "sha256": "ff173250edb731a711960d5019c51b7cdc744c1740a86bc95528796787699063"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_spdifrx.h",
+      "sha256": "6a45307aa2c3f321072a9c078155067b8b04dc68d9ceaf0cd1713811bca325a3"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_spi.h",
+      "sha256": "9ea983fd0e3148a3291b2aa56b1d01709374a3a3845d6b592b3d3356b71f6cb5"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_spi_ex.h",
+      "sha256": "44d854991d118840677da5ce86d88b1e555fe811808354522ad2f198ac4fa66c"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_sram.h",
+      "sha256": "104336b36fe77bd174025311a3e56d0e86c2be97617190259f4a2ef2d06728bb"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_swpmi.h",
+      "sha256": "02fe1364f35fe40c7f71d5eceacafb417db2cd5b93fc5ecfb683bfb9d16fdb41"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim.h",
+      "sha256": "90eaea9d79e3e69afa3d1ef8758a07ef8809eab28e6502e46d15201f8ffa7c38"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim_ex.h",
+      "sha256": "c6e76b135cc6bff07ad4b84a76d7eedb3a63ddba472131595c4655ac37ed7196"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h",
+      "sha256": "4065a1e1b21da22b6ee74e6549d573ea4c0930e744ce923a776cfc3f35383bd7"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h",
+      "sha256": "99756f731f50013b1344f8ea0d1a0259ccacd5e085fb7477080c215dcf343841"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_usart.h",
+      "sha256": "1b1a9d7feaab8338308383dfd7546cc9d32c52d6cf7d0a8e5d86649c089a983e"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_usart_ex.h",
+      "sha256": "ac9b36ce42317dc06ee1b45c3010bc326f3e4081516b222e31c6eff18d9b4cd1"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_wwdg.h",
+      "sha256": "9bbc6c7d99a56974b31cb92d638b126701a2edc2cc0d76e8cceff6cf0b667684"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_adc.h",
+      "sha256": "cb252eef4c35038adc1ed634b7acdb7067e4984ef7f399eb6432916756481920"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_bdma.h",
+      "sha256": "29744d62b96f2e3bc721d034214feeda2132556c559cbdeafb6cd7b14cf6a7f8"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_bus.h",
+      "sha256": "0eb42ffbba51192ec0efd6463759a5fda060637ff4d694274df16b4763c882a5"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_comp.h",
+      "sha256": "077a80baf69590d25195f04c07af3d7bdb6983d7e95541661c1b11253bab5850"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_cordic.h",
+      "sha256": "c14e0a66652d2618eea6de289f5a6a67c3dce425848ba6df4a3b56f4a081d1f9"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_cortex.h",
+      "sha256": "e6781bfcc812a315006a5ea9ed0f0eb7db19beb095bce5136c345e0af4caed1c"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_crc.h",
+      "sha256": "10a384076129075299ffd121ca15d0a7e8bbc16bda47b4841dffca3dfc21e810"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_crs.h",
+      "sha256": "cb7133e48358f5cd50119c8b88c4a59634dad521f489448e04602c9efd9d2972"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_dac.h",
+      "sha256": "66765de3bf4a05abe52bbc7b6961180dc94cdeb7ef2435ef15d2db3171566652"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_delayblock.h",
+      "sha256": "af9cfe4b9f1f2b55a27f59b8a965e967adbb7ababba38a2f85e897698575d8f9"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_dma.h",
+      "sha256": "3cf0adf0da04435eb89743523a7f9e6a23a18fd6133afed7c808acef9ee0aa76"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_dma2d.h",
+      "sha256": "147da3bc1a563eb6d6c23fe2661a7c8dc6738a92f59b5acaef3be2bec1d84bf5"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_dmamux.h",
+      "sha256": "74cdd7b811aa394274ba645d05ae410d417f0e3836d91194e58156960d68a2ea"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_exti.h",
+      "sha256": "6eee9e7ba6b688c5c848e8f318b7adc293347a4697a888cfaadc9a2cd654cc5b"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_fmac.h",
+      "sha256": "33e0e3e83c974dca568be3f2e1b00b9986f3f6f585a0760edacd6893598915e0"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_fmc.h",
+      "sha256": "ebefe6988dbe215e2c5a8c8f69ba15550e60d2118211eb3711eb32c3f9852df5"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_gpio.h",
+      "sha256": "3a84cb663d59954ce2a057ee58793890579b4ef15af37c8f043190b0a82c9093"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_hrtim.h",
+      "sha256": "2b5ea541cb4cc286a51b0854fba29e9b4d93772ca997e26662719817c35cae9c"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_hsem.h",
+      "sha256": "7e2cc95c8dcd6b326801026d0398a46b903c94e4c3befd650a227e9a351606c2"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_i2c.h",
+      "sha256": "2703dc6fcbc59f324cc5e1c39dbf68774c9d68665649fbf1ed92cea72ee1270a"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_iwdg.h",
+      "sha256": "dd5c8116767550492595983a08f870d9db95181c31ec7d149e3923d274dd6768"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_lptim.h",
+      "sha256": "822c27c1547d429e3abdadc087ddd8a0ef8a8a9492b276119fc450eefdd6aca0"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_lpuart.h",
+      "sha256": "272862ad6036ead74e88306b08ed0870c44f866617328beabb505038be9af6ba"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_mdma.h",
+      "sha256": "a51bbcd08f9474c670271b05effa2b071822f32b6a656dfc057ba666a155eb2c"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_opamp.h",
+      "sha256": "0aab2102c2d5be6ac3157537b4e035bd03b664435ec8d1fe31dbfb3a681c0a5d"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_pwr.h",
+      "sha256": "fd20ad8efbceb8ad7169e92a365385759fc1331157a94399d9e8328e32c8a564"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_rcc.h",
+      "sha256": "811ac8f472d426f2d7542d1e5987f1771035637bbdf69d9197f02cd52bb9f2e9"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_rng.h",
+      "sha256": "8a105759dc1118fd0d38c1b011f4a2ea019b2ac70604d86585faed6ae21bf41b"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_rtc.h",
+      "sha256": "c75e2be7ae19fe1026175adfe02a00cf33e7cb0c75c7e11f15e78952b7c7d19d"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_sdmmc.h",
+      "sha256": "3998613e1fa2b12c5eaae2089f0ea4538b6b47838d59c3f9b331116ab311f04a"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_spi.h",
+      "sha256": "637d0822e248429fd87182786f1e727860dc52645440405642e08f5df13bf565"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_swpmi.h",
+      "sha256": "cca5b3a6abc20915eee1df22b9823ee9b0317322f9655915ca905c52bed3cb92"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_system.h",
+      "sha256": "b8fa6b6b051d961eea8b74d62b1f70849ab029b112d99c3d4955400392d78462"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_tim.h",
+      "sha256": "c4547de1d0e4825dc91d40bd4e9af5cc4d5eff16357c1601fc9127c8aea3f7c3"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usart.h",
+      "sha256": "137553753bb69d630d93751f895b3951be03c7a30862a31ac60e94355ce81bde"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_usb.h",
+      "sha256": "1214fcc2d4046842942f3e74c0219d24be038184a2a5c395519d30f11da4e97d"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_utils.h",
+      "sha256": "02f36cc8124209b5045c10a4063a7e5f4f92fb1eeb1d29f1104d94cffcbde2a5"
+    },
+    {
+      "path": "Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_ll_wwdg.h",
+      "sha256": "54aefe6a85103f2a008dac0e476d364b8e11f3bba908b1b58fb9b1b37310d0da"
+    },
+    {
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc.h",
+      "sha256": "c859848f6bf61ba5d16f0728e8a7a9ac6147ce323da35bd7e75369b582d01214"
+    },
+    {
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc/usbd_cdc_if_template.h",
+      "sha256": "6ea2d95f93f3393c84a72a96a99e2534d176337295a69b6692b189dfdfeeb05f"
+    },
+    {
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_conf_template.h",
+      "sha256": "81a5ca0fbc8d9a0c999361d4e76588e8d3a0ab2b861440b7e31f76b3d67f23a2"
+    },
+    {
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h",
+      "sha256": "a6c2dfc99fabefe4db7c4c145b4ab87d6b992e3fbd15cc65ecc1c7f9d2086f78"
+    },
+    {
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h",
+      "sha256": "f8897c9b47f97b6ca78c72b857d20fb2a2b0d85091a2362799165cdfa863e3cc"
+    },
+    {
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_def.h",
+      "sha256": "137b6e33174a789dab6a29798a32545e14593818756267b81783cb905589a904"
+    },
+    {
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_desc_template.h",
+      "sha256": "4cd5020bc5190f228741a91f7fd473f9d9a30612dfde5e33f6efd53a0dacb917"
+    },
+    {
+      "path": "Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h",
+      "sha256": "8a2d44f0cc1c34c21eb75e01cec568b45b901678fba9ca2dc3b0c9a9f0364e7c"
+    }
+  ],
+  "link_flags_after_map": [
+    "-Wl,--gc-sections",
+    "-static",
+    "--specs=nano.specs",
+    "-mfpu=fpv5-d16",
+    "-mfloat-abi=hard",
+    "-mthumb",
+    "-Wl,--start-group",
+    "-lc",
+    "-lm",
+    "-Wl,--end-group"
+  ],
+  "linker_script": {
+    "path": "STM32H723VGTX_FLASH.ld",
+    "sha256": "fb22cbf4bafa947763282fbe0219f99e4a821bd083489011e43faf00ed35fffb"
+  },
+  "frozen_build_header": {
+    "path": "review/build_autogen.h",
+    "sha256": "068b2b78e61ad9d9bda57cdcecc736dce24a21d3fc55d39e75bb747e046806db"
+  },
+  "project_tree_manifest": {
+    "path": "review/source-tree-sha256.json",
+    "sha256": "3ad1900655293436a0d9fd637de7a1d4854cb058d682f79aef83a6771bab8040"
+  },
+  "expected_binary_sha256": "6188b176ddebe196bcfde8631303f33e27287c3630af249a3d666ca2f1e0d02b",
+  "expected_binary_bytes": 327960,
+  "portable_builder_execution_status": "Full66-source59 LCDboot+liveness build passed; pinned repeat follows.",
+  "original_build_evidence": "review/build-results.json; original compile-results/source order included in formal review material",
+  "source_export_scope": "Complete firmware project source/config/linker closure; excludes historic HostTools/release binaries/logs/gitbundles. Required CubeH7 source and header subset exported separately.",
+  "frozen_build_time_standard": "UTC",
+  "based_on": "Reviewed STM58v2 exactTXlease +LCD bootGRAM/display gate only; no role/NVM/ADC/linker edits."
+}

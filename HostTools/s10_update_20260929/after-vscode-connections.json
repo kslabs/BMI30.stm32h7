@@ -1,0 +1,82 @@
+{
+  "BMI30-05AB38E6A": {
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.059044837951660156
+    },
+    "fps": {
+      "a": 15.886255233072188,
+      "b": 15.886255233072188,
+      "a_even": 7.943127616536094,
+      "a_odd": 7.943127616536094,
+      "b_even": 7.943127616536094,
+      "b_odd": 7.943127616536094
+    }
+  },
+  "BMI30-27448D72B": {
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.021230220794677734
+    },
+    "fps": {
+      "a": 15.96199311608069,
+      "b": 15.96199311608069,
+      "a_even": 7.980996558040345,
+      "a_odd": 7.980996558040345,
+      "b_even": 7.980996558040345,
+      "b_odd": 7.980996558040345
+    }
+  },
+  "BMI30-7AA5CED27": {
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.07632756233215332
+    },
+    "fps": {
+      "a": 12.924774267810395,
+      "b": 12.924774267810395,
+      "a_even": 6.95949383651329,
+      "a_odd": 5.9652804312971055,
+      "b_even": 6.95949383651329,
+      "b_odd": 5.9652804312971055
+    }
+  },
+  "BMI30-D5507EDFC": {
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.10247278213500977
+    },
+    "fps": {
+      "a": 15.934148186525054,
+      "b": 15.934148186525054,
+      "a_even": 7.967074093262527,
+      "a_odd": 7.967074093262527,
+      "b_even": 7.967074093262527,
+      "b_odd": 7.967074093262527
+    }
+  },
+  "BMI30-D5EB8F26C": {
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.05761909484863281
+    },
+    "fps": {
+      "a": 15.942180526217266,
+      "b": 15.942180526217266,
+      "a_even": 7.971090263108633,
+      "a_odd": 7.971090263108633,
+      "b_even": 7.971090263108633,
+      "b_odd": 7.971090263108633
+    }
+  }
+}

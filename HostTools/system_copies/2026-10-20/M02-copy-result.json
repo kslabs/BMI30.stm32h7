@@ -1,0 +1,48 @@
+{
+  "stage": "complete",
+  "time": "2026-10-20T13:12:52+0200",
+  "log": "/var/log/bmi30-usb-to-emmc-20261020",
+  "result": {
+    "source": "/dev/sda2",
+    "target": "/dev/mmcblk0p2",
+    "version": "2026-10-16-1743",
+    "root_partuuid": "cd5a1133-02",
+    "boot_partuuid": "cd5a1133-01",
+    "copy_set_bytes": 10607302319,
+    "settings_hashes_verified": 311,
+    "host_modules_verified": 42,
+    "persistent_os_content_checksum_parity": true,
+    "live_state_differences": [
+      {
+        "kind": ".f..t......",
+        "path": "etc/bmi30-agent/config.json"
+      },
+      {
+        "kind": ".f..t......",
+        "path": "home/techaid/.local/state/wireplumber/restore-stream"
+      },
+      {
+        "kind": ">fc.t......",
+        "path": "var/lib/bmi30-agent/state.json"
+      },
+      {
+        "kind": ".f..t......",
+        "path": "var/lib/systemd/timesync/clock"
+      },
+      {
+        "kind": ">fc.t......",
+        "path": "var/log/journal/fc11627a33444f5eafafb08988d49cf3/system.journal"
+      },
+      {
+        "kind": ">fc.t......",
+        "path": "var/log/journal/fc11627a33444f5eafafb08988d49cf3/user-1000.journal"
+      }
+    ],
+    "boot_content_parity": true,
+    "python_dependencies": "1.24.2 1.2.1-2 0.13.1",
+    "rtc_dependencies": "1.14.0 3.13.3 16.1.0",
+    "boot_tested": false,
+    "root_fsck_exit": 0,
+    "boot_fsck_exit": 0
+  }
+}

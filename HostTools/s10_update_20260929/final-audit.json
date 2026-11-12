@@ -1,0 +1,183 @@
+{
+  "active": {
+    "version": "2026-09-29-1720",
+    "release": "BMI30_FIRMWARE_VERSION=2026-09-29-171920\nBMI30_FIRMWARE_LABEL=\"Relay control with independent detection timer\"\nBMI30_FIRMWARE_CREATED_AT=2026-09-29T15:19:20Z\nBMI30_FIRMWARE_SIGNATURE_VERSION=9\nBMI30_FIRMWARE_BUNDLE_ID=2026-09-29-1720\nBMI30_FIRMWARE_CORE_PATH=host/bmi30_active_runtime/project/host/BMI30.001.py.2026-09-29-1720\nBMI30_FIRMWARE_CORE_SHA256=37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a\nBMI30_FIRMWARE_ENGINE_PATH=host/bmi30_active_runtime/project/host/BMI30.200.py.2026-09-29-1720\nBMI30_FIRMWARE_ENGINE_SHA256=8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8\nBMI30_FIRMWARE_GUI_PATH=host/bmi30_active_runtime/project/host/BMI30.GUI.001.py.2026-09-29-1720\nBMI30_FIRMWARE_GUI_SHA256=36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1\nBMI30_FIRMWARE_PORTAL_PATH=host/bmi30_active_runtime/project/hotspot_info_server.py\nBMI30_FIRMWARE_PORTAL_SHA256=46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c\nBMI30_FIRMWARE_CONFIG_PATH=host/bmi30_active_runtime/project/host/bmi30_config.json\nBMI30_FIRMWARE_CONFIG_SHA256=ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356\nBMI30_FIRMWARE_TAG_FILTERS_PATH=host/bmi30_active_runtime/project/host/tag_response_filters\nBMI30_FIRMWARE_USB_STREAM_PATH=host/bmi30_active_runtime/project/host/usb_vendor/usb_stream.py\nBMI30_FIRMWARE_USB_STREAM_SHA256=b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c\n",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a",
+      "host/BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/relay_control.py": "8b5fd98bf4d021d8c8b44b6559b945ffa3521e2663393244467a5e07bbcb068a",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "portal_installed_match": true,
+    "offline": false,
+    "settings_changed_keys": {
+      "bmi30_config.json": [
+        "sound_settings_updated_at",
+        "dc_config_updated_at",
+        "det_ratio_high1",
+        "det_effective_ratio0",
+        "det_confirm_count1",
+        "operation",
+        "det_ratio",
+        "tag_detection_updated_at",
+        "det_ratio_high0",
+        "tag_detection",
+        "lcd_role_overlay_updated_at",
+        "det_ratio1",
+        "avg_n",
+        "det_effective_ratio1",
+        "det_ratio0"
+      ],
+      "bmi30_sel.json": [
+        "ts",
+        "sel"
+      ]
+    },
+    "status": {
+      "service": {
+        "version": "001",
+        "engine_source": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-09-29-1720",
+        "uptime_s": 710.6404409408569,
+        "runtime": "headless",
+        "qt_loaded": false
+      },
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.01777958869934082
+      },
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 3.5
+      },
+      "frames": {
+        "seq0_even": 8643,
+        "seq0_odd": 8644,
+        "seq1_even": 8643,
+        "seq1_odd": 8644,
+        "last_frame_t": 1790699648.567836
+      },
+      "fps": {
+        "a": 14.96615909270401,
+        "b": 14.96615909270401,
+        "a_even": 7.981951516108805,
+        "a_odd": 6.984207576595204,
+        "b_even": 7.981951516108805,
+        "b_odd": 6.984207576595204
+      },
+      "optic": {
+        "system_led_source_requested": 1,
+        "system_led_source_kind": "neighbor",
+        "system_led_source_policy": "enabled-source-only",
+        "system_led_source_sent": 1,
+        "system_led_source_error": "",
+        "system_led_source_send_count": 1,
+        "reaction_enabled": false,
+        "neighbor_reaction_enabled": true,
+        "neighbor_device_id": 1,
+        "neighbor_active_device_id": 1,
+        "reaction_gate_allowed": true,
+        "reaction_local_active": false,
+        "reaction_neighbor_active": true,
+        "neighbor_confirmed": true,
+        "neighbor_confirm_samples": 16,
+        "neighbor_gate_reason": "confirmed",
+        "remote_sensor_valid": true,
+        "remote_sensor_validation": "evt1_sensor_map",
+        "led_patterns": {
+          "upper_detection": 8,
+          "lower_detection": 9,
+          "both_detection": 12,
+          "neighbor_upper_detection": 4,
+          "neighbor_lower_detection": 5,
+          "neighbor_both_detection": 6,
+          "fault": 7
+        },
+        "relay": {
+          "enabled": false,
+          "active": false,
+          "pc1": 0,
+          "mode": 0,
+          "test_enabled": false,
+          "remaining_ms": 0,
+          "available": true,
+          "duration_ms": 1000,
+          "saved_enabled": false,
+          "age_s": 0.8671397269999943,
+          "usb_serial": "334535423032",
+          "sequence": 538
+        },
+        "non_addressable_led": {
+          "enabled": true,
+          "test_enabled": false,
+          "detection_active": false,
+          "sound_output_active": false,
+          "level": 0,
+          "gpio": 22,
+          "gpiochip": 15,
+          "available": true,
+          "backend": "lgpio"
+        },
+        "led_pattern_actual": 0,
+        "led_pattern_actual_source": "stat",
+        "led_pattern_actual_age_s": 1.052821159362793,
+        "led_pattern_commanded": 0,
+        "led_manual_test_pattern": 0,
+        "led_detection_allowed": true,
+        "led_sound_synchronized": true,
+        "led_sound_output_active": false,
+        "led_neighbor_detection_enabled": false,
+        "led_event": "",
+        "led_desired_event": "",
+        "led_state": {
+          "fault": false,
+          "local_upper": false,
+          "local_lower": false,
+          "neighbor_upper": false,
+          "neighbor_lower": true
+        }
+      }
+    },
+    "relay": {
+      "ok": true,
+      "relay": {
+        "enabled": false,
+        "active": false,
+        "pc1": 0,
+        "mode": 0,
+        "test_enabled": false,
+        "remaining_ms": 0,
+        "available": true,
+        "duration_ms": 1000,
+        "saved_enabled": false,
+        "age_s": 0.8699907480000775,
+        "usb_serial": "334535423032",
+        "sequence": 538
+      }
+    }
+  },
+  "emmc": {
+    "version": "2026-09-29-1720",
+    "release": "BMI30_FIRMWARE_VERSION=2026-09-29-171920\nBMI30_FIRMWARE_LABEL=\"Relay control with independent detection timer\"\nBMI30_FIRMWARE_CREATED_AT=2026-09-29T15:19:20Z\nBMI30_FIRMWARE_SIGNATURE_VERSION=9\nBMI30_FIRMWARE_BUNDLE_ID=2026-09-29-1720\nBMI30_FIRMWARE_CORE_PATH=host/bmi30_active_runtime/project/host/BMI30.001.py.2026-09-29-1720\nBMI30_FIRMWARE_CORE_SHA256=37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a\nBMI30_FIRMWARE_ENGINE_PATH=host/bmi30_active_runtime/project/host/BMI30.200.py.2026-09-29-1720\nBMI30_FIRMWARE_ENGINE_SHA256=8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8\nBMI30_FIRMWARE_GUI_PATH=host/bmi30_active_runtime/project/host/BMI30.GUI.001.py.2026-09-29-1720\nBMI30_FIRMWARE_GUI_SHA256=36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1\nBMI30_FIRMWARE_PORTAL_PATH=host/bmi30_active_runtime/project/hotspot_info_server.py\nBMI30_FIRMWARE_PORTAL_SHA256=46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c\nBMI30_FIRMWARE_CONFIG_PATH=host/bmi30_active_runtime/project/host/bmi30_config.json\nBMI30_FIRMWARE_CONFIG_SHA256=ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356\nBMI30_FIRMWARE_TAG_FILTERS_PATH=host/bmi30_active_runtime/project/host/tag_response_filters\nBMI30_FIRMWARE_USB_STREAM_PATH=host/bmi30_active_runtime/project/host/usb_vendor/usb_stream.py\nBMI30_FIRMWARE_USB_STREAM_SHA256=b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c\n",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a",
+      "host/BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/relay_control.py": "8b5fd98bf4d021d8c8b44b6559b945ffa3521e2663393244467a5e07bbcb068a",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "portal_installed_match": true,
+    "offline": true,
+    "settings_changed_keys": {}
+  }
+}

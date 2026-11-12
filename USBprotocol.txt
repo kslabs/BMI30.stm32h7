@@ -91,7 +91,7 @@ Payload: массив `total_samples` значений по 2 байта (LE). (
 |0x44  | CMD_SET_OPTIC_REACTION_SOURCE | Выбрать единственный источник оптики системного WS2812 | 1 байт: `0..31` или `0xFF=собственный датчик` | нет
 |0x45  | CMD_SET_WIRE_MODE | Временная политика RS485 для Raspberry IP data plane | `version=1, mode, u16 lease_ms LE, u32 transport_epoch LE` | readback через EP0 0x46
 |0x46  | CMD_GET_SYNC_DIAG | Получить sync/wire/lease диагностику | EP0 IN, `wLength=84` | `SYN1` (84 байта)
-|0x47  | CMD_SET_TX1_PHASE | Фаза TX1 PA1 (active-low), независимо от общей RS485 sync | строго u8: 0=в фазе, 1=противофаза | readback EP0 0x49
+|0x47  | CMD_SET_TX1_PHASE | Фаза верхнего TX1 PC7 (active-high, 1.2.56+); PA1 зеркалит её active-low | строго u8: 0=в фазе, 1=противофаза | readback EP0 0x49
 |0x48  | CMD_SET_TX2_PHASE | Фаза TX2 PA2 (active-high), независимо от общей RS485 sync | строго u8: 0=в фазе, 1=противофаза | readback EP0 0x49
 |0x49  | CMD_GET_TX_PHASE | Заданные/применённые фазы и GPIO | только EP0 IN, `wLength=16` | `TXP1` (16 байт)
 |0x4A  | CMD_SET_RELAY_ENABLE | Разрешить реле PC1; 0 сразу выключает | строго u8 0/1 | readback EP0 0x4C |

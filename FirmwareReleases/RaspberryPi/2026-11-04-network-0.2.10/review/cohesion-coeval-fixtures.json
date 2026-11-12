@@ -1,0 +1,278 @@
+{
+  "status": "PASS_actual_coeval_fixture_source_execution",
+  "common_time": 1793808259.7416816,
+  "results": {
+    "m02": {
+      "fixture_at": 1793808259.7416816,
+      "elapsed_to_common_s": 0.0,
+      "core_flags": {
+        "ok": true,
+        "stale": false,
+        "connection": {
+          "connected": true,
+          "connecting": false,
+          "disconnected": false,
+          "last_frame_age_s": 0.0009639263153076172
+        },
+        "sync": {
+          "value": "master",
+          "role": "master",
+          "assigned_role": "master",
+          "role_persisted": true,
+          "device_id": 2,
+          "local_node_id": 2,
+          "device_id_assigned": true,
+          "sync_seen_mask": 132,
+          "code": "M02",
+          "source": "event-cache",
+          "device_responded": true
+        }
+      },
+      "local_cohesion_at_common": {
+        "version": 1,
+        "available": true,
+        "own_short_id": "5F295F47B",
+        "member_short_ids": [
+          "5F295F47B",
+          "8CC938B79"
+        ],
+        "age_s": 1.7869436740875244,
+        "reason": "fresh complete local RID"
+      },
+      "root_lan_at_common": {
+        "version": 1,
+        "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+        "cidr": "192.168.0.0/24",
+        "gateway_ip": "192.168.0.1",
+        "gateway_mac": "70:4f:57:da:0c:53",
+        "source": "relay",
+        "source_id": "BMI30-C9775FBAE",
+        "age_s": 0.20330357551574707,
+        "via_parent": "BMI30-C9775FBAE"
+      },
+      "parent": "BMI30-C9775FBAE",
+      "path": [
+        "BMI30-E29805C7C",
+        "BMI30-C9775FBAE"
+      ],
+      "rid_host_age_at_common_s": {
+        "2": 1.7869436740875244,
+        "7": 1.7829680442810059
+      },
+      "candidates": [
+        {
+          "ssid": "VINETA-EL 2,4GHz",
+          "bssid": "70:4f:57:da:0c:53",
+          "freq": 2417,
+          "channel": 2,
+          "signal": 77,
+          "security": "WPA1 WPA2",
+          "kind": "direct",
+          "parent": null,
+          "cost": 52.44,
+          "path": [
+            "BMI30-E29805C7C"
+          ],
+          "cohesion_lan_key": null,
+          "cohesion_majority": false,
+          "cohesion_votes": 0,
+          "cohesion_group_size": 2,
+          "cohesion_majority_key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+          "cohesion_hold_lan": null,
+          "cohesion_reason": "candidate LAN unknown"
+        },
+        {
+          "ssid": "VINETA-EL 5GHz",
+          "bssid": "70:4f:57:da:0c:52",
+          "freq": 5180,
+          "channel": 36,
+          "signal": 45,
+          "security": "WPA1 WPA2",
+          "kind": "direct",
+          "parent": null,
+          "cost": 80.44,
+          "path": [
+            "BMI30-E29805C7C"
+          ],
+          "cohesion_lan_key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+          "cohesion_majority": true,
+          "cohesion_votes": 2,
+          "cohesion_group_size": 2,
+          "cohesion_majority_key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+          "cohesion_hold_lan": null,
+          "cohesion_reason": "strict fresh mutual-group majority"
+        },
+        {
+          "ssid": "BMI30-C9775FBAE",
+          "bssid": "2e:cf:67:50:12:42",
+          "freq": 5180,
+          "channel": 36,
+          "signal": 63,
+          "security": "WPA2",
+          "kind": "relay",
+          "parent": "BMI30-C9775FBAE",
+          "cost": 117.3,
+          "path": [
+            "BMI30-E29805C7C",
+            "BMI30-C9775FBAE"
+          ],
+          "cohesion_lan_key": null,
+          "cohesion_majority": false,
+          "cohesion_votes": 0,
+          "cohesion_group_size": 2,
+          "cohesion_majority_key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+          "cohesion_hold_lan": null,
+          "cohesion_reason": "candidate LAN unknown"
+        }
+      ],
+      "decision_trace": [
+        {
+          "monotonic": 1000,
+          "selected": null
+        },
+        {
+          "monotonic": 1016,
+          "selected": null
+        },
+        {
+          "monotonic": 1032,
+          "selected": {
+            "ssid": "VINETA-EL 5GHz",
+            "bssid": "70:4f:57:da:0c:52",
+            "freq": 5180,
+            "channel": 36,
+            "signal": 45,
+            "security": "WPA1 WPA2",
+            "kind": "direct",
+            "parent": null,
+            "cost": 80.44,
+            "path": [
+              "BMI30-E29805C7C"
+            ],
+            "cohesion_lan_key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+            "cohesion_majority": true,
+            "cohesion_votes": 2,
+            "cohesion_group_size": 2,
+            "cohesion_majority_key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+            "cohesion_hold_lan": null,
+            "cohesion_reason": "strict fresh mutual-group majority"
+          }
+        }
+      ]
+    },
+    "s07": {
+      "fixture_at": 1793808259.538378,
+      "elapsed_to_common_s": 0.20330357551574707,
+      "core_flags": {
+        "ok": true,
+        "stale": false,
+        "connection": {
+          "connected": true,
+          "connecting": false,
+          "disconnected": false,
+          "last_frame_age_s": 0.007182121276855469
+        },
+        "sync": {
+          "value": "slave",
+          "role": "slave",
+          "assigned_role": "slave",
+          "role_persisted": true,
+          "device_id": 7,
+          "local_node_id": 7,
+          "device_id_assigned": true,
+          "sync_seen_mask": 132,
+          "code": "S07",
+          "source": "event-cache",
+          "device_responded": true
+        }
+      },
+      "local_cohesion_at_common": {
+        "version": 1,
+        "available": true,
+        "own_short_id": "8CC938B79",
+        "member_short_ids": [
+          "5F295F47B",
+          "8CC938B79"
+        ],
+        "age_s": 42.29692029953003,
+        "reason": "fresh complete local RID"
+      },
+      "root_lan_at_common": {
+        "version": 1,
+        "key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+        "cidr": "192.168.0.0/24",
+        "gateway_ip": "192.168.0.1",
+        "gateway_mac": "70:4f:57:da:0c:53",
+        "source": "direct",
+        "source_id": "BMI30-C9775FBAE",
+        "age_s": 0.20330357551574707
+      },
+      "parent": null,
+      "path": [
+        "BMI30-C9775FBAE"
+      ],
+      "rid_host_age_at_common_s": {
+        "2": 42.29205322265625,
+        "7": 42.29692029953003
+      },
+      "candidates": [
+        {
+          "ssid": "VINETA-EL 5GHz",
+          "bssid": "70:4f:57:da:0c:52",
+          "freq": 5180,
+          "channel": 36,
+          "signal": 57,
+          "security": "WPA1 WPA2",
+          "kind": "direct",
+          "parent": null,
+          "cost": 64.3,
+          "path": [
+            "BMI30-C9775FBAE"
+          ],
+          "cohesion_lan_key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+          "cohesion_majority": true,
+          "cohesion_votes": 2,
+          "cohesion_group_size": 2,
+          "cohesion_majority_key": "3b96a17c6c095e6f7b044b8d5c2fe77736cbf8bb79770cece9567193a9795e27",
+          "cohesion_hold_lan": null,
+          "cohesion_reason": "strict fresh mutual-group majority"
+        }
+      ],
+      "decision_trace": [
+        {
+          "monotonic": 1000,
+          "selected": null
+        },
+        {
+          "monotonic": 1016,
+          "selected": null
+        },
+        {
+          "monotonic": 1032,
+          "selected": null
+        }
+      ],
+      "hypothetical_after_M02_AP_departure_trace": [
+        null,
+        null,
+        null
+      ]
+    }
+  },
+  "count_units": "Two distinct full-UID-bound physical group members vote for one upstream LAN; this is route-selection source execution, not a device switch.",
+  "limits": [
+    "Original fixture bytes and timestamps are unchanged.",
+    "Source-executed Agent.route constructs prospective authenticated peer records from two positively identified SSH fixtures; live gossip/exchange is not asserted.",
+    "M02 candidate profile SSIDs exist in the saved profile inventory; live credential-cache eligibility/password verification/activation have not been replayed.",
+    "Decision trace uses default expired dwell and no failed-candidate cooldown; focused tests separately cover dwell/confirmations/cooldown.",
+    "S07 clients=0 trace is explicitly hypothetical after M02 departs its AP; the actual fixture still has its observed client count."
+  ],
+  "sha256": {
+    ".tmp/m02-network-disappearance-20261104/m02-cohesion-fixture-coeval.json": "d3b7dfc450e140ece8cc2cc4302bb511cb2b7c3ef23e422fc97e4638ab8b292e",
+    ".tmp/m02-network-disappearance-20261104/s07-cohesion-fixture-coeval.json": "fb5aaeeef62303a77b41ba4007a7115c442d87ac9415b382a2104416d99ab276",
+    ".tmp/m02-network-disappearance-20261104/candidate/service.py": "564688eef956907bf0fe6b743eda48b376b9cac68bd21bb190f5d3240130d18d",
+    ".tmp/m02-network-disappearance-20261104/m02_profiles_read.json": "d575718e2beed32a87e1941b1c3203a54d9207165221c3a372374b17fd026c11",
+    "HostTools/bmi30_network/cohesion.py": "8ca452ce2e5893889e75494cff94d575b6df377563ccc760cbee7d34179cbb04",
+    "HostTools/bmi30_network/policy.py": "00a473f01c4bbcb97e039e4231d0a98622ab8d9bb98a58eee722fdac322a7af0"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "ok": true,
+  "status": "NATIVE_OS_ABI_COMPATIBLE_WITH_EXPLICIT_RTC_RUNTIME_REQUIREMENT",
+  "read_only": true,
+  "checked_at": 1793876152.7443438,
+  "board": "M04",
+  "physical_CM5": "0d6b7531ed3e6af5",
+  "native_root_partuuid": "e1b5c915-02",
+  "source_root_partuuid": "d6e578d8-02",
+  "source_selected_version": "2026-11-04-185916",
+  "base_bundle": "2026-11-04-175044",
+  "native_OS": "Debian12 Bookworm arm64/aarch64",
+  "native_python": "CPython3.11.2 ELF64LE e_machine183",
+  "source_SOABI": "cpython-311-aarch64-linux-gnu",
+  "mandatory_packages_match": [
+    "libc6",
+    "libstdc++6",
+    "libgcc-s1",
+    "libusb-1.0-0",
+    "python3-numpy",
+    "python3-usb",
+    "python3-serial",
+    "python3-pyudev",
+    "python3-dbus",
+    "python3-gi",
+    "python3-lgpio",
+    "python3-cryptography",
+    "python3-psutil",
+    "python3-requests",
+    "python3-pil",
+    "python3-scipy"
+  ],
+  "same_ABI_revision_differences": {
+    "python3.11": {
+      "native": "3.11.2-6+deb12u8",
+      "source": "3.11.2-6+deb12u9"
+    },
+    "libssl3": {
+      "native": "3.0.20-1~deb12u2+rpt1",
+      "source": "3.0.22-1~deb12u2+rpt1"
+    }
+  },
+  "target_available_bytes": 13435244544,
+  "source_Core_python": "/usr/bin/python3.11",
+  "source_usbvenv": "Empty directory; not a usable runtime",
+  "whole_OS_or_kernel_copy_required_by_findings": false,
+  "concrete_gap": {
+    "native_missing": "/opt/bmi30-scope-rtc",
+    "service_ExecStart": "/opt/bmi30-scope-rtc/bin/python /opt/bmi30-network/scope_rtc.py",
+    "source_venv_python": "3.11.2 /usr/bin/python3.11",
+    "required_action": "Include explicit generic RTC runtime payload with hashes/symlinks reviewed, or state RTC unavailable; do not enable an absent interpreter."
+  },
+  "native_install_requirements": [
+    "Preserve own native config and all user/calibration/network/agent/SSH/BT data; donor USB configuration is not M04 own native settings",
+    "Install complete sanitized project code/helpers, paired185916 Core/engine/common plus base175044 assets and generic allowlisted system code/units; keep native boot/kernel/OS",
+    "Validate installed paths and source hashes; create LOCAL native adopted marker only after successful complete native deployment, with stage adopted, physical_serial0d6b7531ed3e6af5, bundle_id2026-11-04-175044",
+    "Do not copy donor legacy-menu transaction state/guards: service BOUND_BUNDLE112226 only optionally restarts a matching existing donor recovery guard, not a board acceptance condition",
+    "Do not copy empty .usbvenv or overwrite native parameters with USB values",
+    "Validate real native boot/runtime later; STM disconnected means Core connecting is expected, so do not require live ADC/STM for this RPi-only stage"
+  ],
+  "standard_marker_sources": {
+    "HostTools\\usb_recovery\\usb_recovery_common.py": "5f53473b874887a3fa70b1c6e0a1c79c2ebf0c0bbe196bc32048dc8d9465ebb7",
+    "HostTools\\usb_recovery\\usb_recovery_emmc.py": "f50e4e2bd8c62b56bc875662cfb0b3e6fcfbd309e36ca900bde6b46749e0ea1d"
+  },
+  "evidence_sha256": {
+    "native-os-source-readonly.json": "2bc1f9187b7ff1847ec3e4e236c336b4d092fe41d51a25fb1894a7738f267f4f",
+    "native-python-dependencies-source-readonly.json": "505bc869ad345e8c668d698886b927d79f6269146d61a1af2cd255fb3f218031",
+    "native-generic-service-contract-source-readonly.json": "fb80e8aeac7c023693cdd3d40d2d54c967f0e534721b0b783c7e302080501c53",
+    "native-generic-guard-source-readonly.json": "bf13e4a58918f03d582a851b2b6b0b8a996212113ce6b4077cff4166a13ba000",
+    "native-service-bound-guard-source-readonly.json": "b1f7b52bbd7a9469e453bf3f434e885c8d5352967f2a1660baa9b1e71c8f2432",
+    "native-package-compatibility-readonly.json": "b89641f15885a1c24368eb7b300934982ede4a3eda522e73fe0b4ea88b88db16",
+    "m04-own-settings-backup-report.json": "b842f4331b06f5fae1ac95ead4bef3e2e98abed9d557173b65119e7947aa4ae3"
+  },
+  "safety": {
+    "target_RO_noload": true,
+    "target_unmounted_after": true,
+    "target_filesystem_writes": false,
+    "MCU_calls": false,
+    "service_changes": false,
+    "RPi_reboot": false,
+    "source_USB_changed": false
+  },
+  "limits": [
+    "No target Python/chroot execution; compatibility derived from OS/ELF/package metadata plus current source interpreter evidence",
+    "Runtime activation and boot verification belong to root installer, not this audit"
+  ]
+}

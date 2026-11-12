@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "ok": true,
+  "scope": "Local verification-gate correction only; no device/radio/config writes or reboot",
+  "created_at": 1793874073.2150698,
+  "control_before_sha256": "30c20d01f17dcf1fd98a26f5c4b222a438c01b4d818d1401305a164f4594fa69",
+  "control": {
+    "path": ".tmp\\new-device-emmc-20261105\\control.py",
+    "sha256": "a9750854af889d9492054e3beda4d3febf344fe7858a71318d3da23a5468f24d",
+    "bytes": 13246
+  },
+  "tests": {
+    "path": ".tmp\\new-device-emmc-20261105\\test_control.py",
+    "sha256": "15730010376be77b94da2c2c25ab5f7ddc2d722abb7f6d6ba63049b5314a8508",
+    "bytes": 8559
+  },
+  "tests_run": 17,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "new_tests": 2,
+  "expected_own_ap": "2e:cf:67:50:12:2d",
+  "actual_s07_ap": "2e:cf:67:50:12:42",
+  "guard": "Observed network BSSID == sysfs wlan0ap/address == ethtool -P wlan0ap == positively identified own2d; addr_assign_type0; actual donor42 rejected.",
+  "evidence": [
+    {
+      "path": ".tmp\\new-device-emmc-20261105\\ap-mac-readonly-diagnosis.json",
+      "sha256": "925ab49403c15a1f184bd660a06a0efc099144f3acf410c45fd4e4df6a286a5c",
+      "bytes": 17765
+    },
+    {
+      "path": ".tmp\\new-device-emmc-20261105\\s07-actual-radio-mac-readonly.json",
+      "sha256": "6557803f1bc42aee5f17ce26112278b83693a7849805f14c31a3a0e7d19abd71",
+      "bytes": 1428
+    },
+    {
+      "path": ".tmp\\new-device-emmc-20261105\\ap-mac-physical-identity-comparison.json",
+      "sha256": "3f9180fbc8cd4437d141e62636864db826c35e12e3e6e991720817b4d9d90a65",
+      "bytes": 1068
+    }
+  ],
+  "limits": [
+    "Local actual helper execution with command/sysfs fixtures; root owns live verify",
+    "No graphical RDP login or STM input qualification implied"
+  ]
+}

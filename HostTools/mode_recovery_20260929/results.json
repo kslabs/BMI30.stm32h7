@@ -1,0 +1,388 @@
+{
+  "date": "2026-09-29",
+  "software_changed": false,
+  "bundle": "2026-09-29-1720",
+  "boards": {
+    "S10": {
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 3.0
+      },
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.06108903884887695
+      },
+      "optimize": {
+        "dc_autotune_active": false,
+        "fast_adapt_active": false
+      },
+      "dc_guard": {
+        "enabled": true,
+        "last_ok": true,
+        "last_profile": "acquisition",
+        "rpi_state": "acquisition",
+        "settle_ms": 20000,
+        "state_owner": "rpi",
+        "device_control": "settle_ms_only",
+        "last_reason": "ok",
+        "last_mismatches": [],
+        "last_age_s": 3.7085249423980713,
+        "fix_count": 0,
+        "lightning": {
+          "active": false,
+          "target_percent": 99,
+          "progress_percent": 0.0,
+          "initial_offset": null,
+          "current_offset": null,
+          "timeout_s": 0.0,
+          "completion_reason": ""
+        }
+      },
+      "fps": {
+        "a": 15.941328457023841,
+        "b": 15.941328457023841,
+        "a_even": 7.970664228511921,
+        "a_odd": 7.970664228511921,
+        "b_even": 7.970664228511921,
+        "b_odd": 7.970664228511921
+      },
+      "pass_recovery": true,
+      "saved_mode": 6,
+      "hashes": {
+        "BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+        "BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+        "BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a"
+      },
+      "evidence": [
+        "2026-09-29T19:09:52+0200 BMI30-D5EB8F26C bash[1343]: [RUN] fault #2 after 44m mode=6 reason=usb_disconnected",
+        "2026-09-29T19:10:02+0200 BMI30-D5EB8F26C bash[1343]: [sel] transient mode 5 not persisted",
+        "2026-09-29T19:10:02+0200 BMI30-D5EB8F26C bash[1343]: [recovery] silent mode 5 DC compensation started; return mode 6",
+        "2026-09-29T19:10:02+0200 BMI30-D5EB8F26C bash[1343]: [RUN] fault #3 after - mode=6 reason=нет новых кадров",
+        "2026-09-29T19:10:03+0200 BMI30-D5EB8F26C bash[1343]: [sel] saved working mode 6",
+        "2026-09-29T19:10:03+0200 BMI30-D5EB8F26C bash[1343]: [DC-RECOVERY] entered mode 6; fastest DC for first 1s cycle, outputs inhibited",
+        "2026-09-29T19:10:04+0200 BMI30-D5EB8F26C bash[1343]: [DC-RECOVERY] mode 6 first fast cycle complete; working DC restored reason=fault_reconnect"
+      ]
+    },
+    "S11": {
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 3.5
+      },
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.0747063159942627
+      },
+      "optimize": {
+        "dc_autotune_active": false,
+        "fast_adapt_active": false
+      },
+      "dc_guard": {
+        "enabled": true,
+        "last_ok": true,
+        "last_profile": "acquisition",
+        "rpi_state": "acquisition",
+        "settle_ms": 20000,
+        "state_owner": "rpi",
+        "device_control": "settle_ms_only",
+        "last_reason": "ok",
+        "last_mismatches": [],
+        "last_age_s": 9.694348335266113,
+        "fix_count": 0,
+        "lightning": {
+          "active": false,
+          "target_percent": 99,
+          "progress_percent": 0.0,
+          "initial_offset": null,
+          "current_offset": null,
+          "timeout_s": 0.0,
+          "completion_reason": ""
+        }
+      },
+      "fps": {
+        "a": 15.923452242003556,
+        "b": 15.923452242003556,
+        "a_even": 7.961726121001778,
+        "a_odd": 7.961726121001778,
+        "b_even": 7.961726121001778,
+        "b_odd": 7.961726121001778
+      },
+      "pass_recovery": true,
+      "saved_mode": 6,
+      "hashes": {
+        "BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a",
+        "BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+        "BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1"
+      },
+      "evidence": [
+        "2026-09-29T19:08:06+0200 BMI30-D5507EDFC bash[3923205]: [RUN] fault #3 after 1h28m mode=6 reason=usb_disconnected",
+        "2026-09-29T19:08:15+0200 BMI30-D5507EDFC bash[3923205]: [sel] transient mode 5 not persisted",
+        "2026-09-29T19:08:15+0200 BMI30-D5507EDFC bash[3923205]: [recovery] silent mode 5 DC compensation started; return mode 6",
+        "2026-09-29T19:08:15+0200 BMI30-D5507EDFC bash[3923205]: [RUN] fault #4 after - mode=6 reason=нет новых кадров",
+        "2026-09-29T19:08:16+0200 BMI30-D5507EDFC bash[3923205]: [sel] saved working mode 6",
+        "2026-09-29T19:08:16+0200 BMI30-D5507EDFC bash[3923205]: [DC-RECOVERY] entered mode 6; fastest DC for first 1s cycle, outputs inhibited",
+        "2026-09-29T19:08:17+0200 BMI30-D5507EDFC bash[3923205]: [DC-RECOVERY] mode 6 first fast cycle complete; working DC restored reason=fault_reconnect"
+      ]
+    },
+    "S12": {
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 3.5
+      },
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.0030214786529541016
+      },
+      "optimize": {
+        "dc_autotune_active": false,
+        "fast_adapt_active": false
+      },
+      "dc_guard": {
+        "enabled": true,
+        "last_ok": true,
+        "last_profile": "acquisition",
+        "rpi_state": "acquisition",
+        "settle_ms": 20000,
+        "state_owner": "rpi",
+        "device_control": "settle_ms_only",
+        "last_reason": "ok",
+        "last_mismatches": [],
+        "last_age_s": 9.40400505065918,
+        "fix_count": 0,
+        "lightning": {
+          "active": false,
+          "target_percent": 99,
+          "progress_percent": 0.0,
+          "initial_offset": null,
+          "current_offset": null,
+          "timeout_s": 0.0,
+          "completion_reason": ""
+        }
+      },
+      "fps": {
+        "a": 15.903682389247024,
+        "b": 15.903682389247024,
+        "a_even": 7.951841194623512,
+        "a_odd": 7.951841194623512,
+        "b_even": 7.951841194623512,
+        "b_odd": 7.951841194623512
+      },
+      "pass_recovery": true,
+      "saved_mode": 6,
+      "hashes": {
+        "BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a",
+        "BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+        "BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8"
+      },
+      "evidence": [
+        "2026-09-29T19:09:37+0200 BMI30-27448D72B bash[3641830]: [RUN] fault #2 after 1h48m mode=6 reason=usb_disconnected",
+        "2026-09-29T19:09:46+0200 BMI30-27448D72B bash[3641830]: [sel] transient mode 5 not persisted",
+        "2026-09-29T19:09:46+0200 BMI30-27448D72B bash[3641830]: [recovery] silent mode 5 DC compensation started; return mode 6",
+        "2026-09-29T19:09:46+0200 BMI30-27448D72B bash[3641830]: [RUN] fault #3 after - mode=6 reason=нет новых кадров",
+        "2026-09-29T19:09:47+0200 BMI30-27448D72B bash[3641830]: [sel] saved working mode 6",
+        "2026-09-29T19:09:47+0200 BMI30-27448D72B bash[3641830]: [DC-RECOVERY] entered mode 6; fastest DC for first 1s cycle, outputs inhibited",
+        "2026-09-29T19:09:48+0200 BMI30-27448D72B bash[3641830]: [DC-RECOVERY] mode 6 first fast cycle complete; working DC restored reason=fault_reconnect"
+      ]
+    },
+    "S13": {
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 32,
+        "det_ratio": 4.0
+      },
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.10124087333679199
+      },
+      "optimize": {
+        "dc_autotune_active": false,
+        "fast_adapt_active": false
+      },
+      "dc_guard": {
+        "enabled": true,
+        "last_ok": true,
+        "last_profile": "work",
+        "rpi_state": "work",
+        "settle_ms": 30000,
+        "state_owner": "rpi",
+        "device_control": "settle_ms_only",
+        "last_reason": "ok",
+        "last_mismatches": [],
+        "last_age_s": 8.266227960586548,
+        "fix_count": 0,
+        "lightning": {
+          "active": false,
+          "target_percent": 99,
+          "progress_percent": 0.0,
+          "initial_offset": null,
+          "current_offset": null,
+          "timeout_s": 0.0,
+          "completion_reason": ""
+        }
+      },
+      "fps": {
+        "a": 11.959982301801803,
+        "b": 11.959982301801803,
+        "a_even": 5.979991150900902,
+        "a_odd": 5.979991150900902,
+        "b_even": 5.979991150900902,
+        "b_odd": 5.979991150900902
+      },
+      "pass_recovery": true,
+      "saved_mode": 6,
+      "hashes": {
+        "BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+        "BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+        "BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a"
+      },
+      "evidence": [
+        "2026-09-29T19:06:27+0200 BMI30-7AA5CED27 bash[1321]: [RUN] fault #4 after 28m mode=6 reason=usb_disconnected",
+        "2026-09-29T19:06:36+0200 BMI30-7AA5CED27 bash[1321]: [sel] transient mode 5 not persisted",
+        "2026-09-29T19:06:36+0200 BMI30-7AA5CED27 bash[1321]: [recovery] silent mode 5 DC compensation started; return mode 6",
+        "2026-09-29T19:06:36+0200 BMI30-7AA5CED27 bash[1321]: [RUN] fault #5 after - mode=6 reason=нет новых кадров",
+        "2026-09-29T19:06:37+0200 BMI30-7AA5CED27 bash[1321]: [sel] saved working mode 6",
+        "2026-09-29T19:06:37+0200 BMI30-7AA5CED27 bash[1321]: [DC-RECOVERY] entered mode 6; fastest DC for first 1s cycle, outputs inhibited",
+        "2026-09-29T19:06:38+0200 BMI30-7AA5CED27 bash[1321]: [DC-RECOVERY] mode 6 first fast cycle complete; working DC restored reason=fault_reconnect"
+      ]
+    },
+    "M01": {
+      "mode": {
+        "selected": 6,
+        "stream_mode": 2,
+        "view_mode": 0,
+        "base_buf_len": 200,
+        "freq_hz": 200,
+        "desired_freq": 200,
+        "avg_n": 24,
+        "det_ratio": 3.5
+      },
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.04261374473571777
+      },
+      "optimize": {
+        "dc_autotune_active": false,
+        "fast_adapt_active": false
+      },
+      "dc_guard": {
+        "enabled": true,
+        "last_ok": true,
+        "last_profile": "acquisition",
+        "rpi_state": "acquisition",
+        "settle_ms": 20000,
+        "state_owner": "rpi",
+        "device_control": "settle_ms_only",
+        "last_reason": "ok",
+        "last_mismatches": [],
+        "last_age_s": 6.699896812438965,
+        "fix_count": 0,
+        "lightning": {
+          "active": false,
+          "target_percent": 99,
+          "progress_percent": 0.0,
+          "initial_offset": null,
+          "current_offset": null,
+          "timeout_s": 0.0,
+          "completion_reason": ""
+        }
+      },
+      "fps": {
+        "a": 16.913298409200614,
+        "b": 16.913298409200614,
+        "a_even": 7.959199251388525,
+        "a_odd": 8.95409915781209,
+        "b_even": 7.959199251388525,
+        "b_odd": 8.95409915781209
+      },
+      "pass_recovery": true,
+      "saved_mode": 6,
+      "hashes": {
+        "BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+        "BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+        "BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a"
+      },
+      "evidence": [
+        "2026-09-29T19:10:08+0200 BMI30-05AB38E6A bash[4102258]: [RUN] fault #1 after 1h48m mode=6 reason=usb_disconnected",
+        "2026-09-29T19:10:18+0200 BMI30-05AB38E6A bash[4102258]: [sel] transient mode 5 not persisted",
+        "2026-09-29T19:10:18+0200 BMI30-05AB38E6A bash[4102258]: [recovery] silent mode 5 DC compensation started; return mode 6",
+        "2026-09-29T19:10:18+0200 BMI30-05AB38E6A bash[4102258]: [RUN] fault #2 after - mode=6 reason=нет новых кадров",
+        "2026-09-29T19:10:19+0200 BMI30-05AB38E6A bash[4102258]: [sel] saved working mode 6",
+        "2026-09-29T19:10:19+0200 BMI30-05AB38E6A bash[4102258]: [DC-RECOVERY] entered mode 6; fastest DC for first 1s cycle, outputs inhibited",
+        "2026-09-29T19:10:20+0200 BMI30-05AB38E6A bash[4102258]: [DC-RECOVERY] mode 6 first fast cycle complete; working DC restored reason=fault_reconnect"
+      ]
+    }
+  },
+  "uniform_running_code": true,
+  "s10_emmc": {
+    "uuid": "46776a4f-bbf7-40ec-a809-2126c1488239",
+    "before": {
+      "sel": 3,
+      "ts": 1790349099
+    },
+    "after": {
+      "sel": 6,
+      "ts": 1790701822
+    },
+    "config_unchanged": true,
+    "backup": "home/techaid/Documents/.tmp/mode-recovery-20260929",
+    "boot_tested": false
+  },
+  "s13_before_emmc_activation_saved_mode": {
+    "sel": 3,
+    "ts": 1790667358
+  },
+  "s13_original_episode": [
+    "2026-09-29T09:35:57+0200 BMI30-7AA5CED27 bash[2255540]: [API-CMD] peer=127.0.0.1 action=mode source=- params={\"idx\":3} ref=- ua=Python-urllib/3.11",
+    "2026-09-29T09:35:58+0200 BMI30-7AA5CED27 bash[2255540]: [sel] saved working mode 3",
+    "2026-09-29T18:13:36+0200 BMI30-7AA5CED27 bash[1321]: [RUN] fault #1 after - mode=3 reason=usb_disconnected",
+    "2026-09-29T18:13:40+0200 BMI30-7AA5CED27 bash[1321]: [sel] saved working mode 3",
+    "2026-09-29T18:13:40+0200 BMI30-7AA5CED27 bash[1321]: [GUI] Auto-reset completed, restored mode 3",
+    "2026-09-29T18:13:40+0200 BMI30-7AA5CED27 bash[1321]: [RUN] fault #2 after - mode=3 reason=usb_disconnected",
+    "2026-09-29T18:13:46+0200 BMI30-7AA5CED27 bash[1321]: [sel] saved working mode 3",
+    "2026-09-29T18:13:46+0200 BMI30-7AA5CED27 bash[1321]: [GUI] Auto-reset completed, restored mode 3",
+    "2026-09-29T18:37:45+0200 BMI30-7AA5CED27 bash[1321]: [API-CMD] peer=127.0.0.1 action=mode source=- params={\"idx\":5} ref=- ua=Python-urllib/3.11",
+    "2026-09-29T18:37:47+0200 BMI30-7AA5CED27 bash[1321]: [API-CMD] peer=127.0.0.1 action=mode source=- params={\"idx\":6} ref=- ua=Python-urllib/3.11",
+    "2026-09-29T18:38:18+0200 BMI30-7AA5CED27 bash[1321]: [API-CMD] peer=127.0.0.1 action=mode source=- params={\"idx\":6} ref=- ua=Python-urllib/3.11",
+    "2026-09-29T18:38:20+0200 BMI30-7AA5CED27 bash[1321]: [API-CMD] peer=127.0.0.1 action=mode source=- params={\"idx\":6} ref=- ua=Python-urllib/3.11",
+    "2026-09-29T18:38:20+0200 BMI30-7AA5CED27 bash[1321]: [API-CMD] peer=127.0.0.1 action=mode source=- params={\"idx\":6} ref=- ua=Python-urllib/3.11"
+  ],
+  "test_limitations": [
+    "USB deauthorization/reauthorization test, not an STM32 power failure or continuous phase endurance test.",
+    "Kernel reauthorization writes timed out; all five devices re-enumerated and recovered automatically.",
+    "S13 sampler output was lost on the write exception; service journal and final API state confirm recovery.",
+    "S11 initial sampling ended during mode 6 fast DC; completion was verified from the subsequent service journal.",
+    "No additional boot from S10 eMMC was performed."
+  ]
+}

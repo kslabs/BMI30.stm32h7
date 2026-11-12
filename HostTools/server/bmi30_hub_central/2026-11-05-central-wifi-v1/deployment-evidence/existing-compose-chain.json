@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "source": "readonlySFTPpublicdeploymentcode, not executed",
+  "project": "bmi30prod",
+  "hub_container": "bmi30prod_bmi30hub_1",
+  "base_compose": "/opt/bmi30hub/releases/0.2.1-20260814-r33/docker-compose.production.yml",
+  "existing_override": "/opt/bmi30hub/releases/0.2.1-20260923-r36-all-approved/deployment/docker-compose.all-approved.yml",
+  "new_release_proposed_not_created": "/opt/bmi30hub/releases/0.2.1-20261105-central-wifi-v1",
+  "new_override_relative": "candidate/docker-compose.central-wifi.yml",
+  "service_uid": 10001,
+  "service_gid": 10002,
+  "preserve_existing_rw_volumes": [
+    "/var/lib/bmi30hub",
+    "/srv/bmi30-firmware"
+  ],
+  "base_cmd": [
+    "python",
+    "-m",
+    "uvicorn",
+    "bmi30hub.main:app",
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "8000",
+    "--proxy-headers",
+    "--forwarded-allow-ips=*",
+    "--no-server-header"
+  ],
+  "public_source_sha256": {
+    "deploy_all_approved.py": "ec9d7389cfbd9a3124e8009e89b263e9466ad3922ad187843150f39f24e48ce6",
+    "actual-r33-base-compose.yml": "b05d10c8e92db65af99e92b31f2fd7f075bf5c75497d49744b3960cb9e4e689b",
+    "docker-compose.all-approved.yml": "1c07882de49aec683c2842d7d1d0b2e6e995c522dc010e6912cec9369b7e969a",
+    "Dockerfile": "913be66d829b6388e0fb4f956666b1737efc3b95aace49fade8f3422e6c12390",
+    "root-tagit-nginx.conf": "4b503e6e4e8c4cf7223c60e0b54194e4ef268af2367e89ce037574778db4e0e1"
+  },
+  "source_line_anchors": {
+    "deploy_all_approved.py": [
+      14,
+      17,
+      21,
+      77,
+      79
+    ],
+    "Dockerfile": [
+      19,
+      22
+    ],
+    "root-tagit-nginx.conf": [
+      69,
+      70,
+      75
+    ]
+  },
+  "warning": "Do not run old deploy_all_approved.py: it writes publisher policy. New patch changes code image only."
+}

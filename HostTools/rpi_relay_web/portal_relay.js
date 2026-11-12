@@ -10,13 +10,16 @@
     function updateRelay(cfg, force) {
       if (!relayRoot || (relayBusy && !force)) { return; }
       cfg = cfg || {};
+      // A late HTTP baseline must not overwrite a newer WebSocket relay read.
+      if (Number.isInteger(cfg.sequence) && Number.isInteger(relaySequence) &&
+          cfg.sequence < relaySequence && performance.now() - relayLastUpdate < 2500) { return; }
       if (cfg.sequence !== undefined && cfg.sequence !== relaySequence) {
         relaySequence = cfg.sequence;
-        relayLastUpdate = performance.now();
+        relayLastUpdate = performance.now() - Math.max(0, Number(cfg.age_s) || 0) * 1000;
       }
       relayState = cfg;
       var available = cfg.available === true && performance.now() - relayLastUpdate < 2500;
-      relayEnable.checked = !!(available ? cfg.enabled : cfg.saved_enabled);
+      relayEnable.checked = !!(available ? cfg.enabled : (cfg.saved_enabled === undefined ? cfg.enabled : cfg.saved_enabled));
       relayEnable.disabled = relayBusy || !available;
       if (force || document.activeElement !== relayDuration) {
         relayDuration.value = String(Number(cfg.duration_ms) || 1000);

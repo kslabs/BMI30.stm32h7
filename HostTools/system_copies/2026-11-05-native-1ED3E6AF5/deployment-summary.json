@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "status": "native_booted_app_running_utilities_pending",
+  "state": "NATIVE_BOOT_CONFIRMED_APP_RUNNING_UTILITIES_NOT_UPDATED",
+  "board": "M04",
+  "host": "BMI30-1ED3E6AF5",
+  "physical_cm5": "0d6b7531ed3e6af5",
+  "emmc_cid": "150100424a5444345203123049047b00",
+  "native_root": "/dev/mmcblk0p2",
+  "native_root_partuuid": "e1b5c915-02",
+  "native_boot": "/dev/mmcblk0p1",
+  "native_boot_partuuid": "e1b5c915-01",
+  "running_source_during_install": {
+    "root": "/dev/sda2",
+    "partuuid": "d6e578d8-02"
+  },
+  "source_version": "2026-11-04-185916",
+  "base_bundle": "2026-11-04-175044",
+  "installation_type": "in-place application and allowlisted system-code update; own native OS/kernel/filesystems retained",
+  "installed": true,
+  "ssh_public_key_access_prepared": true,
+  "boot_tested": true,
+  "protected_entries_verified": 6379,
+  "code_files": 1999,
+  "symlinks": 13,
+  "own_config_byte_sha256_at_install": "90530d9f05c3d397c51faf48ae307d358fb5a1dda0add934ff130d2a3610eb3d",
+  "old_real_active_runtime_directory_preserved": true,
+  "old_active_runtime_state_entries_preserved": 75,
+  "target_unmounted_after_install_and_ssh": true,
+  "source_USB_written_by_installer": false,
+  "source_USB_written_by_ssh_helper": false,
+  "live_services_changed_by_installer": false,
+  "STM_commands_by_installer": false,
+  "RPi_rebooted_by_installer": false,
+  "generic_USB_architecture": "separate unfinished work; this native installation does not implement a universal state-free USB",
+  "pending": [
+    "Update the separate native terminal utilities tree and validate its version-selection/restore compatibility.",
+    "STM32 update remains separate: current physical M04 reports1.2.44; no flash was performed.",
+    "Universal USB without persistent individual state remains a separate unfinished task."
+  ],
+  "limits": [
+    "Native eMMC boot and application runtime are verified; the complete M04 software task remains unfinished because Utilities is still old.",
+    "No physical tag/detection-range qualification is made by these service/boot checks.",
+    "The canonical verifier stopped on its USB-unmounted precondition. USB is attached as a separate desktop-mounted volume; root and boot are positively own eMMC.",
+    "Historical preparation reports retain their original scope notes. Later physical M04 USB/UID/RX evidence supersedes the earlier disconnected-STM assumption.",
+    "Byte-exact own configuration is proven at installation and in the saved postboot comparison; no settings values are included."
+  ],
+  "native_boot_id": "c2173c2f-d588-43e0-86dc-36fdcee1b76a",
+  "overall_M04_software_update_complete": false,
+  "Core_and_RTC_active": true,
+  "network_and_own_AP_verified": true,
+  "native_config_comparison_passed": true,
+  "source_USB_currently_attached": true,
+  "source_USB_separately_desktop_mounted": true,
+  "STM_physically_connected": true,
+  "STM_UID96": "3336353430325113000A0027",
+  "STM_firmware_reported": "1.2.44",
+  "STM_flashed_by_this_task": false,
+  "utilities_update_complete": false,
+  "permission_correction": {
+    "public_code_directories_0700_to_0755": 250,
+    "file_modes_or_code_bytes_changed": false,
+    "settings_written_by_correction": false
+  },
+  "mapping": {
+    "this_report": "M04 / 192.168.0.160 / CM5 0d6b7531ed3e6af5 / connected STM32",
+    "standalone_192.168.0.133": "different CM5 366b6f101fa60500; its evidence belongs to a separate report"
+  }
+}

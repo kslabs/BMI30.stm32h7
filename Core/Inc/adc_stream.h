@@ -132,6 +132,15 @@ uint8_t adc_get_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *sample
 // Используйте вместе с adc_consume_frame_pair_fifo() после успешной обработки кадра.
 uint8_t adc_peek_frame_pair_fifo(uint16_t **ch1, uint16_t **ch2, uint16_t *samples, uint32_t *seq_out);
 
+/* RAW ROI: copy both channels into caller-owned storage and consume the FIFO
+   pair only after its source/generation has been revalidated. On failure the
+   destination is unspecified and must not be used; no explicit consume occurs.
+   Destinations must each hold roi_len uint16_t values and must not overlap.
+   buffer_index is captured with the source, not looked up after USB completes. */
+uint8_t adc_copy_consume_frame_pair_roi_fifo(uint16_t *dst_a, uint16_t *dst_b,
+                                           uint16_t roi_start, uint16_t roi_len,
+                                           uint32_t *seq_out, uint8_t *buffer_index_out);
+
 // LOSSLESS: подтвердить (consume) пару FIFO, ранее полученную через adc_peek_frame_pair_fifo.
 uint8_t adc_consume_frame_pair_fifo(uint32_t seq);
 
@@ -144,8 +153,8 @@ void adc_stream_get_debug(adc_stream_debug_t *out);
 // Получить parity (чётность) буфера по seq (0=even, 1=odd) для 400Hz режима
 uint8_t adc_get_buffer_parity(uint32_t seq);
 
-// Общая логическая фаза RS485/ADC. TX1=PA1 (active-low), TX2=PA2 (active-high)
-// имеют независимую полярность; PC7 сохраняет прежний маркер с gating по TX enable.
+// Общая логическая фаза RS485/ADC хранится отдельно от физических выходов.
+// TX1 (верхний)=PC7, TX2 (нижний)=PA2, active-high; PA1 зеркалит TX1 active-low.
 uint8_t adc_stream_get_marker_level(void);
 void adc_stream_refresh_marker_output(void);
 

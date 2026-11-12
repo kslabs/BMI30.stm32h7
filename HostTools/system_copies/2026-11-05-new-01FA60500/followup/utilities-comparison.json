@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "target_host": "BMI30-01FA60500",
+  "target_cm5": "366b6f101fa60500",
+  "target_root_partuuid": "2da3faaa-02",
+  "read_only": true,
+  "additional_live_calls": false,
+  "utilities_matched_count": 31,
+  "utilities_different": [],
+  "utilities_missing": [],
+  "root_launcher_matched_count": 6,
+  "root_launcher_matched": [
+    "switch_bmi30_split_versions.sh",
+    "switch_bmi30_core_versions.sh",
+    "switch_bmi30_versions.sh",
+    "switch_version.sh",
+    "launch.sh",
+    "stop_bmi.sh"
+  ],
+  "root_launcher_differences": [],
+  "menu_sha256": "04e965006a6edeacc1f3ea5230be947ccb2b4ea63b9e68a8dc37f07ae9162b47",
+  "menu_bytes": 9272,
+  "versions_disks_network_submenus_present": true,
+  "selected_version": "2026-11-04-185916",
+  "selected_bundle": "2026-11-03-172055",
+  "current_bundle_present": true,
+  "active_runtime_layout": {
+    "exists": true,
+    "is_symlink": false,
+    "is_directory": true,
+    "resolved": "/home/techaid/Documents/host/bmi30_active_runtime"
+  },
+  "conclusion": "Actual .133 utilities/menu.sh is already byte-identical to current S07 two-level menu. Replacing these files is not justified by a stale-menu claim alone.",
+  "M04_160_scope": "Separate immutable native-app/portal30 compatibility findings are deferred; no .160 or .133 compatibility patch/deploy was executed.",
+  "evidence_sha256": {
+    "standalone133-utilities-readonly.json": "f20a8f23775681f66857ff3668987e2de035ee04919ba45c3b4fbcc5b9202f95",
+    "utilities-s07-code-manifest.json": "98529733686e2c7cdced8340c056fbaf89feaba0838b8ded011a377a9cf98586",
+    "root-utility-dependencies-s07-manifest.json": "01d02eb9ee1e84450f87c7398a9bf158808761d8b0fe8e8fe4b86bccbcbcf9ea"
+  }
+}

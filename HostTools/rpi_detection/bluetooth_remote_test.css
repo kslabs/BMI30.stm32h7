@@ -1,0 +1,21 @@
+.bluetooth-device-list{grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));align-items:start}
+.bluetooth-device{box-sizing:border-box;width:100%;min-width:0;max-width:430px}
+.bluetooth-device--remote{display:grid;grid-template-columns:minmax(0,1fr) 148px;gap:10px;align-items:start}
+.bluetooth-device-main{min-width:0}
+.bluetooth-device-main .bluetooth-address{overflow-wrap:anywhere}
+.bt-remote-test{display:grid;justify-items:center;gap:6px;border-left:1px solid var(--line);padding-left:10px;min-width:0;color:var(--text)}
+.bt-remote-test>strong{font-size:13px}
+.bt-remote-cross{display:grid;grid-template-columns:repeat(3,36px);grid-template-rows:repeat(3,36px);gap:4px}
+.bt-remote-key{position:relative;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:9px;background:var(--note-bg);color:var(--text);font-family:inherit;font-weight:700;font-size:20px;line-height:1;cursor:default;padding:0;transition:background .08s,border-color .08s,box-shadow .08s}
+.bt-remote-key:disabled{opacity:1;color:var(--text);cursor:default}
+.bt-remote-key:hover,.bt-remote-key:focus,.bt-remote-key:active{background:var(--note-bg);border-color:var(--line)}
+.bt-remote-key.is-received{background:#36b987;border-color:#168558;color:#062f24;box-shadow:0 0 0 3px #36b98735}
+.bt-remote-key--up{grid-area:1/2}.bt-remote-key--left{grid-area:2/1}.bt-remote-key--center{grid-area:2/2;font-size:14px}.bt-remote-key--right{grid-area:2/3}.bt-remote-key--down{grid-area:3/2}
+.bt-remote-key small{position:absolute;right:4px;bottom:3px;font:600 9px/1 sans-serif;opacity:.65}
+.bt-remote-controls{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.bt-remote-controls .link{min-height:28px;padding:5px 7px;font-size:11px}
+.bt-remote-controls .link.is-selected,.bt-remote-controls .link.is-selected:disabled{background:#36b987;border-color:#168558;color:#062f24;opacity:1;box-shadow:0 0 0 2px #36b98725}
+.bt-remote-status,.bt-remote-age,.bt-remote-other{font-size:11px;line-height:1.4;text-align:center;color:var(--muted);max-width:220px;overflow-wrap:anywhere}
+.bt-remote-status{color:var(--text);font-weight:600;min-height:16px}.bt-remote-other[hidden]{display:none}
+.bt-remote-status:empty{display:none}
+@media(max-width:390px){.bluetooth-device--remote{grid-template-columns:minmax(0,1fr)}.bt-remote-test{border-left:0;border-top:1px solid var(--line);padding:12px 0 0;justify-self:center;width:min(100%,230px)}}

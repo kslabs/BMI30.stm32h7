@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "reviewed_at_epoch": 1793872211.1109304,
+  "scope": "Offline exact-board USB-to-eMMC source review and local fixture tests; no live execution by reviewer",
+  "worker_sha256": "5c1272a3150776741cd2272aa23ec718d0d25ede7b106197a1a49106839a8d8a",
+  "personalizer_sha256": "969c694d612edcef29b229968f0e5b910bbc082cdefeaf57f03a57feb293c22e",
+  "reviewed_stager_sha256": "26d84d864a64c395971d77922fa374a1abcb117495f037233c0cd9fc716555c3",
+  "tests": {
+    "worker": {
+      "passed": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "path": "test_clone_remote.py",
+      "sha256": "4a52d79c88fde6e8ea6397fdf6410d4214b54cbfe59f5b14cb1b33028b4296ea"
+    },
+    "personalizer": {
+      "passed": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "path": "test_personalize_target.py",
+      "sha256": "4a8d4443b34ce1614f877796a3be88d6cd953ac61d053e50f9ffaa3252948b03"
+    }
+  },
+  "verified_code_guards": [
+    "ExactCM5/USBsource/PARTUUID/bootid and eMMC CID/dev_t/diskseq",
+    "Targetpartitions mmcblk0p1/p2 and source sda1/sda2; formatter targets open pinned descriptors",
+    "Own old eMMC RO/noload backup and fingerprint-sealed job/CM5/CID manifest BEFORE sfdisk; recheck before hook",
+    "Hook exacttrustedmount directory, no symlinkancestors, findmnt device+UUID, root runningUSB; fixedhash and sealedbackup reread before anywrite",
+    "Own machine-id and exactownSSHhostkeyset; donor root/userSSHprivatekeys removed; ownkeys restored and approved benchpubkey onlytechaid",
+    "Detectorconfig preserved byte-for-byte; network UUID/MAC/BSSID pins reset, BMI30 peerSTA removed, homeSTA DHCP and password retained",
+    "Own AP identity/address and workingband/channel retained; stale credential stores removed for service regeneration",
+    "Donorrollbackguard and portable-adoptunits/dropins removed; only activefeature172055 portable marker",
+    "Root criticalverification/fstab/fsync before kernel-last bootactivation; finally+ExecStopPost ownershipsafe recovery"
+  ],
+  "launch_requirements": [
+    "Plan bench_public_key must contain reviewed operator PUBLIC key before launch",
+    "Plan personalizer_sha256 must equal this report; recovery_bundle_version must be2026-11-03-172055",
+    "No live start is performed by these tests; source and new eMMC must be checked after actual boot"
+  ],
+  "postboot_checks": [
+    "Verify hostname/CM5/eMMCroot+boot IDs, own SSHhostkey and credentials access",
+    "Verify APssid/subnet and actualBSSID differs from S07/donor; clearing UUID alone is not runtimeproof",
+    "Verify source USB remains unchanged and full detectorconfig values/types match; Core mode/worker/network readiness",
+    "No STM firmware writes or physical detection/35cm performance claims"
+  ],
+  "remaining_code_blockers": [],
+  "live_actions": false
+}

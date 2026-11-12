@@ -1,0 +1,4 @@
+version: "3.7"
+services:
+  bmi30hub:
+    image: bmi30hub-linux:0.2.1-20261105-central-wifi-v1

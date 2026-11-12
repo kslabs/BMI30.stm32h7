@@ -1,0 +1,14 @@
+{
+  "format": "peer-deploy-five-source-review-v1",
+  "syntax": "PASS",
+  "focused_checks": 8,
+  "helper_sha256": "cd72f0090c06fb247758fc74c75c7cf03c98691a11d12c02940269fdefedbdff",
+  "actual_rollback_function_executed_locally_with_fake_systemctl": true,
+  "restored_source_files": 5,
+  "network_and_access_restart_requested": true,
+  "idempotent_rollback": true,
+  "all_backup_hashes_checked_before_first_restore_write": true,
+  "timer_armed_before_access_stop": true,
+  "no_live_actions": true,
+  "limits": "Linux flock/systemd behavior not run; tests execute rollback body with local paths and recorded command calls"
+}

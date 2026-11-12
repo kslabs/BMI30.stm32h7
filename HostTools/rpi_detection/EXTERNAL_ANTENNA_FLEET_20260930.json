@@ -1,0 +1,431 @@
+{
+  "date": "2026-09-30",
+  "scope": "CM5 external Wi-Fi/Bluetooth antenna selection and boot check",
+  "physical_antenna_connected": "confirmed by user; not measured by software",
+  "devices": {
+    "M01": {
+      "hostname": "BMI30-05AB38E6A",
+      "checked_epoch": 1790788087.4074068,
+      "boot_id": "3a28c8e6-4396-427d-aa8b-aab6007806aa",
+      "root": "/dev/sda2 ext4",
+      "boot": "/dev/sda1 vfat",
+      "root_uuid": "d24efc0b-47e6-444f-bc0a-aff5691c7266",
+      "boot_uuid": "7CAE-93A5",
+      "version": "2026-09-30-1650",
+      "boot_config_sha256": "9ee826116381cf33e5ba946075d6fdfa36b9314362a9ac67df1256aa050e2e08",
+      "antenna_check": {
+        "ant1": false,
+        "ant2": true,
+        "boot_id": "3a28c8e6-4396-427d-aa8b-aab6007806aa",
+        "config_sha256": "9ee826116381cf33e5ba946075d6fdfa36b9314362a9ac67df1256aa050e2e08",
+        "epoch": 1790787814.0886807,
+        "external_selected": true,
+        "hostname": "BMI30-05AB38E6A",
+        "model": "Raspberry Pi Compute Module 5 Rev 1.0",
+        "ok": true,
+        "physical_connection_checked": false,
+        "scope": "antenna_selection_only"
+      },
+      "checker_enabled": "enabled",
+      "core": {
+        "rc": 0,
+        "output": "MainPID=1320\nActiveState=active"
+      },
+      "detector_config_and_version_preserved": true,
+      "mode_timestamp_updated": true,
+      "file_hashes": {
+        "/home/techaid/Documents/host/bmi30_split_active_version.env": "48ada50f07272256687877a14ccc1bc658314384d9697dcc66b104e8fcc96bbc",
+        "/home/techaid/Documents/host/bmi30_config.json": "49254cce4df2c2c97c178ed50476b078563bbe2e41276c5fcf549818839e8b43",
+        "/home/techaid/Documents/host/bmi30_sel.json": "f74ef45a0745f862b66ae0bee295b1c1be13923e2759e8506c15f77844c59c4b"
+      },
+      "checker_hashes": {
+        "/usr/local/sbin/bmi30-antenna-check.py": "2335b3a6ddc053681fad43f86e536d320784ec2a6d10eebb4bee8ee9a4837847",
+        "/etc/systemd/system/bmi30-antenna-check.service": "39cdb29b4f6a2063ae02e8c4cb4b4bb16d260e116a67b16892b92132aa992afd"
+      },
+      "observation": {
+        "samples": 30,
+        "usable_samples": 30,
+        "elapsed_s": 28.997338538000008,
+        "complete": true,
+        "same_core_pid": true,
+        "request_errors": 0,
+        "received_fps": {
+          "ch0": 15.829038909846723,
+          "ch1": 15.829038909846723
+        },
+        "stream_delta": {
+          "rx_cnt_ch0": 459,
+          "rx_cnt_ch1": 459,
+          "seq_gap_ch0": 0,
+          "seq_gap_ch1": 0,
+          "crc_bad": 0,
+          "magic_bad": 0,
+          "host_rx_ack_fail": 0
+        },
+        "worker_delta": {
+          "submitted": 918,
+          "results": 918,
+          "overflows": 0
+        },
+        "worker_alive_all_samples": true,
+        "mode_changed": false,
+        "channels_enabled": {
+          "upper": true,
+          "lower": true
+        },
+        "optic_blocked_samples": 30,
+        "fire_delta": {
+          "ch0": 1,
+          "ch1": 0
+        },
+        "over_100ms_delta": 0
+      },
+      "all_observed_samples_healthy": true
+    },
+    "S10": {
+      "hostname": "BMI30-D5EB8F26C",
+      "checked_epoch": 1790788087.962071,
+      "boot_id": "0e4e7303-70ef-4cf8-bdd1-fc30c45d986e",
+      "root": "/dev/mmcblk0p2 ext4",
+      "boot": "/dev/mmcblk0p1 vfat",
+      "root_uuid": "46776a4f-bbf7-40ec-a809-2126c1488239",
+      "boot_uuid": "65A2-A1A9",
+      "version": "2026-09-30-1650",
+      "boot_config_sha256": "9ee826116381cf33e5ba946075d6fdfa36b9314362a9ac67df1256aa050e2e08",
+      "antenna_check": {
+        "ant1": false,
+        "ant2": true,
+        "boot_id": "0e4e7303-70ef-4cf8-bdd1-fc30c45d986e",
+        "config_sha256": "9ee826116381cf33e5ba946075d6fdfa36b9314362a9ac67df1256aa050e2e08",
+        "epoch": 1790787137.1784122,
+        "external_selected": true,
+        "hostname": "BMI30-D5EB8F26C",
+        "model": "Raspberry Pi Compute Module 5 Rev 1.0",
+        "ok": true,
+        "physical_connection_checked": false,
+        "scope": "antenna_selection_only"
+      },
+      "checker_enabled": "enabled",
+      "core": {
+        "rc": 0,
+        "output": "MainPID=1317\nActiveState=active"
+      },
+      "detector_config_and_version_preserved": true,
+      "mode_timestamp_updated": false,
+      "file_hashes": {
+        "/home/techaid/Documents/host/bmi30_split_active_version.env": "7c143cde8f2f8c2e42f3916c0ebf1ff4d39eb7faae9a329476757067423ff5ed",
+        "/home/techaid/Documents/host/bmi30_config.json": "b66b671e0cb8d6c389e6f53ad389955321e9d9663a23a937fd70469e0d9482c0",
+        "/home/techaid/Documents/host/bmi30_sel.json": "186a5bb8ac286fefeb13149fd663b81386190e4550530b7275b41731f68397f0"
+      },
+      "checker_hashes": {
+        "/usr/local/sbin/bmi30-antenna-check.py": "2335b3a6ddc053681fad43f86e536d320784ec2a6d10eebb4bee8ee9a4837847",
+        "/etc/systemd/system/bmi30-antenna-check.service": "39cdb29b4f6a2063ae02e8c4cb4b4bb16d260e116a67b16892b92132aa992afd"
+      },
+      "observation": {
+        "samples": 30,
+        "usable_samples": 30,
+        "elapsed_s": 29.004482194999582,
+        "complete": true,
+        "same_core_pid": true,
+        "request_errors": 0,
+        "received_fps": {
+          "ch0": 15.997527446981774,
+          "ch1": 15.997527446981774
+        },
+        "stream_delta": {
+          "rx_cnt_ch0": 464,
+          "rx_cnt_ch1": 464,
+          "seq_gap_ch0": 0,
+          "seq_gap_ch1": 0,
+          "crc_bad": 0,
+          "magic_bad": 0,
+          "host_rx_ack_fail": 0
+        },
+        "worker_delta": {
+          "submitted": 928,
+          "results": 928,
+          "overflows": 0
+        },
+        "worker_alive_all_samples": true,
+        "mode_changed": false,
+        "channels_enabled": {
+          "upper": true,
+          "lower": true
+        },
+        "optic_blocked_samples": 0,
+        "fire_delta": {
+          "ch0": 1,
+          "ch1": 0
+        },
+        "over_100ms_delta": 0
+      },
+      "all_observed_samples_healthy": true
+    },
+    "S11": {
+      "hostname": "BMI30-D5507EDFC",
+      "checked_epoch": 1790788088.60096,
+      "boot_id": "ffdee99b-0a7c-435c-86b2-ab9100b6bda5",
+      "root": "/dev/mmcblk0p2 ext4",
+      "boot": "/dev/mmcblk0p1 vfat",
+      "root_uuid": "c20bd2b5-3d16-40b1-b3ee-2f76613362e8",
+      "boot_uuid": "502D-7B34",
+      "version": "2026-09-30-1650",
+      "boot_config_sha256": "9ee826116381cf33e5ba946075d6fdfa36b9314362a9ac67df1256aa050e2e08",
+      "antenna_check": {
+        "ant1": false,
+        "ant2": true,
+        "boot_id": "ffdee99b-0a7c-435c-86b2-ab9100b6bda5",
+        "config_sha256": "9ee826116381cf33e5ba946075d6fdfa36b9314362a9ac67df1256aa050e2e08",
+        "epoch": 1790787936.3385684,
+        "external_selected": true,
+        "hostname": "BMI30-D5507EDFC",
+        "model": "Raspberry Pi Compute Module 5 Rev 1.0",
+        "ok": true,
+        "physical_connection_checked": false,
+        "scope": "antenna_selection_only"
+      },
+      "checker_enabled": "enabled",
+      "core": {
+        "rc": 0,
+        "output": "MainPID=1321\nActiveState=active"
+      },
+      "detector_config_and_version_preserved": true,
+      "mode_timestamp_updated": true,
+      "file_hashes": {
+        "/home/techaid/Documents/host/bmi30_split_active_version.env": "51ccc995a6990d216dc25e3d387c81e0366b6ebfb82bd3b2ccbb109e86f9ed9c",
+        "/home/techaid/Documents/host/bmi30_config.json": "4393d9496bf8fc937c0175368d19842e96bf953243bb5a31a7aa9718839d85de",
+        "/home/techaid/Documents/host/bmi30_sel.json": "8e47053a78abacc9c3580cb404bba8d3f554275503d5ad348cbd16818e24fc2e"
+      },
+      "checker_hashes": {
+        "/usr/local/sbin/bmi30-antenna-check.py": "2335b3a6ddc053681fad43f86e536d320784ec2a6d10eebb4bee8ee9a4837847",
+        "/etc/systemd/system/bmi30-antenna-check.service": "39cdb29b4f6a2063ae02e8c4cb4b4bb16d260e116a67b16892b92132aa992afd"
+      },
+      "observation": {
+        "samples": 30,
+        "usable_samples": 30,
+        "elapsed_s": 29.00006776500001,
+        "complete": true,
+        "same_core_pid": true,
+        "request_errors": 0,
+        "received_fps": {
+          "ch0": 16.034445290545335,
+          "ch1": 16.034445290545335
+        },
+        "stream_delta": {
+          "rx_cnt_ch0": 465,
+          "rx_cnt_ch1": 465,
+          "seq_gap_ch0": 0,
+          "seq_gap_ch1": 0,
+          "crc_bad": 0,
+          "magic_bad": 0,
+          "host_rx_ack_fail": 0
+        },
+        "worker_delta": {
+          "submitted": 930,
+          "results": 930,
+          "overflows": 0
+        },
+        "worker_alive_all_samples": true,
+        "mode_changed": false,
+        "channels_enabled": {
+          "upper": true,
+          "lower": true
+        },
+        "optic_blocked_samples": 1,
+        "fire_delta": {
+          "ch0": 0,
+          "ch1": 0
+        },
+        "over_100ms_delta": 0
+      },
+      "all_observed_samples_healthy": true
+    },
+    "S12": {
+      "hostname": "BMI30-27448D72B",
+      "checked_epoch": 1790788089.1805863,
+      "boot_id": "4949055a-5d5a-46c0-95a8-86299c050b27",
+      "root": "/dev/mmcblk0p2 ext4",
+      "boot": "/dev/mmcblk0p1 vfat",
+      "root_uuid": "94e31333-1dd2-4bfd-87ea-6b5fad7b41d9",
+      "boot_uuid": "4BA1-884E",
+      "version": "2026-09-30-1650",
+      "boot_config_sha256": "9ee826116381cf33e5ba946075d6fdfa36b9314362a9ac67df1256aa050e2e08",
+      "antenna_check": {
+        "ant1": false,
+        "ant2": true,
+        "boot_id": "4949055a-5d5a-46c0-95a8-86299c050b27",
+        "config_sha256": "9ee826116381cf33e5ba946075d6fdfa36b9314362a9ac67df1256aa050e2e08",
+        "epoch": 1790787989.3766615,
+        "external_selected": true,
+        "hostname": "BMI30-27448D72B",
+        "model": "Raspberry Pi Compute Module 5 Rev 1.0",
+        "ok": true,
+        "physical_connection_checked": false,
+        "scope": "antenna_selection_only"
+      },
+      "checker_enabled": "enabled",
+      "core": {
+        "rc": 0,
+        "output": "MainPID=1322\nActiveState=active"
+      },
+      "detector_config_and_version_preserved": true,
+      "mode_timestamp_updated": true,
+      "file_hashes": {
+        "/home/techaid/Documents/host/bmi30_split_active_version.env": "341a8b4abac04efec3e93a4e7276a1c25db16f74e3e962937670887ab019087d",
+        "/home/techaid/Documents/host/bmi30_config.json": "8402de5c1e8dcb9efec6601b46183fd4186db2f05c6ddf8d92757dfd7482807a",
+        "/home/techaid/Documents/host/bmi30_sel.json": "398326906da942ca8879a56598c857d275db90fbc017ca227f26afcd993dd3a2"
+      },
+      "checker_hashes": {
+        "/usr/local/sbin/bmi30-antenna-check.py": "2335b3a6ddc053681fad43f86e536d320784ec2a6d10eebb4bee8ee9a4837847",
+        "/etc/systemd/system/bmi30-antenna-check.service": "39cdb29b4f6a2063ae02e8c4cb4b4bb16d260e116a67b16892b92132aa992afd"
+      },
+      "observation": {
+        "samples": 30,
+        "usable_samples": 30,
+        "elapsed_s": 29.00233329199999,
+        "complete": true,
+        "same_core_pid": true,
+        "request_errors": 0,
+        "received_fps": {
+          "ch0": 15.895272816796515,
+          "ch1": 15.895272816796515
+        },
+        "stream_delta": {
+          "rx_cnt_ch0": 461,
+          "rx_cnt_ch1": 461,
+          "seq_gap_ch0": 0,
+          "seq_gap_ch1": 0,
+          "crc_bad": 0,
+          "magic_bad": 0,
+          "host_rx_ack_fail": 0
+        },
+        "worker_delta": {
+          "submitted": 921,
+          "results": 921,
+          "overflows": 0
+        },
+        "worker_alive_all_samples": true,
+        "mode_changed": false,
+        "channels_enabled": {
+          "upper": true,
+          "lower": false
+        },
+        "optic_blocked_samples": 0,
+        "fire_delta": {
+          "ch0": 0,
+          "ch1": 0
+        },
+        "over_100ms_delta": 0
+      },
+      "all_observed_samples_healthy": true
+    },
+    "S13": {
+      "hostname": "BMI30-7AA5CED27",
+      "checked_epoch": 1790788089.7352486,
+      "boot_id": "7aa9c437-786d-46a3-a135-9aadc54b4489",
+      "root": "/dev/mmcblk0p2 ext4",
+      "boot": "/dev/mmcblk0p1 vfat",
+      "root_uuid": "a711d2b8-b0af-4434-b208-df32ba3362bb",
+      "boot_uuid": "B512-6118",
+      "version": "2026-09-30-1650",
+      "boot_config_sha256": "9ee826116381cf33e5ba946075d6fdfa36b9314362a9ac67df1256aa050e2e08",
+      "antenna_check": {
+        "ant1": false,
+        "ant2": true,
+        "boot_id": "7aa9c437-786d-46a3-a135-9aadc54b4489",
+        "config_sha256": "9ee826116381cf33e5ba946075d6fdfa36b9314362a9ac67df1256aa050e2e08",
+        "epoch": 1790788043.4492698,
+        "external_selected": true,
+        "hostname": "BMI30-7AA5CED27",
+        "model": "Raspberry Pi Compute Module 5 Rev 1.0",
+        "ok": true,
+        "physical_connection_checked": false,
+        "scope": "antenna_selection_only"
+      },
+      "checker_enabled": "enabled",
+      "core": {
+        "rc": 0,
+        "output": "MainPID=1382\nActiveState=active"
+      },
+      "detector_config_and_version_preserved": true,
+      "mode_timestamp_updated": true,
+      "file_hashes": {
+        "/home/techaid/Documents/host/bmi30_split_active_version.env": "06c4be37cdd8386fe58c3c911f5b8e00b7f3921fbedcd6cf9631d960355133e4",
+        "/home/techaid/Documents/host/bmi30_config.json": "d82526de6bbbac70939789a43c31d321af9cc181975c43b334e794452a61aa5b",
+        "/home/techaid/Documents/host/bmi30_sel.json": "49f8a14033cb455c2bf4e296f62599d393da7fd2e64e1e886b7edc0c3144321f"
+      },
+      "checker_hashes": {
+        "/usr/local/sbin/bmi30-antenna-check.py": "2335b3a6ddc053681fad43f86e536d320784ec2a6d10eebb4bee8ee9a4837847",
+        "/etc/systemd/system/bmi30-antenna-check.service": "39cdb29b4f6a2063ae02e8c4cb4b4bb16d260e116a67b16892b92132aa992afd"
+      },
+      "observation": {
+        "samples": 30,
+        "usable_samples": 30,
+        "elapsed_s": 29.00105041100001,
+        "complete": true,
+        "same_core_pid": true,
+        "request_errors": 0,
+        "received_fps": {
+          "ch0": 15.86149444523304,
+          "ch1": 15.86149444523304
+        },
+        "stream_delta": {
+          "rx_cnt_ch0": 460,
+          "rx_cnt_ch1": 460,
+          "seq_gap_ch0": 0,
+          "seq_gap_ch1": 0,
+          "crc_bad": 0,
+          "magic_bad": 0,
+          "host_rx_ack_fail": 0
+        },
+        "worker_delta": {
+          "submitted": 920,
+          "results": 920,
+          "overflows": 0
+        },
+        "worker_alive_all_samples": true,
+        "mode_changed": false,
+        "channels_enabled": {
+          "upper": true,
+          "lower": true
+        },
+        "optic_blocked_samples": 0,
+        "fire_delta": {
+          "ch0": 0,
+          "ch1": 1
+        },
+        "over_100ms_delta": 0
+      },
+      "all_observed_samples_healthy": true
+    }
+  },
+  "inactive_installations": {
+    "M01_emmc": {
+      "files": {
+        "/usr/local/sbin/bmi30-antenna-check.py": "2335b3a6ddc053681fad43f86e536d320784ec2a6d10eebb4bee8ee9a4837847",
+        "/etc/systemd/system/bmi30-antenna-check.service": "39cdb29b4f6a2063ae02e8c4cb4b4bb16d260e116a67b16892b92132aa992afd",
+        "/home/techaid/Documents/host/bmi30_split_active_version.env": "26347ab86dc590a7b7bb60c752287765a0d845065923412f57c8a30e32c3f50c",
+        "/home/techaid/Documents/host/bmi30_config.json": "f8b0f4370ec2c88dec13ab1b9fc7215497839d29e761753a227d50ee5ba6782f",
+        "/home/techaid/Documents/host/bmi30_sel.json": "47b051d288823f18635d9d554e4fc3560fbb027c6b4cfbfbca9b35f4e997f1a5"
+      },
+      "enabled_target": "/etc/systemd/system/bmi30-antenna-check.service",
+      "config_sha256": "9ee826116381cf33e5ba946075d6fdfa36b9314362a9ac67df1256aa050e2e08",
+      "backup_sha256": "b0daa07d59ab6c331af5024575e425d929e10154d82c8518e434cae5e28d6ccf",
+      "root": "/dev/mmcblk0p2",
+      "boot": "/dev/mmcblk0p1",
+      "verification": "read-only file and enabled symlink check; not booted after change"
+    }
+  },
+  "firmware_or_detector_release_changed": false,
+  "t33_center_test": {
+    "expected": 9,
+    "received": 9,
+    "mapping": "center=tap",
+    "full_calibration_complete": false,
+    "pending_buttons": [
+      "up",
+      "down"
+    ]
+  },
+  "m01_boot_note": "First reboot selected attached USB. Both USB and eMMC have ant2 and boot checker. Independent detector configurations preserved; boot order not changed."
+}

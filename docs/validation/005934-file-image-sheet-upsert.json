@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "board": "S07",
+  "mode": "upsert",
+  "updated": 2,
+  "appended": 0,
+  "row_ids": [
+    "2026-11-06-005933",
+    "2026-11-06-005934"
+  ],
+  "csv_sha256": "bb20a7cd29aa66f0b0283ff1aca13fe47feaf4b4aa923e8945ab678d0e45849b",
+  "utility_sha256": "0dd662414952abefaa148f7e8ca6df4c82d78499c71b1ea0e5d91aa28c2fdb58",
+  "native_csv_unchanged": true,
+  "replace": false,
+  "credential_returned": false
+}

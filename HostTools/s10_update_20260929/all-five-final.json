@@ -1,0 +1,302 @@
+[
+  {
+    "hostname": "BMI30-05AB38E6A",
+    "root": "/dev/mmcblk0p2",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a",
+      "host/BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/relay_control.py": "8b5fd98bf4d021d8c8b44b6559b945ffa3521e2663393244467a5e07bbcb068a",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "installed_portal_sha256": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+    "root_portal_sha256": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+    "python_sha256": "304aa87a76ebb13fd22d253ac157f14980ff2cdb23e6274f3b045571405e07dc",
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.05161619186401367
+    },
+    "fps": {
+      "a": 15.943843270151627,
+      "b": 15.943843270151627,
+      "a_even": 7.971921635075813,
+      "a_odd": 7.971921635075813,
+      "b_even": 7.971921635075813,
+      "b_odd": 7.971921635075813
+    },
+    "mode": {
+      "selected": 6,
+      "stream_mode": 2,
+      "view_mode": 0,
+      "base_buf_len": 200,
+      "freq_hz": 200,
+      "desired_freq": 200,
+      "avg_n": 24,
+      "det_ratio": 3.5
+    },
+    "relay": {
+      "enabled": false,
+      "active": false,
+      "pc1": 0,
+      "mode": 0,
+      "test_enabled": false,
+      "remaining_ms": 0,
+      "available": true,
+      "duration_ms": 1000,
+      "saved_enabled": false,
+      "age_s": 0.304378064989578,
+      "usb_serial": "334035753032",
+      "sequence": 5237
+    },
+    "service": {
+      "version": "001",
+      "engine_source": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-09-29-1720",
+      "uptime_s": 5329.218086481094,
+      "runtime": "headless",
+      "qt_loaded": false
+    }
+  },
+  {
+    "hostname": "BMI30-27448D72B",
+    "root": "/dev/mmcblk0p2",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a",
+      "host/BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/relay_control.py": "8b5fd98bf4d021d8c8b44b6559b945ffa3521e2663393244467a5e07bbcb068a",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "installed_portal_sha256": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+    "root_portal_sha256": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+    "python_sha256": "304aa87a76ebb13fd22d253ac157f14980ff2cdb23e6274f3b045571405e07dc",
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.02453160285949707
+    },
+    "fps": {
+      "a": 16.849008634674192,
+      "b": 16.849008634674192,
+      "a_even": 8.920063394827514,
+      "a_odd": 7.928945239846678,
+      "b_even": 8.920063394827514,
+      "b_odd": 7.928945239846678
+    },
+    "mode": {
+      "selected": 6,
+      "stream_mode": 2,
+      "view_mode": 0,
+      "base_buf_len": 200,
+      "freq_hz": 200,
+      "desired_freq": 200,
+      "avg_n": 24,
+      "det_ratio": 3.5
+    },
+    "relay": {
+      "enabled": false,
+      "active": false,
+      "pc1": 0,
+      "mode": 0,
+      "test_enabled": false,
+      "remaining_ms": 0,
+      "available": true,
+      "duration_ms": 1000,
+      "saved_enabled": false,
+      "age_s": 0.21460674604168162,
+      "usb_serial": "334235603032",
+      "sequence": 5264
+    },
+    "service": {
+      "version": "001",
+      "engine_source": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-09-29-1720",
+      "uptime_s": 5349.627641439438,
+      "runtime": "headless",
+      "qt_loaded": false
+    }
+  },
+  {
+    "hostname": "BMI30-7AA5CED27",
+    "root": "/dev/mmcblk0p2",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a",
+      "host/BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/relay_control.py": "8b5fd98bf4d021d8c8b44b6559b945ffa3521e2663393244467a5e07bbcb068a",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "installed_portal_sha256": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+    "root_portal_sha256": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+    "python_sha256": "304aa87a76ebb13fd22d253ac157f14980ff2cdb23e6274f3b045571405e07dc",
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.03557777404785156
+    },
+    "fps": {
+      "a": 11.961599603020034,
+      "b": 11.961599603020034,
+      "a_even": 5.980799801510017,
+      "a_odd": 5.980799801510017,
+      "b_even": 5.980799801510017,
+      "b_odd": 5.980799801510017
+    },
+    "mode": {
+      "selected": 6,
+      "stream_mode": 2,
+      "view_mode": 0,
+      "base_buf_len": 200,
+      "freq_hz": 200,
+      "desired_freq": 200,
+      "avg_n": 32,
+      "det_ratio": 4.0
+    },
+    "relay": {
+      "enabled": false,
+      "active": false,
+      "pc1": 0,
+      "mode": 0,
+      "test_enabled": false,
+      "remaining_ms": 0,
+      "available": true,
+      "duration_ms": 1000,
+      "saved_enabled": false,
+      "age_s": 0.5106413290000091,
+      "usb_serial": "334535653032",
+      "sequence": 2217
+    },
+    "service": {
+      "version": "001",
+      "engine_source": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-09-29-1720",
+      "uptime_s": 2211.770407676697,
+      "runtime": "headless",
+      "qt_loaded": false
+    }
+  },
+  {
+    "hostname": "BMI30-D5507EDFC",
+    "root": "/dev/mmcblk0p2",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a",
+      "host/BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/relay_control.py": "8b5fd98bf4d021d8c8b44b6559b945ffa3521e2663393244467a5e07bbcb068a",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "installed_portal_sha256": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+    "root_portal_sha256": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+    "python_sha256": "304aa87a76ebb13fd22d253ac157f14980ff2cdb23e6274f3b045571405e07dc",
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.038527727127075195
+    },
+    "fps": {
+      "a": 17.949775085353444,
+      "b": 17.949775085353444,
+      "a_even": 8.974887542676722,
+      "a_odd": 8.974887542676722,
+      "b_even": 8.974887542676722,
+      "b_odd": 8.974887542676722
+    },
+    "mode": {
+      "selected": 6,
+      "stream_mode": 2,
+      "view_mode": 0,
+      "base_buf_len": 200,
+      "freq_hz": 200,
+      "desired_freq": 200,
+      "avg_n": 24,
+      "det_ratio": 3.5
+    },
+    "relay": {
+      "enabled": false,
+      "active": false,
+      "pc1": 0,
+      "mode": 0,
+      "test_enabled": false,
+      "remaining_ms": 0,
+      "available": true,
+      "duration_ms": 1000,
+      "saved_enabled": false,
+      "age_s": 0.17738872399786487,
+      "usb_serial": "3344357A3032",
+      "sequence": 5275
+    },
+    "service": {
+      "version": "001",
+      "engine_source": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-09-29-1720",
+      "uptime_s": 5368.222527503967,
+      "runtime": "headless",
+      "qt_loaded": false
+    }
+  },
+  {
+    "hostname": "BMI30-D5EB8F26C",
+    "root": "/dev/sda2",
+    "hashes": {
+      "host/BMI30.001.py.2026-09-29-1720": "37d4060b3dc1d7deab8d147f33c72b0124d3427d4bc5c1d3de75c466119e766a",
+      "host/BMI30.200.py.2026-09-29-1720": "8070730577df5130cc999ca4dfc3b15918f127db9817f5e00400f2e9a44aade8",
+      "host/BMI30.GUI.001.py.2026-09-29-1720": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "hotspot_info_server.py": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+      "host/usb_vendor/relay_control.py": "8b5fd98bf4d021d8c8b44b6559b945ffa3521e2663393244467a5e07bbcb068a",
+      "host/usb_vendor/usb_stream.py": "b5904a49d1f449a4b5e8ebed4f3d4eb1915a0c22b0557801fcd3b9957949d99c"
+    },
+    "installed_portal_sha256": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+    "root_portal_sha256": "46426ef68c49a3986a0607c682333fb8d7d5bc8be3bfad1faf77b54bb06afa4c",
+    "python_sha256": "304aa87a76ebb13fd22d253ac157f14980ff2cdb23e6274f3b045571405e07dc",
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.09652090072631836
+    },
+    "fps": {
+      "a": 18.859432322202515,
+      "b": 18.859432322202515,
+      "a_even": 8.933415310516981,
+      "a_odd": 9.926017011685536,
+      "b_even": 8.933415310516981,
+      "b_odd": 9.926017011685536
+    },
+    "mode": {
+      "selected": 6,
+      "stream_mode": 2,
+      "view_mode": 0,
+      "base_buf_len": 200,
+      "freq_hz": 200,
+      "desired_freq": 200,
+      "avg_n": 24,
+      "det_ratio": 3.0
+    },
+    "relay": {
+      "enabled": true,
+      "active": true,
+      "pc1": 1,
+      "mode": 1,
+      "test_enabled": false,
+      "remaining_ms": 1998,
+      "available": true,
+      "duration_ms": 2000,
+      "saved_enabled": true,
+      "age_s": 1.0122991369999,
+      "usb_serial": "334535423032",
+      "sequence": 1519
+    },
+    "service": {
+      "version": "001",
+      "engine_source": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-09-29-1720",
+      "uptime_s": 1688.6646399497986,
+      "runtime": "headless",
+      "qt_loaded": false
+    }
+  }
+]

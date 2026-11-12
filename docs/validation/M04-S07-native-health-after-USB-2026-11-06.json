@@ -1,0 +1,73 @@
+{
+  "ok": true,
+  "devices": {
+    "M04": {
+      "ok": true,
+      "read_only": true,
+      "board": "M04",
+      "boot_id": "c2173c2f-d588-43e0-86dc-36fdcee1b76a",
+      "five_protected_PID_startticks_unchanged": true,
+      "protected": {
+        "bmi30-core.service": {
+          "pid": 610623,
+          "start_ticks": "1035436"
+        },
+        "bmi30-hotspot-info.service": {
+          "pid": 610659,
+          "start_ticks": "1035439"
+        },
+        "NetworkManager.service": {
+          "pid": 905,
+          "start_ticks": "352"
+        },
+        "bmi30-network.service": {
+          "pid": 4873,
+          "start_ticks": "3741"
+        },
+        "bmi30-access.service": {
+          "pid": 2231661,
+          "start_ticks": "3566573"
+        }
+      },
+      "Access_version": "0.1.1",
+      "Access_health": "ready",
+      "health_age_seconds": 1.9124584197998047,
+      "portal_HTTP": 200,
+      "native_root_source": "/dev/mmcblk0p2"
+    },
+    "S07": {
+      "ok": true,
+      "read_only": true,
+      "board": "S07",
+      "boot_id": "c64ee473-bd26-4b5a-bac2-365e398322c8",
+      "five_protected_PID_startticks_unchanged": true,
+      "protected": {
+        "bmi30-core.service": {
+          "pid": 1130668,
+          "start_ticks": "3124894"
+        },
+        "bmi30-hotspot-info.service": {
+          "pid": 1810,
+          "start_ticks": "708"
+        },
+        "NetworkManager.service": {
+          "pid": 884,
+          "start_ticks": "350"
+        },
+        "bmi30-network.service": {
+          "pid": 3539,
+          "start_ticks": "1492"
+        },
+        "bmi30-access.service": {
+          "pid": 1730246,
+          "start_ticks": "5252737"
+        }
+      },
+      "Access_version": "0.1.1",
+      "Access_health": "ready",
+      "health_age_seconds": 5.277688026428223,
+      "portal_HTTP": 200,
+      "native_root_source": "/dev/mmcblk0p2"
+    }
+  }
+}

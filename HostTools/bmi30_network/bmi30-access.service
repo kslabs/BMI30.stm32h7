@@ -1,0 +1,24 @@
+[Unit]
+Description=BMI30 local access recovery and short power-button handling
+After=NetworkManager.service bmi30-hotspot.service bmi30-hotspot-info.service systemd-logind.service
+Wants=NetworkManager.service bmi30-hotspot-info.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/systemd-inhibit --what=handle-power-key --who=BMI30 --why=Short-button-network-recovery --mode=block /usr/bin/python3 /opt/bmi30-network/access.py
+ExecStopPost=-/usr/sbin/iw dev wlan0ap set txpower auto
+Restart=always
+RestartSec=5
+RuntimeDirectory=bmi30-access
+RuntimeDirectoryMode=0700
+StateDirectory=bmi30-access
+StateDirectoryMode=0700
+UMask=0077
+Nice=15
+CPUWeight=10
+MemoryMax=80M
+TasksMax=24
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

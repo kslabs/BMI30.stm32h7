@@ -1,0 +1,22 @@
+{
+  "USB_boot_qualified": false,
+  "artifact_review_sha256": "d1cc95e9e36978d26ebf6fcb567725610bf68fa177805725368dfcfe48202331",
+  "files": {
+    ".gitattributes": {
+      "bytes": 17,
+      "sha256": "f1d2426b5c10dbdbcf81d14e56db2dbfb856deef01d6882d0fe18a666a3ac9d5"
+    },
+    "app-asset-plan.json": {
+      "bytes": 158570,
+      "sha256": "3cc8e4add23b7414dffcf8225488466242ed3fbdbbb060170a8c134213b13f71"
+    },
+    "bmi30-app-cm5-2026-11-06-123519.tar": {
+      "bytes": 23889920,
+      "sha256": "1012c30ce296ba9576b0a156a71d790c865c34b908077a7eb9b2f2877fe078ff"
+    }
+  },
+  "full_USB_image": false,
+  "kind": "allowlisted-public-Raspberry-release",
+  "private_device_state_included": false,
+  "schema": 1
+}

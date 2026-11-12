@@ -1,0 +1,26 @@
+{
+  "board": "S07",
+  "root": "/dev/sda2",
+  "boot_mode": 4,
+  "version": "2026-10-16-1743",
+  "engine_sha256_verified": true,
+  "source_defaults_sha256": "1fdf75914f8e43b138ab5bb49e5d70e71f2287c8c14ff599d90001c5f208be32",
+  "hardware_role": "S07",
+  "role_preserved": true,
+  "worker_results_advanced": 294,
+  "worker_overflow_delta": 0,
+  "stream_delta": {
+    "rx_cnt_ch0": 148,
+    "rx_cnt_ch1": 148,
+    "seq_gap_ch0": 0,
+    "seq_gap_ch1": 0,
+    "seq_dup_ch0": 0,
+    "seq_dup_ch1": 0,
+    "crc_bad": 0,
+    "magic_bad": 0,
+    "host_rx_ack_fail": 0
+  },
+  "https": 200,
+  "bootloader_permanent_unchanged": true,
+  "boot_tested": true
+}

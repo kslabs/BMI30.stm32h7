@@ -367,8 +367,10 @@ static inline uint32_t adc_addr_to_index(uint32_t addr, uint16_t buf[FIFO_FRAMES
 #define ADC_TX_GATE_PORT  GPIOA
 #define ADC_TX_GATE_PIN   GPIO_PIN_1
 
-/* bit0 = TX1 (active-low PA1), bit1 = TX2 (active-high PA2).
-   Zero preserves the existing waveform on every pin. PC7 remains the marker.
+/* bit0 = upper TX1 (active-high PC7, complementary legacy PA1),
+   bit1 = lower TX2 (active-high PA2). The board routes PC7/PA2 to the
+   transmitters; PA1 is not the upper transmitter input.
+   Zero preserves the existing waveform on every pin.
    Requests never write GPIO; only the regular marker boundary latches them. */
 static volatile uint8_t s_tx_phase_requested_mask = 0u;
 static volatile uint8_t s_tx_phase_applied_mask = 0u;
@@ -395,14 +397,13 @@ static inline void adc_marker_write_outputs(uint8_t level_high)
     uint8_t phases = s_tx_phase_applied_mask;
     uint8_t tx1_active = (uint8_t)(output_allowed && (level_high ^ (phases & 1u)));
     uint8_t tx2_active = (uint8_t)(output_allowed && (level_high ^ ((phases >> 1) & 1u)));
-    uint8_t marker_high = (uint8_t)(output_allowed && level_high);
 
     /* Update the two TX pins in one atomic port write. Disable always clamps
-       PA1 HIGH and PA2 LOW, regardless of phase. PC7 keeps its old waveform. */
+       PA1 HIGH and PA2/PC7 LOW, regardless of phase. */
     ADC_MARKER_PORT_A->BSRR =
         (tx1_active ? ((uint32_t)ADC_TX_GATE_PIN << 16) : (uint32_t)ADC_TX_GATE_PIN) |
         (tx2_active ? (uint32_t)ADC_MARKER_PIN_A : ((uint32_t)ADC_MARKER_PIN_A << 16));
-    adc_marker_set_level_b(marker_high);
+    adc_marker_set_level_b(tx1_active);
 }
 
 static inline void adc_marker_set_level(uint8_t level_high)
@@ -1868,6 +1869,53 @@ uint8_t __attribute__((optimize("O2"))) adc_peek_frame_pair_fifo(uint16_t **ch1,
     *ch2 = s_consumer_snapshot[1];
     *samples = snapshot_samples;
     return 1;
+}
+
+uint8_t __attribute__((optimize("O2"))) adc_copy_consume_frame_pair_roi_fifo(
+    uint16_t *dst_a, uint16_t *dst_b, uint16_t roi_start, uint16_t roi_len,
+    uint32_t *seq_out, uint8_t *buffer_index_out)
+{
+    if (dst_a == NULL || dst_b == NULL || dst_a == dst_b || roi_len == 0u ||
+        roi_len > MAX_FRAME_SAMPLES) return 0u;
+
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    uint32_t seq = frame_rd_seq;
+    uint32_t generation = s_capture_generation;
+    uint16_t samples = g_active_samples;
+    if (samples > MAX_FRAME_SAMPLES) samples = MAX_FRAME_SAMPLES;
+    if (s_snapshot_copy_busy || (uint32_t)roi_start + roi_len > samples ||
+        !adc_snapshot_pair_valid(seq, generation)) {
+        __set_PRIMASK(primask);
+        return 0u;
+    }
+    uint32_t index = seq & (FIFO_FRAMES - 1u);
+    uint8_t buffer_index = (uint8_t)(s_frame_buffer_idx[index] & 0x07u);
+    s_snapshot_copy_busy = 1u;
+    __set_PRIMASK(primask);
+
+    /* DMA/marker/SYNC continue during the bounded 200-point copies. The
+       destination belongs to the USB pair, never to the shared snapshot. */
+    adc_invalidate_cache_for_buffer(adc1_buffers[index], samples);
+    adc_invalidate_cache_for_buffer(adc2_buffers[index], samples);
+    memcpy(dst_a, adc1_buffers[index] + roi_start, (size_t)roi_len * sizeof(uint16_t));
+    memcpy(dst_b, adc2_buffers[index] + roi_start, (size_t)roi_len * sizeof(uint16_t));
+
+    __disable_irq();
+    uint8_t valid = adc_snapshot_pair_valid(seq, generation);
+    if (valid) {
+        /* The copied pair is now independent of DMA and USB latency. Free its
+           source immediately; never consume this sequence again in TxCplt. */
+        frame_rd_seq++;
+        if (adc_ch_rd_seq[0] == seq) adc_ch_rd_seq[0]++;
+        if (adc_ch_rd_seq[1] == seq) adc_ch_rd_seq[1]++;
+    }
+    s_snapshot_copy_busy = 0u;
+    __set_PRIMASK(primask);
+    if (!valid) return 0u;
+    if (seq_out != NULL) *seq_out = seq;
+    if (buffer_index_out != NULL) *buffer_index_out = buffer_index;
+    return 1u;
 }
 
 uint8_t adc_consume_frame_pair_fifo(uint32_t seq)

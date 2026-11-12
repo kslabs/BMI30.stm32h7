@@ -1,0 +1,33 @@
+{
+  "status": "pending",
+  "native_menu_path": "/home/techaid/Documents/utilities/menu.sh",
+  "native_menu_sha256": "fb4a9b9c2b6f53c5da7fe34e84260276256d883a47dba4a61ea5ddff786fd3ff",
+  "native_menu_bytes": 9042,
+  "native_menu_structure": "flat one-level show_menu",
+  "reference": {
+    "board": "S07",
+    "path": "/home/techaid/Documents/utilities/menu.sh",
+    "sha256": "04e965006a6edeacc1f3ea5230be947ccb2b4ea63b9e68a8dc37f07ae9162b47",
+    "bytes": 9272,
+    "structure": "two-level main plus versions/disks/network submenus",
+    "functions": [
+      "pause_menu",
+      "run_action",
+      "bmi30_core_state_text",
+      "bmi30_core_enabled_text",
+      "show_bmi30_core_status",
+      "run_core_service_action",
+      "show_core_service_details",
+      "deploy_portal",
+      "show_menu",
+      "versions_menu",
+      "disks_menu",
+      "network_menu",
+      "main"
+    ]
+  },
+  "installed_APP_menu_exists": false,
+  "native_install_plan_included_utilities_menu": false,
+  "conclusion": "The separate native Utilities tree was omitted by the installer and remains old; the overall M04 software update is unfinished.",
+  "deployed_by_this_report_update": false
+}

@@ -1,0 +1,7 @@
+{
+  "all_task_tunnels_stopped": true,
+  "stopped_pids": [
+    40412
+  ],
+  "matched_exact_task_forwards_and_hosts": true
+}

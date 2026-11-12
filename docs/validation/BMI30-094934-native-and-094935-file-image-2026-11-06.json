@@ -1,0 +1,69 @@
+{
+  "094935_compression_completion": "UNKNOWN after poweroff; launch alone is not completion",
+  "094935_sealed_file": {
+    "closure_sha256": "3fb759a768fe22237d87045ac4250a1d4f921280b6de471cde073f6e82e460ab",
+    "initramfs_sha256": "bc18f3b2c8298da954041f9afff25eacf32a4b39ec6c6b0f710b6d09006c0c65",
+    "original_seal_receipt_sha256": "bab13fa05362db7b1e35565bd49ed07d0c7b5ca86a634235569edc6dbc7a3313",
+    "raw_bytes": 8589934592,
+    "raw_sha256": "62c8b4daa6075215bda1fd58082134ebd0e90227e973fe9edf2964c2e8e8bd8a"
+  },
+  "CSV_after_sha256": "80820defbd2377692e8959ccd6cabf144e203bba047f38afd201ebd5e4d1e9b1",
+  "CSV_before_sha256": "4fdcbb021c6497cbb6c63ff61d3eff00c9d1f4b4de2c2510f7f0fda40fc865dd",
+  "central_success_before_poweroff": {
+    "automatic_roaming": false,
+    "catalog_records_each": 1,
+    "new_RAM_profiles_created_each": 0,
+    "persistent_downloads": false
+  },
+  "current_user_scope": {
+    "094935_compression_completion": "unknown after poweroff",
+    "094935_new_XZ_cache_or_server_ACK_or_USB_write_verified": false,
+    "S07_remains_in_scope": true,
+    "both_last_LAN_targets_reported_powered_off_or_offline": true,
+    "date": "2026-11-06",
+    "old_M04_actual_operations_authorized_now": false,
+    "old_M04_removed_for_relay_LED_repair": true,
+    "replacement_identity": "unknown",
+    "replacement_is_different_complete_device": true,
+    "replacement_role_policy": "preserve replacement own STM role; never assign M04 merely because replacing the old device",
+    "replacement_updated_by_this_task": false,
+    "source": "Root relayed explicit user clarification after the original device was powered off; not a new hardware observation by this helper"
+  },
+  "date": "2026-11-06",
+  "helper_actual_device_cloud_Git_calls": 0,
+  "historical_first116_rows_sha256": "5130ee8cabad7684400273d2ea870915c4c643748458edb27ebc9bedaa7bff82",
+  "historical_native005933_installed_both_then_superseded": true,
+  "kind": "local-binding-of-Root-historical-native-and-file-image-evidence",
+  "limits": [
+    "Historical first-status/commit receipts do not assert either powered-off board is currently online or central running.",
+    "Replacement device is unknown; this helper assigns no STM role and confirms no replacement update.",
+    "No actual094935 XZ/cache/serverACK/media write/boot claim; no artifact or capture deletion."
+  ],
+  "native094934_installed_on_old_M04_and_S07_before_poweroff": true,
+  "new094935_XZ_cache_archive_ACK_USBcopy_or_hardwareboot_verified": false,
+  "old005934_M04_USB_copy_verified_but_withdrawn_before_boot": true,
+  "release_ids": [
+    "2026-11-06-005933",
+    "2026-11-06-005934",
+    "2026-11-06-094934",
+    "2026-11-06-094935"
+  ],
+  "schema": 1,
+  "source_evidence_sha256": {
+    "M04_central_first_status": "30590238ea629daf29b022e18ff9097f2c08ab5fd5cd73f16ecd0a23ae86f9c2",
+    "M04_central_start": "e588900ddad14ab7106d95d2f011555fdc6347c7d04d51d68248943364d325d4",
+    "M04_commit": "2476c8e914bf9340543824e7d272ab3b10e920ad1e886906698db87fe9a00f54",
+    "Root_build_actual": "5a8dea605438e6cfaa104c5de16b5c19c42511d30a0378c94c37d0da50f59c7e",
+    "Root_build_approval": "7724a2ab00debf215573288aee509af149d5ddf490dc51d9ef041fcc6af68593",
+    "S07_central_first_status": "adfa018684cbd3e81d3da3a8e248529ae715e246c211247d9e1e9fc498741362",
+    "S07_central_start": "d77acff571d85b2baf43b5d3631a002de9a3531153b66cfd9189203b376ea5a9",
+    "S07_commit": "35480f2ccd4c3ef25f8eeea32293d6c70a8be4a2bba421d9744631a3acb2609e",
+    "XZ_last_status_unknown": "39169c7c50e12976abe8de1e9defb7356fd5bfea030be7bc179ee7342b4442c4",
+    "XZ_start_only": "24419eac5e1dce21c97a4d82d7660101ecd05e5e9ab0dd7df054e1c21b60d5c1",
+    "new_image_original": "bab13fa05362db7b1e35565bd49ed07d0c7b5ca86a634235569edc6dbc7a3313",
+    "new_image_terminal_status": "7e8e948ab3d4644c65144be3da360121bf8f3f41f30a7540b79cd56739cb3bfb",
+    "old_M04_USB_copy": "09903b49349e80a8b1f9008baa6a5d1c7b18056019e9fc92704a833ce4f0de01",
+    "old_M04_commit": "193b9d7cc7cc4ee9c1cdd010c30ac3ae0d4e04f795a6a773bc0f08b97561e090",
+    "old_S07_commit": "b3d53f2d78e446aaf5c23907341ffab40b04e734d88d344808871202e1f422f1"
+  }
+}

@@ -1,0 +1,171 @@
+{
+  "ok": true,
+  "physical_cm5": "0d6b7531ed3e6af5",
+  "checked_at": 1793885988.0553563,
+  "STM_USB_devices": [
+    {
+      "sysfs_device": "2-1",
+      "vid": "cafe",
+      "pid": "4001",
+      "product": "BMI30 TagIT",
+      "serial": "3340355B3032"
+    }
+  ],
+  "Core_snapshots": [
+    {
+      "at": 1793885986.8463354,
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.004930019378662109
+      },
+      "source": {
+        "version": "001",
+        "engine_source": "/home/techaid/Documents/host/bmi30_split_versions/2026-11-04-175044-native-M04/project/host/BMI30.200.py.2026-11-04-185916",
+        "uptime_s": 322.3514316082001,
+        "runtime": "headless",
+        "qt_loaded": false
+      },
+      "whitelisted_fields": [
+        {
+          "path": "/connection/connected",
+          "value": true
+        },
+        {
+          "path": "/connection/connecting",
+          "value": false
+        },
+        {
+          "path": "/connection/disconnected",
+          "value": false
+        },
+        {
+          "path": "/connection/last_frame_age_s",
+          "value": 0.004930019378662109
+        },
+        {
+          "path": "/optic/relay/usb_serial",
+          "value": ""
+        },
+        {
+          "path": "/detector/worker/submitted",
+          "value": 9888
+        },
+        {
+          "path": "/detector/worker/results",
+          "value": 9888
+        },
+        {
+          "path": "/frames/last_frame_t",
+          "value": 1793885986.8376892
+        },
+        {
+          "path": "/stream_stats/rx_cnt_ch0",
+          "value": 5036
+        },
+        {
+          "path": "/stream_stats/rx_cnt_ch1",
+          "value": 5036
+        },
+        {
+          "path": "/stream_stats/crc_bad",
+          "value": 0
+        },
+        {
+          "path": "/frame_integrity/last/crc_bad",
+          "value": 0
+        },
+        {
+          "path": "/frame_amplitude/last/crc_bad",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "at": 1793885988.0512707,
+      "connection": {
+        "connected": true,
+        "connecting": false,
+        "disconnected": false,
+        "last_frame_age_s": 0.2383115291595459
+      },
+      "source": {
+        "version": "001",
+        "engine_source": "/home/techaid/Documents/host/bmi30_split_versions/2026-11-04-175044-native-M04/project/host/BMI30.200.py.2026-11-04-185916",
+        "uptime_s": 323.5560564994812,
+        "runtime": "headless",
+        "qt_loaded": false
+      },
+      "whitelisted_fields": [
+        {
+          "path": "/connection/connected",
+          "value": true
+        },
+        {
+          "path": "/connection/connecting",
+          "value": false
+        },
+        {
+          "path": "/connection/disconnected",
+          "value": false
+        },
+        {
+          "path": "/connection/last_frame_age_s",
+          "value": 0.2383115291595459
+        },
+        {
+          "path": "/optic/relay/usb_serial",
+          "value": ""
+        },
+        {
+          "path": "/detector/worker/submitted",
+          "value": 9920
+        },
+        {
+          "path": "/detector/worker/results",
+          "value": 9920
+        },
+        {
+          "path": "/frames/last_frame_t",
+          "value": 1793885987.8089325
+        },
+        {
+          "path": "/stream_stats/rx_cnt_ch0",
+          "value": 5052
+        },
+        {
+          "path": "/stream_stats/rx_cnt_ch1",
+          "value": 5052
+        },
+        {
+          "path": "/stream_stats/crc_bad",
+          "value": 0
+        },
+        {
+          "path": "/frame_integrity/last/crc_bad",
+          "value": 0
+        },
+        {
+          "path": "/frame_amplitude/last/crc_bad",
+          "value": 0
+        }
+      ]
+    }
+  ],
+  "portal": {
+    "stm32_firmware_version": "1.2.44",
+    "version_sources": {
+      "raspberry": "firmware_release",
+      "stm32": "EVT1:0x00:fw_info"
+    },
+    "group_state_identity": {
+      "stm32_uid96": "3336353430325113000A0027",
+      "uid96": "3336353430325113000A0027"
+    }
+  },
+  "current_reported_STM_firmware": "1.2.44",
+  "STM_flash_performed": false,
+  "STM_commands_by_observation": false,
+  "scope": "Real connected M04 USB identity plus advancing RX/worker counters; no physical tag or range test."
+}

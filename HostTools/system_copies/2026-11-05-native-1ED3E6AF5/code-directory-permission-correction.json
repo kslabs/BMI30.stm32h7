@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "checked_at": 1793885665.2986104,
+  "physical_cm5": "0d6b7531ed3e6af5",
+  "root_partuuid": "e1b5c915-02",
+  "cause": "New public-code parent directories inherited installer runner umask077; techaid could not traverse them.",
+  "directories_checked": 250,
+  "directories_changed_0700_to_0755": 250,
+  "scopes": {
+    "network": 9,
+    "RTC": 202,
+    "bootstrap": 1,
+    "APP": 38
+  },
+  "public_code_files_exact_hash_verified": 1978,
+  "all_asset_files_fingerprinted": 1999,
+  "code_files_and_links_unchanged": true,
+  "own_files_configs_unchanged": true,
+  "files_chmodded": 0,
+  "own_file_writes": false,
+  "services_changed_by_helper": false,
+  "STM_commands": false,
+  "rebooted_by_helper": false,
+  "audit_sha256": "66b14882b7399f313d995097f4bc10a4109e6aa910371ecdddabf98d3a92c40d",
+  "public_plan_sha256": "9f9394ad781c7fc6d7cdda9292822d8a90735c7714bd7c16dbcb5cba735f3554"
+}

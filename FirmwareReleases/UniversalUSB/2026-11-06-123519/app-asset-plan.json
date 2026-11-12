@@ -1,0 +1,4626 @@
+{
+  "Linux_image_modified": false,
+  "boot_qualified": false,
+  "dependency_primary_sources": [
+    "https://packages.debian.org/bookworm/python3-aiortc",
+    "https://packages.debian.org/bookworm/python3-aioice"
+  ],
+  "directories": {
+    "default": {
+      "gid": 0,
+      "mode": 493,
+      "uid": 0
+    },
+    "home/techaid": {
+      "gid": 1000,
+      "mode": 493,
+      "uid": 1000
+    },
+    "home/techaid/Documents": {
+      "gid": 1000,
+      "mode": 493,
+      "uid": 1000
+    }
+  },
+  "enable_units_only_after_safe_import_probe": true,
+  "exclusions": [
+    "project/host/BMI30.001.py.2026-11-03-172055",
+    "project/host/BMI30.200.py.2026-11-03-172055",
+    "project/host/BMI30_Agent/tests/test_bmi30_agent.py",
+    "project/host/bmi30_config.json",
+    "project/host/bmi30_firmware_release.env",
+    "project/host/bmi30_full_bootstrap.py",
+    "project/host/bmi30_full_update/bmi30_native_service_variants.py",
+    "project/host/bmi30_full_update/component.py",
+    "project/host/bmi30_full_update/manifest.json",
+    "project/host/bmi30_full_update/payload/metadata/portable-assets.json",
+    "project/host/bmi30_full_update/payload/project/hotspot_info_server.py",
+    "project/host/bmi30_full_update/payload/system/etc/NetworkManager/dnsmasq-shared.d/91-bmi30-captive-detection.conf",
+    "project/host/bmi30_full_update/payload/system/etc/bmi30-network/central-wifi-ram-only",
+    "project/host/bmi30_full_update/payload/system/etc/systemd/logind.conf.d/80-bmi30-access.conf",
+    "project/host/bmi30_full_update/payload/system/etc/systemd/system/bmi30-access.service",
+    "project/host/bmi30_full_update/payload/system/etc/systemd/system/bmi30-central-wifi.service",
+    "project/host/bmi30_full_update/payload/system/etc/systemd/system/bmi30-channel-policy.service",
+    "project/host/bmi30_full_update/payload/system/etc/systemd/system/bmi30-communication-recovery.service",
+    "project/host/bmi30_full_update/payload/system/etc/systemd/system/bmi30-core.service",
+    "project/host/bmi30_full_update/payload/system/etc/systemd/system/bmi30-core.service.d/80-bmi30-offline-start.conf",
+    "project/host/bmi30_full_update/payload/system/etc/systemd/system/bmi30-network.service",
+    "project/host/bmi30_full_update/payload/system/etc/systemd/system/bmi30-refresh-network-identity.service",
+    "project/host/bmi30_full_update/payload/system/etc/systemd/system/bmi30-scope-rtc.service",
+    "project/host/bmi30_full_update/payload/system/home/techaid/Documents/hotspot_info_server.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-central-wifi/adapter.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-central-wifi/central_wifi_client.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-central-wifi/central_wifi_runtime.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-central-wifi/daemon.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-central-wifi/lifecycle.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-central-wifi/rollback_guard.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/Open-BMI30.cmd",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/access.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/access_policy.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/access_power.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/bluetooth_transport.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/bluez_service.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/central_wifi_runtime.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/cohesion.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/communication_recovery.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/freshness.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/group.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/group_ui.js",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/live_ui.js",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/network.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/owner_events.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/policy.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/portal_help.js",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/portal_relay.js",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/portal_ui_version.js",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/protocol.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/realtime.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/release.json",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/scope_codec.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/scope_live.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/scope_rtc.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/scope_rtc_proxy.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/service.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/status.html",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/transport_policy.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode-8.2.dist-info/INSTALLER",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode-8.2.dist-info/LICENSE",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode-8.2.dist-info/METADATA",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode-8.2.dist-info/RECORD",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode-8.2.dist-info/REQUESTED",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode-8.2.dist-info/WHEEL",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode-8.2.dist-info/entry_points.txt",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/LUT.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/__init__.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/base.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/compat/__init__.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/compat/etree.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/compat/png.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/console_scripts.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/constants.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/exceptions.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/image/__init__.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/image/base.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/image/pil.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/image/pure.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/image/styledpil.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/image/styles/__init__.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/image/styles/colormasks.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/image/styles/moduledrawers/__init__.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/image/styles/moduledrawers/base.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/image/styles/moduledrawers/pil.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/image/styles/moduledrawers/svg.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/image/svg.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/main.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/release.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/tests/__init__.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/tests/consts.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/tests/test_example.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/tests/test_qrcode.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/tests/test_qrcode_pil.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/tests/test_qrcode_pypng.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/tests/test_qrcode_svg.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/tests/test_release.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/tests/test_script.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/tests/test_util.py",
+    "project/host/bmi30_full_update/payload/system/opt/bmi30-network/vendor/qrcode/util.py",
+    "project/host/bmi30_full_update/payload/system/usr/local/bin/bmi30-hotspot.sh",
+    "project/host/bmi30_full_update/payload/system/usr/local/lib/bmi30/bmi30_core_bootstrap.py",
+    "project/host/bmi30_full_update/payload/system/usr/local/sbin/bmi30-refresh-network-identity.sh",
+    "project/host/bmi30_full_update/payload/system/usr/local/sbin/bmi30-wifi-watchdog.py",
+    "project/host/bmi30_full_update/payload/variants/network-service/M04.py",
+    "project/host/bmi30_full_update/payload/variants/network-service/S07.py",
+    "project/host/bmi30_full_update/portable.py",
+    "project/host/bmi30_full_update/recovery3/legacy_recovery.py",
+    "project/host/bmi30_full_update/recovery3/service.py",
+    "project/host/bmi30_split_active_version.env",
+    "project/host/bmi30_usb_recovery/bmi30-usb-no-emmc-overlay.dts",
+    "project/host/bmi30_usb_recovery/bmi30-usb-no-emmc.dtbo",
+    "project/host/bmi30_usb_recovery/bundle_feature_cli.py",
+    "project/host/bmi30_usb_recovery/config.json",
+    "project/host/bmi30_usb_recovery/integrate_bundle.py",
+    "project/host/bmi30_usb_recovery/patch_bundle_builder.py",
+    "project/host/bmi30_usb_recovery/patch_firmware_check.py",
+    "project/host/bmi30_usb_recovery/patch_group_status.py",
+    "project/host/bmi30_usb_recovery/patch_hotspot_identity.py",
+    "project/host/bmi30_usb_recovery/patch_portal.py",
+    "project/host/bmi30_usb_recovery/patch_portal_launcher.py",
+    "project/host/bmi30_usb_recovery/patch_wifi_profiles.py",
+    "project/host/bmi30_usb_recovery/usb_recovery_adopt.py",
+    "project/host/bmi30_usb_recovery/usb_recovery_backend.py",
+    "project/host/bmi30_usb_recovery/usb_recovery_common.py",
+    "project/host/bmi30_usb_recovery/usb_recovery_emmc.py",
+    "project/host/bmi30_usb_recovery/usb_recovery_emmc_settings.py",
+    "project/host/bmi30_usb_recovery/usb_recovery_finish.py",
+    "project/host/bmi30_usb_recovery/usb_recovery_progress.py",
+    "project/host/bmi30_usb_recovery/usb_recovery_stm32.py",
+    "project/host/bmi30_usb_recovery/usb_recovery_wifi_seed.py",
+    "project/host/bmi30_usb_recovery/usb_recovery_worker.py",
+    "project/host/usb_vendor/HOST_QUICKSTART.md",
+    "project/host/usb_vendor/Makefile",
+    "project/host/usb_vendor/PROTOCOL.md",
+    "project/host/usb_vendor/README.md",
+    "project/host/usb_vendor/README_VENDOR_HOST.md",
+    "project/host/usb_vendor/crc16.c",
+    "project/host/usb_vendor/crc16.h",
+    "project/host/usb_vendor/crc16.o",
+    "project/host/usb_vendor/host_to_device_report.txt",
+    "project/host/usb_vendor/main.c",
+    "project/host/usb_vendor/main.o",
+    "project/host/usb_vendor/ring.c",
+    "project/host/usb_vendor/ring.h",
+    "project/host/usb_vendor/ring.o",
+    "project/host/usb_vendor/usb_stream_demo",
+    "project/host/usb_vendor/util.c",
+    "project/host/usb_vendor/util.h",
+    "project/host/usb_vendor/util.o",
+    "project/utilities/bmi30_native_service_variants.py"
+  ],
+  "external_runtime_modules_provided_by_initramfs_owner": [
+    "opt/bmi30-universal/runtime_guard.py",
+    "opt/bmi30-universal/runtime_identity.py",
+    "opt/bmi30-universal/owned_emmc_reader.py",
+    "opt/bmi30-universal/universal_usb_proof.py"
+  ],
+  "factory_config": {
+    "avg_n": 8,
+    "operation": {
+      "avg_n": 8,
+      "rpi_avg_n": 12
+    },
+    "rpi_avg_n": 12
+  },
+  "factory_mode": {
+    "sel": 6
+  },
+  "full_universal_features_complete": false,
+  "kind": "public-cm5-family-APP-assets",
+  "local_only": true,
+  "no_hardware_imports": [
+    "lgpio is find_spec only",
+    "RPi.GPIO is optional production fallback, not invoked during image build"
+  ],
+  "not_enabled_automatically": [
+    "bmi30-communication-recovery.service",
+    "bmi30-refresh-network-identity.service",
+    "bmi30-tunnel.service"
+  ],
+  "recommended_units": [
+    "bmi30-core.service",
+    "bmi30-hotspot.service",
+    "bmi30-hotspot-info.service",
+    "bmi30-network.service",
+    "bmi30-access.service",
+    "bmi30-agent.service",
+    "bmi30-central-wifi.service",
+    "bmi30-scope-rtc.service"
+  ],
+  "required_packages": [
+    "network-manager",
+    "wpasupplicant",
+    "iw",
+    "rfkill",
+    "bluez",
+    "avahi-daemon",
+    "alsa-utils",
+    "openssh-client",
+    "openssh-server",
+    "xrdp",
+    "xorgxrdp",
+    "python3-numpy",
+    "python3-scipy",
+    "python3-usb",
+    "python3-serial",
+    "python3-pyudev",
+    "python3-lgpio",
+    "python3-cryptography",
+    "python3-pyqtgraph",
+    "python3-pyqt5",
+    "python3-pil",
+    "python3-psutil",
+    "python3-requests",
+    "python3-dbus",
+    "python3-gi",
+    "python3-aiohttp",
+    "python3-aiortc",
+    "python3-aioice"
+  ],
+  "safe_import_probe": "import sys,importlib.util;import numpy,scipy,pyqtgraph,usb,serial,pyudev,cryptography,dbus,gi,PIL,psutil,requests,aiohttp,aiortc,aioice;assert importlib.util.find_spec('lgpio');sys.path.insert(0,'/opt/bmi30-network');import scope_rtc,scope_codec,scope_live;print('APP-runtime-imports-PASS')",
+  "schema": 1,
+  "shell_syntax_check_required": {
+    "mode": "bash -n parse-only",
+    "scope": "all distinct .sh source bytes",
+    "script_execution_allowed": false
+  },
+  "source_frozen_family_archive_sha256": "843f967f2c6d480cb3e8106e655775b3fed9c7053a4ea7dfef182271dee1d57c",
+  "published": false,
+  "installed_boards": [],
+  "known_limitations": [
+    "Ethernet menu remains a legacy wildcard writer, not qualified",
+    "No generic native installation/OTA/capture-uploader/BlueZ import qualification"
+  ],
+  "release_id": "2026-11-06-123519",
+  "archive": "D:\\Users\\Admin\\Documents\\Work\\BMI20\\STM32\\BMI30.stm32h7\\.tmp\\s07-m02-return-20261106\\release-builder-v2\\app\\2026-11-06-123519\\bmi30-app-cm5-2026-11-06-123519.tar",
+  "archive_sha256": "1012c30ce296ba9576b0a156a71d790c865c34b908077a7eb9b2f2877fe078ff",
+  "archive_bytes": 23889920,
+  "family_manifest_sha256": "5f999adb7c9168df4836007d58b1546b4087a67ad8a65eeb18ed3015c7a0d056",
+  "source_archive_sha256": "7b095f98316962d85690776cddac2594230ab9e9a1cfb475beb50e9c7eb7574f",
+  "files": {
+    "etc/NetworkManager/dnsmasq-shared.d/90-bmi30-captive-portal.conf": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "3b1e8c7c56818e6f044c120cd38ba2ecc82b05c95a15fdc6edc8f94d664c99aa",
+      "bytes": 201,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/NetworkManager/dnsmasq-shared.d/91-bmi30-captive-detection.conf": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "1688f44279ca0c72e92082d3dbfc6aacc5dfe1165a589bade0cc22fa0bd36423",
+      "bytes": 920,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/bmi30-network/central-wifi-ram-only": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/logind.conf.d/80-bmi30-access.conf": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "7f08f82b47f1b1fb76c3ca65510d030993ba033935e1800cf73c989b835438d1",
+      "bytes": 61,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-access.service": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "394b88262f8194e1e83f69be21fbcbf60aa2788ed471b3bfdd635bc667cbe9cb",
+      "bytes": 733,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-agent.service": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "a5542a94dda7046f37808378f89dd87c228800de7b48095c88da6f86670e3376",
+      "bytes": 778,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-agent.service.d/30-universal-identity.conf": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "784274d21482b269f564a1a75982bfc0d3b5bcbc33cb71f05640bb9a8cdca1f7",
+      "bytes": 56,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-central-wifi.service": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "34cbc1ee59a8bba28cc3193d1838502444abb0641c3100b82741561709bfba60",
+      "bytes": 728,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-central-wifi.service.d/30-universal-identity.conf": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "910dc303e2ae4956153a58c050471848272995008a7e2f87f7fd7c017ee6d7c1",
+      "bytes": 127,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-channel-policy.service": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "2e0edbc2522bf3ace46469e046adae200f553a6dbd9f0494e37e1e5629054dfc",
+      "bytes": 340,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-communication-recovery.service": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "4ac5248d72ccb2b844e523a605c0a0cadc8c985e4645c4863b7a60f57abb4a2e",
+      "bytes": 318,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-core.service": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "838b34bad187d6fa3f7a583a68bbd4a6b10f8bc9bd80177574d205a07decf0d0",
+      "bytes": 1001,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-core.service.d/80-bmi30-offline-start.conf": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "fce7c537a192fe0234ff3a5f9f64125902a9402b69f4d1416618664669e5343a",
+      "bytes": 43,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-hotspot-info.service": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "f8643d035a7753c2114d772dfb28fe11bb2447fe2a91fb65002dcbeb3e5e028b",
+      "bytes": 382,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-hotspot.service": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "c3eaf80251b1469597b985f4f137bb5bfc7b1ab0b456cddbfe32017b990628a7",
+      "bytes": 251,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-network.service": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "f4409f1724f9120d269d5b98c4c9d3dbf975bae82dc4a1089b6219563fd7fa15",
+      "bytes": 684,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-network.service.d/30-universal-server-pending.conf": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "ae50ea407cee3c0c63ef19f7edf7d4b5beac27605daab3f099a81b26cb978173",
+      "bytes": 69,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-refresh-network-identity.service": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "1b06858f84e8b6256a181ac9b3d3c6b03d75c5e2e4aba9dddfe29186f2f1198f",
+      "bytes": 330,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-scope-rtc.service": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "62ff4393e499e55a306ee9954c4e013159b99b294019dce8f8753b132de22cd4",
+      "bytes": 465,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "etc/systemd/system/bmi30-tunnel.service": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "d67fca2319875d103981a3c99730de5c3ece150caa8f90aafdd513eafce3812b",
+      "bytes": 788,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/BUILD_INFO.txt": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "1294236f0844e5ef40b9f29588220177d0fd63d764e423a3ba2d5a56853b3222",
+      "bytes": 1047,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/README_RU.md": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "45c79e533721ef583a9b243e90d7b196a84fbbcfd020b37057d505b862d25cea",
+      "bytes": 8763,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/SHA256SUMS.txt": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "419423e282d7ea283ed471e2121edf8e4e991583c03c280c66dc3f665fb25aa4",
+      "bytes": 1133,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/START_HERE_RU.txt": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "07d30e049c592dde21987bfdc01d31c58e58af2653333e70160468d80f96d97b",
+      "bytes": 1887,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/VERSION": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "5b57e3b8c153d1d33b0c0f1ee29d3de1bf93232ed95aa78b80fe885e99faa915",
+      "bytes": 6,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/config/config.example.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "7332d97c21464c3e94fb1a5519589f7b5b5e4fe05a68498029f8948deab8efdf",
+      "bytes": 459,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/install_bmi30_agent.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "416c19f72d6378dbe42f6fc47e6877cd6c8bfaa089602c609e365eaa3f7396c6",
+      "bytes": 13559,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/src/bmi30-agent-ctl": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "3714cb895c4fe4354e76a36331355b0515d06019eb69b1825c693d8df86c5830",
+      "bytes": 1341,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/src/bmi30_agent.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "1ef0db2d03a0eae112134f706e0d28481939057721c8b1ddbeab7a93337f238d",
+      "bytes": 35981,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/src/run_bmi30_tunnel.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "25c771cb8091f887de60e95799f7beb1dbfe628e8f4be8865feadf25a3c5924c",
+      "bytes": 2655,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/systemd/bmi30-agent.service": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "a5542a94dda7046f37808378f89dd87c228800de7b48095c88da6f86670e3376",
+      "bytes": 778,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/systemd/bmi30-tunnel.service": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d67fca2319875d103981a3c99730de5c3ece150caa8f90aafdd513eafce3812b",
+      "bytes": 788,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/BMI30_Agent/uninstall_bmi30_agent.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "a8bbae32dcec53f77ef44754e31cfbda84bff850346e3f06a4c9731710cc0e35",
+      "bytes": 1260,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.001.py.2026-11-06-111748": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "bea3ead6c995e7336f47d81296ea15ca865ce9c5a50a4bbe2bd983ce08f0d55c",
+      "bytes": 1606623,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-11-04-185916": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d5905f22c629b6b915f656958e236b48de28288c720a537f1781df954a0d74a6",
+      "bytes": 866453,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.GUI.001.py.2026-09-30-1650": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "bytes": 621,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/BUILD_INFO.txt": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "1294236f0844e5ef40b9f29588220177d0fd63d764e423a3ba2d5a56853b3222",
+      "bytes": 1047,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/README_RU.md": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "45c79e533721ef583a9b243e90d7b196a84fbbcfd020b37057d505b862d25cea",
+      "bytes": 8763,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/SHA256SUMS.txt": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "419423e282d7ea283ed471e2121edf8e4e991583c03c280c66dc3f665fb25aa4",
+      "bytes": 1133,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/START_HERE_RU.txt": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "07d30e049c592dde21987bfdc01d31c58e58af2653333e70160468d80f96d97b",
+      "bytes": 1887,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/VERSION": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "5b57e3b8c153d1d33b0c0f1ee29d3de1bf93232ed95aa78b80fe885e99faa915",
+      "bytes": 6,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/config/config.example.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "7332d97c21464c3e94fb1a5519589f7b5b5e4fe05a68498029f8948deab8efdf",
+      "bytes": 459,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/install_bmi30_agent.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "416c19f72d6378dbe42f6fc47e6877cd6c8bfaa089602c609e365eaa3f7396c6",
+      "bytes": 13559,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/src/bmi30-agent-ctl": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "3714cb895c4fe4354e76a36331355b0515d06019eb69b1825c693d8df86c5830",
+      "bytes": 1341,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/src/bmi30_agent.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "1ef0db2d03a0eae112134f706e0d28481939057721c8b1ddbeab7a93337f238d",
+      "bytes": 35981,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/src/run_bmi30_tunnel.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "25c771cb8091f887de60e95799f7beb1dbfe628e8f4be8865feadf25a3c5924c",
+      "bytes": 2655,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/systemd/bmi30-agent.service": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "a5542a94dda7046f37808378f89dd87c228800de7b48095c88da6f86670e3376",
+      "bytes": 778,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/systemd/bmi30-tunnel.service": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d67fca2319875d103981a3c99730de5c3ece150caa8f90aafdd513eafce3812b",
+      "bytes": 788,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30_Agent/uninstall_bmi30_agent.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "a8bbae32dcec53f77ef44754e31cfbda84bff850346e3f06a4c9731710cc0e35",
+      "bytes": 1260,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_averaging.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "22e5f293625ce29fe601ea20d8ae8eea0f1057ae906862e3e2991b9c9923f00c",
+      "bytes": 4467,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_bluetooth_remote_test.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "f5748db3c3b811151d0fb77d7766c7a9c0e9f36a7084926007903860fbacd820",
+      "bytes": 16353,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_common_mode.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "9d0b58edd1c81d217777df6fc6954e2592c36f1f93c51717c5f7a45bd1a1270e",
+      "bytes": 15091,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_config.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "44bb06f3ef0525e21ab35b64ec535b19876cdfa0246ce5c0544bedea69dc1106",
+      "bytes": 94,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_dual_detector.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "166f1f6ed1e55267462ab18232ed4d4746c3feeb6638b3c65e9ab3f16143c08d",
+      "bytes": 9136,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_firmware_release.env": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "ee451b52da1e194069c11484dd9ae9a4d39f7bd1dfc6745167958311b93e8290",
+      "bytes": 1784,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_full_bootstrap.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "f080d68afa7b17b9cf716371418c99d0867dee35b8835980c5b3b19174fe26d1",
+      "bytes": 2524,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_headless.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "93dc3c7fb2149d74f64352e85b48f30e3dc475e9bbe22fcf06c4af52a74b5a47",
+      "bytes": 12400,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_phase_adaptation.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "1116c4e0447bfc5435e55b61e7ae2e2d7847c931a64858a13ebb6cfee23060c6",
+      "bytes": 3280,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_runtime_support.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "370acabec4e00bb4fc143e09ad645cb6c7f5378432ff0b1d5649b8692cc041f5",
+      "bytes": 20785,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/bundle_ui.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "c536026810196aabb7143e16e0ca56daca1cca9dcf250e6f0a3ee33eefd2e8c1",
+      "bytes": 2546,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/firmware_check.js": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "46b991ba1192c47935b1763802875712c89536b1f4942c18f95f6e30b2277dce",
+      "bytes": 2458,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/group_ui.js": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "51606c5c3a4e88c1f887975d275d7170102fc2b64b4a20995ea4632a93d2274b",
+      "bytes": 23696,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/recovery.html": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "558e13bd4e5c9c8c2998380d7705532484eca06786318cfe7289414e60bd446f",
+      "bytes": 1098111,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/recovery_aliases.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "f6c3f6ef356095884f72b1d8823d7df45c082acf05da44dfffbc5779459ebdff",
+      "bytes": 17875,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/recovery_catalogs.tsv": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "226a34690dabf922d294c2cb174d7bee529fe99f415cc12142abbc58c4af4bc9",
+      "bytes": 88116,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/translations.cs.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "2f081595c9669683776c7d0f82136ab0f0d0078906aeca1f587f540927691b8a",
+      "bytes": 86183,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/translations.de.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "b93a349787a0b5ccf663a87246179cf0c06763d4672f4a0ee5d61009cef1ca56",
+      "bytes": 87257,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/translations.es.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "39d424877be65bc16efaafb036fd36e72432495679f6b2ea8c8129461d17422c",
+      "bytes": 87655,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/translations.fr.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "dc56e6bdb9bb3ab534945eb15aaa80e765add0377ff39107ac904f6b8ec18ead",
+      "bytes": 90955,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/translations.it.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "7199e67e739561f803ef253b33e2b4a6ccd1e4fd25403d1a2513619f229c2273",
+      "bytes": 87221,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/translations.ja.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "3c2fab4b7745368f23b7275709549c269d58833c7dccd72f92e12111f2a750db",
+      "bytes": 100129,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/translations.pt.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "73de78986da15d61ddb4256e0636a56842cb2dca6ed1cc9abeca69f9fbc7e691",
+      "bytes": 88811,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/translations.ru.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "4cb66f9963dae09ded962bd4d69b50183c637ec520962f7e54498858a46af240",
+      "bytes": 118590,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/translations.uk.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "9a833feec51478bbf4be319d6c0d6717129df3f8de8350184b639a745892fd07",
+      "bytes": 113945,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/translations.zh-Hans.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "5fba080195bb4315499a3faeac36c3fc41d22e2c6e4453414f6e188360ae15c3",
+      "bytes": 78196,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/ui_language.js": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "b48885ff3a791d066f2b0ae782033fa82953fceaa998c03de18b7713f0134a5d",
+      "bytes": 12666,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/usb_recovery_backend.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "df7f7a796e7fd3645dd0bd76d9e6579b17f740ca2b4c65ea3ece2a71852171ed",
+      "bytes": 2018,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/wifi_profiles.html": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "3f68cc167989e1221f2bcbbee3d7616273c73258540b9092dad8c7eba4a51c38",
+      "bytes": 1087259,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_usb_recovery/wifi_profiles.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "5ef728311e4ae11c38ec8f8fae0ec88b444f186b17470906953a821d5b570876",
+      "bytes": 15702,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/bmi30_wifi_watchdog.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "743cbe7f7b906ea394b14aee81b227319361a20e5d90a660fe864843252ab6ad",
+      "bytes": 14480,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/ring_gestures.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "792c970d1107478a6421097a79d768d36dd191500d2a2bb1c8a8053f242f52dc",
+      "bytes": 4291,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/tag_response_filters/Barkhausen.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "e64450a7365006769a8475aaefd1b83f3f34d3c577d73ebde581ea9aafe21f0b",
+      "bytes": 156,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/tag_response_filters/Casino.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "b8853e841cb527ed96ab69794ab1c62088f42f830633b3e0b66b1c4aafb0b050",
+      "bytes": 112,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/tag_response_filters/Microwire.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "8f580d71ca14094a34401d969497ba0905f0b12204bb88fa13c4c5528e5fbe1b",
+      "bytes": 118,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/tag_response_filters/Paper.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "409538593ffe155416ef72e05c6420af0a6fd8ef3fc57e74c7e2cfb5acd8af8c",
+      "bytes": 110,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/tag_response_filters/README.md": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "ad811f85f8b20ec4e5f019527dccf722be7d1cace94cdad94f57a34d9864404e",
+      "bytes": 1203,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/__init__.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "ae633daae9158c3ba649447148f22b2245ebe9a150a3bce5732863bdc932a91c",
+      "bytes": 28,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/capabilities.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "33effcd18a3a3f5b8396ac2755399a843d24ddb2349e87fa6d3f75805a4c9389",
+      "bytes": 3174,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/dump_first30_200hz.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "e9048a505a2340a5cff678bbca448cb47263aad05c05a5bf4e484a3ab4a99f99",
+      "bytes": 4474,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/dump_first30_300hz.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "04cb4a29e073201300bae14d7509cceada027fd20b32de59166ffb6950c9138c",
+      "bytes": 4373,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/dump_first_bytes.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "4b31b0d259a141cc9f8cb210e2fd7a3f66224fa7fae6688446013d688413e2dc",
+      "bytes": 4608,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/dump_headers.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "881adb01165f3e03d525d481a548872f707a0afe4c74ba3dbb73fff98e9e9e31",
+      "bytes": 2123,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/dump_samples.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "191637a67e8c3e77cd1ea32c2855c8a923fc314cf861584245507c9b29dddafe",
+      "bytes": 8141,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/kick_start_via_cdc_then_dump_vendor.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "2af44a3b4e4676a6621d6423d48760ee54cb1b011f9d8c6e7bd9191daa6bdb25",
+      "bytes": 11333,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/measure_frame_rate.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "15536bfd54abadb718be6e53b47f5b067eb9bc0b4acbcf3db8e13206ebd63b2e",
+      "bytes": 4196,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/owner_events.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "cfa578f4d75091d694c5e49ab4ba204ecb2cdb7bb88a0030262a69b8b4019bf7",
+      "bytes": 2939,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/read_stream_cli.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "6538740f11488cb5644c77ec430d22a9f62f6896567b69958ce9e1f45452b0bc",
+      "bytes": 5919,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/relay_control.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d882fc7c1a064984e6096bd9b40f5fd8465cdc99628bcd1de63a166a2ad9bad8",
+      "bytes": 12913,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/scan_in_eps.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "10671f773c44f3a53719e5a1f8b1d4e65c3d6f4d225824c27d1b77507ca8e515",
+      "bytes": 4013,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/tx_phase.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "1e46f336889f2099c422f3c282765c49be4660595de11cc761a4694fb37e5aa1",
+      "bytes": 6682,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/usb_stream.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "aafe8faa0d04824e0374a784d7ed58b819a63b8d5fa117b8eb967700cbcc8945",
+      "bytes": 215302,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/host/usb_vendor/usb_stream_smoke.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "3e0f8820ad400b5676df332ae340fb3c0d7764c752d585e61f02507bf5b5b03b",
+      "bytes": 1549,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/hotspot_info_server.py": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "3651e15fa1813d5f57342e7372cd60356153bad05ea345fc4b6bd67a5e6ceaf7",
+      "bytes": 1933397,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/install_bmi30_network_identity.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "a56d14a52fb14e01cb15cc4e2aa274944309c94bce01408a545021b5e7e860e2",
+      "bytes": 68650,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/launch.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "414a4b482ca2eaa45b4959c4a48820c0cc51d3f718d3ed606729fabb78c910c6",
+      "bytes": 5766,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/ops/scripts/bmi30-wifi-watchdog.py": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "743cbe7f7b906ea394b14aee81b227319361a20e5d90a660fe864843252ab6ad",
+      "bytes": 14480,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/setup_portal.sh": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "48489e195c60bcb67c3fbd5acaff6f60992746a14f8dcfa944e38817874d759c",
+      "bytes": 150,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/stop_bmi.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "b2199aa4cd25a378729dc77dbabdd9d9507face770a8ca4619225cdfec26cfa5",
+      "bytes": 1011,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/switch_bmi30_core_versions.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "843d2be2a7f0f6642b44e168f5a76028009a5324b9f3c20538926a40a944392d",
+      "bytes": 502,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/switch_bmi30_split_versions.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "92efb5b19a694c523e43e303833d8d8d47d98486827027d61c0dcffeebaaa028",
+      "bytes": 36071,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/switch_bmi30_versions.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "c453b8ef105653f25736510963c63a627e564c2396b4255d7008e49cc1e7d830",
+      "bytes": 8365,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/switch_version.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "680baa1f434003f1556849029795e3cd93bcaacb4ca456cf38c1b5dc6f547869",
+      "bytes": 9165,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/bmi30-agent-tmpfiles.conf": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "90d9b95bd4a1bcc4f677f628673aa4fc166aa2c6d89d51a788b20d795a090ab4",
+      "bytes": 102,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/bmi30-reverse-tunnel.service": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "253919da6de873e5e4a47f5d13bd22e20adc6861b35514ddfa50b391e15539ee",
+      "bytes": 448,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/bmi30_codex_preflight.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "83066f114ec1839115d2ea37c5d67ed26988704c5f8b33ef3948ffa2cb135def",
+      "bytes": 8124,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/bmi30_mode7_offline_analyzer.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "14aa8bbece6bf728d7bd71daa5c422b9a9d6bf4c9d3ce74bbb5f7b350fec577c",
+      "bytes": 45502,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/bmi30_portable_assets.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "0532a01291e6139d7e8eea7700fcf0981fbb4548b9d650b0604b341b4fa289d1",
+      "bytes": 23028,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/bmi30_reverse_tunnel.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "213b6ee676bd5603ca21cf12c67d646de80e0c5be2672ba511217b02e30ae21f",
+      "bytes": 2054,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/bmi30_runtime_policy.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "0b57705b4a50eb117808d7def34b8ef335aa87fb3e7e058e8365d1dcfafe6e94",
+      "bytes": 11860,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/bmi30_server_files.py": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "9041cf13bdd158bce17cb7b4cf1587b47dc66ad4ed906da6185b8270aef951e9",
+      "bytes": 20551,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/bmi30_server_update.py": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "c3fd07110324acf75e34fe8976ede59611d766f9955269fbcabea6b0a9f0fb13",
+      "bytes": 30066,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/bmi30_vscode_wrapper.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "356354f096867814241c9b6e6ac7c46f07c7db6e00d48d48dbca5f374b11bcea",
+      "bytes": 320,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/check_boot_source.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "de15c97cf72c8ede7762a39562494f9569dd7ccfec78eafb1dbab75e17a29734",
+      "bytes": 1983,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/check_bootloader.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "8ea72db6388b2551446bdff99d00e35c2b078ca2ff38541f03944f36e5d57200",
+      "bytes": 3434,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/create_bmi30_split_bundle.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "92096939cdb0347b2a601507addc8cd15fa08596a360b6c4a7007ed0e9b0bc1b",
+      "bytes": 16771,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/fix_xrdp_to_xorg.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d02ba65083988fc6db708f840cffb80fbbc0b618a4447e3bb4fa2ab7cc2bd1d3",
+      "bytes": 5208,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/install_bmi30_agent_from_project.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "aa4d5056193fbb88ace43729739f9e5f6d2a2a3805a6e10de628b8bad072e82e",
+      "bytes": 14794,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/install_bmi30_rdp_keyboard.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "6ad8c1ccab031e3463904da45df35f628f9fb16b1f3b680a69d15e1de55e993c",
+      "bytes": 2869,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/install_bmi30_reverse_tunnel.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "11a3456cb083d14271cfd0bc5085ebe2ca9724593335141d01c0d19b20d35535",
+      "bytes": 8876,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/install_bmi30_wifi_watchdog.sh": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "8637fe6ba259d2dca98b9ecfc13e9bf209b5b12b0794be20caeff9376c4fe965",
+      "bytes": 510,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/list_tools.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "38ad26e2404183353b95f7cda613c3d6a4c3a87179688c49a46039b591e9070e",
+      "bytes": 1574,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/menu.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "04e965006a6edeacc1f3ea5230be947ccb2b4ea63b9e68a8dc37f07ae9162b47",
+      "bytes": 9272,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/migrate_system_between_disks.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "a78a4807122ca7b094c566ca9ac368c1d059c2439b69f3aef40393734ae1ccda",
+      "bytes": 57896,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/migrate_system_to_emmc.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "59cff1c7349e8b1e126f6a5156343a3b7e36340ee54fa9267e4b9d3fabe61bc1",
+      "bytes": 1207,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/migrate_system_to_usb.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "19e665b7e23ae15a8736250447682ea5045f1f1f3645b53f0fe6b6330c63ded3",
+      "bytes": 1363,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/monitor_ethernet_link.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "e72da33e951142cfd07f2ad1fc33a1dcb0a8113f467d35830d0be5f0320db94c",
+      "bytes": 8548,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/portal_firmware_operation.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "f5a1a96639dba6edd7e16fa5bd6345eed9ea436fe894931029705fe56cb47ff6",
+      "bytes": 2223,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/refresh_network_identity.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "796e309cda3493c1107b8c5708f89bbc5515d5355715ee775f49d1ba5f6eee07",
+      "bytes": 24655,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/restore_bmi30_recovery_archive.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "e724893889c158319979b6692fb44a092d406f0be746bc321dfe2542f7367dd5",
+      "bytes": 7616,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/retire_drive_firmware.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "b1936791831e96176714121b6b70b45c33776a9c36746c993ebf7d912dabae01",
+      "bytes": 2727,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/server_firmware.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "388b5587ae05a85172b3b826bf6026faa9a88dd3785cf600ddd1feca4ad295cb",
+      "bytes": 264,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/set_usb_boot_priority.sh": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "6c42d78f820a7a26e803c7cb997053bf9ad4c2017e8ebb6b4a10b2bb49aab70a",
+      "bytes": 3505,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/setup_ethernet_portal.sh": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d18b3ace528ca482c17f02fd5db6199591d7b611824c8fbac7baf62af1b3efa9",
+      "bytes": 9850,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/sync_bmi30_version_registry.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "add08dac087e64caeb27bfe2c50b0a7a4656409bc5f860000df61b4566918ca2",
+      "bytes": 5601,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/sync_system_to_emmc.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "97dc05f4a3d0825b7b375543379d2c6f3e3dd834bc6d04f6b501e7d2484b1377",
+      "bytes": 1208,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_active_runtime/project/utilities/sync_system_to_usb.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "100da31aef9d2de4972c40a2e171df05dc63aafc0ea41b263a570d2aee29a17c",
+      "bytes": 1222,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/host/bmi30_firmware_release.env": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "085fed82d51347297d4f9486ffa9b3f53283f0b0f282b45680d8ab25df6286ad",
+      "bytes": 1784,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_active_version.env": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "1417b6a5450b779edcdd3828d1c15f576ce5e891adc7c3faa10f9dbe9806bb14",
+      "bytes": 1074,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/SHA256SUMS": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "ef9daa9c23a4dff6fde0ee9dea4b905a5404fb78f8c58f7cd5dd7962a693f1c4",
+      "bytes": 12425,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/manifest.env": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "18c16baf4a1ee411013bcb9de5858bac53fb2c9bb3bf50d7fbbf77a9c7bdea4f",
+      "bytes": 1314,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30.001.py.2026-11-06-111748": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "bea3ead6c995e7336f47d81296ea15ca865ce9c5a50a4bbe2bd983ce08f0d55c",
+      "bytes": 1606623,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30.200.py.2026-11-04-185916": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d5905f22c629b6b915f656958e236b48de28288c720a537f1781df954a0d74a6",
+      "bytes": 866453,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30.GUI.001.py.2026-09-30-1650": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "36223981ca37f49ed53aaa83b4e2d92dde33d23274329b66ff63c3cf378163c1",
+      "bytes": 621,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/BUILD_INFO.txt": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "1294236f0844e5ef40b9f29588220177d0fd63d764e423a3ba2d5a56853b3222",
+      "bytes": 1047,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/README_RU.md": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "45c79e533721ef583a9b243e90d7b196a84fbbcfd020b37057d505b862d25cea",
+      "bytes": 8763,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/SHA256SUMS.txt": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "419423e282d7ea283ed471e2121edf8e4e991583c03c280c66dc3f665fb25aa4",
+      "bytes": 1133,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/START_HERE_RU.txt": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "07d30e049c592dde21987bfdc01d31c58e58af2653333e70160468d80f96d97b",
+      "bytes": 1887,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/VERSION": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "5b57e3b8c153d1d33b0c0f1ee29d3de1bf93232ed95aa78b80fe885e99faa915",
+      "bytes": 6,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/config/config.example.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "7332d97c21464c3e94fb1a5519589f7b5b5e4fe05a68498029f8948deab8efdf",
+      "bytes": 459,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/install_bmi30_agent.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "416c19f72d6378dbe42f6fc47e6877cd6c8bfaa089602c609e365eaa3f7396c6",
+      "bytes": 13559,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/src/bmi30-agent-ctl": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "3714cb895c4fe4354e76a36331355b0515d06019eb69b1825c693d8df86c5830",
+      "bytes": 1341,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/src/bmi30_agent.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "1ef0db2d03a0eae112134f706e0d28481939057721c8b1ddbeab7a93337f238d",
+      "bytes": 35981,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/src/run_bmi30_tunnel.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "25c771cb8091f887de60e95799f7beb1dbfe628e8f4be8865feadf25a3c5924c",
+      "bytes": 2655,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/systemd/bmi30-agent.service": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "a5542a94dda7046f37808378f89dd87c228800de7b48095c88da6f86670e3376",
+      "bytes": 778,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/systemd/bmi30-tunnel.service": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d67fca2319875d103981a3c99730de5c3ece150caa8f90aafdd513eafce3812b",
+      "bytes": 788,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/BMI30_Agent/uninstall_bmi30_agent.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "a8bbae32dcec53f77ef44754e31cfbda84bff850346e3f06a4c9731710cc0e35",
+      "bytes": 1260,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_averaging.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "22e5f293625ce29fe601ea20d8ae8eea0f1057ae906862e3e2991b9c9923f00c",
+      "bytes": 4467,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_bluetooth_remote_test.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "f5748db3c3b811151d0fb77d7766c7a9c0e9f36a7084926007903860fbacd820",
+      "bytes": 16353,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_common_mode.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "9d0b58edd1c81d217777df6fc6954e2592c36f1f93c51717c5f7a45bd1a1270e",
+      "bytes": 15091,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_config.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "44bb06f3ef0525e21ab35b64ec535b19876cdfa0246ce5c0544bedea69dc1106",
+      "bytes": 94,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_dual_detector.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "166f1f6ed1e55267462ab18232ed4d4746c3feeb6638b3c65e9ab3f16143c08d",
+      "bytes": 9136,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_firmware_release.env": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "085fed82d51347297d4f9486ffa9b3f53283f0b0f282b45680d8ab25df6286ad",
+      "bytes": 1784,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_full_bootstrap.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "f080d68afa7b17b9cf716371418c99d0867dee35b8835980c5b3b19174fe26d1",
+      "bytes": 2524,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_headless.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "93dc3c7fb2149d74f64352e85b48f30e3dc475e9bbe22fcf06c4af52a74b5a47",
+      "bytes": 12400,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_phase_adaptation.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "1116c4e0447bfc5435e55b61e7ae2e2d7847c931a64858a13ebb6cfee23060c6",
+      "bytes": 3280,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_runtime_support.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "370acabec4e00bb4fc143e09ad645cb6c7f5378432ff0b1d5649b8692cc041f5",
+      "bytes": 20785,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/bundle_ui.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "c536026810196aabb7143e16e0ca56daca1cca9dcf250e6f0a3ee33eefd2e8c1",
+      "bytes": 2546,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/firmware_check.js": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "46b991ba1192c47935b1763802875712c89536b1f4942c18f95f6e30b2277dce",
+      "bytes": 2458,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/group_ui.js": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "51606c5c3a4e88c1f887975d275d7170102fc2b64b4a20995ea4632a93d2274b",
+      "bytes": 23696,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/recovery.html": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "558e13bd4e5c9c8c2998380d7705532484eca06786318cfe7289414e60bd446f",
+      "bytes": 1098111,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/recovery_aliases.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "f6c3f6ef356095884f72b1d8823d7df45c082acf05da44dfffbc5779459ebdff",
+      "bytes": 17875,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/recovery_catalogs.tsv": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "226a34690dabf922d294c2cb174d7bee529fe99f415cc12142abbc58c4af4bc9",
+      "bytes": 88116,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/translations.cs.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "2f081595c9669683776c7d0f82136ab0f0d0078906aeca1f587f540927691b8a",
+      "bytes": 86183,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/translations.de.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "b93a349787a0b5ccf663a87246179cf0c06763d4672f4a0ee5d61009cef1ca56",
+      "bytes": 87257,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/translations.es.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "39d424877be65bc16efaafb036fd36e72432495679f6b2ea8c8129461d17422c",
+      "bytes": 87655,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/translations.fr.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "dc56e6bdb9bb3ab534945eb15aaa80e765add0377ff39107ac904f6b8ec18ead",
+      "bytes": 90955,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/translations.it.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "7199e67e739561f803ef253b33e2b4a6ccd1e4fd25403d1a2513619f229c2273",
+      "bytes": 87221,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/translations.ja.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "3c2fab4b7745368f23b7275709549c269d58833c7dccd72f92e12111f2a750db",
+      "bytes": 100129,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/translations.pt.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "73de78986da15d61ddb4256e0636a56842cb2dca6ed1cc9abeca69f9fbc7e691",
+      "bytes": 88811,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/translations.ru.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "4cb66f9963dae09ded962bd4d69b50183c637ec520962f7e54498858a46af240",
+      "bytes": 118590,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/translations.uk.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "9a833feec51478bbf4be319d6c0d6717129df3f8de8350184b639a745892fd07",
+      "bytes": 113945,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/translations.zh-Hans.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "5fba080195bb4315499a3faeac36c3fc41d22e2c6e4453414f6e188360ae15c3",
+      "bytes": 78196,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/ui_language.js": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "b48885ff3a791d066f2b0ae782033fa82953fceaa998c03de18b7713f0134a5d",
+      "bytes": 12666,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/usb_recovery_backend.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "df7f7a796e7fd3645dd0bd76d9e6579b17f740ca2b4c65ea3ece2a71852171ed",
+      "bytes": 2018,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/wifi_profiles.html": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "3f68cc167989e1221f2bcbbee3d7616273c73258540b9092dad8c7eba4a51c38",
+      "bytes": 1087259,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_usb_recovery/wifi_profiles.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "5ef728311e4ae11c38ec8f8fae0ec88b444f186b17470906953a821d5b570876",
+      "bytes": 15702,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/bmi30_wifi_watchdog.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "743cbe7f7b906ea394b14aee81b227319361a20e5d90a660fe864843252ab6ad",
+      "bytes": 14480,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/ring_gestures.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "792c970d1107478a6421097a79d768d36dd191500d2a2bb1c8a8053f242f52dc",
+      "bytes": 4291,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/tag_response_filters/Barkhausen.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "e64450a7365006769a8475aaefd1b83f3f34d3c577d73ebde581ea9aafe21f0b",
+      "bytes": 156,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/tag_response_filters/Casino.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "b8853e841cb527ed96ab69794ab1c62088f42f830633b3e0b66b1c4aafb0b050",
+      "bytes": 112,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/tag_response_filters/Microwire.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "8f580d71ca14094a34401d969497ba0905f0b12204bb88fa13c4c5528e5fbe1b",
+      "bytes": 118,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/tag_response_filters/Paper.json": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "409538593ffe155416ef72e05c6420af0a6fd8ef3fc57e74c7e2cfb5acd8af8c",
+      "bytes": 110,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/tag_response_filters/README.md": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "ad811f85f8b20ec4e5f019527dccf722be7d1cace94cdad94f57a34d9864404e",
+      "bytes": 1203,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/__init__.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "ae633daae9158c3ba649447148f22b2245ebe9a150a3bce5732863bdc932a91c",
+      "bytes": 28,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/capabilities.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "33effcd18a3a3f5b8396ac2755399a843d24ddb2349e87fa6d3f75805a4c9389",
+      "bytes": 3174,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/dump_first30_200hz.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "e9048a505a2340a5cff678bbca448cb47263aad05c05a5bf4e484a3ab4a99f99",
+      "bytes": 4474,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/dump_first30_300hz.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "04cb4a29e073201300bae14d7509cceada027fd20b32de59166ffb6950c9138c",
+      "bytes": 4373,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/dump_first_bytes.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "4b31b0d259a141cc9f8cb210e2fd7a3f66224fa7fae6688446013d688413e2dc",
+      "bytes": 4608,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/dump_headers.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "881adb01165f3e03d525d481a548872f707a0afe4c74ba3dbb73fff98e9e9e31",
+      "bytes": 2123,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/dump_samples.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "191637a67e8c3e77cd1ea32c2855c8a923fc314cf861584245507c9b29dddafe",
+      "bytes": 8141,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/kick_start_via_cdc_then_dump_vendor.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "2af44a3b4e4676a6621d6423d48760ee54cb1b011f9d8c6e7bd9191daa6bdb25",
+      "bytes": 11333,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/measure_frame_rate.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "15536bfd54abadb718be6e53b47f5b067eb9bc0b4acbcf3db8e13206ebd63b2e",
+      "bytes": 4196,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/owner_events.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "cfa578f4d75091d694c5e49ab4ba204ecb2cdb7bb88a0030262a69b8b4019bf7",
+      "bytes": 2939,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/read_stream_cli.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "6538740f11488cb5644c77ec430d22a9f62f6896567b69958ce9e1f45452b0bc",
+      "bytes": 5919,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/relay_control.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d882fc7c1a064984e6096bd9b40f5fd8465cdc99628bcd1de63a166a2ad9bad8",
+      "bytes": 12913,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/scan_in_eps.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "10671f773c44f3a53719e5a1f8b1d4e65c3d6f4d225824c27d1b77507ca8e515",
+      "bytes": 4013,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/tx_phase.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "1e46f336889f2099c422f3c282765c49be4660595de11cc761a4694fb37e5aa1",
+      "bytes": 6682,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/usb_stream.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "aafe8faa0d04824e0374a784d7ed58b819a63b8d5fa117b8eb967700cbcc8945",
+      "bytes": 215302,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/host/usb_vendor/usb_stream_smoke.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "3e0f8820ad400b5676df332ae340fb3c0d7764c752d585e61f02507bf5b5b03b",
+      "bytes": 1549,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/hotspot_info_server.py": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "3651e15fa1813d5f57342e7372cd60356153bad05ea345fc4b6bd67a5e6ceaf7",
+      "bytes": 1933397,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/install_bmi30_network_identity.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "a56d14a52fb14e01cb15cc4e2aa274944309c94bce01408a545021b5e7e860e2",
+      "bytes": 68650,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/launch.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "414a4b482ca2eaa45b4959c4a48820c0cc51d3f718d3ed606729fabb78c910c6",
+      "bytes": 5766,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/ops/scripts/bmi30-wifi-watchdog.py": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "743cbe7f7b906ea394b14aee81b227319361a20e5d90a660fe864843252ab6ad",
+      "bytes": 14480,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/setup_portal.sh": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "48489e195c60bcb67c3fbd5acaff6f60992746a14f8dcfa944e38817874d759c",
+      "bytes": 150,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/stop_bmi.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "b2199aa4cd25a378729dc77dbabdd9d9507face770a8ca4619225cdfec26cfa5",
+      "bytes": 1011,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/switch_bmi30_core_versions.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "843d2be2a7f0f6642b44e168f5a76028009a5324b9f3c20538926a40a944392d",
+      "bytes": 502,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/switch_bmi30_split_versions.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "92efb5b19a694c523e43e303833d8d8d47d98486827027d61c0dcffeebaaa028",
+      "bytes": 36071,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/switch_bmi30_versions.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "c453b8ef105653f25736510963c63a627e564c2396b4255d7008e49cc1e7d830",
+      "bytes": 8365,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/switch_version.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "680baa1f434003f1556849029795e3cd93bcaacb4ca456cf38c1b5dc6f547869",
+      "bytes": 9165,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/bmi30-agent-tmpfiles.conf": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "90d9b95bd4a1bcc4f677f628673aa4fc166aa2c6d89d51a788b20d795a090ab4",
+      "bytes": 102,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/bmi30-reverse-tunnel.service": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "253919da6de873e5e4a47f5d13bd22e20adc6861b35514ddfa50b391e15539ee",
+      "bytes": 448,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/bmi30_codex_preflight.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "83066f114ec1839115d2ea37c5d67ed26988704c5f8b33ef3948ffa2cb135def",
+      "bytes": 8124,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/bmi30_mode7_offline_analyzer.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "14aa8bbece6bf728d7bd71daa5c422b9a9d6bf4c9d3ce74bbb5f7b350fec577c",
+      "bytes": 45502,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/bmi30_portable_assets.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "0532a01291e6139d7e8eea7700fcf0981fbb4548b9d650b0604b341b4fa289d1",
+      "bytes": 23028,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/bmi30_reverse_tunnel.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "213b6ee676bd5603ca21cf12c67d646de80e0c5be2672ba511217b02e30ae21f",
+      "bytes": 2054,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/bmi30_runtime_policy.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "0b57705b4a50eb117808d7def34b8ef335aa87fb3e7e058e8365d1dcfafe6e94",
+      "bytes": 11860,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/bmi30_server_files.py": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "9041cf13bdd158bce17cb7b4cf1587b47dc66ad4ed906da6185b8270aef951e9",
+      "bytes": 20551,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/bmi30_server_update.py": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "c3fd07110324acf75e34fe8976ede59611d766f9955269fbcabea6b0a9f0fb13",
+      "bytes": 30066,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/bmi30_vscode_wrapper.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "356354f096867814241c9b6e6ac7c46f07c7db6e00d48d48dbca5f374b11bcea",
+      "bytes": 320,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/check_boot_source.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "de15c97cf72c8ede7762a39562494f9569dd7ccfec78eafb1dbab75e17a29734",
+      "bytes": 1983,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/check_bootloader.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "8ea72db6388b2551446bdff99d00e35c2b078ca2ff38541f03944f36e5d57200",
+      "bytes": 3434,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/create_bmi30_split_bundle.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "92096939cdb0347b2a601507addc8cd15fa08596a360b6c4a7007ed0e9b0bc1b",
+      "bytes": 16771,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/fix_xrdp_to_xorg.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d02ba65083988fc6db708f840cffb80fbbc0b618a4447e3bb4fa2ab7cc2bd1d3",
+      "bytes": 5208,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/install_bmi30_agent_from_project.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "aa4d5056193fbb88ace43729739f9e5f6d2a2a3805a6e10de628b8bad072e82e",
+      "bytes": 14794,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/install_bmi30_rdp_keyboard.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "6ad8c1ccab031e3463904da45df35f628f9fb16b1f3b680a69d15e1de55e993c",
+      "bytes": 2869,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/install_bmi30_reverse_tunnel.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "11a3456cb083d14271cfd0bc5085ebe2ca9724593335141d01c0d19b20d35535",
+      "bytes": 8876,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/install_bmi30_wifi_watchdog.sh": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "8637fe6ba259d2dca98b9ecfc13e9bf209b5b12b0794be20caeff9376c4fe965",
+      "bytes": 510,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/list_tools.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "38ad26e2404183353b95f7cda613c3d6a4c3a87179688c49a46039b591e9070e",
+      "bytes": 1574,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/menu.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "04e965006a6edeacc1f3ea5230be947ccb2b4ea63b9e68a8dc37f07ae9162b47",
+      "bytes": 9272,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/migrate_system_between_disks.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "a78a4807122ca7b094c566ca9ac368c1d059c2439b69f3aef40393734ae1ccda",
+      "bytes": 57896,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/migrate_system_to_emmc.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "59cff1c7349e8b1e126f6a5156343a3b7e36340ee54fa9267e4b9d3fabe61bc1",
+      "bytes": 1207,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/migrate_system_to_usb.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "19e665b7e23ae15a8736250447682ea5045f1f1f3645b53f0fe6b6330c63ded3",
+      "bytes": 1363,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/monitor_ethernet_link.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "e72da33e951142cfd07f2ad1fc33a1dcb0a8113f467d35830d0be5f0320db94c",
+      "bytes": 8548,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/portal_firmware_operation.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "f5a1a96639dba6edd7e16fa5bd6345eed9ea436fe894931029705fe56cb47ff6",
+      "bytes": 2223,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/refresh_network_identity.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "796e309cda3493c1107b8c5708f89bbc5515d5355715ee775f49d1ba5f6eee07",
+      "bytes": 24655,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/restore_bmi30_recovery_archive.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "e724893889c158319979b6692fb44a092d406f0be746bc321dfe2542f7367dd5",
+      "bytes": 7616,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/retire_drive_firmware.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "b1936791831e96176714121b6b70b45c33776a9c36746c993ebf7d912dabae01",
+      "bytes": 2727,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/server_firmware.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "388b5587ae05a85172b3b826bf6026faa9a88dd3785cf600ddd1feca4ad295cb",
+      "bytes": 264,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/set_usb_boot_priority.sh": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "6c42d78f820a7a26e803c7cb997053bf9ad4c2017e8ebb6b4a10b2bb49aab70a",
+      "bytes": 3505,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/setup_ethernet_portal.sh": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d18b3ace528ca482c17f02fd5db6199591d7b611824c8fbac7baf62af1b3efa9",
+      "bytes": 9850,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/sync_bmi30_version_registry.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "add08dac087e64caeb27bfe2c50b0a7a4656409bc5f860000df61b4566918ca2",
+      "bytes": 5601,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/sync_system_to_emmc.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "97dc05f4a3d0825b7b375543379d2c6f3e3dd834bc6d04f6b501e7d2484b1377",
+      "bytes": 1208,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/host/bmi30_split_bundles/2026-11-06-123519/project/utilities/sync_system_to_usb.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "100da31aef9d2de4972c40a2e171df05dc63aafc0ea41b263a570d2aee29a17c",
+      "bytes": 1222,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/hotspot_info_server.py": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "3651e15fa1813d5f57342e7372cd60356153bad05ea345fc4b6bd67a5e6ceaf7",
+      "bytes": 1933397,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/install_bmi30_network_identity.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "a56d14a52fb14e01cb15cc4e2aa274944309c94bce01408a545021b5e7e860e2",
+      "bytes": 68650,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/launch.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "414a4b482ca2eaa45b4959c4a48820c0cc51d3f718d3ed606729fabb78c910c6",
+      "bytes": 5766,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/ops/scripts/bmi30-wifi-watchdog.py": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "743cbe7f7b906ea394b14aee81b227319361a20e5d90a660fe864843252ab6ad",
+      "bytes": 14480,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/setup_portal.sh": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "48489e195c60bcb67c3fbd5acaff6f60992746a14f8dcfa944e38817874d759c",
+      "bytes": 150,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/stop_bmi.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "b2199aa4cd25a378729dc77dbabdd9d9507face770a8ca4619225cdfec26cfa5",
+      "bytes": 1011,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/switch_bmi30_core_versions.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "843d2be2a7f0f6642b44e168f5a76028009a5324b9f3c20538926a40a944392d",
+      "bytes": 502,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/switch_bmi30_split_versions.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "92efb5b19a694c523e43e303833d8d8d47d98486827027d61c0dcffeebaaa028",
+      "bytes": 36071,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/switch_bmi30_versions.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "c453b8ef105653f25736510963c63a627e564c2396b4255d7008e49cc1e7d830",
+      "bytes": 8365,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/switch_version.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "680baa1f434003f1556849029795e3cd93bcaacb4ca456cf38c1b5dc6f547869",
+      "bytes": 9165,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/bmi30-agent-tmpfiles.conf": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "90d9b95bd4a1bcc4f677f628673aa4fc166aa2c6d89d51a788b20d795a090ab4",
+      "bytes": 102,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/bmi30-reverse-tunnel.service": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "253919da6de873e5e4a47f5d13bd22e20adc6861b35514ddfa50b391e15539ee",
+      "bytes": 448,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/bmi30_codex_preflight.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "83066f114ec1839115d2ea37c5d67ed26988704c5f8b33ef3948ffa2cb135def",
+      "bytes": 8124,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/bmi30_mode7_offline_analyzer.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "14aa8bbece6bf728d7bd71daa5c422b9a9d6bf4c9d3ce74bbb5f7b350fec577c",
+      "bytes": 45502,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/bmi30_portable_assets.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "0532a01291e6139d7e8eea7700fcf0981fbb4548b9d650b0604b341b4fa289d1",
+      "bytes": 23028,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/utilities/bmi30_reverse_tunnel.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "213b6ee676bd5603ca21cf12c67d646de80e0c5be2672ba511217b02e30ae21f",
+      "bytes": 2054,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/bmi30_runtime_policy.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "0b57705b4a50eb117808d7def34b8ef335aa87fb3e7e058e8365d1dcfafe6e94",
+      "bytes": 11860,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/bmi30_server_files.py": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "9041cf13bdd158bce17cb7b4cf1587b47dc66ad4ed906da6185b8270aef951e9",
+      "bytes": 20551,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/bmi30_server_update.py": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "c3fd07110324acf75e34fe8976ede59611d766f9955269fbcabea6b0a9f0fb13",
+      "bytes": 30066,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "home/techaid/Documents/utilities/bmi30_vscode_wrapper.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "356354f096867814241c9b6e6ac7c46f07c7db6e00d48d48dbca5f374b11bcea",
+      "bytes": 320,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/check_boot_source.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "de15c97cf72c8ede7762a39562494f9569dd7ccfec78eafb1dbab75e17a29734",
+      "bytes": 1983,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/check_bootloader.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "8ea72db6388b2551446bdff99d00e35c2b078ca2ff38541f03944f36e5d57200",
+      "bytes": 3434,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/create_bmi30_split_bundle.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "92096939cdb0347b2a601507addc8cd15fa08596a360b6c4a7007ed0e9b0bc1b",
+      "bytes": 16771,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/fix_xrdp_to_xorg.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d02ba65083988fc6db708f840cffb80fbbc0b618a4447e3bb4fa2ab7cc2bd1d3",
+      "bytes": 5208,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/install_bmi30_agent_from_project.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "aa4d5056193fbb88ace43729739f9e5f6d2a2a3805a6e10de628b8bad072e82e",
+      "bytes": 14794,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/install_bmi30_rdp_keyboard.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "6ad8c1ccab031e3463904da45df35f628f9fb16b1f3b680a69d15e1de55e993c",
+      "bytes": 2869,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/install_bmi30_reverse_tunnel.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "11a3456cb083d14271cfd0bc5085ebe2ca9724593335141d01c0d19b20d35535",
+      "bytes": 8876,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/install_bmi30_wifi_watchdog.sh": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "8637fe6ba259d2dca98b9ecfc13e9bf209b5b12b0794be20caeff9376c4fe965",
+      "bytes": 510,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/list_tools.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "38ad26e2404183353b95f7cda613c3d6a4c3a87179688c49a46039b591e9070e",
+      "bytes": 1574,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/menu.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "04e965006a6edeacc1f3ea5230be947ccb2b4ea63b9e68a8dc37f07ae9162b47",
+      "bytes": 9272,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/migrate_system_between_disks.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "a78a4807122ca7b094c566ca9ac368c1d059c2439b69f3aef40393734ae1ccda",
+      "bytes": 57896,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/migrate_system_to_emmc.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "59cff1c7349e8b1e126f6a5156343a3b7e36340ee54fa9267e4b9d3fabe61bc1",
+      "bytes": 1207,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/migrate_system_to_usb.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "19e665b7e23ae15a8736250447682ea5045f1f1f3645b53f0fe6b6330c63ded3",
+      "bytes": 1363,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/monitor_ethernet_link.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "e72da33e951142cfd07f2ad1fc33a1dcb0a8113f467d35830d0be5f0320db94c",
+      "bytes": 8548,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/portal_firmware_operation.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "f5a1a96639dba6edd7e16fa5bd6345eed9ea436fe894931029705fe56cb47ff6",
+      "bytes": 2223,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/refresh_network_identity.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "796e309cda3493c1107b8c5708f89bbc5515d5355715ee775f49d1ba5f6eee07",
+      "bytes": 24655,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/restore_bmi30_recovery_archive.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "e724893889c158319979b6692fb44a092d406f0be746bc321dfe2542f7367dd5",
+      "bytes": 7616,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/retire_drive_firmware.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "b1936791831e96176714121b6b70b45c33776a9c36746c993ebf7d912dabae01",
+      "bytes": 2727,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/server_firmware.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "388b5587ae05a85172b3b826bf6026faa9a88dd3785cf600ddd1feca4ad295cb",
+      "bytes": 264,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/set_usb_boot_priority.sh": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "6c42d78f820a7a26e803c7cb997053bf9ad4c2017e8ebb6b4a10b2bb49aab70a",
+      "bytes": 3505,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/setup_ethernet_portal.sh": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "d18b3ace528ca482c17f02fd5db6199591d7b611824c8fbac7baf62af1b3efa9",
+      "bytes": 9850,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/sync_bmi30_version_registry.py": {
+      "mode": 420,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "add08dac087e64caeb27bfe2c50b0a7a4656409bc5f860000df61b4566918ca2",
+      "bytes": 5601,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/sync_system_to_emmc.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "97dc05f4a3d0825b7b375543379d2c6f3e3dd834bc6d04f6b501e7d2484b1377",
+      "bytes": 1208,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "home/techaid/Documents/utilities/sync_system_to_usb.sh": {
+      "mode": 493,
+      "uid": 1000,
+      "gid": 1000,
+      "sha256": "100da31aef9d2de4972c40a2e171df05dc63aafc0ea41b263a570d2aee29a17c",
+      "bytes": 1222,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-agent/bmi30_agent.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "1ef0db2d03a0eae112134f706e0d28481939057721c8b1ddbeab7a93337f238d",
+      "bytes": 35981,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-central-wifi/adapter.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "b6da0744e386c195cef9ca375dffb2b0856473a970349b5afb3501df37b7ce98",
+      "bytes": 15845,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-central-wifi/central_wifi_client.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "273add598e3cec0f89c2954d9ecf50e0be403405e58185aa1f4bad1fb266d277",
+      "bytes": 15660,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-central-wifi/central_wifi_runtime.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "79d19b454185cd879929941f2d0e27421044ff5b058ec594bb7b700edd9b88e9",
+      "bytes": 2557,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-central-wifi/daemon.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "e763061cd943f76bf0b13753ef3bd64f86783b2045848e287b9a2a7b5aae9b51",
+      "bytes": 3356,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-central-wifi/lifecycle.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "f07b3ac318e299cc32570fd0acb212ff2dcb407f7b38df5227b80e087219f048",
+      "bytes": 9143,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-central-wifi/rollback_guard.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "fa82bbd419beeebb541ec2fc01c13d482dbb574903bf4dc7a61c92b50b230017",
+      "bytes": 1838,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/Open-BMI30.cmd": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "36ae343337aa06bd372c3fb0d31c18c83e37815c5d10f7b95823f0599bfe908e",
+      "bytes": 6128,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/access.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "bd1a0974917b5af9b62ff5fe5a8772554ee32e2c412c31c7091d3348418f511d",
+      "bytes": 21775,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/access_policy.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "adc2fe2093d0a2e868883cb36039d856f7fbbdd7367a43cc415a53855165faab",
+      "bytes": 1226,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/access_power.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "ce9bf29c4d5da459e0228909e88d461ca3a960beef2817b4b493954906fe5a69",
+      "bytes": 3124,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/bluetooth_transport.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "b4d1628cddb92868b74ac0fc64aa31e29314370825696458bf7e8da82b27a13e",
+      "bytes": 17319,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/bluez_service.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "6f98778932a3cda4d19f6705a8aa21452be240b140072ea1f253e49029017504",
+      "bytes": 6703,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/central_wifi_runtime.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "79d19b454185cd879929941f2d0e27421044ff5b058ec594bb7b700edd9b88e9",
+      "bytes": 2557,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/cohesion.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "8ca452ce2e5893889e75494cff94d575b6df377563ccc760cbee7d34179cbb04",
+      "bytes": 11352,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/communication_recovery.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "60b00003c2e6846080732b951a5edbc6cc69d6e9aea85627d117981e7d73cc59",
+      "bytes": 10956,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/dns_policy.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "846d8d7ac00ece0178e17c336c060d70ae30a88bf6daae64afb604b087b859c0",
+      "bytes": 8204,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/freshness.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "b0bc584c73fb773ba257d65b7885c3f5799a049a9f04c67c85f72c6233482391",
+      "bytes": 3300,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/group.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "4d40aab9e9880d2f3746a4321d6a006bd466a64eb75c52012cee99c6e90ee9a4",
+      "bytes": 36890,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/group_ui.js": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "51606c5c3a4e88c1f887975d275d7170102fc2b64b4a20995ea4632a93d2274b",
+      "bytes": 23696,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/live_ui.js": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "1711f2d4550c976dda3db18b0c9425ed6d4d336a883ae14ce172de084ceb7b92",
+      "bytes": 3348,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/network.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "a6611b5a155107a940e3300af8643bbe61c70f9698641822d33489981e03d449",
+      "bytes": 25857,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/owner_events.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "017103657ecfbf6022546781c5021ac58f5631c2d129ca83437dd36ef2e6e930",
+      "bytes": 3196,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/policy.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "00a473f01c4bbcb97e039e4231d0a98622ab8d9bb98a58eee722fdac322a7af0",
+      "bytes": 8916,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/portal_help.js": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "9f3df144cbbdc0006173538a6bbe6ff329d7e4ade2e15c8389d4d2024448dfa0",
+      "bytes": 14671,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/portal_relay.js": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "20eff6f48d9b645b4ab408acbfc2947c46c144b0308314fdc160a5b712ff774e",
+      "bytes": 3925,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/portal_ui_version.js": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "9e156ea5b79053b46f186db2db02aad22f5830e9f7e1fae841f8f9e7ddc46735",
+      "bytes": 1438,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/protocol.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "df29af62b5f86bda8198899843a494b730a02f21e5401759c341922b737dc1c8",
+      "bytes": 4369,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/realtime.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "db005ec7cb9052d11edbbde59a8f71085ac92ac1641f4d764cc7684d71d1d652",
+      "bytes": 6678,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/release.json": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "2657a699f16e18422b567d21f90cf0d5f33ace91e8312a05ef1decf01adfdfaa",
+      "bytes": 256,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "opt/bmi30-network/scope_codec.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "8241843ad2487e8cde4d4ab0ea12d47fa1c8556bac97f7565954028d14332769",
+      "bytes": 1970,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/scope_live.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "7147ee6762bc929128b45ed24b4bbd6ca255326c742312eb32c52f8d9d4e11cc",
+      "bytes": 5709,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/scope_rtc.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "228784e1faefa204ab01aafeacee196eef00be6907300649f4c5609aaec7cd5c",
+      "bytes": 8798,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/scope_rtc_proxy.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "981d3ead4bf828e0ec240786dd6cc21609f5b274792b9d2e1f7ec9ec2a547c1f",
+      "bytes": 2109,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/service.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "6b9a0ef7ea855cd5cbee4764a823a1830cf31b1bfaeb1d1548afa520b931edc8",
+      "bytes": 66575,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/status.html": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "82598c592fb5c82298cc14b2202cf6f288ac7e84ecd7072c92c3cd0f699c1798",
+      "bytes": 1083323,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/transport_policy.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "b73007d1b089d8739fbdad9354ff949e93f9dc2a09a7f95d2ca43e963fe29187",
+      "bytes": 2078,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode-8.2.dist-info/INSTALLER": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "ceebae7b8927a3227e5303cf5e0f1f7b34bb542ad7250ac03fbcde36ec2f1508",
+      "bytes": 4,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode-8.2.dist-info/LICENSE": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "40dfb903c94ee3f789500131311186548ecba5cefd3557623d7700e2522ab994",
+      "bytes": 2143,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode-8.2.dist-info/METADATA": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "3a8f1be6da9428b97806292d05e3148264b9053c22e79894918b670e930afc36",
+      "bytes": 17686,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode-8.2.dist-info/RECORD": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "ac30b977b3acc2afb71bd05f93130b84331660e147be593db7b36558d28c58bb",
+      "bytes": 5270,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode-8.2.dist-info/REQUESTED": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode-8.2.dist-info/WHEEL": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "b0ff78e83ee31421de373e48ab87cbe0bbbe3eb5ab16c81f2d76db91c8886708",
+      "bytes": 88,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode-8.2.dist-info/entry_points.txt": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "8e891806b519fd27f56ceec5704e77888847627d4227dfdae52a214c86b238ff",
+      "bytes": 50,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/LUT.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "3635ca3df1d24c56282e51a45e11637f6394abf1060fa9ab772607206ddd35c9",
+      "bytes": 3599,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/__init__.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "d02f23c778031d2278cb27651cdd35cadca2a4d876a4c3b75584bd0e4fa6e285",
+      "bytes": 645,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/base.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "f49ff52f29c5e5d5c92b5e00cecf17c87258eba15f4e5b9827ae85f198de4ad6",
+      "bytes": 7288,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/compat/__init__.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/compat/etree.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "ac4c96440f5032c545bdaffdace76d877440911a453a6905e7d736110338e201",
+      "bytes": 152,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/compat/png.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "3827b95acba24c8fd44ea9b256a2db70996849b66f80260974c0b39cabcc0823",
+      "bytes": 171,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/console_scripts.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "9fe6d0e6fa4ab5c8c6df49758e443fab6d874d5e17f8910cc242d17499e8f2f7",
+      "bytes": 5558,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/constants.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "d02b1af1861d790f0d685ad19ade3799a560d763bcf5dfa82a088a01520edace",
+      "bytes": 106,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/exceptions.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "2f67d9b9838ab1cbdd9fbdab6bec05f06c2caf6641f5e4595aba757f4203c781",
+      "bytes": 45,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/image/__init__.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/image/base.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "8c2adbb78503d597ce0bc8cc1632b77a565f81427b33f16c1ca44c56f8def811",
+      "bytes": 4965,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/image/pil.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "cb96b7b7a541e209efb132b8792474e181153ff424f36893d4d5cbea314fd634",
+      "bytes": 1589,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/image/pure.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "07c3c900dbc01cfc9dd43681b400bcdc2b1bdb129b67e7cfe12496bb0d4d36f5",
+      "bytes": 1525,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/image/styledpil.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "442ec9a034be5337b3da737e236c7078fb065f7a980de1e0f187a94f615b3bf3",
+      "bytes": 4951,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/image/styles/__init__.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/image/styles/colormasks.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "87c6ac22f40a31346eaba6c5cef6a2660172a1afb6b6abc86ff841e47e57c0cd",
+      "bytes": 7936,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/image/styles/moduledrawers/__init__.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "324970e528d88866ecd80ca6dfc8f0c2b2add299491b3c0856067efa388e5417",
+      "bytes": 430,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/image/styles/moduledrawers/base.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "80b16adb4a74eed0449ac15f8ab10cd7d5d9b2162c68d3f65abd54340909abdd",
+      "bytes": 1019,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/image/styles/moduledrawers/pil.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "9644fc23cabc3d407f4dd601acfe4397328df14b505be5d0118aa85c15a40fb6",
+      "bytes": 9773,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/image/styles/moduledrawers/svg.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "f969e012f645f0bc2d4e95a649db74b4367a74ab58ccb72d603358f8c8bb72b7",
+      "bytes": 3936,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/image/svg.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "1b6766bb26d53f77f0920cab145e517d04f776958309897cd0e29ed976a5f205",
+      "bytes": 5188,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/main.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "385eee1c3033d938a1a5ee857ed79fe9f8951f6b69a152797a42c2206e25c890",
+      "bytes": 16869,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/release.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "c098d51249569c04d487c094f3c1c42b285481953d873a65fff499632c8d519a",
+      "bytes": 1080,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/tests/__init__.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/tests/consts.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "4e7d806c8f734c48bf2a2022b21e9fef801b056ad983c03e26cf234eb37fbc5d",
+      "bytes": 96,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/tests/test_example.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "cf9a794e7ba69e3d045ac2a8e98278bee51033b2a38acbe02f06c9b7cc13006d",
+      "bytes": 244,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/tests/test_qrcode.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "14f8df7662c05dad25adbb294176ed0f5c0f28c82008e3cdfcee2d4fe8cb26e8",
+      "bytes": 6461,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/tests/test_qrcode_pil.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "9b5d927c89a77e0ab3bca99d47898c4024956fd1b2367349e04771c239bbb6eb",
+      "bytes": 5148,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/tests/test_qrcode_pypng.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "7e04ebefcbd7d53fdc1f4de64bf8a41c982821328b535d5b24c5c4774526e720",
+      "bytes": 944,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/tests/test_qrcode_svg.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "db57a79598d73549b433f6682bf00ca74504e2610ba02788584e94bde42c2709",
+      "bytes": 1296,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/tests/test_release.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "495097531e0178dcff777a2c6c135d5b6377aecb5b12b1af63937657f907ae17",
+      "bytes": 1341,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/tests/test_script.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "d60721a647bf0ca64b121b4de5c6490594d3dbc7e16e3bd77c03edb6fbcce6d0",
+      "bytes": 2908,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/tests/test_util.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "3e09e9d434457b8e18447f5d791f7ff4d6fdcc7fac91aeb5088624556c2ecbd0",
+      "bytes": 207,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-network/vendor/qrcode/util.py": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "54e1b846b27a4243ecd1f2da6647de330c70c5d2292ac4479ba757be3a3d625e",
+      "bytes": 17103,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-universal/agent-config-template.json": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "7332d97c21464c3e94fb1a5519589f7b5b5e4fe05a68498029f8948deab8efdf",
+      "bytes": 459,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-universal/app-manifest.json": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "5f999adb7c9168df4836007d58b1546b4087a67ad8a65eeb18ed3015c7a0d056",
+      "bytes": 62644,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "opt/bmi30-universal/factory-defaults.json": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "44bb06f3ef0525e21ab35b64ec535b19876cdfa0246ce5c0544bedea69dc1106",
+      "bytes": 94,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "opt/bmi30-universal/factory-mode.json": {
+      "mode": 420,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "c1bf553191bdf4d9404ba2bfd1734bf2d198b17afb2be147dc0829fd904ff916",
+      "bytes": 15,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "usr/local/bin/bmi30-agent-ctl": {
+      "mode": 493,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "3714cb895c4fe4354e76a36331355b0515d06019eb69b1825c693d8df86c5830",
+      "bytes": 1341,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "usr/local/bin/bmi30-hotspot-info-server.py": {
+      "mode": 493,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "3651e15fa1813d5f57342e7372cd60356153bad05ea345fc4b6bd67a5e6ceaf7",
+      "bytes": 1933397,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": false
+      }
+    },
+    "usr/local/bin/bmi30-hotspot.sh": {
+      "mode": 493,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "d5fb2c13114dbe71c6bcaa12e3737886638ebf79b45d3a5dc4774ed413309571",
+      "bytes": 7214,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "usr/local/bin/run_bmi30_tunnel.sh": {
+      "mode": 493,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "25c771cb8091f887de60e95799f7beb1dbfe628e8f4be8865feadf25a3c5924c",
+      "bytes": 2655,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "usr/local/lib/bmi30/bmi30_core_bootstrap.py": {
+      "mode": 493,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "b6f46e09b48f1b377eaed8e7aa62a65caf237e8fb69dbb4b00acf374cf8dd0fb",
+      "bytes": 1297,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "usr/local/sbin/bmi30-refresh-network-identity.sh": {
+      "mode": 493,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "6a5564639e38211a0b18ac31e56c60cc0b39779fcdcc6c9d686cc585a165df97",
+      "bytes": 24459,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    },
+    "usr/local/sbin/bmi30-wifi-watchdog.py": {
+      "mode": 493,
+      "uid": 0,
+      "gid": 0,
+      "sha256": "743cbe7f7b906ea394b14aee81b227319361a20e5d90a660fe864843252ab6ad",
+      "bytes": 14480,
+      "source": {
+        "own_scope_Core_successor": true,
+        "base_bytes_unchanged": true
+      }
+    }
+  }
+}

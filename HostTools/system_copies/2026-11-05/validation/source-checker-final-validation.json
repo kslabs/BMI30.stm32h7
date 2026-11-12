@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "created_at": 1793867929.4528306,
+  "status": "LOCAL_TESTS_AND_ROOT_RUNTIME_PASS",
+  "tests_run": 17,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "live_actions_by_author": false,
+  "source": {
+    "path": ".tmp\\emmc-usb-copies-20261105\\check_source_runtime.py",
+    "bytes": 18828,
+    "sha256": "d8a44654d988dc8ad769ef3329430648440b259e194d862ee04a43271a4302fd"
+  },
+  "tests": {
+    "path": ".tmp\\emmc-usb-copies-20261105\\test_source_runtime.py",
+    "bytes": 9500,
+    "sha256": "db2a4b20af067aa9e3a8106a9a51b87f4f657a95b54813f5d9817e551085e08c"
+  },
+  "actual_copy_fixture": {
+    "path": ".tmp\\emmc-usb-copies-20261105\\s07-copy-result.json",
+    "bytes": 11275,
+    "sha256": "24573c0288318d259fdf7275d9654bb9f595ceb12a50a9cb9167cdf776116ed4"
+  },
+  "baseline_9test_attestation": {
+    "path": ".tmp\\emmc-usb-copies-20261105\\source-checker-validation.json",
+    "bytes": 1894,
+    "sha256": "e84dd6b721d22d186abdd97b75d8fafe6b66bcbb6b595dc17cd6eebb434439ae"
+  },
+  "canonical_convention": {
+    "format": "bmi30-copy-config-semantic-proof-v1",
+    "ensure_ascii": false,
+    "encoding": "utf-8",
+    "sort_keys": true,
+    "separators": [
+      ",",
+      ":"
+    ],
+    "allow_nan": false,
+    "duplicate_keys": "reject"
+  },
+  "semantic_guard": "Different config bytes require root-owned private job proof bound to host/CM5/job/USBserial/targetrootUUID/targetrootPARTUUID/copied snapshot byte SHA and current semantic SHA. Byte-equal configs require no proof.",
+  "added_tests": [
+    "Exact bytes without proof",
+    "Format and key order require bound proof",
+    "Changed number, number type, bool type or list order rejected",
+    "Different job/board/USB/UUID/copiedsnapshot proof rejected",
+    "False or missing proof flags/digests rejected",
+    "Duplicate keys and nonfinite JSON rejected",
+    "Later format-only change retains same semantic snapshot"
+  ],
+  "limits": [
+    "No source configuration writes or restore",
+    "No live calls by author",
+    "No USB boot or physical sensitivity claim",
+    "Runtime execution owned by parent/root"
+  ],
+  "previous_semantic_attestation": {
+    "path": ".tmp\\emmc-usb-copies-20261105\\source-checker-semantic-validation.json",
+    "bytes": 2141,
+    "sha256": "f719352d93908aad63b30e626901bf255e1278f60d46a817d907fb44a47b2ced"
+  },
+  "final_network_schema_guard": "Network local.internet is a probe dictionary; require isinstance(dict) and internet.ok is True; false/missing/numeric/string/boolean shapes rejected by actual AST guard.",
+  "runtime_evidence": {
+    "s07": {
+      "path": ".tmp\\emmc-usb-copies-20261105\\s07-source-runtime-verified.json",
+      "bytes": 15694,
+      "sha256": "a65ccd563e7524a49f4d44bce6bee7efa9a4fdcea2cb44928b4efaf063f3ea54",
+      "executed_by": "parent/root",
+      "ok": true,
+      "source_reverified": true,
+      "config_semantic_sha256": "4a2668350705edcb52ada206a8eecb028d4c9915f32f203ce9714458c90467c0",
+      "copied_config_sha256": "ec1b3b60c3f7ab0844e86b53547d27dbb38f626fe0be6c509c76ce51324db542",
+      "config_sha256": "a8890287ed3c5fb2c45576880d3df73e61b6f5b5f64aec0b8609894bfc5ca4e5"
+    },
+    "m02": {
+      "path": ".tmp\\emmc-usb-copies-20261105\\m02-source-runtime-verified.json",
+      "bytes": 15695,
+      "sha256": "dc9fc23d66001c18d156a73e82141c7db04b618cfc262785464b9c9c08ae76db",
+      "executed_by": "parent/root",
+      "ok": true,
+      "source_reverified": true,
+      "config_semantic_sha256": "0d3dc4685bb22c65b6c7c259a9fa2370f44afc62288f3a1821a9e5adca484f69",
+      "copied_config_sha256": "6ed9392e70f7d1014af39c7831c83efbcc2332b0d551146c2e995cf8b6600a6d",
+      "config_sha256": "c081d5b5a3a6e130b5c02f8d16f4b4e83647b5d6836f0d1511a5eacbf272edbe"
+    }
+  }
+}

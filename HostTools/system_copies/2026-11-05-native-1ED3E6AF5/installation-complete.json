@@ -1,0 +1,40 @@
+{
+  "read_only_observed_at": 1793879456.6828835,
+  "result": {
+    "ok": true,
+    "started_at": 1793879304.0875618,
+    "source_USB_writes": false,
+    "STM_commands": false,
+    "rebooted": false,
+    "installed": true,
+    "failure": null,
+    "rollback_errors": [],
+    "host": "BMI30-1ED3E6AF5",
+    "cm5": "0d6b7531ed3e6af5",
+    "target_root_partuuid": "e1b5c915-02",
+    "source_version": "2026-11-04-185916",
+    "base_bundle": "2026-11-04-175044",
+    "protected_files": 6379,
+    "code_files": 1999,
+    "symlinks": 13,
+    "own_config_sha256": "90530d9f05c3d397c51faf48ae307d358fb5a1dda0add934ff130d2a3610eb3d",
+    "live_services_changed": false,
+    "boot_tested": false,
+    "installer_exit": 0,
+    "cleanup_errors": [],
+    "target_unmounted": true,
+    "finished_at": 1793879377.8518422
+  },
+  "cleanup": {
+    "ok": true,
+    "errors": []
+  },
+  "unit": {
+    "MainPID": "0",
+    "ControlPID": "0",
+    "Result": "success",
+    "LoadState": "not-found",
+    "ActiveState": "inactive"
+  },
+  "backup": "Durable rollback backup exists on own eMMC; no private backup content is included."
+}

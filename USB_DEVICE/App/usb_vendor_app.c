@@ -4,6 +4,7 @@
 #include "usb_device.h"
 #include "usbd_core.h"
 #include "usb_vendor_app.h"
+#include "tx_host_lease.h"
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -241,7 +242,7 @@ extern volatile uint8_t need_usb_status_refresh;
 #define VND_STREAM_MODE_AVG_ROI       2u
 #define VND_AVG_MAX_N                 64u  /* Максимум 64 буфера для усреднения (шаг 8: 8/16/24/32/40/48/56/64) */
 #ifndef VND_AVG_MIN_N
-#define VND_AVG_MIN_N                 8u
+#define VND_AVG_MIN_N                 2u
 #endif
 #ifndef VND_AVG_LATEST_WINS
 /* AVG_ROI is a live stream, not a backlog. If USB falls behind, keep only the
@@ -307,6 +308,9 @@ extern volatile uint8_t need_usb_status_refresh;
 /* Видимая снаружи (CDC) метка стриминга */
 volatile uint8_t streaming = 0;
 static volatile uint8_t vnd_tx_requested_enable = 0; /* Persistent host/manual request; changed only by SET_TX_ENABLE/TX200. */
+/* CPU-only lease state; explicitly initialized before USB callbacks. */
+static volatile tx_host_lease_t vnd_host_lease __attribute__((section(".ram_dtcm")));
+static volatile uint32_t vnd_host_usb_generation __attribute__((section(".ram_dtcm")));
 static volatile uint8_t vnd_tx_enable = 0; /* 1=enable complementary TX200 waveform on PA2/PC7 and PA1; 0=clamp it off. */
 static volatile uint32_t vnd_tx_host_cmd_count = 0;
 static volatile uint32_t vnd_tx_host_cmd_last_ms = 0;
@@ -719,6 +723,11 @@ static inline uint8_t vnd_frame_pace_applies(void)
 {
 #if VND_USB_FRAME_PACE_MS > 0
     if(!streaming || diag_mode_active) return 0u;
+    /* RAW ROI200 needs 800 short bulk transfers/s at a 400 Hz ADC buffer rate.
+       The old 4 ms / after-ACK 12 ms delays cap it below the source rate.
+       Keep legacy pacing for other ROI sizes; ownership/TxCplt serialize IN. */
+    if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI &&
+       (win_len0 == 0u || win_len0 == VND_ROI_LEN_DEFAULT)) return 0u;
     /* AVG_ROI is already rate-limited by buf_rate / avg_n. Extra USB pacing
        throttles avg_n=8/16 below their expected 50/25 fps and delays B after A. */
     return (vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI) ? 1u : 0u;
@@ -2508,7 +2517,17 @@ static void vnd_avg_drain_fifo(uint16_t roi_start, uint16_t roi_len)
         if(vnd_avg_cnt[parity] >= avg_n)
         {
 #if VND_AVG_LATEST_WINS
-            if(vnd_avg_q_count != 0u){
+            if(avg_n <= 4u){
+                /* Short recording means may complete both phases in one
+                   drain. Preserve all queued cohorts until Q4 is full. */
+                if(vnd_avg_q_count >= VND_AVG_OUT_Q){
+                    vnd_avg_q_head = (uint8_t)((vnd_avg_q_head + 1u) % VND_AVG_OUT_Q);
+                    vnd_avg_q_count--;
+                    dbg_avg_drop_frames++;
+                }
+            } else if(vnd_avg_q_count != 0u){
+                /* Preserve the existing low-latency policy for AVG8..64
+                   (and other protocol values above4). */
                 dbg_avg_drop_frames += (uint32_t)vnd_avg_q_count;
                 vnd_avg_q_head = vnd_avg_q_tail;
                 vnd_avg_q_count = 0u;
@@ -3131,6 +3150,7 @@ typedef struct {
     uint16_t frame_size;
     uint32_t seq;
     uint32_t dma_seq;
+    uint8_t source_consumed; /* RAW ROI200 copied/consumed before USB. */
     uint16_t crc16;
     uint32_t crc_seq;
     uint8_t  buf[VND_FRAME_MAX_SIZE];
@@ -3941,6 +3961,7 @@ static int vnd_find_pair_by_seq(uint32_t seq);
 
 void Vendor_Control_Task(void)
 {
+    vnd_tx_failsafe_service(HAL_GetTick());
     USBD_VND_ProcessControlRequests();
 }
 
@@ -3966,6 +3987,7 @@ static void vnd_recompute_pair_timing(uint16_t samples_per_frame)
 /* Публичная функция: полный сброс/останов пайплайна */
 void vnd_pipeline_stop_reset(int deep)
 {
+    vnd_host_session_revoke();
     /* Остановить передачу и внутренние состояния */
     streaming = 0; diag_mode_active = 0; full_mode = 1;
     stop_request = 0; pending_status = 0; start_stat_inflight = 0; status_ack_pending = 0; start_ack_done = 1;
@@ -3985,8 +4007,7 @@ void vnd_pipeline_stop_reset(int deep)
     (void)deep;
     /* Индикация */
     HAL_GPIO_WritePin(Data_ready_GPIO22_GPIO_Port, Data_ready_GPIO22_Pin, GPIO_PIN_RESET);
-    /* A USB pipeline stop preserves the requested switch position, while the
-       effective TX output is clamped off until streaming starts again. */
+    /* A stopped pipeline revokes TX; a new START and TX command are required. */
     (void)vnd_tx_refresh_effective(HAL_GetTick(), "pipeline_stop");
 }
 
@@ -4766,6 +4787,7 @@ void Vendor_Status_Task(void)
 
 void Vendor_Maintenance_Task(void)
 {
+    vnd_tx_failsafe_service(HAL_GetTick());
 #ifndef VND_MAINT_ENABLE_DC_LOAD
 #define VND_MAINT_ENABLE_DC_LOAD 1u
 #endif
@@ -5450,36 +5472,92 @@ static void vnd_apply_tx_enable_outputs(void)
     adc_stream_refresh_marker_output();
 }
 
-static uint8_t vnd_tx_set_enabled_internal(uint8_t enable, const char *reason)
+/* Caller holds PRIMASK across policy, public flags and physical GPIO.
+ * The existing marker writer preserves phases and clamps PA1=HIGH/PA2=PC7=LOW. */
+static uint8_t vnd_tx_publish_locked(uint32_t now_ms)
 {
-    vnd_tx_requested_enable = (enable != 0u) ? 1u : 0u;
-    return vnd_tx_refresh_effective(HAL_GetTick(), reason);
-}
-
-static uint8_t vnd_tx_refresh_effective(uint32_t now_ms, const char *reason)
-{
-    /* TX200 is allowed only while both conditions remain true:
-       1) the oscilloscope/RPI explicitly requested TX;
-       2) the USB stream is logically running.
-       Do not gate TX from the short HOST_RX_ACK heartbeat: a transient USB
-       scheduling delay must never create a missing TX pulse. */
-    uint8_t next = (uint8_t)((vnd_tx_requested_enable != 0u) &&
-                             (streaming != 0u));
-    if(vnd_tx_enable != next){
-        if(next == 0u){
-            vnd_tx_effective_off_count++;
-        }
+    uint8_t next;
+    vnd_tx_requested_enable = vnd_host_lease.tx_requested;
+    if (!vnd_host_lease.session_active) {
+        streaming = 0u;
+        vnd_pending_init = 0u;
+        vnd_stream_active = 0u;
+    }
+    next = (uint8_t)(tx_host_lease_effective(&vnd_host_lease) && streaming);
+    if (vnd_tx_enable != next) {
+        if (!next) vnd_tx_effective_off_count++;
         vnd_tx_effective_change_count++;
         vnd_tx_effective_last_change_ms = now_ms;
         vnd_tx_effective_last_value = next;
         vnd_tx_enable = next;
         vnd_apply_tx_enable_outputs();
-        cdc_logf("EVT TX_ENABLE=%u req=%u reason=%s",
-                 (unsigned)next,
-                 (unsigned)vnd_tx_requested_enable,
-                 reason ? reason : "?");
     }
     return vnd_tx_enable;
+}
+
+/* IRQ-safe: no logging, USB transfers, Flash, DMA reset or buffer allocation.
+ * Generation prevents a START interrupted by USB loss from committing later. */
+void vnd_host_session_revoke(void)
+{
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    vnd_host_usb_generation++;
+    tx_host_lease_revoke(&vnd_host_lease);
+    (void)vnd_tx_publish_locked(HAL_GetTick());
+    __set_PRIMASK(primask);
+}
+
+void vnd_host_session_boot_init(void)
+{
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    vnd_host_lease.last_progress_ms = 0u;
+    vnd_host_lease.last_counter = 0u;
+    vnd_host_lease.counter_valid = 0u;
+    tx_host_lease_revoke(&vnd_host_lease);
+    vnd_host_usb_generation = 0u;
+    (void)vnd_tx_publish_locked(HAL_GetTick());
+    __set_PRIMASK(primask);
+}
+
+static uint8_t vnd_host_session_start(uint32_t generation)
+{
+    uint8_t accepted = 0u;
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    if (generation == vnd_host_usb_generation &&
+        hUsbDeviceHS.dev_state == USBD_STATE_CONFIGURED) {
+        tx_host_lease_start(&vnd_host_lease, HAL_GetTick());
+        streaming = 1u;
+        accepted = 1u;
+    }
+    (void)vnd_tx_publish_locked(HAL_GetTick());
+    __set_PRIMASK(primask);
+    return accepted;
+}
+
+static uint8_t vnd_tx_set_enabled_internal(uint8_t enable, const char *reason)
+{
+    uint8_t effective;
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    tx_host_lease_set_tx(&vnd_host_lease, HAL_GetTick(), enable);
+    effective = vnd_tx_publish_locked(HAL_GetTick());
+    __set_PRIMASK(primask);
+    (void)reason;
+    return effective;
+}
+
+static uint8_t vnd_tx_refresh_effective(uint32_t now_ms, const char *reason)
+{
+    uint8_t effective;
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    (void)tx_host_lease_poll(&vnd_host_lease, now_ms);
+    effective = vnd_tx_publish_locked(now_ms);
+    __set_PRIMASK(primask);
+    (void)reason;
+    return effective;
 }
 
 /* функция vnd_generate_test_sawtooth() реализована в vnd_testgen.c */
@@ -5512,6 +5590,9 @@ static void vnd_prepare_pair(void)
     (void)ch1; (void)ch2; /* могут быть неиспользованы в режиме overlay */
     uint16_t crc_a = 0; uint32_t crc_seq = 0;
     uint32_t pair_seq = 0;
+    uint32_t lossless_dma_seq = 0;
+    uint8_t lossless_buffer_index = 0;
+    uint8_t used_lossless_copy = 0;
     uint8_t used_avg_q = 0;
     uint8_t used_avg_q_idx = 0;
     uint32_t used_avg_ts_ms = 0;
@@ -5568,36 +5649,36 @@ static void vnd_prepare_pair(void)
 
         if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI)
         {
-            /* Берём следующий кадр строго по очереди (A+B синхронно по DMA seq) */
-            if(!adc_peek_frame_pair_fifo(&ch1, &ch2, &samples, &pair_seq)){
-                return;
-            }
-            if(samples < (uint16_t)(roi_start + roi_len)){
-                /* Профиль/размер кадра не подходит под ROI — ждём корректного кадра */
-                (void)adc_consume_frame_pair_fifo(pair_seq);
-                return;
-            }
-            /* Лочим формат кадра на ROI длину */
-            if(cur_samples_per_frame != roi_len){
-                cur_samples_per_frame = roi_len;
-                cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)cur_samples_per_frame * 2u);
-            }
-            /* Смещаем указатели на начало ROI. Для 200-sample ROI применяем DC к локальной
-               копии, чтобы USB payload был скорректирован, но FIFO/DMA raw буферы не менялись. */
             if(roi_len == (uint16_t)VND_DC_ROI_LEN){
-                uint8_t parity = (uint8_t)(adc_get_buffer_parity(pair_seq) & 1u);
+                /* Retain no pointer into DMA or a shared consumer snapshot.
+                   Source sequence/parity belong to this exact copied pair. */
+                if(!adc_copy_consume_frame_pair_roi_fifo(lossless_dc_copy_a,
+                        lossless_dc_copy_b, roi_start, roi_len,
+                        &lossless_dma_seq, &lossless_buffer_index)) return;
+                used_lossless_copy = 1u;
+                uint8_t parity = (uint8_t)(lossless_buffer_index & 1u);
                 vnd_dc_load_once();
-                vnd_dc_ensure_parity_mapping(ch1, ch2, samples, roi_start, roi_len, parity);
-                memcpy(lossless_dc_copy_a, ch1 + roi_start, (size_t)roi_len * sizeof(uint16_t));
-                memcpy(lossless_dc_copy_b, ch2 + roi_start, (size_t)roi_len * sizeof(uint16_t));
+                vnd_dc_ensure_parity_mapping(lossless_dc_copy_a, lossless_dc_copy_b,
+                                             roi_len, 0u, roi_len, parity);
                 vnd_dc_apply_only(0, parity, lossless_dc_copy_a, roi_len);
                 vnd_dc_apply_only(1, parity, lossless_dc_copy_b, roi_len);
                 ch1 = lossless_dc_copy_a;
                 ch2 = lossless_dc_copy_b;
             } else {
-                ch1 = ch1 + roi_start;
-                ch2 = ch2 + roi_start;
+                /* Preserve the legacy path for non-200-point windows. */
+                if(!adc_peek_frame_pair_fifo(&ch1, &ch2, &samples, &lossless_dma_seq)) return;
+                if(samples < (uint32_t)roi_start + roi_len){
+                    (void)adc_consume_frame_pair_fifo(lossless_dma_seq);
+                    return;
+                }
+                ch1 += roi_start;
+                ch2 += roi_start;
             }
+            cur_samples_per_frame = roi_len;
+            cur_expected_frame_size = (uint16_t)(VND_FRAME_HDR_SIZE + (uint32_t)roi_len * 2u);
+            /* USB pair sequencing is independent of the free-running ADC FIFO.
+               Actual source sequence remains visible in header.reserved. */
+            pair_seq = stream_seq;
             /* В ROI режиме не используем precomputed CRC из staging (оно было для полного кадра). */
             crc_a = 0; crc_seq = 0;
             samples = cur_samples_per_frame;
@@ -5745,7 +5826,8 @@ static void vnd_prepare_pair(void)
         uint8_t *p0 = f0->buf + VND_FRAME_HDR_SIZE + 2 * i; p0[0] = (uint8_t)(a & 0xFF); p0[1] = (uint8_t)(a >> 8);
         uint8_t *p1 = f1->buf + VND_FRAME_HDR_SIZE + 2 * i; p1[0] = (uint8_t)(b & 0xFF); p1[1] = (uint8_t)(b >> 8);
     }
-    f0->samples = f1->samples = use_samples; 
+    f0->samples = f1->samples = use_samples;
+    f0->source_consumed = f1->source_consumed = used_lossless_copy;
     /* Сохраняем индекс DMA (seq/rd) для привязки отображения на хосте.
        В stream_mode=2 header.seq идёт как stream_seq, а dma_seq берём из последнего кадра группы (передан через crc_seq). */
     if(vnd_stream_mode == VND_STREAM_MODE_AVG_ROI){
@@ -5753,13 +5835,15 @@ static void vnd_prepare_pair(void)
         f0->dma_seq = f1->dma_seq = out_dma_seq;
         /* crc_seq больше не нужен как временный канал */
         crc_seq = 0;
+    } else if(vnd_stream_mode == VND_STREAM_MODE_LOSSLESS_ROI){
+        f0->dma_seq = f1->dma_seq = lossless_dma_seq;
     } else {
         f0->dma_seq = f1->dma_seq = pair_seq;
     }
     /* CRC финализируется ниже после окончательного заполнения заголовков. */
     f0->crc16 = f1->crc16 = 0u;
     f0->crc_seq = f1->crc_seq = 0u;
-    /* seq в заголовке привязан к последовательности DMA (pair_seq), одинаковый для A и B */
+    /* Strict ROI/AVG header.seq is the logical USB pair sequence; DMA is metadata. */
     f0->seq = pair_seq;
     f1->seq = pair_seq;
     vnd_frame_hdr_t *h0 = (vnd_frame_hdr_t*)f0->buf; h0->timestamp = pair_timestamp;
@@ -5770,7 +5854,9 @@ static void vnd_prepare_pair(void)
          Для AVG_ROI нельзя вычислять это значение позже по dma_seq (кольцевой s_buffer_parity перезаписывается),
          поэтому берём сохранённую метку из очереди. */
      uint16_t buf_idx = 0;
-     if(used_avg_q){
+     if(used_lossless_copy){
+         buf_idx = lossless_buffer_index;
+     } else if(used_avg_q){
          buf_idx = (uint16_t)(vnd_avg_q_bufidx[used_avg_q_idx] & 0x07u);
      } else {
          buf_idx = (uint16_t)(adc_get_buffer_parity(f0->dma_seq) & 0x07u);
@@ -5913,6 +5999,7 @@ static void vnd_consume_strict_fifo_pair(uint8_t slot)
 {
     if(slot >= VND_PAIR_BUFFERS) return;
     if(vnd_stream_mode != VND_STREAM_MODE_LOSSLESS_ROI) return;
+    if(g_frames[slot][0].source_consumed || g_frames[slot][1].source_consumed) return;
 
     uint32_t dma_seq = g_frames[slot][0].dma_seq;
     if(g_frames[slot][0].st == FB_FILL && g_frames[slot][1].st != FB_FILL){
@@ -6685,6 +6772,7 @@ void __attribute__((unused)) vnd_diag_send64_once(void)
 /* Основной периодический таск */
 void __attribute__((unused)) Vendor_Stream_Task(void)
 {
+    vnd_tx_failsafe_service(HAL_GetTick());
     dbg_task_calls++;
     vnd_note_task_entry(HAL_GetTick());
     /* Сервис EP0: выполняем отложенные SOFT/DEEP RESET без блокировки SETUP */
@@ -7813,6 +7901,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
     {
         case VND_CMD_START_STREAM:
         {
+            uint32_t generation = vnd_host_usb_generation;
             uint8_t was_streaming = streaming;
             /* ДИАГНОСТИКА: фиксируем прием команды START */
             last_cmd_received = 0x20;
@@ -7870,7 +7959,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     cur_samples_per_frame = 0; /* снять lock, чтобы применилось немедленно */
                     cur_expected_frame_size = 0;
                 }
-                /* START applies the saved host TX request and only rebuilds the
+                /* START requires a new TX request and only rebuilds the
                    USB pipeline. It must not restart continuous ADC/DMA. */
                 /* Синхронизация всегда активна и не должна сбрасываться при START */
                 if(!was_streaming && vnd_sync_mode_public == VND_SYNC_MODE_SLAVE){
@@ -7891,8 +7980,8 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                     vnd_tx_meta_head = vnd_tx_meta_tail = 0;
                     meta_push_total = meta_pop_total = meta_empty_events = meta_overflow_events = 0;
                 } while(0);
-                streaming = 1;
-                (void)vnd_tx_refresh_effective(start_cmd_ms, "start_stream");
+                /* A fresh session never replays TX from a previous START. */
+                if (!vnd_host_session_start(generation)) break;
                 /* Включаем async декуплинг по умолчанию в полном режиме.
                    В тестовом режиме принудительно держим async=0, чтобы использовать
                    парный пайплайн с синтетической пилой. */
@@ -7993,6 +8082,7 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
             break;
         case VND_CMD_STOP_STREAM:
         {
+            vnd_host_session_revoke();
             /* ДИАГНОСТИКА: фиксируем прием команды STOP, сбрасываем счётчик START */
             last_cmd_received = 0x21;
             last_cmd_timestamp_ms = HAL_GetTick();
@@ -8165,23 +8255,33 @@ void USBD_VND_DataReceived(const uint8_t *data, uint32_t len)
                                        ((uint32_t)data[2] << 8) |
                                        ((uint32_t)data[3] << 16) |
                                        ((uint32_t)data[4] << 24);
-                if ((!vnd_host_rx_counter_valid) || (host_frames != vnd_host_rx_last_counter)) {
-                    vnd_last_host_rx_ack_ms = HAL_GetTick();
-                    (void)vnd_tx_refresh_effective(vnd_last_host_rx_ack_ms, "host_ack");
+                uint32_t primask = __get_PRIMASK();
+                __disable_irq();
+                uint32_t ack_ms = HAL_GetTick();
+                if (tx_host_lease_ack(&vnd_host_lease, ack_ms, host_frames)) {
+                    vnd_last_host_rx_ack_ms = ack_ms;
+                    vnd_host_rx_last_counter = host_frames;
+                    vnd_host_rx_counter_valid = 1u;
                 }
-                vnd_host_rx_last_counter = host_frames;
-                vnd_host_rx_counter_valid = 1u;
+                (void)vnd_tx_publish_locked(ack_ms);
+                __set_PRIMASK(primask);
             }
         }
         break;
 
         case VND_CMD_HOST_RX_CLEAR:
         {
+            uint32_t clear_primask = __get_PRIMASK();
+            __disable_irq();
+            tx_host_lease_clear_ack(&vnd_host_lease);
             vnd_last_host_rx_ack_ms = 0;
             vnd_host_rx_last_counter = 0;
             vnd_host_rx_counter_valid = 0;
+            (void)tx_host_lease_poll(&vnd_host_lease, HAL_GetTick());
+            (void)vnd_tx_publish_locked(HAL_GetTick());
+            __set_PRIMASK(clear_primask);
             rs485_wire_mode_force_full(RS485_WIRE_FALLBACK_HOST_CLEAR);
-            /* Heartbeat reset must not alter TX; reapply the unchanged host request. */
+            /* Clear only the short RX display heartbeat. It never renews the TX lease. */
             (void)vnd_tx_refresh_effective(HAL_GetTick(), "host_clear");
         }
         break;

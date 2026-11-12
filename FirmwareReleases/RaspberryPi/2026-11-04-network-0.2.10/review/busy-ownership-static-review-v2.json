@@ -1,0 +1,47 @@
+{
+  "format": "m02-busy-ownership-static-review-v2",
+  "source_path": ".tmp\\m02-network-disappearance-20261104\\active_m02_access.py",
+  "source_sha256": "354fd91afabdfd11d20a379f90d535170ee933d99a16d6fbf74b31b04a883b13",
+  "source_execution_test": "PASS: extracted actual Supervisor.tick overwrites then deletes a foreign marker for an already queued job",
+  "observed_interleaving": [
+    {
+      "action": "write",
+      "before": "foreign-recovery-token",
+      "after": {
+        "started": 123.0
+      }
+    },
+    {
+      "action": "run_pending_recover"
+    },
+    {
+      "action": "unlink",
+      "before": {
+        "started": 123.0
+      }
+    }
+  ],
+  "actual_live_writer_identified_from_journal": false,
+  "known_hazards": [
+    {
+      "lines": [
+        206,
+        218,
+        283,
+        286,
+        294
+      ],
+      "detail": "Queue-time busy check is not repeated at execution; atomic write and unlink ignore foreign ownership."
+    }
+  ],
+  "first_live_recovery": {
+    "private_backup": "/var/lib/bmi30-network/manual-recovery/m02-home-851458a5bf2a4264ba3faf4d21a8318b",
+    "result_as_reported": "maintenance_owner_changed; relay rollback succeeded"
+  },
+  "manual_literal": "No exact manual writer found in inspected active access/persistent-guard/network sources. If live bytes equal manual, further dispatcher/custom writer evidence is required.",
+  "safety": "The recovery helper ownership guard correctly aborted; do not suppress it or overwrite a foreign marker.",
+  "selected_remedy_as_parent_directed": "Permanent narrow access ownership fix: exclusive execution-time claim, defer queued jobs for foreign marker, owner-only cleanup, preserve fresh foreign marker at startup; guarded5-filedeploy with timed restore and access-only stop during replacement.",
+  "no_live_actions": true,
+  "supersedes_review_sha256": "da6784d561c4967b45824b5ce23d90887fa514e856b4833b67d9ee4194b4d1a6",
+  "correction": "The earlier review omitted context: actual baseline main already guards startup unlink with if not access_policy.maintenance(). Fresh foreign marker is preserved; it is not an unconditional startup unlink."
+}

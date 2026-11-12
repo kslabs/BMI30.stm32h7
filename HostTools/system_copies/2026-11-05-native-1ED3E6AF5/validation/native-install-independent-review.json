@@ -1,0 +1,112 @@
+{
+  "schema": "bmi30-m04-native-installer-independent-review-v1",
+  "ok": true,
+  "blockers": [],
+  "scope": "Local source/plan review and isolated fixture execution only. No device calls, installer deployment, source USB writes, service actions or reboot.",
+  "installer_sha256": "82d19bd6b231a504a2072c5824b9e44121461201e278abcca0d8bb551e0d65c0",
+  "runner_sha256": "927bacf302d5e68a8a12472faf95b3b41a943eb7ec1d13c70212baba4f57b889",
+  "stager_sha256": "06361b28d3cb81dc564caa3a7f22c599534af5759af0d0b05bb83fd4365c05fe",
+  "runner_review": {
+    "file": "native-runner-pin-delta-review.json",
+    "sha256": "87bfe0ecf267ffae3baff7ce52de9184c549bb95802f2e06684d0d2645892e4e",
+    "ok": true
+  },
+  "public_plan_sha256": "9f9394ad781c7fc6d7cdda9292822d8a90735c7714bd7c16dbcb5cba735f3554",
+  "private_plan_sha256": "04c7a1feebac94255ac7d69e02a9c27a8ecdc80e9d50a5a3cafed43bdf50b05e",
+  "job_id": "m04-native-20261105-148e99fe",
+  "host": "BMI30-1ED3E6AF5",
+  "cm5": "0d6b7531ed3e6af5",
+  "target_cid": "150100424a5444345203123049047b00",
+  "actual_plan": {
+    "assets": 1999,
+    "symlinks": 13,
+    "protected_entries": 6379,
+    "positive_code_allowlist_and_links": "PASS (author source-executed actual public-plan validation)",
+    "no_protected_overlap_or_symlink_ancestor": "PASS",
+    "private_create_payload_read_locally": false
+  },
+  "test_evidence": [
+    {
+      "file": "test_native_prefix_installer.py",
+      "sha256": "738f0daf73cf56dacc070e69306402aea3faf333371e7b8986445a770b06edaf",
+      "passed": 17,
+      "owner": "capture_review",
+      "independent_current_plan_rerun": true,
+      "evidence": "native-plan-delta-validation.json",
+      "earlier_author_attestation": "native-prefix-local-validation.json"
+    },
+    {
+      "file": "test_native_prefix_failure.py",
+      "sha256": "cd044e79af3cd0c7581ba59ab4be3c262686cf50e612e7ba8b65cd2c7f945c4c",
+      "passed": 3,
+      "owner": "algorithm_audit",
+      "executed_against_installer_sha256": "82d19bd6b231a504a2072c5824b9e44121461201e278abcca0d8bb551e0d65c0",
+      "cases": [
+        "successful code-first/selection-last install preserves own config and releases lease",
+        "dependency failure after code writes restores owned old code and old selection",
+        "concurrent foreign code edit is preserved and reported while other owned files roll back"
+      ],
+      "isolation": "Actual install() control flow; Linux identity/path/metadata/atomic IO isolated for Windows fixture. Actual four latest production source bytes pinned; no device/credential calls."
+    },
+    {
+      "file": "test_m04_native_guard.py",
+      "sha256": "f6dd90e22ab82d55efeeab9aa99a385064b6e6194715c96afae3a4b095fa439f",
+      "passed": 7,
+      "owner": "raw_capture_tool",
+      "evidence": "native-marker-guard-validation.json",
+      "independent_rerun": "PASS",
+      "cases": [
+        "actual 175044 bootstrap accepts own adopted M04/native marker",
+        "missing, foreign, wrong-bundle, not-adopted and malformed markers keep actual strict Wrong CM5 cohort rejection",
+        "actual M02-only manifest remains unchanged"
+      ]
+    },
+    {
+      "file": "test_native_plan_delta.py",
+      "sha256": "27715e69b55b103d3cb1034e25c6df5b3fbce11d72a3e1da7d928cbd365cb5bd",
+      "passed": 5,
+      "evidence": "native-plan-delta-validation.json",
+      "owner": "algorithm_audit",
+      "cases": [
+        "old real active_runtime directory and75 protected descendants have no install action",
+        "all committed code paths bypass old alias",
+        "selected Core/engine/GUI/portal point to existing new native assets",
+        "direct portal30 uses only fixed reviewed RAM code source",
+        "own central configuration90530 seal is retained"
+      ]
+    }
+  ],
+  "reviewed_guards": [
+    "Physical host/full CM5/CID and source USB root/boot PARTUUID plus source boot ID; inactive own eMMC prefix/root PARTUUID",
+    "Native own hostname and normalized own agent binding; no donor config/NM/BT/agent/TLS copy",
+    "Own config byte SHA90530d9f plus all protected bytes/metadata/link seals checked before writes and before/after commit",
+    "Verified source bytes buffered and rehashed after writes; exact latest185916 Core/engine/common/dual pair",
+    "Create-only absent own network config with exact seven-key public contract; shared fleet key private RAM only",
+    "Maintenance token/inode ownership rechecked throughout; no format, package operation, service/reboot or source USB write",
+    "Per-file own-eMMC rollback guarded against foreign edits; own links metadata preserved",
+    "Generic application/system code and direct native portal30 drop-in first, dependency probes, then native selection/release/adopted marker commit; old real active_runtime directory preserved"
+  ],
+  "delta_after_first_safe_preflight_refusal": {
+    "first_attempt": "Old active_runtime was a real directory; installer refused before backup/write stage. Root reported target unmounted afterward.",
+    "review_correction": "Initial static review checked exact overlaps but missed alias-directory descendants. Runtime guard refused safely; revised plan has no action at old directory or its descendants.",
+    "preserved_old_runtime_state_files": 75,
+    "new_portal_dropin_source_exception": "Exact target path plus exact root-owned600/private tmpfs RAM source and byte-for-byte reviewed content only.",
+    "generic_RAM_sources_allowed": false,
+    "delta_validation_sha256": "84885d6ae1de0eab802fe140f658fdf07bb56a5d83dd2db2f3577f2e440bbbee"
+  },
+  "preserved_native_config_sha256": "90530d9f05c3d397c51faf48ae307d358fb5a1dda0add934ff130d2a3610eb3d",
+  "own_backup_manifest_sha256": "2aa4c46124698785b5fa66b1880383b61ffc5b491d5aada605e97d5081607fb4",
+  "supporting_files": {
+    "native-prefix-local-validation.json": "55bd56fa97770714e042f8732b971e33cf54fc6ecb2a2762087000cf5411d65b",
+    "native-marker-guard-validation.json": "aa746ca7905b6d6ddba542a6ec18e2837ec515fad557ed48f88d07ef69ce2372",
+    "own-settings-backup-validation.json": "0c41f008b4f315215f90dd41b61689d0740fd21e1df8153c2d2802bb75054cf6",
+    "m04-own-config-expected-baseline.json": "d4dae4522649c93bd5ed17ed68f8e85035a6135392328dc840660f00ed3df486"
+  },
+  "limits": [
+    "Installer deployment, target unmount and native cold boot/runtime proof remain parent-owned future actions.",
+    "portable_runtime marker test is intrinsically media-agnostic; eMMC-only placement is enforced by installer target/CID/root guards, not by bootstrap itself.",
+    "Power loss/SIGKILL can require recovery from durable own-eMMC rollback files; this is not an atomic filesystem snapshot.",
+    "Stored desired_freq250 is stale configuration metadata, not evidence of a working250Hz stream. User confirms working200Hz. Latest runtime retains200Hz; serialization may normalize this stored field and profile to1. Preboot own JSON bytes remain sealed; postboot strict keypath/type comparison is prepared.",
+    "STM32 is not updated/qualified, and no tag sensitivity or detection result is claimed."
+  ]
+}

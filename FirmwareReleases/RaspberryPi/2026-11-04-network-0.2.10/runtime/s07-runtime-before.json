@@ -1,0 +1,101 @@
+{
+  "host": "BMI30-C9775FBAE",
+  "core_pid": 704918,
+  "core_start_ticks": "1170105",
+  "runtime_env_sha256": "9ce28bd9100473e75899b38f885e213233831c6915f054b08f49aeb30f9c3ac3",
+  "core_sources": {
+    "BMI30_CORE_PATH": {
+      "path": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.001.py.2026-11-03-172055",
+      "sha256": "bbc522278981ce530e8e261df2d9bc456761b82ea4d45c0267bb52aeff5b562e"
+    },
+    "BMI30_ENGINE_SOURCE": {
+      "path": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-11-03-172055",
+      "sha256": "02c8b7ceb354464b04f5bf3f8437a27be7b19c411f91a3477d0da22f12637bfd"
+    }
+  },
+  "mode": {
+    "selected": 6,
+    "stream_mode": 2,
+    "view_mode": 0,
+    "base_buf_len": 200,
+    "freq_hz": 200,
+    "desired_freq": 200,
+    "avg_n": 8,
+    "rpi_avg_n": 12,
+    "det_ratio": 1.6
+  },
+  "core_config_sha256": "8acabf2f8f29e102280793ecf854c2848bce291c0df4f6673c22bf15eda47f6c",
+  "detector_policy_sha256": "afbf2f6fb48f2dd79986cbf6c464414c79b03ac27815bfda16ca225fe0567a12",
+  "stream_stats": {
+    "rx_cnt_ch0": 4436265,
+    "rx_cnt_ch1": 4436264,
+    "seq_gap_ch0": 3,
+    "seq_gap_ch1": 3,
+    "seq_dup_ch0": 1,
+    "seq_dup_ch1": 1,
+    "crc_bad": 0,
+    "magic_bad": 0,
+    "host_rx_ack_fail": 0,
+    "queues": {
+      "stereo_q": 0,
+      "qA": 1,
+      "qB": 2,
+      "bufA": 0,
+      "bufB": 0
+    },
+    "last_crc_bad_info": null
+  },
+  "worker": {
+    "mode": "process",
+    "enabled": true,
+    "alive": true,
+    "request_queue": 0,
+    "result_queue": 1,
+    "submitted": 41651,
+    "results": 41649,
+    "overflows": 0,
+    "latency": {
+      "worker_ms": 19.09202699607704,
+      "delivery_ms": 18.221026999526657,
+      "total_ms": 37.313053995603696,
+      "samples": 8409337,
+      "max_total_ms": 276.5283460030332,
+      "over_100ms": 4829
+    },
+    "input_policy": "averaged_sensitive_branch_with_raw_leave_one_out_guard",
+    "fresh_pairs": {
+      "pairs": [
+        20826,
+        20825
+      ],
+      "same_phase_rejected": [
+        1,
+        1
+      ],
+      "sequence_discontinuities": [
+        0,
+        0
+      ],
+      "depth": 12,
+      "window_counts": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    "dispatch": "pipe_ready",
+    "source_seq0": 4257275,
+    "source_seq1": 4257274
+  },
+  "service": {
+    "version": "001",
+    "engine_source": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-11-03-172055",
+    "uptime_s": 82766.46571707726,
+    "runtime": "headless",
+    "qt_loaded": false
+  },
+  "access_policy_source_sha256": "adc2fe2093d0a2e868883cb36039d856f7fbbdd7367a43cc415a53855165faab",
+  "network_manifest_files": [],
+  "active_busy_exists": false
+}

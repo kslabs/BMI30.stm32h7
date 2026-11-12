@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "host": "BMI30-01FA60500",
+  "cm5": "366b6f101fa60500",
+  "status": "native_latest_application_and_two_level_utilities_verified",
+  "mutations": false,
+  "files": {
+    "application-status.json": {
+      "bytes": 1671,
+      "sha256": "a526809afc46f3dca7d2b5dbdf42a211edc075d2c299af0baacfb21f91223170"
+    },
+    "native-verification.json": {
+      "bytes": 1352,
+      "sha256": "5095478cbfd59b0d7b5b5373b2cfb556e4a95d5c1c612177c7a6c2eb913ee517"
+    },
+    "README_RU.md": {
+      "bytes": 2659,
+      "sha256": "150c73b55cd44bff1abd1db0cf9d7312666677976f432520e158d94170309ea8"
+    },
+    "utilities-comparison.json": {
+      "bytes": 1732,
+      "sha256": "028570cf1476cd779a75302921e433719c6316388dbd6f9f3eb08098b25b1ef5"
+    }
+  },
+  "source_evidence": {
+    "native-verification.json": {
+      "source": ".tmp/new-device-emmc-20261105/current-native-verify.json",
+      "source_sha256": "5095478cbfd59b0d7b5b5373b2cfb556e4a95d5c1c612177c7a6c2eb913ee517"
+    },
+    "utilities-comparison.json": {
+      "source": ".tmp/m04-update-as-s07-20261105/standalone133-utilities-comparison.json",
+      "source_sha256": "af8be0af4bb5b67c1dce6ca8b6ac0339b4cfed933c7621ba0aa0dbb8260988bb"
+    },
+    "application-status.json": {
+      "source": ".tmp/new-device-rdp-20261105/read-133-native-versions.json",
+      "source_sha256": "0a8fd2008eea23a1bbf553580ea33d1ed3f6449469dd6e6f8a4edb6aca4a0dac",
+      "selection": "Core/portal identity, version and connection fields only"
+    }
+  }
+}

@@ -10083,25 +10083,6 @@ main_loop_second_half:
   #endif
 #endif
 
-  /* Периодическое обновление статуса на LCD (вернули после отката) */
-  {
-    static uint32_t last_lcd_ms = 0;
-    static uint8_t lcd_first_update = 1;
-    extern uint8_t vnd_is_streaming(void);
-    uint32_t lcd_period_ms = vnd_is_streaming() ? 1000u : 100u;
-    // Первое обновление сразу после старта (в течение первых 200ms)
-    if (lcd_first_update && now >= 200) {
-      lcd_first_update = 0;
-      last_lcd_ms = now;
-      DrawUSBStatus();
-    }
-    // Во время USB-стрима LCD не должен ограничивать Vendor_Stream_Task.
-    else if (!lcd_first_update && (now - last_lcd_ms >= lcd_period_ms)) {
-      last_lcd_ms = now;
-      DrawUSBStatus();
-    }
-  }
-
   /* Low-priority change monitor: polls slow system values only when Vendor IN is idle. */
   Vendor_ChangeEvent_Task();
 
@@ -10187,7 +10168,7 @@ main_loop_second_half:
           printf("SYNCSTATE    - compact sync state over raw UART\r\n");
           printf("OPTIC        - optic tx/rx status over raw UART\r\n");
           printf("TX200 0|1    - set 200Hz marker TX request; OPTIC shows tx_req/tx200\r\n");
-          printf("TXPH1 0|1    - TX1 PA1 phase: 0=in phase, 1=antiphase\r\n");
+          printf("TXPH1 0|1    - upper TX1 PC7 phase: 0=in phase, 1=antiphase\r\n");
           printf("TXPH2 0|1    - TX2 PA2 phase: 0=in phase, 1=antiphase\r\n");
           printf("TXPH         - read requested/applied TX phases via OPTIC\r\n");
           printf("OPTP 0..255  - set 38kHz optic TX power over UART\r\n");
@@ -10834,6 +10815,40 @@ main_loop_second_half:
 
   /* Optional phase indication yields to all regular foreground work. */
   adc_rx_phase_service();
+
+  {
+  uint32_t lcd_now = HAL_GetTick();
+  /* Lowest-priority LCD; retain known boot scene until first frame+visible hold. */
+  if(LCD_BootScreenReady(lcd_now)){
+    static uint32_t last_lcd_ms = 0;
+    static uint8_t lcd_first_update = 1;
+    extern uint8_t vnd_is_streaming(void);
+    uint32_t lcd_period_ms = vnd_is_streaming() ? 1000u : 100u;
+    // Первое обновление сразу после старта (в течение первых 200ms)
+    if (lcd_first_update && lcd_now >= 200) {
+      lcd_first_update = 0;
+      last_lcd_ms = lcd_now;
+      uint32_t render_started = DWT->CYCCNT;
+      DrawUSBStatus();
+      uint32_t render_cycles = DWT->CYCCNT - render_started;
+      if(render_cycles > g_lcd_background_diag.scene_render_max_cycles)
+        g_lcd_background_diag.scene_render_max_cycles = render_cycles;
+    }
+    // Во время USB-стрима LCD не должен ограничивать Vendor_Stream_Task.
+    else if (!lcd_first_update && (lcd_now - last_lcd_ms >= lcd_period_ms)) {
+      last_lcd_ms = lcd_now;
+      uint32_t render_started = DWT->CYCCNT;
+      DrawUSBStatus();
+      uint32_t render_cycles = DWT->CYCCNT - render_started;
+      if(render_cycles > g_lcd_background_diag.scene_render_max_cycles)
+        g_lcd_background_diag.scene_render_max_cycles = render_cycles;
+    }
+  }
+
+  /* High-priority foreground work has run. A sticky USB kick is not a budget.
+     The LCD service itself permits only one nonblocking DMA start per ms. */
+  LCD_BackgroundService(lcd_now, 1u);
+  }
 
   /* Подсчёт длительности итерации */
   uint32_t dwt_end = DWT->CYCCNT;
@@ -11904,7 +11919,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /* PC7: logical sync marker (TX-enable gated), independent of TX1/TX2 phase. */
+  /* PC7: upper TX1 output, TX-enable gated, independently inverted by TX1 phase. */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
   GPIO_InitStruct.Pin = GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;

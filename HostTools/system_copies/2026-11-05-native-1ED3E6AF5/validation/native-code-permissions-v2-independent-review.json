@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "critical_blockers": [],
+  "checked_at": 1793885699.9747066,
+  "scope": "Independent static delta review; no device calls",
+  "source_sha256": "98a1b08959b1531d372affdc94adc10bfc3bd744b4af4950c6b0a07b526dd7ab",
+  "previous_review": "native-code-permissions-independent-review.json",
+  "strict_public_code_files": 1978,
+  "all_asset_files_fingerprinted": 1999,
+  "directories_allowlist_unchanged": 250,
+  "delta": [
+    "Exact install-plan SHA remains required for files under all four approved public-code roots",
+    "Generated ancillary service selectors are fingerprinted/reported, not rewritten or required to retain install-time bytes",
+    "Ancillary or own daemon normalization is reported without undoing the directory repair",
+    "Exact same250 directory-only chmod and native identity/transport guards retained"
+  ],
+  "limits": [
+    "No Linux chmod/service runtime executed by reviewer; postrepair validation remains root-owned"
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "format": "network-neighbor-json-integration-correction-v1",
+  "actual_initial_runtime": {
+    "m02": {
+      "at": 1793809060.8654423,
+      "hostname": "BMI30-E29805C7C",
+      "source_report_sha256": "f28c195e1f7cfbfc1eed41c0e1f36a20e4905e2b036779e06bfa48f23b2d81f5",
+      "network_version": "0.2.10",
+      "network_source_sha256": "50a82441ffc883e302cb1e376661d507fbbd63c2a1ec29f13d2fd0133c51cea6",
+      "root_lan": null,
+      "cohesion": {
+        "age_s": 24.16029953956604,
+        "available": true,
+        "member_short_ids": [
+          "5F295F47B",
+          "8CC938B79"
+        ],
+        "own_short_id": "5F295F47B",
+        "reason": "fresh complete local RID",
+        "version": 1
+      },
+      "Core_PID_unchanged": true,
+      "Core_start_ticks_unchanged": true,
+      "runtime_env_sha256_unchanged": true,
+      "Core_sources_unchanged": true
+    },
+    "s07": {
+      "at": 1793809060.8398209,
+      "hostname": "BMI30-C9775FBAE",
+      "source_report_sha256": "4f7867afc80011eb9cb74b77b56e7fc6ec8bb7015353ed6e272c14c5ee6d5e87",
+      "network_version": "0.2.10",
+      "network_source_sha256": "50a82441ffc883e302cb1e376661d507fbbd63c2a1ec29f13d2fd0133c51cea6",
+      "root_lan": null,
+      "cohesion": {
+        "age_s": 4.457534313201904,
+        "available": true,
+        "member_short_ids": [
+          "5F295F47B",
+          "8CC938B79"
+        ],
+        "own_short_id": "8CC938B79",
+        "reason": "fresh complete local RID",
+        "version": 1
+      },
+      "Core_PID_unchanged": true,
+      "Core_start_ticks_unchanged": true,
+      "runtime_env_sha256_unchanged": true,
+      "Core_sources_unchanged": true
+    }
+  },
+  "cause": "Filtered ip -j neigh show dev IFACE to GATEWAY rows omit dev; cohesion requires dev==iface and therefore rejected both gateway MAC observations.",
+  "actual_diagnosis_files": [
+    "fixtures/m02-root-lan-diagnosis.json",
+    "fixtures/s07-root-lan-diagnosis.json"
+  ],
+  "correction": {
+    "old_network_sha256": "50a82441ffc883e302cb1e376661d507fbbd63c2a1ec29f13d2fd0133c51cea6",
+    "new_network_sha256": "b1e838f90a3fe22cfe38343d3fd57f1cd8ca55f8763cbc63149a506a1f26072f",
+    "command": [
+      "ip",
+      "-j",
+      "neigh",
+      "show"
+    ],
+    "scope": "One command line only; retain interface proof in returned rows; other runtime modules unchanged."
+  },
+  "regression": "test_profile_role_guard.ProfileRoleGuardTests.test_snapshot_collects_only_readonly_cohesion_inputs_and_core_failure_is_unknown",
+  "qualification": "These are initial failed integration observations and local correction checks. Successful corrected live runtime is pending separate root evidence."
+}

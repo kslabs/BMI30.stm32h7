@@ -1,0 +1,52 @@
+{
+  "ok": true,
+  "local_only": true,
+  "live_calls": false,
+  "source_executed_tests": 7,
+  "failures": 0,
+  "skips": 0,
+  "actual_source_functions": [
+    "bmi30_full_bootstrap.portable_runtime",
+    "bmi30_full_bootstrap.start",
+    "component.system",
+    "component.identity",
+    "component.require_compatible_hardware"
+  ],
+  "acceptance": {
+    "stage": "adopted",
+    "physical_serial": "0d6b7531ed3e6af5",
+    "bundle_id": "2026-11-04-175044",
+    "location": "native-eMMC-prefix/var/lib/bmi30-portable-runtime.json"
+  },
+  "negative_cases": [
+    "no marker",
+    "foreign M02 physical serial",
+    "wrong bundle185916 instead of base175044",
+    "not adopted",
+    "malformed JSON"
+  ],
+  "negative_result": "actual M02 cohort gate raises WrongCM5cohort; no bypass",
+  "source_USB_manifest_unchanged": true,
+  "source_USB_marker_written": false,
+  "allowed_ids_unchanged": true,
+  "limit": "Production portable_runtime is intentionally media-agnostic. These tests route files to native fixture only; exact target eMMC placement must separately be enforced by reviewed installer mount/identity guards. No target code was executed on hardware.",
+  "files": {
+    "test_m04_native_guard.py": {
+      "path": ".tmp\\m04-update-as-s07-20261105\\test_m04_native_guard.py",
+      "sha256": "f6dd90e22ab82d55efeeab9aa99a385064b6e6194715c96afae3a4b095fa439f"
+    },
+    "bmi30_full_bootstrap.py": {
+      "path": ".tmp\\m02-contract-20261104175044\\Documents\\host\\bmi30_split_bundles\\2026-11-04-175044\\project\\host\\bmi30_full_bootstrap.py",
+      "sha256": "b94d24f68689b4cb50a9e0345da35480c8bd85eb2b54fa86c42a0476c7142f9c"
+    },
+    "bmi30_full_update/component.py": {
+      "path": ".tmp\\m02-contract-20261104175044\\Documents\\host\\bmi30_split_bundles\\2026-11-04-175044\\project\\host\\bmi30_full_update\\component.py",
+      "sha256": "9c03c75ba74b12773b8df77c54619aa80f19fb00211498e97fe208c0ecf2bd20"
+    },
+    "bmi30_full_update/manifest.json": {
+      "path": ".tmp\\m02-contract-20261104175044\\Documents\\host\\bmi30_split_bundles\\2026-11-04-175044\\project\\host\\bmi30_full_update\\manifest.json",
+      "sha256": "f60bfe997f4ed6c47f96d54e6971d79819048984b484ae8c595f67d27d5d1122"
+    }
+  },
+  "checked_at": 1793877824.932447
+}

@@ -1,0 +1,463 @@
+{
+  "host": "BMI30-C9775FBAE",
+  "now": 1793808259.538378,
+  "local": {
+    "id": "BMI30-C9775FBAE",
+    "role": "slave",
+    "stm32_uid96": "333635343032511300090040",
+    "rs485_id": 7,
+    "code": "S07",
+    "ssid": "VINETA-EL 5GHz",
+    "bssid": "70:4f:57:da:0c:52",
+    "freq": 5180,
+    "rssi_dbm": -63,
+    "signal": 74,
+    "iface": "wlan0",
+    "uplink": "wifi",
+    "gateway": "192.168.0.1",
+    "addresses": [
+      "10.43.0.1",
+      "192.168.0.153",
+      "10.187.143.1"
+    ],
+    "broadcasts": [
+      "10.43.0.255",
+      "192.168.0.255",
+      "10.187.143.255"
+    ],
+    "ap": {
+      "ssid": "BMI30-C9775FBAE",
+      "bssid": "2e:cf:67:50:12:42",
+      "address": "10.187.143.1/24"
+    },
+    "clients": 1,
+    "station_uuid": "65797328-02d2-4ba5-903c-c8f82a6166d3",
+    "ap_uuid": "694f3d77-f81a-4377-ae3f-9949fc9c6b87",
+    "internet": {
+      "ok": true,
+      "rtt_ms": 75.5,
+      "loss": 0.0,
+      "checks": 2
+    }
+  },
+  "core": {
+    "ok": true,
+    "stale": false,
+    "connection": {
+      "connected": true,
+      "connecting": false,
+      "disconnected": false,
+      "last_frame_age_s": 0.007182121276855469
+    },
+    "sync": {
+      "value": "slave",
+      "role": "slave",
+      "assigned_role": "slave",
+      "role_persisted": true,
+      "device_id": 7,
+      "local_node_id": 7,
+      "device_id_assigned": true,
+      "sync_seen_mask": 132,
+      "code": "S07",
+      "source": "event-cache",
+      "device_responded": true
+    },
+    "rs485_ident": {
+      "authoritative": false,
+      "last_master_request_at": 1793808217.449664,
+      "last_master_request_iso": "2026-11-04T17:03:37+0100",
+      "local": {
+        "complete": true,
+        "device_id_assigned": true,
+        "flags": 1055,
+        "flags_hex": "0x041F",
+        "group_label": "8CC938B79/153",
+        "host_id": "8CC938B79",
+        "host_updated_at": 1793808217.4447613,
+        "host_updated_iso": "2026-11-04T17:03:37+0100",
+        "ip": "192.168.0.153",
+        "ip4": [
+          192,
+          168,
+          0,
+          153
+        ],
+        "ip_last": "153",
+        "ip_valid": true,
+        "last_ms": 83471476,
+        "local": true,
+        "master": false,
+        "node_conflict": false,
+        "node_id": 7,
+        "node_id_matches_status": true,
+        "recent": true,
+        "requested_node_id": 255,
+        "role": "slave",
+        "rpi_id": "",
+        "rpi_id_valid": false,
+        "rpi_number": null,
+        "rpi_number_valid": false,
+        "scan_active": false,
+        "seen_page_mask": 2097151,
+        "short_id": "8CC938B79",
+        "short_valid": true,
+        "version": 1,
+        "wire_format": "RID1"
+      },
+      "local_ip": "192.168.0.153",
+      "node_count": 2,
+      "node_list": [
+        {
+          "complete": true,
+          "device_id_assigned": true,
+          "flags": 1175,
+          "flags_hex": "0x0497",
+          "group_label": "5F295F47B/198",
+          "host_id": "5F295F47B",
+          "host_updated_at": 1793808217.4496284,
+          "host_updated_iso": "2026-11-04T17:03:37+0100",
+          "ip": "10.187.143.198",
+          "ip4": [
+            10,
+            187,
+            143,
+            198
+          ],
+          "ip_last": "198",
+          "ip_valid": true,
+          "last_ms": 83468978,
+          "local": false,
+          "master": true,
+          "node_conflict": false,
+          "node_id": 2,
+          "node_id_matches_status": true,
+          "recent": true,
+          "requested_node_id": 2,
+          "role": "master",
+          "rpi_id": "",
+          "rpi_id_valid": false,
+          "rpi_number": null,
+          "rpi_number_valid": false,
+          "scan_active": false,
+          "seen_page_mask": 2097151,
+          "short_id": "5F295F47B",
+          "short_valid": true,
+          "version": 1,
+          "wire_format": "RID1"
+        },
+        {
+          "complete": true,
+          "device_id_assigned": true,
+          "flags": 1055,
+          "flags_hex": "0x041F",
+          "group_label": "8CC938B79/153",
+          "host_id": "8CC938B79",
+          "host_updated_at": 1793808217.4447613,
+          "host_updated_iso": "2026-11-04T17:03:37+0100",
+          "ip": "192.168.0.153",
+          "ip4": [
+            192,
+            168,
+            0,
+            153
+          ],
+          "ip_last": "153",
+          "ip_valid": true,
+          "last_ms": 83471476,
+          "local": true,
+          "master": false,
+          "node_conflict": false,
+          "node_id": 7,
+          "node_id_matches_status": true,
+          "recent": true,
+          "requested_node_id": 255,
+          "role": "slave",
+          "rpi_id": "",
+          "rpi_id_valid": false,
+          "rpi_number": null,
+          "rpi_number_valid": false,
+          "scan_active": false,
+          "seen_page_mask": 2097151,
+          "short_id": "8CC938B79",
+          "short_valid": true,
+          "version": 1,
+          "wire_format": "RID1"
+        }
+      ],
+      "nodes": {
+        "2": {
+          "complete": true,
+          "device_id_assigned": true,
+          "flags": 1175,
+          "flags_hex": "0x0497",
+          "group_label": "5F295F47B/198",
+          "host_id": "5F295F47B",
+          "host_updated_at": 1793808217.4496284,
+          "host_updated_iso": "2026-11-04T17:03:37+0100",
+          "ip": "10.187.143.198",
+          "ip4": [
+            10,
+            187,
+            143,
+            198
+          ],
+          "ip_last": "198",
+          "ip_valid": true,
+          "last_ms": 83468978,
+          "local": false,
+          "master": true,
+          "node_conflict": false,
+          "node_id": 2,
+          "node_id_matches_status": true,
+          "recent": true,
+          "requested_node_id": 2,
+          "role": "master",
+          "rpi_id": "",
+          "rpi_id_valid": false,
+          "rpi_number": null,
+          "rpi_number_valid": false,
+          "scan_active": false,
+          "seen_page_mask": 2097151,
+          "short_id": "5F295F47B",
+          "short_valid": true,
+          "version": 1,
+          "wire_format": "RID1"
+        },
+        "7": {
+          "complete": true,
+          "device_id_assigned": true,
+          "flags": 1055,
+          "flags_hex": "0x041F",
+          "group_label": "8CC938B79/153",
+          "host_id": "8CC938B79",
+          "host_updated_at": 1793808217.4447613,
+          "host_updated_iso": "2026-11-04T17:03:37+0100",
+          "ip": "192.168.0.153",
+          "ip4": [
+            192,
+            168,
+            0,
+            153
+          ],
+          "ip_last": "153",
+          "ip_valid": true,
+          "last_ms": 83471476,
+          "local": true,
+          "master": false,
+          "node_conflict": false,
+          "node_id": 7,
+          "node_id_matches_status": true,
+          "recent": true,
+          "requested_node_id": 255,
+          "role": "slave",
+          "rpi_id": "",
+          "rpi_id_valid": false,
+          "rpi_number": null,
+          "rpi_number_valid": false,
+          "scan_active": false,
+          "seen_page_mask": 2097151,
+          "short_id": "8CC938B79",
+          "short_valid": true,
+          "version": 1,
+          "wire_format": "RID1"
+        }
+      },
+      "requested_scan": true,
+      "source": "ep0_rid1",
+      "updated_at": 1793808217.449664,
+      "updated_iso": "2026-11-04T17:03:37+0100"
+    }
+  },
+  "addr_rows": [
+    {
+      "ifindex": 1,
+      "ifname": "lo",
+      "flags": [
+        "LOOPBACK",
+        "UP",
+        "LOWER_UP"
+      ],
+      "mtu": 65536,
+      "qdisc": "noqueue",
+      "operstate": "UNKNOWN",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "127.0.0.1",
+          "prefixlen": 8,
+          "scope": "host",
+          "label": "lo",
+          "valid_life_time": 4294967295,
+          "preferred_life_time": 4294967295
+        }
+      ]
+    },
+    {
+      "ifindex": 2,
+      "ifname": "eth0",
+      "flags": [
+        "NO-CARRIER",
+        "BROADCAST",
+        "MULTICAST",
+        "UP"
+      ],
+      "mtu": 1500,
+      "qdisc": "pfifo_fast",
+      "operstate": "DOWN",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "10.43.0.1",
+          "prefixlen": 24,
+          "broadcast": "10.43.0.255",
+          "scope": "global",
+          "noprefixroute": true,
+          "label": "eth0",
+          "valid_life_time": 4294967295,
+          "preferred_life_time": 4294967295
+        }
+      ]
+    },
+    {
+      "ifindex": 3,
+      "ifname": "wlan0",
+      "flags": [
+        "BROADCAST",
+        "MULTICAST",
+        "UP",
+        "LOWER_UP"
+      ],
+      "mtu": 1500,
+      "qdisc": "pfifo_fast",
+      "operstate": "UP",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "192.168.0.153",
+          "prefixlen": 24,
+          "broadcast": "192.168.0.255",
+          "scope": "global",
+          "dynamic": true,
+          "noprefixroute": true,
+          "label": "wlan0",
+          "valid_life_time": 6908,
+          "preferred_life_time": 6908
+        }
+      ]
+    },
+    {
+      "ifindex": 4,
+      "ifname": "wlan0ap",
+      "flags": [
+        "BROADCAST",
+        "MULTICAST",
+        "UP",
+        "LOWER_UP"
+      ],
+      "mtu": 1500,
+      "qdisc": "pfifo_fast",
+      "operstate": "UP",
+      "group": "default",
+      "txqlen": 1000,
+      "addr_info": [
+        {
+          "family": "inet",
+          "local": "10.187.143.1",
+          "prefixlen": 24,
+          "broadcast": "10.187.143.255",
+          "scope": "global",
+          "noprefixroute": true,
+          "label": "wlan0ap",
+          "valid_life_time": 4294967295,
+          "preferred_life_time": 4294967295
+        }
+      ]
+    }
+  ],
+  "neighbor_rows": [
+    {
+      "dst": "192.168.0.163",
+      "dev": "wlan0",
+      "state": [
+        "INCOMPLETE"
+      ]
+    },
+    {
+      "dst": "192.168.0.114",
+      "dev": "wlan0",
+      "state": [
+        "INCOMPLETE"
+      ]
+    },
+    {
+      "dst": "192.168.0.199",
+      "dev": "wlan0",
+      "lladdr": "84:9e:56:20:f2:f7",
+      "state": [
+        "REACHABLE"
+      ]
+    },
+    {
+      "dst": "192.168.0.150",
+      "dev": "wlan0",
+      "state": [
+        "INCOMPLETE"
+      ]
+    },
+    {
+      "dst": "192.168.0.154",
+      "dev": "wlan0",
+      "state": [
+        "INCOMPLETE"
+      ]
+    },
+    {
+      "dst": "192.168.0.173",
+      "dev": "wlan0",
+      "state": [
+        "INCOMPLETE"
+      ]
+    },
+    {
+      "dst": "192.168.0.132",
+      "dev": "wlan0",
+      "state": [
+        "INCOMPLETE"
+      ]
+    },
+    {
+      "dst": "192.168.0.1",
+      "dev": "wlan0",
+      "lladdr": "70:4f:57:da:0c:53",
+      "state": [
+        "REACHABLE"
+      ]
+    },
+    {
+      "dst": "10.187.143.198",
+      "dev": "wlan0ap",
+      "lladdr": "88:a2:9e:2e:fb:3d",
+      "state": [
+        "REACHABLE"
+      ]
+    }
+  ],
+  "visible": [
+    {
+      "ssid": "VINETA-EL 5GHz",
+      "bssid": "70:4f:57:da:0c:52",
+      "freq": 5180,
+      "channel": 36,
+      "signal": 57,
+      "security": "WPA1 WPA2"
+    }
+  ],
+  "guard_source": null,
+  "guard_state_public": null
+}

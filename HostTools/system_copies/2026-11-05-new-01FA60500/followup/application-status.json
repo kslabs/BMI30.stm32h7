@@ -1,0 +1,55 @@
+{
+  "ok": true,
+  "host": "BMI30-01FA60500",
+  "cm5": "366b6f101fa60500",
+  "boot_id": "0a26b69b-97cd-4360-a83f-8bc38c79a875",
+  "firmware_boot_mode": 1,
+  "root": "/dev/mmcblk0p2 2da3faaa-02",
+  "boot": "/dev/mmcblk0p1 2da3faaa-01",
+  "core": {
+    "port": 8765,
+    "path": "/api/status",
+    "http_status": 200,
+    "reachable": true,
+    "summary": {
+      "ok": true,
+      "stale": false
+    },
+    "service": {
+      "version": "001",
+      "engine_source": "/home/techaid/Documents/host/bmi30_active_runtime/project/host/BMI30.200.py.2026-11-04-185916",
+      "uptime_s": 1458.243284702301
+    },
+    "connection": {
+      "connected": false,
+      "connecting": true,
+      "disconnected": false,
+      "last_frame_age_s": null
+    }
+  },
+  "portal": {
+    "port": 80,
+    "path": "/api/status",
+    "http_status": 200,
+    "reachable": true,
+    "summary": {
+      "hostname": "BMI30-01FA60500",
+      "generated_at": "2026-11-05 14:46:06",
+      "raspberry_firmware_version": "2026-11-03-172055",
+      "stm32_firmware_version": "",
+      "version_sources": {
+        "raspberry": "firmware_release",
+        "stm32": ""
+      }
+    },
+    "selected_source": {
+      "version": "2026-11-04-185916",
+      "selected_by": "reviewed-base-width-noise-floor",
+      "source": "reviewed-base-width-noise-floor",
+      "core_path": "host/bmi30_active_runtime/project/host/BMI30.001.py.2026-11-04-185916",
+      "gui_path": "host/bmi30_active_runtime/project/host/BMI30.GUI.001.py.2026-09-30-1650",
+      "portal_path": "host/bmi30_active_runtime/project/hotspot_info_server.py"
+    }
+  },
+  "mutations": false
+}

@@ -1,0 +1,155 @@
+--- active_m02_service.py
++++ service.py
+@@ -18,6 +18,7 @@
+ import urllib.request
+ import uuid
+ import network
++import cohesion
+ import access_policy
+ import policy
+ import group
+@@ -638,7 +639,7 @@
+ BOUND_BUNDLE = '2026-10-30-112226'
+ GUARD_SHA = 'd15bb8ac554a4b9dd42e3a9501a029ed5c09f5a099c9a9e7041b00a77d57dccd'
+ 
+-VERSION = '0.2.9'
++VERSION = '0.2.10'
+ LOG = logging.getLogger('bmi30-network')
+ 
+ def private_ip(value):
+@@ -646,6 +647,24 @@
+     if not address.is_private or address.is_loopback or address.is_multicast or address.is_unspecified:
+         raise ValueError('Not a LAN address')
+     return str(address)
++
++ROUTING_STALE_S = 75.0
++
++
++def routing_status(state, now_mono=None, now_wall=None):
++    """Freshness of route observation only; group/fast-channel health is separate."""
++    result = dict(state)
++    now_mono = time.monotonic() if now_mono is None else now_mono
++    now_wall = time.time() if now_wall is None else now_wall
++    checked = state.get('checked_mono') if state.get('clock_mode') == 'monotonic-v2' else state.get('checked_at')
++    now = now_mono if state.get('clock_mode') == 'monotonic-v2' else now_wall
++    observed_age = max(0., now-checked) if isinstance(checked, (int, float)) and math.isfinite(checked) else None
++    stale = observed_age is None or observed_age > ROUTING_STALE_S or state.get('routing_tick_ok') is False
++    result.update(checked_age_s=observed_age, stale=stale)
++    if stale:
++        result.update(status='degraded', automatic=False)
++    return result
++
+ 
+ class Agent:
+ 
+@@ -680,6 +699,22 @@
+         self.bluetooth = BluetoothManager(self)
+         self.legacy_recovery = LegacyRecovery(self)
+ 
++    def shared_credentials(self):
++        credentials = dict(self.secrets)
++        if not (self.local or {}).get('ap', {}).get('available', False):
++            credentials.pop('ap:' + self.config['id'], None)
++        return credentials
++
++    def note_tick_error(self, error):
++        # Preserve last successful observation timestamps. A live HTTP/group
++        # thread must not make a failed route observer look freshly online.
++        with self.lock:
++            self.state = routing_status(dict(self.state, status='degraded', automatic=False,
++                routing_tick_ok=False, routing_error_type=type(error).__name__,
++                last_attempt_at=time.time(), last_attempt_mono=time.monotonic()))
++            state = dict(self.state)
++        network.atomic('/run/bmi30-network/status.json', json.dumps(state), 420)
++
+     def remember_secret(self, key, value):
+         if isinstance(key, str) and key.startswith('wifi:') and access_policy.forgotten(key[5:]):
+             return
+@@ -722,7 +757,7 @@
+                 accepted = bool(self.local and (not self.switching) and policy.valid_path(self.local, sender['id']))
+                 if accepted:
+                     self.hold_until = max(self.hold_until, time.monotonic() + 120)
+-            return {'id': self.config['id'], 'request_id': incoming['request_id'], 'self': self.records.records.get(self.config['id']), 'records': list(self.records.records.values()), 'record_ages': self.records.ages(), 'credentials': self.secrets, 'reserved': accepted}
++            return {'id': self.config['id'], 'request_id': incoming['request_id'], 'self': self.records.records.get(self.config['id']), 'records': list(self.records.records.values()), 'record_ages': self.records.ages(), 'credentials': self.shared_credentials(), 'reserved': accepted}
+ 
+     def contact(self, address, expected=None, reserve=False):
+         address = private_ip(address)
+@@ -730,7 +765,7 @@
+             if self.local is None:
+                 return None
+             request_id = uuid.uuid4().hex
+-            body = {'request_id': request_id, 'self': self.records.records[self.config['id']], 'records': list(self.records.records.values()), 'record_ages': self.records.ages(), 'credentials': dict(self.secrets), 'reserve': reserve}
++            body = {'request_id': request_id, 'self': self.records.records[self.config['id']], 'records': list(self.records.records.values()), 'record_ages': self.records.ages(), 'credentials': self.shared_credentials(), 'reserve': reserve}
+         reply, elapsed = self.rpc(address, 'exchange', body, expected, timeout=8)
+         with self.lock:
+             if reply.get('request_id') != request_id or (expected and reply.get('id') != expected):
+@@ -833,6 +868,7 @@
+         if parent:
+             if policy.valid_path(parent, local['id']):
+                 local.update(parent=parent['id'], path=[local['id']] + parent['path'], cost=policy.radio_cost(local['signal'], local['freq']) + 25 + parent['cost'])
++                local['root_lan'] = cohesion.inherit_root(local, parent)
+         elif not local['ssid'].upper().startswith('BMI30') or local['uplink'] == 'ethernet':
+             local.update(path=[local['id']], cost=policy.internet_cost(local['internet']) + (policy.radio_cost(local['signal'], local['freq']) if local['uplink'] == 'wifi' else 5))
+ 
+@@ -927,6 +963,8 @@
+         permissions = self.network.permissions()
+         local = self.network.snapshot()
+         local['internet'] = network.probe(local['iface'])
++        observation = local.pop('_cohesion_observation', {})
++        local.update(cohesion.observe(local, observation.get('addr_rows', []), observation.get('neighbor_rows', []), observation.get('core', {})))
+         if now - self.last_profiles > 60 or not self.profile_cache or getattr(self, 'profile_station_uuid', None) != local.get('station_uuid'):
+             self.profile_cache = self.network.profiles()
+             self.last_profiles = now
+@@ -938,7 +976,10 @@
+             local['signal'] = active_ap['signal']
+         if rescan:
+             self.last_scan = now
+-        ap_psk = network.nm_value(local['ap_uuid'], '802-11-wireless-security.psk', secrets=True)
++        ap_available = bool(network.connection_uuid(local.get('ap_uuid')) and local.get('ap', {}).get('ssid') and local['ap'].get('available', True))
++        local['ap']['available'] = ap_available
++        ap_psk = (network.nm_value(local['ap_uuid'], '802-11-wireless-security.psk', secrets=True)
++                  if ap_available else '')
+         desktop_active = self.network.remote_desktop_active()
+         with self.lock:
+             nodes = self.records.nodes()
+@@ -963,16 +1004,18 @@
+             choices = policy.candidates(local, nodes, local['visible'], profiles)
+             self.offline = 0 if local['internet']['ok'] else self.offline + 1
+             choice = self.decision.choose(local, choices, now)
+-            status = 'online' if local['internet']['ok'] else 'offline'
++            status = ('online' if local['internet']['ok'] else 'offline') if ap_available else 'degraded'
+             can_switch = self.config.get('automatic', False) and permissions.get('wifi', True)
+             can_switch = can_switch and now >= self.hold_until and (now - self.session_start > 90)
+             if local['internet']['ok'] and desktop_active:
+                 can_switch = False
+-            if local.get('clients', 0) or access_policy.offline_mode() or access_policy.maintenance():
++            if not ap_available or local.get('clients', 0) or access_policy.offline_mode() or access_policy.maintenance():
+                 can_switch = False
+             if self.config.get('observe', False):
+                 can_switch = False
+             self.state = {'version': VERSION, 'status': status, 'checked_at': time.time(), 'checked_mono': time.monotonic(), 'clock_mode': 'monotonic-v2', 'bluetooth': self.bluetooth.snapshot(), 'automatic': can_switch, 'coordinator': policy.coordinator(nodes), 'local': local, 'nodes': nodes, 'candidates': choices, 'history': self.history, 'note': 'Estimated route cost; 5 GHz preferred at usable signal; up to 4 nodes per route.'}
++            self.state.update(routing_tick_ok=True, routing_error_type='', last_attempt_at=time.time(),
++                              last_attempt_mono=now, checked_age_s=0., stale=False)
+             network.atomic('/run/bmi30-network/status.json', json.dumps(self.state), 420)
+         if self.legacy_recovery.active.maybe_visit(local):
+             return
+@@ -1047,7 +1090,7 @@
+                 return
+             if self.path == '/status':
+                 with agent.lock:
+-                    raw = encode({**agent.state, 'bluetooth': agent.bluetooth.snapshot(), 'service_transports': agent.group.transport_status(), 'legacy_recovery': agent.legacy_recovery.snapshot()})
++                    raw = encode({**routing_status(agent.state), 'bluetooth': agent.bluetooth.snapshot(), 'service_transports': agent.group.transport_status(), 'legacy_recovery': agent.legacy_recovery.snapshot()})
+                 content = 'application/json'
+             elif self.path == '/':
+                 raw = Path(__file__).with_name('status.html').read_bytes()
+@@ -1214,6 +1257,10 @@
+             agent.tick()
+         except Exception as exc:
+             LOG.error('Network observation failed: %s', type(exc).__name__)
++            try:
++                agent.note_tick_error(exc)
++            except Exception as status_error:
++                LOG.error('Cannot publish routing observation failure: %s', type(status_error).__name__)
+         time.sleep(15 + random.uniform(0, 3))
+ if __name__ == '__main__':
+     main()

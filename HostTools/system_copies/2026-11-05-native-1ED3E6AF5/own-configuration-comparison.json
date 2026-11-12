@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "physical_cm5": "0d6b7531ed3e6af5",
+  "root_partuuid": "e1b5c915-02",
+  "checked_at": 1793885673.4662805,
+  "byte_exact": true,
+  "baseline_sha256": "90530d9f05c3d397c51faf48ae307d358fb5a1dda0add934ff130d2a3610eb3d",
+  "actual_sha256": "90530d9f05c3d397c51faf48ae307d358fb5a1dda0add934ff130d2a3610eb3d",
+  "changed_keypaths": [],
+  "unexpected_changes": [],
+  "configuration_values_included": false
+}

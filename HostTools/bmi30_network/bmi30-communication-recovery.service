@@ -1,0 +1,14 @@
+[Unit]
+Description=BMI30 local STM32 K1 communication recovery
+After=bmi30-core.service NetworkManager.service
+Wants=bmi30-core.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/bmi30-network/communication_recovery.py --daemon
+Restart=on-failure
+RestartSec=3
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

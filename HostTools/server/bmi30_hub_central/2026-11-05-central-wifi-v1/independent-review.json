@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "ok": true,
+  "verdict": "PASS_WITH_DEPLOYMENT_LIMITS",
+  "reviewed_at": "2026-11-05",
+  "scope": "Local independent security and correctness review of the additive Hub r36 Wi-Fi catalog patch. No server or device calls, writes, deployment, or container restart.",
+  "source_hashes": {
+    "candidate/bmi30hub/central_store.py": "410f2560fadd3ba1da3250c408555d68419d855d0aae35ad42c91df8e38c2b9a",
+    "candidate/bmi30hub/main.py": "751bbf23486dbc05cc5bb896d8e585d9384dd951b38453fd5fbcfe2d8767a89f",
+    "test_central_store_independent.py": "cb092e32ff83ffefe7cd57aa2eb5c05ea9ed9828ab960fc6f8db8c437188a1b2",
+    "API_CONTRACT.json": "1a97d877b5a285e8d9e5cd4dd4034bac5c3656ea61b2cf84642c01c8803c95b5",
+    "SOURCE.diff": "da55a7ee814505b6a52ad2e8c0a4be70085ef8fb6ce11c9ccb047d8720dce8d3",
+    "author-validation.json": "31901eabd6bced3c03d8acf1401d39f074d4eb80c2b0ba7ebc75c07a6ead56b7"
+  },
+  "independent_execution": {
+    "command": ".tmp/hub-central-store-20261105/test-venv/Scripts/python.exe -B .tmp/hub-central-store-20261105/test_central_store_independent.py",
+    "exit_code": 0,
+    "tests": 12,
+    "passed": 12,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "reported_test_duration_s": 0.602,
+    "environment": "Windows Python 3.14; FastAPI 0.115.14; httpx 0.28.1; cryptography 46.0.3",
+    "fixtures": "Synthetic workspace data only; actual FastAPI handlers, actual AESGCM, actual SQLite scope resolver, and extracted existing FirmwareStorage.authenticate_device with synthetic DB/token helpers. TestClient uses in-process ASGI transport.",
+    "network_calls": 0,
+    "server_writes": false,
+    "device_calls": 0,
+    "fixture_path_policy": "Short workspace .tmp/hub-central-independent-fixtures-20261105 scratch, unique per-test child, resolved-parent assertion before cleanup, bytecode disabled. Existing auth source is resolved from the workspace root."
+  },
+  "verified_cases": [
+    "Actual system assignment resolver shares only within the active assigned system and denies revoked, inactive, unassigned, and cross-system access.",
+    "Actual existing approved-device authentication callback is reused; ambiguous matching token hashes are rejected.",
+    "Missing or invalid bearer, insecure HTTP, query-based scope, and disabled capture endpoints fail closed; successful catalog response is no-store.",
+    "Ciphertext is encrypted at rest with fresh nonces; scope-bound AESGCM AAD rejects ciphertext transplantation without leaking the synthetic PSK.",
+    "Replacing the encryption key with another valid 32-byte key cannot append a new scope or mutate the existing catalog. Global key_id is checked against one key-byte snapshot used by AESGCM.",
+    "Concurrent CAS writes have exactly one winner and advance the canonical revision by one.",
+    "A later invalid record makes a multi-record merge atomic with byte-identical original file; errors do not echo secrets.",
+    "Existing-credential replacement requires an explicit replacement choice or fresh client-reported connected provenance with CAS; stale provenance is rejected.",
+    "The server revision counter is independent of untrusted client revision, including the maximum incoming integer boundary.",
+    "Canonical origin is the authenticated owner and cannot be forged by submitted record metadata.",
+    "Duplicate JSON keys and oversized bodies are rejected before mutation.",
+    "Init-only refuses an existing key or catalog and preserves the existing bytes."
+  ],
+  "static_review": {
+    "main_integration": "Four additive integrations preserve the existing firmware router and middleware, reuse existing FirmwareStorage.authenticate_device and DB resolver, require HTTPS, and explicitly set enable_captures=False.",
+    "scope": "Server-side system:<positive systems.id> resolution requires approved device and active assigned system. There is no global approved-device catalog fallback.",
+    "store": "Canonical schema-2 credentials.json has isolated encrypted scopes and a SHA256 key_id. Secret key and catalog are owner-private 0600 with private directories; existing parent ownership/modes are preserved.",
+    "locking_and_atomicity": "Read/CAS/encrypt/atomic catalog replacement occurs under the shared store lock. Error messages are bounded static codes rather than exception or request-body contents.",
+    "provenance_limit": "Fresh connected provenance is an authenticated client report, not an independent server measurement of Wi-Fi success. Saved NM timestamps are not proof of a working password.",
+    "dependencies": "Existing downloaded r36 security.py already imports cryptography serialization and Ed25519 and existing main imports security. The additive Dockerfile reuses the operator-verified current r36 image; it does not install a new dependency set.",
+    "captures": "Disabled in the actual main integration and default router. Capture readiness is outside this independent sign-off."
+  },
+  "resolved_blockers": [
+    "Untrusted incoming revision previously could overflow the usable canonical counter; server-counter-only increment is now tested.",
+    "A replaced valid encryption key previously could create a new scope in the old catalog. The independent regression reproduced HTTP 200 instead of 503 on the superseded module; the pinned 410f module now passes the regression."
+  ],
+  "author_validation": {
+    "observed_report_ok": true,
+    "tests": 26,
+    "failures": 0,
+    "errors": 0,
+    "module_hash_matches": true
+  },
+  "blockers": [],
+  "limits": [
+    "No live Hub, device, DNS, TLS proxy, Docker image build, container switch, or authenticated production request was executed by the reviewer.",
+    "Linux ownership, mode, flock, fsync, crash durability and real persistent-volume behavior require the separately guarded deployment and runtime checks; Windows fixture tests do not establish those properties on the production host.",
+    "Deployment must use the final pinned module and a matching initialized schema-2 catalog/key binding; superseded ad70 artifacts are not covered by this sign-off.",
+    "This review does not qualify universal USB, capture storage, local data deletion, or physical detector performance."
+  ]
+}

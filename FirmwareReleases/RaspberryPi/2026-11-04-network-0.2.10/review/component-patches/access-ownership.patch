@@ -1,0 +1,79 @@
+--- active_access.py
++++ access.py
+@@ -56,6 +56,52 @@
+     fd = os.open(path.parent, os.O_DIRECTORY)
+     try: os.fsync(fd)
+     finally: os.close(fd)
++
++def claim_busy(path):
++    """Claim without replacing a maintenance owner; return a unique file token."""
++    path = Path(path)
++    token = uuid.uuid4().hex
++    try:
++        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
++    except FileExistsError:
++        return None
++    info = os.fstat(fd)
++    ownership = (token, info.st_dev, info.st_ino)
++    try:
++        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
++            json.dump({'started': time.time(), 'owner': 'bmi30-access', 'token': token}, stream)
++            stream.flush()
++            os.fsync(stream.fileno())
++    except Exception:
++        # A failed write did not consume the queued job. Remove only the inode
++        # we just created; an externally replaced maintenance file survives.
++        try:
++            current = path.stat()
++            if (current.st_dev, current.st_ino) == ownership[1:]:
++                path.unlink()
++        except OSError:
++            pass
++        raise
++    return ownership
++
++
++def release_busy(path, ownership):
++    """Never release another maintenance owner's token, even after replacement."""
++    path = Path(path)
++    try:
++        with path.open('r', encoding='utf-8') as stream:
++            value = json.load(stream)
++            info = os.fstat(stream.fileno())
++        current = path.stat()
++        if (isinstance(value, dict) and value.get('token') == ownership[0]
++                and (info.st_dev, info.st_ino) == ownership[1:]
++                and (current.st_dev, current.st_ino) == ownership[1:]):
++            path.unlink()
++            return True
++    except (OSError, ValueError):
++        pass
++    return False
++
+ 
+ def run(*args, timeout=12, check=True):
+     r = subprocess.run(args, capture_output=True, text=True, timeout=timeout,
+@@ -281,9 +327,12 @@
+         now = time.monotonic()
+         with self.lock:
+             job = self.pending if self.pending and now >= self.pending[0] else None
+-            if job: self.pending = None
++            ownership = claim_busy(RUNTIME/'busy') if job else None
++            if job and ownership is not None:
++                self.pending = None
++            else:
++                job = None
+         if job:
+-            atomic(RUNTIME/'busy', {'started': time.time()})
+             try:
+                 self.action(job[1], job[2])
+                 self.last_action = {'action': job[1], 'ok': True, 'time': time.time()}
+@@ -291,7 +340,7 @@
+                 LOG.error('Access action failed: %s', type(exc).__name__)
+                 self.last_action = {'action': job[1], 'ok': False, 'time': time.time(), 'error': type(exc).__name__}
+             finally:
+-                (RUNTIME/'busy').unlink(missing_ok=True)
++                release_busy(RUNTIME/'busy', ownership)
+                 self.next_repair = now + 60
+         config = json.loads(CONFIG.read_text())
+         allowed = config.get('channel_permissions', {}).get('hotspot', True)

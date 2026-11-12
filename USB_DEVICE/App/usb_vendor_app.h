@@ -5,6 +5,10 @@
 extern "C" {
 #endif
 
+/* IRQ-safe physical TX/session revoke for USB reset/suspend/disconnect. */
+void vnd_host_session_revoke(void);
+void vnd_host_session_boot_init(void);
+
 #define VND_CMD_START_STREAM    0x20u
 #define VND_CMD_STOP_STREAM     0x21u
 #define VND_CMD_GET_STATUS      0x30u
@@ -29,8 +33,8 @@ extern "C" {
 #define VND_CMD_SET_OPTIC_REACTION_SOURCE 0x44u /* payload: u8 source_id 0..31, 0xFF=disabled */
 #define VND_CMD_SET_WIRE_MODE    0x45u /* payload: version=1, mode, u16 lease_ms, u32 transport_epoch */
 #define VND_CMD_GET_SYNC_DIAG    0x46u /* EP0 IN: SYN1 sync/wire/lease diagnostics */
-#define VND_CMD_SET_TX1_PHASE    0x47u /* u8: 0=in phase, 1=antiphase; absolute setting */
-#define VND_CMD_SET_TX2_PHASE    0x48u /* u8: 0=in phase, 1=antiphase; absolute setting */
+#define VND_CMD_SET_TX1_PHASE    0x47u /* upper PC7, legacy PA1 complement; u8 absolute 0/1 */
+#define VND_CMD_SET_TX2_PHASE    0x48u /* lower PA2; u8 absolute 0/1 */
 #define VND_CMD_GET_TX_PHASE     0x49u /* EP0 IN: TXP1, requested/applied local TX phases */
 #define VND_CMD_GET_RX_PHASE     0x4Eu /* EP0 IN: RXP1, measured per-channel RX polarity */
 #define VND_CMD_GET_COMM_RECOVERY 0x4Fu /* EP0 IN: COM1, 24 bytes; local K1 request */

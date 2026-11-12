@@ -7,7 +7,7 @@ from vendor_tx_phase import read_phase, set_phase, wait_applied
 
 
 # TX1 antiphase, TX2 in phase, enabled stream, logical sync HIGH.
-APPLIED = b"TXP1\x01\x01\x00\x01\x00\x07\x01\x01\x01\x01\x00\x00"
+APPLIED = b"TXP1\x01\x01\x00\x01\x00\x07\x01\x01\x01\x00\x00\x00"
 PENDING = b"TXP1\x01\x01\x00\x00\x00\x0f\x01\x00\x01\x01\x00\x00"
 
 
@@ -21,7 +21,7 @@ class TxPhaseProtocolTests(unittest.TestCase):
         self.assertEqual(state["applied"], [1, 0])
         self.assertTrue(state["tx_requested"] and state["tx_enabled"] and state["streaming"])
         self.assertFalse(state["pending"])
-        self.assertEqual([state[k] for k in ("sync_phase", "pa1", "pa2", "pc7")], [1]*4)
+        self.assertEqual([state[k] for k in ("sync_phase", "pa1", "pa2", "pc7")], [1, 1, 1, 0])
 
     def test_bad_responses_rejected(self):
         for raw in (b"", APPLIED[:-1], APPLIED + b"\0", b"BAD!" + APPLIED[4:],

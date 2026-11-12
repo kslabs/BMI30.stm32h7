@@ -1,0 +1,202 @@
+{
+  "completed_utc": "2026-10-20T11:48:17.541315+00:00",
+  "status": "complete",
+  "scope": [
+    "M02",
+    "S07"
+  ],
+  "source": {
+    "device": "M02",
+    "media": "USB",
+    "serial": "25072933770324",
+    "version": "2026-10-16-1743",
+    "copy_set_bytes": 10607302319
+  },
+  "targets_written": [
+    "M02 eMMC",
+    "S07 eMMC",
+    "S07 USB"
+  ],
+  "media": {
+    "M02 USB": {
+      "state": "original_source_verified",
+      "boot_observed": true,
+      "boot_evidence": "M02-source-initial-state.json"
+    },
+    "M02 eMMC": {
+      "state": "copied_and_boot_verified",
+      "boot_tested": true,
+      "boot_evidence": "M02-boot-emmc-verified.json",
+      "post_copy_configuration_changed": true
+    },
+    "S07 eMMC": {
+      "state": "copied_and_boot_verified",
+      "boot_tested": true,
+      "boot_evidence": "S07-boot-emmc-verified.json"
+    },
+    "S07 USB": {
+      "state": "copied_and_boot_verified",
+      "boot_tested": true,
+      "boot_evidence": "S07-boot-usb-verified.json"
+    }
+  },
+  "detector_defaults_copied_from_source": true,
+  "source_defaults_sha256": "1fdf75914f8e43b138ab5bb49e5d70e71f2287c8c14ff599d90001c5f208be32",
+  "post_copy_configuration_change": {
+    "device": "M02",
+    "media": "eMMC",
+    "source_defaults_verified_at_copy_and_boot": true,
+    "current_config_sha256": "c8454c26e9adebb7d8378ebb5e35a43721c0ba5fcb15c2a1e1c802cb249da66c",
+    "current_upper_confirm": 3,
+    "origin": "User confirmed they were manually editing M02 settings through the web interface after the copy.",
+    "action": "Retained user changes after copying and boot verification.",
+    "observed_differences": {
+      "source_sha256": "1fdf75914f8e43b138ab5bb49e5d70e71f2287c8c14ff599d90001c5f208be32",
+      "active_sha256": "c8454c26e9adebb7d8378ebb5e35a43721c0ba5fcb15c2a1e1c802cb249da66c",
+      "active_modified_utc": "2026-10-20T11:44:57.452950+00:00",
+      "differences": [
+        {
+          "path": "/base_width_max",
+          "source": 23,
+          "current": 33
+        },
+        {
+          "path": "/dc_config/acquisition_settle_s",
+          "source": 15.0,
+          "current": 150.0
+        },
+        {
+          "path": "/dc_config/detect_settle_s",
+          "source": 15.0,
+          "current": 150.0
+        },
+        {
+          "path": "/dc_config/detection_settle_s",
+          "source": 10.0,
+          "current": 100.0
+        },
+        {
+          "path": "/dc_config/fast_settle_s",
+          "source": 10.0,
+          "current": 100.0
+        },
+        {
+          "path": "/dc_config/work_settle_s",
+          "source": 20.0,
+          "current": 200.0
+        },
+        {
+          "path": "/dc_config_updated_at",
+          "source": 1792417596,
+          "current": 1792496384
+        },
+        {
+          "path": "/det_confirm_count0",
+          "source": 6,
+          "current": 3
+        },
+        {
+          "path": "/det_confirm_count1",
+          "source": 6,
+          "current": 3
+        },
+        {
+          "path": "/lcd_role_overlay_updated_at",
+          "source": 1792417596,
+          "current": 1792496384
+        },
+        {
+          "path": "/noise_area_percent",
+          "source": 80,
+          "current": 65
+        },
+        {
+          "path": "/operation/updated_at",
+          "source": 1792417596,
+          "current": 1792496384
+        },
+        {
+          "path": "/peak_index_max",
+          "source": 184,
+          "current": 100
+        },
+        {
+          "path": "/peak_index_min",
+          "source": 66,
+          "current": 35
+        },
+        {
+          "path": "/sound_settings_updated_at",
+          "source": 1792417596,
+          "current": 1792496384
+        },
+        {
+          "path": "/tag_detection/base_width_max",
+          "source": 23,
+          "current": 33
+        },
+        {
+          "path": "/tag_detection/confirm0",
+          "source": 6,
+          "current": 3
+        },
+        {
+          "path": "/tag_detection/confirm1",
+          "source": 6,
+          "current": 3
+        },
+        {
+          "path": "/tag_detection/noise_area_percent",
+          "source": 80,
+          "current": 65
+        },
+        {
+          "path": "/tag_detection/peak_index_max",
+          "source": 184,
+          "current": 100
+        },
+        {
+          "path": "/tag_detection/peak_index_min",
+          "source": 66,
+          "current": 35
+        },
+        {
+          "path": "/tag_detection_updated_at",
+          "source": 1792416769,
+          "current": 1792496697
+        }
+      ],
+      "statistics_units": "",
+      "source_unmounted_after_check": true
+    },
+    "user_confirmed_manual_changes": true
+  },
+  "per_device_service_identity_preserved": true,
+  "stm32_firmware_or_roles_modified": false,
+  "roles_verified": {
+    "M02": "M02",
+    "S07": "S07"
+  },
+  "current_root": {
+    "M02": "/dev/mmcblk0p2",
+    "S07": "/dev/sda2"
+  },
+  "persistent_bootloader_settings_unchanged": true,
+  "runtime_verified": "Detector running, both channels receiving, HTTPS portal responding; no physical tag test performed.",
+  "copy_method": "Full filesystem rsync with checksums; target boot selectors and individual service identity retained. Volatile and previous maintenance/backup paths excluded.",
+  "cleanup": {
+    "source_export": {
+      "read_only_export_stopped": true,
+      "source_usb_unmounted": true
+    },
+    "ssh_tunnels": {
+      "all_task_tunnels_stopped": true,
+      "stopped_pids": [
+        40412
+      ],
+      "matched_exact_task_forwards_and_hosts": true
+    }
+  },
+  "prior_S07_recordings": "Previously offloaded and SHA-256 verified in the common computer archive; old source files replaced by this authorized system copy.",
+  "other_devices_written": []
+}

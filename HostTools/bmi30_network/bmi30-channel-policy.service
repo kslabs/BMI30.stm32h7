@@ -1,0 +1,13 @@
+[Unit]
+Description=BMI30 saved channel permissions before network activation
+After=local-fs.target
+Before=NetworkManager.service
+RequiresMountsFor=/home/techaid/Documents/host
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/bmi30-network/communication_recovery.py --prepare
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
