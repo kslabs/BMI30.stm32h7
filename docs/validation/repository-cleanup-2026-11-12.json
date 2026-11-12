@@ -1,13 +1,64 @@
 {
   "as_of": "2026-11-12",
-  "state": "local_verified_before_publication",
+  "state": "complete",
   "stm32_binary_matches_release": true,
   "fresh_git_checkout_project_files_verified": 1090,
   "fresh_git_checkout_sdk_inputs_verified": 226,
   "raspberry_files_verified": 173,
   "raspberry_bundle_checksums_verified": 158,
   "retained_release_files_verified": 11531,
-  "retention": {"current": 5, "rollback": 116, "archive": 53, "delete": 1},
+  "retention": {
+    "current": 5,
+    "rollback": 116,
+    "archive": 53,
+    "delete": 1
+  },
   "archive_zip_files_verified": 53,
-  "device_operations": false
+  "device_operations": false,
+  "github": {
+    "remote_main": "7f75e9fdedfb2d3c3ca58b7e1666ee6732747f9c",
+    "remote_branches": 1,
+    "remote_tags": 8,
+    "remote_old_branches_deleted": 10,
+    "remote_old_tag_names_deleted": 17,
+    "local_branches": [
+      "refs/heads/main"
+    ],
+    "local_tags": [
+      "archive/bmi30-fw-1.2.53-r5-2026-09-29",
+      "archive/bmi30-fw-1.2.55-2026-10-07",
+      "archive/bmi30-rpi-2026-10-08-1211",
+      "baseline/2026-11-12",
+      "rollback/2026-10-12-working-base-before-cleanup",
+      "rollback/2026-11-06-main-before-cleanup",
+      "rollback/xm125-gate-v0.1.2",
+      "rollback/xm125-gate-v0.1.2-preset-180s"
+    ],
+    "local_old_tag_names_deleted": 22,
+    "guarded_atomic_deletion": true,
+    "main_force_push": false
+  },
+  "baseline": {
+    "source_commit": "08f1deac5faa15ce1ae929e1e359a4d268c8c19d",
+    "main_commit": "7f75e9fdedfb2d3c3ca58b7e1666ee6732747f9c",
+    "tree": "352aa55996858f362197564333655430bce9f816",
+    "former_main_is_ancestor": true,
+    "merge_preserved_tree": true
+  },
+  "scoped_source_rollback": {
+    "captured": "2026-11-12",
+    "purpose": "Pre-consolidation working source rollback; release payloads are retained separately.",
+    "path": "archives/rollback-releases/WorkingTree/2026-11-12-before-cleanup.zip",
+    "files": 2666,
+    "verified": true,
+    "sha256": "6a9bfe0a058b86056a7f3267b167f70db75fd7051ecc03de8715efd231c949df"
+  },
+  "deleted_obsolete_backups": [
+    "archives/repository-cleanup-2026-11-12/all-refs.bundle",
+    "archives/repository-cleanup-2026-11-12/worktree-before.zip",
+    "BMI30_rpi_state_2026-01-31.bundle",
+    "BMI30.stm32h7_99+++"
+  ],
+  "git_history_rewritten": false,
+  "local_release_payloads_uploaded": false
 }
